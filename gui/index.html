@@ -1,0 +1,179 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <title>Open RollerCoaster Tycoon 3</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: sans-serif;
+  font-family: "Helvetica Neue", Helvetica, sans-serif;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  background-image: url(world.jpg);
+  background-size: cover;
+}
+header {
+  display: flex;
+  gap: 4px;
+  position: relative;
+  margin: 0 auto;
+  padding: 4px 4px 4px;
+  max-width: fit-content;
+  filter: drop-shadow(2px 2px 1px rgba(0, 0, 0, 0.75));
+  white-space: nowrap;
+}
+header:after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  width: 100%;
+  height: 100%;
+  background-color: rgb(73, 153, 223);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  clip-path: path('M 0 0 L 1024 0 L 1024 30 L 300 30 C 300,10 270,10 270,30 L 0 30');
+  z-index: 2;
+}
+header > * {
+  z-index: 3;
+}
+#drawerGripMarker {
+  width: 30px;
+  height: 20px;
+}
+#notifications {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  background-color: white;
+  box-shadow: rgba(0, 0, 0, 0.75) 0 1px 2px;
+}
+input[type="radio"] {
+  appearance: none;
+  margin: 0;
+}
+.icon, button.icon-button {
+  font-family: "Noto Color Emoji";
+  font-size: 20px;
+  text-shadow: rgba(0, 0, 0, 0.5) 1px 1px 2px;
+}
+header .icon-button {
+  background: none;
+  border: none;
+}
+aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  margin-inline-start: 12px;
+  gap: 8px;
+  width: max-content;
+}
+aside button.icon-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(rgb(55, 114, 166),rgb(73, 153, 223));
+  border: solid 2px rgb(35, 117, 159);
+  border-radius: 30px;
+  box-shadow: inset rgb(73, 153, 223) 0 0 3px 3px, rgba(0, 0, 0, 0.5) 1px 1px 2px 0px;
+  transition: transform ease 0.2s;
+}
+aside button.icon-button:hover {
+  transform: scale(1.15);
+}
+button {
+  cursor: pointer;
+}
+  </style>
+</head>
+<body>
+  <header>
+    <button class="icon-button">🧢</button>
+    <button id="dayNightCycleToggle" class="icon-button">☀️</button>
+    <div id="gameSpeed" class="radio-group">
+      <input type="radio" id="pause" name="gameSpeed" value="0" title="Pause">
+      <label for="pause">⏸</label>
+      <input type="radio" id="play" name="gameSpeed" value="1" title="Play" checked="checked">
+      <label for="play">⏵</label>
+      <input type="radio" id="fastForward" name="gameSpeed" value="2" title="Fast-Forward">
+      <label for="fastForward">⏩</label>
+      <input type="radio" id="extraFastForward" name="gameSpeed" value="3" title="Extra Fast-Forward">
+      <label for="extraFastForward">⏭</label>
+    </div>
+    <div id="funds" class="label">
+      <span class="currency">$</span>
+      <span class="funds">unlimited</span>
+    </div>
+    <div id="approval" class="label">
+      <span id="approvalRating">700</span>
+      <span class="icon">👎</span>
+      <meter id="approvalRatingMeter" value="100"></meter>
+      <span class="icon">👍</span>
+    </div>
+    <span id="drawerGripMarker"></span>
+    <div id="weather">
+      <span>71 F</span>
+      <span>⛅️</span>
+    </div>
+    <div id="dateTime">
+      <span id="date">1 January, Year 1</span>
+      <span id="time">10:00 am</span>
+    </div>
+    <div id="indicators">
+      <span class="icon">🎯</span>
+      <span class="icon">🧨</span>
+      <span class="icon">👨‍👩‍👧</span>
+    </div>
+  </header>
+  <div id="notifications" class="drawer">
+    <div id="grip"></div>
+  </div>
+  <aside>
+    <button class="icon-button" title="Park Map">🗺️</button>
+    <button class="icon-button" title="Info Views">👓</button>
+    <button class="icon-button" title="Game Settings">🛠️</button>
+    <button class="icon-button" title="Save & Quit">🚪</button>
+    <button class="icon-button" title="Graphs">📉</button>
+    <button class="icon-button" title="Rides">🎡</button>
+    <button class="icon-button" title="Shops">🛍️</button>
+    <button class="icon-button" title="Scenery">🏡</button>
+    <button class="icon-button" title="Paths">🚏</button>
+    <button class="icon-button" title="Landscaping">🪴</button>
+    <button class="icon-button" title="Bulldozer">🗑️</button>
+  </aside>
+  <main></main>
+  <script>
+const marker = document.querySelector('#drawerGripMarker');
+const drawer = document.querySelector('#notifications');
+const styleOverrides = document.createElement("style");
+document.head.append(styleOverrides);
+function measureDrawer() {
+  const header = document.querySelector('header').getBoundingClientRect();
+  const rect = marker.getBoundingClientRect();
+  const right = rect.right - header.left - 4;
+  const left = rect.left - header.left - 4;
+  const height = header.height + 4;
+  const cutout = `path('M 0 0 L ${header.width} 0 L ${header.width} ${height} L ${right} ${height} C ${right},${height / 3} ${left},${height / 3} ${left},${height} L 0 ${height}')`;
+  styleOverrides.innerHTML = `header:after { clip-path: ${cutout}; }`;
+  
+  drawer.style.left = `${header.left}px`;
+  drawer.style.width = `${header.width}px`;
+}
+window.addEventListener('load', measureDrawer)
+window.addEventListener('resize', measureDrawer)
+measureDrawer();
+  </script>
+</body>
+</html>
