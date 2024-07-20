@@ -1,0 +1,42 @@
+name: DBPF CI
+
+on: push
+#   schedule:
+#   - cron: '0 0 * * SUN'
+
+jobs:
+  test:
+    name: Tests
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install D compiler
+      uses: dlang-community/setup-dlang@v1
+      with:
+        compiler: ldc-latest
+    - name: Cache DUB Artifacts (Posix)
+      if: startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
+      uses: actions/cache@v2
+      with:
+        path: ~/.dub
+        key: ${{ runner.os }}-dub-${{ hashFiles('**/dub.json') }}
+        restore-keys: |
+          ${{ runner.os }}-dub-
+    - name: Cache DUB Artifacts (Windows)
+      if: startsWith(runner.os, 'Windows')
+      uses: actions/cache@v2
+      with:
+        path: ~\AppData\Local\dub
+        key: ${{ runner.os }}-dub-${{ hashFiles('**/dub.json') }}
+        restore-keys: |
+          ${{ runner.os }}-dub-
+    - name: Lint
+      continue-on-error: true
+      run: dub run dscanner -- lint src
+    - name: Test
+      run: dub test --coverage
+    - name: Upload Coverage to Codecov
+      if: success()
+      run: bash <(curl -s https://codecov.io/bash)
