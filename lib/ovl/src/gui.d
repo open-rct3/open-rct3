@@ -1,3 +1,4 @@
+/// License: GPL 2.0
 module ovl.gui;
 
 struct BitmapTable {
