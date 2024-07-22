@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/ovl
+ovl.so
+ovl.dylib
+ovl.dll
+ovl.a
+ovl.lib
+ovl-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

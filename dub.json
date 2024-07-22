@@ -1,0 +1,16 @@
+{
+  "name": "open-rct3",
+  "description": "An open source re-implementation of RollerCoaster Tycoon 3",
+  "license": "AGPL-3.0-only",
+  "copyright": "Copyright © 2024, Chance Snow",
+  "authors": [
+    "Chance Snow <rct3@chancesnow.me>"
+  ],
+  "targetPath": "bin",
+  "targetType": "executable",
+  "dependencies": {
+    "ovl": {
+      "path": "./lib/ovl"
+    }
+  }
+}
