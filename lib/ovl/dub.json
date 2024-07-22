@@ -8,6 +8,9 @@
   ],
   "targetPath": "bin",
   "targetType": "staticLibrary",
+  "subPackages": [
+    "./dumper"
+  ],
   "buildTypes": {
     "docs": {
       "sourceFiles": ["views/docs.ddoc"],

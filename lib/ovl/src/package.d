@@ -7,6 +7,9 @@ import std.typecons : BitFlags;
 import ovl.enums;
 import ovl.gui;
 
+// TODO: Publish this package on dub
+// QUESTION: Extract this library into it's own module?
+
 enum VERSION = 2;
 
 struct OvlHeader {
