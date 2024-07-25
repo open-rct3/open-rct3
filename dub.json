@@ -12,5 +12,18 @@
     "ovl": {
       "path": "./lib/ovl"
     }
-  }
+  },
+  "configurations": [
+    {
+      "name": "application",
+      "targetName": "OpenRCT3 Server",
+      "preBuildCommands": [
+        "deno compile --no-prompt --unstable-ffi --allow-ffi --allow-read --allow-write --allow-run=cmd,tar --allow-net=github.com:443,objects.githubusercontent.com:443 --output bin/OpenRCT3 clients/deno/main.ts"
+      ]
+    },
+    {
+      "name": "unittest",
+      "targetName": "open-rct3-unittest"
+    }
+  ]
 }
