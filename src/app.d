@@ -1,3 +1,6 @@
+/// License: AGPL 3.0
+module rct3.server;
+
 import std.stdio;
 
 void main() {

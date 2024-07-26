@@ -1,4 +1,6 @@
 /// See_Also: <a href="https://www.pcgamingwiki.com/wiki/RollerCoaster_Tycoon_3#Game_data">RCT3: Game Data</a> (PCGamingWiki)
+/// License: AGPL 3.0
+module rct3.paths;
 
 ///
 struct Data {

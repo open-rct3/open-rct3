@@ -1,5 +1,13 @@
 all:
-	dub build -c release
+	dub build
+
+.PHONY: install
+install: release
+# TODO: Bundle the app for this OS
+
+.PHONY: release
+release:
+	dub build -b release
 
 .PHONY: ovl
 ovl:
