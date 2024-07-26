@@ -1,0 +1,7 @@
+{
+  "identifier" : "EC679C9D-5C27-45B1-922B-554A1F24D281",
+  "localPath" : "community\/forum",
+  "remotePath" : "\/var\/discourse",
+  "server" : "OpenRCT3 Forum",
+  "usesPublishing" : false
+}
