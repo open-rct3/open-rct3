@@ -1,6 +1,8 @@
 /// License: GPL 2.0
 module ovl;
 
+import std.conv : to;
+import std.exception : enforce;
 static import std.stdio;
 import std.typecons : BitFlags;
 
@@ -189,20 +191,39 @@ package T read(T)(std.stdio.File file) {
 }
 
 class Ovl {
+  import std.path : baseName;
+
   // is char FileName[MAX_PATH]; in importer
   const string path;
   const string name;
+  const OvlType type;
   File[9] files;
   string[] references;
   // Added to store the unique ID.
   string internalName;
 
   this(string name) {
+    enforce(name !is null, "You must provide a name.");
     this(null, name);
   }
   package this(string path, string name) {
+    import std.algorithm : canFind, endsWith, joiner;
+    import std.array : array;
+    import std.path : isValidPath, pathSeparator;
+    import std.uni : asLowerCase;
+
+    path = path is null ? [".", name].joiner(pathSeparator).array.to!string : path;
+    enforce(path.isValidPath, "File does not exist: " ~ path);
+    this.name = path.baseName;
+    const nameLowered = this.name.asLowerCase.array;
+    const extIsCommonOvl = nameLowered.endsWith(".common.ovl");
+    enforce(extIsCommonOvl || nameLowered.endsWith(".unique.ovl"), "File is not an OVL archive: " ~ path);
     this.path = path;
-    this.name = name;
+    this.type = extIsCommonOvl ? OvlType.common : OvlType.unique;
+  }
+
+  void open() {
+    assert(0, "Unimplemented!");
   }
 
   static Ovl createScenery(string name) {
@@ -212,9 +233,8 @@ class Ovl {
   }
   static Ovl load(string path) {
     import std.algorithm : equal, sum;
-    import std.exception : enforce;
     import std.file : exists;
-    import std.path : baseName, stripExtension;
+    import std.path : stripExtension;
     import std.string : format;
 
     const invalidOvlError = "File is not an OVL archive: " ~ path;
@@ -230,9 +250,9 @@ class Ovl {
     // Read reference count
     switch (header.version_) {
       case 1:
-        ovl.references = references = new string[header.references];
+        ovl.references = new string[header.references];
         break;
-        default:
+      default:
         if (header.version_ != 4 || header.version_ != 5) throw new Exception(
           format!"Unknown OVL version: %d"(header.version_)
         );
@@ -252,13 +272,11 @@ class Ovl {
           }
         }
 
-        references = new string[file.read!uint];
+        ovl.references = new string[file.read!uint];
         break;
     }
 
     string readString() {
-      import std.conv : to;
-
       assert(!file.eof, "Unexpected EOF!");
       ubyte[] str = new ubyte[file.read!ushort];
       file.rawRead!ubyte(str.ptr[0..str.length]);
@@ -266,7 +284,7 @@ class Ovl {
     }
 
     // Read references
-    foreach (ref reference; references) reference = readString();
+    foreach (ref reference; ovl.references) reference = readString();
 
     // Read file index header
     auto filesHeader = file.read!OvlFilesHeader;
