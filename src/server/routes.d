@@ -6,6 +6,7 @@ import vibe.core.log;
 import vibe.http.router;
 import vibe.http.server;
 import vibe.http.websockets;
+import vibe.web.auth;
 import vibe.web.web;
 
 auto router() {
@@ -16,6 +17,7 @@ auto router() {
 
   // TODO: Read public folder path and other configs from .env
   const publicDir = "public/".expandTilde.asAbsolutePath.array.to!string;
+  logInfo("Serving static files from: %s", publicDir);
 
   /// Use `/ws` to identify WebSocket requests, otherwise, serve files out of the public folder.
   auto router = new URLRouter;
@@ -27,17 +29,65 @@ auto router() {
   return router;
 }
 
+/// See_Also: https://vibed.org/api/vibe.web.auth
+static struct User {
+@safe:
+  string username;
+  bool admin;
+
+  bool isAdmin() { return this.admin; }
+  bool isRoomMember(int chat_room) {
+    if (chat_room == 0) return this.username == "macy" || this.username == "peter";
+    else if (chat_room == 1) return this.username == "macy";
+    return false;
+  }
+}
+
 /// See_Also: https://vibed.org/api/vibe.web.web/registerWebInterface
+@requiresAuth
 class API {
-  private SessionVar!(bool, "authenticated") ms_authenticated;
+  private SessionVar!(User, "user") user;
 
   /// `GET /`
+  @noAuth
   void index() {
     render!("index.dt");
   }
 
+  /// `POST /login`
+  @method(HTTPMethod.POST) @noAuth
+  void login() {
+    enforceBadRequest(
+      "username" in request.form && "password" in request.form,
+      "Missing username/password field."
+    );
+
+    auto username = request.form["username"];
+    auto password = request.form["password"];
+    // TODO: Validate credentials
+
+    user = User(username);
+    redirect("/");
+  }
+
+  @noRoute User authenticate(scope HTTPServerRequest req, scope HTTPServerResponse res) {
+    // TODO: Verify bearer auth token
+    if ("Authorization" in req.headers) return user.value;
+
+    // TODO: https://datatracker.ietf.org/doc/html/rfc6750
+    res.headers["WWW-Authenticate"] = "Bearer";
+    throw new HTTPStatusException(HTTPStatus.unauthorized);
+  }
+
+  /// `POST /logout`
+  @method(HTTPMethod.POST) @noAuth
+  void logout() {
+    terminateSession();
+    redirect("/");
+  }
+
   /// WebSocket entry point.
-  @path("/ws")
+  @path("/ws") @noAuth
   void connectWebSocket(scope WebSocket socket) {
     import std.algorithm : canFind, countUntil, remove;
     import vibe.d : seconds;
