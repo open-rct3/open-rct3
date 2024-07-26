@@ -40,9 +40,7 @@ struct Symbol {
 }
 
 struct SymbolHashed {
-  string symbol;
-  ulong *data;
-  ulong isPointer;
+  Symbol symbol;
   ulong checksum;
 }
 
@@ -61,9 +59,7 @@ struct SymbolRef {
 }
 
 struct SymbolRefHashed {
-  ulong* reference;
-  char* symbol;
-  Loader* loader;
+  SymbolRef ref_;
   ulong checksum;
 }
 
@@ -73,8 +69,8 @@ enum OvlType {
 }
 
 struct TextString {
-  char* name;
-  char* value;
+  string name;
+  string value;
 }
 
 /// Used in Type 0 Files
@@ -115,9 +111,9 @@ struct Face {
 
 struct Mesh {
   Mesh* mesh;
-  char* name;
-  char* textureName;
-  char* textureStyle;
+  string name;
+  string textureName;
+  string textureStyle;
   Vector3D boudingBox1;
   Vector3D boudingBox2;
 }
@@ -135,9 +131,9 @@ struct FlexiTextureData {
   ulong height;
   /// Combinable recolorability flags.
   BitFlags!Recolorable recolorable;
-  ubyte* palette;
-  ubyte* texture;
-  ubyte* alpha;
+  ubyte[] palette;
+  ubyte[] texture;
+  ubyte[] alpha;
 }
 
 struct FlexiTextureInfo {
@@ -232,7 +228,6 @@ class Ovl {
     enforce(header.magic == 0x4b524746, invalidOvlError);
 
     // Read reference count
-    string[] references;
     switch (header.version_) {
       case 1:
         ovl.references = references = new string[header.references];
