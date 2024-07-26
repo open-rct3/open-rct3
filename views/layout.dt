@@ -16,6 +16,4 @@ html
           | your browser.
       block content
     footer
-      p OpenRCT3 is made with ♥️ by
-        a(href="https://github.com/open-rct3/open-rct3/contributors") its contributors
-        | .
+      p!= "OpenRCT3 is made with ♥️ by <a target=\"_blank\" href=\"https://github.com/open-rct3/open-rct3/contributors\">its contributors</a>."
