@@ -1,15 +1,36 @@
 doctype html
 html
   head
-    //- TODO: Add page template variable
+    //- TODO: Add page title template variable
     title OpenRCT3
     meta(charset="UTF-8")
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    // CSS
+    link(rel="stylesheet", href="https://snow.llc/stylesheets/bootstrap.css")
+    link(rel="stylesheet", href="/site.css")
+    link(rel="stylesheet", href="https://snow.llc/stylesheets/devicons.min.css")
+    // Icons & Theme
+    link(rel="icon", href="/logo.png")
   body
     header
-      noscript
+      #logo
+        img(src="/logo.png")
+        span#wordmark OpenRCT3
+      noscript.flex
         p OpenRCT3 requires JavaScript to be enabled.
-    main
+      .flex
+      nav
+        ul
+          li
+            a(href="/") Home
+          li
+            a(href="/play") Play
+          li
+            a(href="https://forum.rct3.chancesnow.me") Forum
+          li
+            a(href="https://github.com/open-rct3/open-rct3#readme") GitHub
+    block banner
+    main.flex
       noscript
         p
           a(href="https://browserleaks.com/webgpu") Troubleshoot
