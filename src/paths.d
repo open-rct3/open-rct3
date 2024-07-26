@@ -1,6 +1,11 @@
-/// See_Also: <a href="https://www.pcgamingwiki.com/wiki/RollerCoaster_Tycoon_3#Game_data">RCT3: Game Data</a> (PCGamingWiki)
+/// License: AGPL 3.0
+module rct3.paths;
 
-///
+/// See_Also: $(UL
+///  $(LI $(ANCHOR https://www.pcgamingwiki.com/wiki/RollerCoaster_Tycoon_3#Game_data "RCT3: Game Data") (PCGamingWiki))
+///  $(LI $(ANCHOR https://steamdb.info/app/1368820 "RCT3 Complete Edition") (SteamDB))
+///  $(LI $(ANCHOR https://www.protondb.com/app/1368820 "RCT3 Complete Edition on Steam Play") (ProtonDB))
+/// )
 struct Data {
   /// Installation data location.
   version (DDoc) static const string[] installData = [];
@@ -30,11 +35,13 @@ struct Data {
   ];
   else version (OSX) static const auto appData = [
     // FIXME: This path may vary based on version
-    "$HOME/Library/Containers/com.aspyr.rct3.appstore/Data/Library/Application Support/RollerCoaster Tycoon 3 Platinum/AppData"
+    "$HOME/Library/Containers/com.aspyr.rct3.appstore/Data/Library/Application Support/RollerCoaster Tycoon 3 Platinum/AppData",
+    // Contains Options.txt, MusicGenre.txt, and user save games, coasters, parks, structures, etc.
+    "$HOME/Library/Containers/com.aspyr.rct3.appstore/Data/Library/Application Support/RollerCoaster Tycoon 3 Complete Edition"
   ];
   else version (Linux) static const auto appData = [
-    // Steam Play (Prton on Linux) See https://www.protondb.com/app/1368820
-    // QUESTION: Is this correct for _every_ Steam version?
+    // Steam Play (Proton on Linux) See https://www.protondb.com/app/1368820
+    // FIXME: There may be differing IDs for other versions
     "$STEAM_IBRARY/steamapps/compatdata/1368820/pfx"
   ];
 
@@ -45,11 +52,22 @@ struct Data {
   ];
   else version (OSX) static const auto userData = [
     // FIXME: This path may vary based on version
-    "$HOME/Library/Containers/com.aspyr.rct3.appstore/Data/Library/Application Support/RollerCoaster Tycoon 3 Platinum"
+    "$HOME/Library/Containers/com.aspyr.rct3.appstore/Data/Library/Application Support/RollerCoaster Tycoon 3 Platinum",
+    // Contains Options.txt and (user?) save games, coasters, parks, structures, etc.
+    "$HOME/Library/Containers/com.aspyr.rct3.appstore/Data/Library/Application Support/RollerCoaster Tycoon 3 Complete Edition"
   ];
   else version (Linux) static const auto userData = [
     // Steam Play (Proton on Linux) See https://www.protondb.com/app/1368820
-    // QUESTION: Is this correct for _every_ Steam version?
+    // FIXME: There may be differing IDs for other versions
     "$STEAM_IBRARY/steamapps/compatdata/1368820/pfx"
   ];
+}
+
+unittest {
+  import std.algorithm : equal;
+
+  assert(Data.installData.length);
+  assert(Data.exe.length);
+  assert(Data.appData.length);
+  assert(Data.userData.length);
 }
