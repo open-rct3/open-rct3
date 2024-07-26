@@ -1,0 +1,7 @@
+extends layout
+
+block content
+  noscript
+    p
+      a(href="https://browserleaks.com/webgpu") Troubleshoot
+      | your browser.

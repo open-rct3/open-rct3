@@ -1,0 +1,21 @@
+doctype html
+html
+  head
+    //- TODO: Add page template variable
+    title OpenRCT3
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+  body
+    header
+      noscript
+        p OpenRCT3 requires JavaScript to be enabled.
+    main
+      noscript
+        p
+          a(href="https://browserleaks.com/webgpu") Troubleshoot
+          | your browser.
+      block content
+    footer
+      p OpenRCT3 is made with ♥️ by
+        a(href="https://github.com/open-rct3/open-rct3/contributors") its contributors
+        | .

@@ -3,10 +3,11 @@ module rct3.server;
 
 import std.conv : to;
 import std.stdio;
+import std.traits : Unconst, Unqual;
 import std.typecons : Tuple, tuple;
 import vibe.d;
 
-package shared auto running = true;
+package shared auto running = false;
 package Tuple!(HTTPServerSettings, "settings", URLRouter, "router") server;
 // See https://wiki.dlang.org/User:Csmith1991/Vibe.d_Documentation/websocket
 package WebSocket[] sockets;
@@ -22,19 +23,22 @@ shared static this() {
 
   /// Use `/ws` to identify WebSocket requests, otherwise, serve files out of the public folder.
   auto router = new URLRouter;
-  router.get("/", staticRedirect("/index.html"));
-  // WebSocket entry point
-  router.get("/ws", handleWebSockets(&connectWebSocket));
-  if(publicDir.isRooted && publicDir.exists) router.get("*", serveStaticFiles(publicDir));
+  /// Section: Routes
+  {
+    router.get("/", &index);
+    // WebSocket entry point
+    router.get("/ws", handleWebSockets(&connectWebSocket));
+    if (publicDir.isRooted && publicDir.exists)
+      router.get("*", serveStaticFiles(publicDir));
+  }
 
   auto settings = new HTTPServerSettings;
   settings.port = port;
   settings.bindAddresses = ["::1", "127.0.0.1"];
+  settings.errorPageHandler = toDelegate(&errorPage);
 
   server = tuple!("settings", "router")(settings, router);
 }
-
-import std.traits : Unconst, Unqual;
 
 /// Returns: Mutable reference to the given `object`.
 Unconst!T mut(T)(T object) if (is(Unqual!T : Object)) {
@@ -43,27 +47,37 @@ Unconst!T mut(T)(T object) if (is(Unqual!T : Object)) {
 }
 
 void main() {
-  import std.algorithm : joiner;
-  import std.conv : text;
-  import std.exception : enforce;
+  if (!finalizeCommandLineOptions()) return;
 
   // Start the server and run the event loop
   auto listener = listenHTTP(server.settings, server.router);
-  string[] unrecognizedArgs;
-  runApplication(&unrecognizedArgs);
+  running = true;
+  runEventLoop();
 
   // Server has exited
   listener.stopListening();
   running = false;
+}
 
-  if (unrecognizedArgs.length != 0) {
-    "Unrecognized CLI argument(s):".writeln;
-    unrecognizedArgs.joiner("\n").text.write;
-  }
+package:
+
+void errorPage(HTTPServerRequest req, HTTPServerResponse res, HTTPServerErrorInfo error) {
+  res.render!("error.dt", req, error);
+}
+
+void index(HTTPServerRequest req, HTTPServerResponse res) {
+  res.render!("index.dt", req);
 }
 
 void connectWebSocket(scope WebSocket socket) {
   import std.algorithm : canFind, countUntil, remove;
+
+  // Note: *No* other headers are assignable in standard WebSocket clients.
+  // See https://stackoverflow.com/a/4361358
+  auto protocol = socket.request.headers.get("Sec-WebSocket-Protocol", "UNDEFINED");
+  logInfo("Connecting to WS peer @ %s...", socket.request.mut.peer);
+  logDebug("Protocol: %s", protocol);
+  // TODO: Handle auth tokens from requested protocol
 
   // Add socket to sockets list
   sockets ~= socket;

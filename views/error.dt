@@ -1,0 +1,7 @@
+extends layout
+
+block content
+  h1 Not Found
+  p The page you requested was not found.
+  p
+    a(href="") Go Home
