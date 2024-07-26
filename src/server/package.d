@@ -9,7 +9,7 @@ package shared auto running = false;
 package Tuple!(HTTPServerSettings, "settings", URLRouter, "router") server;
 
 shared static this() {
-  import rct3.server.routes : router, Server;
+  import rct3.server.routes : router;
 
   // TODO: Read server PORT and other configs from .env
   const port = 8080;

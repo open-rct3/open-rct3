@@ -20,18 +20,18 @@ auto router() {
   /// Use `/ws` to identify WebSocket requests, otherwise, serve files out of the public folder.
   auto router = new URLRouter;
   /// Section: Routes
-  {
-    router.registerWebInterface(new Server);
-    if (publicDir.isRooted && publicDir.exists)
-      router.get("*", serveStaticFiles(publicDir));
-  }
+  router.registerWebInterface(new API);
+  if (publicDir.isRooted && publicDir.exists)
+    router.get("*", serveStaticFiles(publicDir));
+
   return router;
 }
 
-class Server {
+/// See_Also: https://vibed.org/api/vibe.web.web/registerWebInterface
+class API {
   private SessionVar!(bool, "authenticated") ms_authenticated;
 
-  // GET /
+  /// `GET /`
   void index() {
     render!("index.dt");
   }
