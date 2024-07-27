@@ -1,6 +1,7 @@
 /// License: GPL 2.0
 module ovl;
 
+import core.stdc.config : c_ulong;
 import std.conv : to;
 import std.exception : enforce;
 static import std.stdio;
@@ -14,44 +15,51 @@ import ovl.gui;
 
 enum VERSION = 2;
 
+// TODO: https://vibe-serialization.dpldocs.info/v1.0.4/vibe.data.serialization.html
+
+// FIXME: Why isn't `OvlHeader` parsing working?
+import std.conv : text;
+static assert(0, ulong.sizeof.text);
+static assert(0, c_ulong.sizeof.text);
+
 struct OvlHeader {
-  ulong magic;
-  ulong reserved;
-  ulong version_;
-  ulong references;
+  c_ulong magic;
+  c_ulong reserved;
+  c_ulong version_;
+  c_ulong references;
 }
 
 struct OvlFilesHeader {
-  ulong unk;
-  ulong fileTypeCount;
+  c_ulong unk;
+  c_ulong fileTypeCount;
 }
 
 struct File {
-  ulong size;
-  ulong offset;
-  ulong relativeOffset;
+  c_ulong size;
+  c_ulong offset;
+  c_ulong relativeOffset;
   // This is `unsigned char*` in Importer
   ubyte[] data;
-  ulong unk;
+  c_ulong unk;
 }
 
 struct Symbol {
   string symbol;
   ulong* data;
-  ulong isPointer;
+  c_ulong isPointer;
 }
 
 struct SymbolHashed {
   Symbol symbol;
-  ulong checksum;
+  c_ulong checksum;
 }
 
 struct Loader {
-  ulong loaderType;
+  c_ulong loaderType;
   ulong* data;
-  ulong hasExtraData;
+  c_ulong hasExtraData;
   Symbol* sym;
-  ulong symbolsToResolve;
+  c_ulong symbolsToResolve;
 }
 
 struct SymbolRef {
@@ -62,7 +70,7 @@ struct SymbolRef {
 
 struct SymbolRefHashed {
   SymbolRef ref_;
-  ulong checksum;
+  c_ulong checksum;
 }
 
 enum OvlType {
@@ -77,7 +85,7 @@ struct TextString {
 
 /// Used in Type 0 Files
 struct Resource {
-  ulong length;
+  c_ulong length;
   ulong* data;
 }
 
@@ -128,9 +136,9 @@ struct Color {
 }
 
 struct FlexiTextureData {
-  ulong scale;
-  ulong width;
-  ulong height;
+  c_ulong scale;
+  c_ulong width;
+  c_ulong height;
   /// Combinable recolorability flags.
   BitFlags!Recolorable recolorable;
   ubyte[] palette;
@@ -139,15 +147,15 @@ struct FlexiTextureData {
 }
 
 struct FlexiTextureInfo {
-  ulong scale;
-  ulong width;
-  ulong height;
+  c_ulong scale;
+  c_ulong width;
+  c_ulong height;
   /// Animation Speed, approx. frames per second.
-  ulong fps;
+  c_ulong fps;
   BitFlags!Recolorable recolorable;
-  ulong offsetCount;
+  c_ulong offsetCount;
   ulong* offset1;
-  ulong nextCount;
+  c_ulong nextCount;
   FlexiTextureData* next;
 }
 
@@ -235,17 +243,22 @@ class Ovl {
     import std.algorithm : equal, sum;
     import std.file : exists;
     import std.path : stripExtension;
-    import std.string : format;
+    debug import std.stdio : writeln;
+    import std.string : format, representation;
 
     const invalidOvlError = "File is not an OVL archive: " ~ path;
 
-    auto ovl = new Ovl(path.baseName.stripExtension, path);
+    auto ovl = new Ovl(path, path.baseName.stripExtension);
     enforce(path.exists, "File does not exist: " ~ path);
     auto file = std.stdio.File(path, "rb");
     enforce(file.size >= OvlHeader.sizeof, invalidOvlError);
 
     OvlHeader header = file.read!OvlHeader();
-    enforce(header.magic == 0x4b524746, invalidOvlError);
+    debug header.writeln;
+    // 0x4647524b
+    // 0x4b524746
+    // "FGRK"c.representation
+    enforce(header.magic == 0x4647524b, invalidOvlError);
 
     // Read reference count
     switch (header.version_) {

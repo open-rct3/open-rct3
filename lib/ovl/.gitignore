@@ -1,14 +1,18 @@
-.dub
-docs.json
-__dummy.html
-docs/
-/ovl
+# Artifacts
+bin/dumper
 ovl.so
 ovl.dylib
 ovl.dll
 ovl.a
 ovl.lib
 ovl-test-*
+
+# Dub
+.dub
+docs.json
+__dummy.html
+docs/
+/ovl
 *.exe
 *.pdb
 *.o

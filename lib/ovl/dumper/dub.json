@@ -6,6 +6,7 @@
   "authors": [
     "Chance Snow <rct3@chancesnow.me>"
   ],
+  "targetPath": "./../bin",
   "dependencies": {
     "ovl": {
       "path": "./.."
