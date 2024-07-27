@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/ovl-dumper
+ovl-dumper.so
+ovl-dumper.dylib
+ovl-dumper.dll
+ovl-dumper.a
+ovl-dumper.lib
+ovl-dumper-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

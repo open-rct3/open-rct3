@@ -1,0 +1,15 @@
+{
+  "name": "dumper",
+  "description": "OVL dumping library and application.",
+  "license": "GPL-2.0-or-later",
+  "copyright": "Copyright © 2024, Chance Snow",
+  "authors": [
+    "Chance Snow <rct3@chancesnow.me>"
+  ],
+  "targetPath": "./../bin",
+  "dependencies": {
+    "ovl": {
+      "path": "./.."
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "ovl",
+  "description": "Library to interact with RCT3 overlays (OVLs).",
+  "license": "GPL-2.0-or-later",
+  "copyright": "Copyright © 2024, Chance Snow",
+  "authors": [
+    "Chance Snow <rct3@chancesnow.me>"
+  ],
+  "targetPath": "bin",
+  "targetType": "staticLibrary",
+  "subPackages": [
+    "./dumper"
+  ],
+  "buildTypes": {
+    "docs": {
+      "sourceFiles": ["views/docs.ddoc"],
+      "buildOptions": ["syntaxOnly"],
+      "dflags": ["-Dddocs"],
+      "postBuildCommands": [
+        "rdmd scripts/docs.d"
+      ]
+    }
+  },
+  "configurations": [
+    {
+      "name": "library"
+    },
+    {
+      "name": "unittest"
+    }
+  ]
+}
