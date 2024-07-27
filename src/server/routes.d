@@ -1,5 +1,6 @@
 module rct3.server.routes;
 
+import rct3.env;
 import std.conv : to;
 import std.traits : Unconst, Unqual;
 import vibe.core.log;
@@ -15,8 +16,7 @@ auto router() {
   import std.file : exists;
   import vibe.http.fileserver : serveStaticFiles;
 
-  // TODO: Read public folder path and other configs from .env
-  const publicDir = "public/".expandTilde.asAbsolutePath.array.to!string;
+  const publicDir = envOrDefault("PUBLIC_DIR", "public/").expandTilde.asAbsolutePath.array.to!string;
   logInfo("Serving static files from: %s", publicDir);
 
   /// Use `/ws` to identify WebSocket requests, otherwise, serve files out of the public folder.
