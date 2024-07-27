@@ -1,6 +1,7 @@
 /// License: AGPL 3.0
 module rct3.server;
 
+import dotenv;
 import std.stdio;
 import std.typecons : Tuple, tuple;
 import vibe.d;
@@ -8,18 +9,24 @@ import vibe.d;
 package shared auto running = false;
 package Tuple!(HTTPServerSettings, "settings", URLRouter, "router") server;
 
+string envOrDefault(string key, string default_ = null) {
+  import std.algorithm : sort;
+
+  if (Env.keys.dup.sort.contains(key)) return Env[key];
+  return default_;
+}
+
 shared static this() {
   import rct3.server.routes : router;
 
-  // TODO: Read server PORT and other configs from .env
-  const port = 8080;
+  Env.load;
 
   void errorPage(HTTPServerRequest req, HTTPServerResponse res, HTTPServerErrorInfo error) {
     res.render!("error.dt", req, error);
   }
 
   auto settings = new HTTPServerSettings;
-  settings.port = port;
+  settings.port = envOrDefault("PORT", "8080").to!ushort;
   settings.bindAddresses = ["::1", "127.0.0.1"];
   settings.errorPageHandler = toDelegate(&errorPage);
 

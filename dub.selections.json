@@ -2,6 +2,7 @@
 	"fileVersion": 1,
 	"versions": {
 		"diet-ng": "1.8.1",
+		"dotenv": "0.1.1",
 		"eventcore": "0.9.31",
 		"libasync": "0.8.6",
 		"memutils": "1.0.10",

@@ -25,6 +25,9 @@
       "subConfigurations": {
         "vibe-stream:tls": "openssl-static"
       },
+      "dependencies": {
+        "dotenv": "~>0.1.1"
+      },
       "libs-osx": [],
       "libs-linux": [],
       "libs-windows": []
