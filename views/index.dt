@@ -10,9 +10,9 @@ block banner
 
 block content
   section.jumbotron.container
-    h1 For the Public
+    h1 20 Years Later
     p.lead Open source re-implementation of RollerCoaster Tycoon 3&copy;.
-    a.btn.call-to-action.float-end(href="/play") Play Now
+    a.btn.btn-info.call-to-action.float-end(href="/play") Play Now
     .clearfix
   section.container
     h1 Features
