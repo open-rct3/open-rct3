@@ -10,6 +10,8 @@ package shared auto running = false;
 package Tuple!(HTTPServerSettings, "settings", URLRouter, "router") server;
 
 shared static this() {
+  import std.range : take;
+  import rct3 : Server;
   import rct3.server.routes : router;
 
   Env.load;
@@ -19,7 +21,7 @@ shared static this() {
   }
 
   auto settings = new HTTPServerSettings;
-  settings.port = envOrDefault("PORT", "8080").to!ushort;
+  settings.port = envOrDefault("PORT", Server.defaultPort);
   settings.bindAddresses = ["::1", "127.0.0.1"];
   settings.errorPageHandler = toDelegate(&errorPage);
 

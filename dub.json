@@ -9,6 +9,7 @@
   "targetPath": "bin",
   "targetType": "executable",
   "dependencies": {
+    "dotenv": "~>0.1.1",
     "observable": "~>1.5.0",
     "ovl": {
       "path": "./lib/ovl"
@@ -16,18 +17,15 @@
     "vibe-d": "~>0.10.0",
     "vibe-stream:tls": "~>1.1.0"
   },
+  "subConfigurations": {
+    "vibe-stream:tls": "openssl-static"
+  },
   "configurations": [{
       "name": "application",
       "preBuildCommands": [
         "deno compile --no-prompt --unstable-ffi --allow-ffi --allow-read --allow-write --allow-run=cmd,tar --allow-net=github.com:443,objects.githubusercontent.com:443 --output bin/OpenRCT3 clients/deno/main.ts"
       ],
       "targetName": "OpenRCT3 Server",
-      "subConfigurations": {
-        "vibe-stream:tls": "openssl-static"
-      },
-      "dependencies": {
-        "dotenv": "~>0.1.1"
-      },
       "libs-osx": [],
       "libs-linux": [],
       "libs-windows": []
