@@ -1,7 +1,7 @@
 extends layout
 
 block content
-  h1 Not Found
-  p The page you requested was not found.
-  p
-    a(href="") Go Home
+  h1.container Not Found
+  p.container The page you requested was not found.
+  p.container
+    a(href="/") Go Home
