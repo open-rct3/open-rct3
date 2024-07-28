@@ -17,6 +17,13 @@ block content
   section.container
     h1 Features
     ul
-      li Enhanced Performance
       li Multiplayer
-      li More details coming soon.
+      li UI Improvements, e.g.
+        ul
+          li Freeform, off-grid scenery placement
+          li Resizable Attractions, Structures, and Scenery windows
+          li etc.
+      li Enhanced Performance
+    a.btn.btn-secondary.call-to-action.float-end(href="https://github.com/open-rct3/open-rct3/wiki/Roadmap") Roadmap
+    h2 More details coming soon.
+    .clearfix
