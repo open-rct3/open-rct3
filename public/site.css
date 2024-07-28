@@ -98,6 +98,11 @@ header + main .jumbotron {
   margin-block-start: 0;
 }
 
+canvas#game {
+  width: 100%;
+  height: 100%;
+}
+
 footer {
   display: flex;
   justify-content: space-between;

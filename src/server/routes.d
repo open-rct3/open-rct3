@@ -23,6 +23,9 @@ auto router() {
   auto router = new URLRouter;
   /// Section: Routes
   router.registerWebInterface(new API);
+  router.get("/play", (scope HTTPServerRequest req, scope HTTPServerResponse res) {
+    res.render!("play.dt");
+  });
   if (publicDir.isRooted && publicDir.exists)
     router.get("*", serveStaticFiles(publicDir));
 
