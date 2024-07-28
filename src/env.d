@@ -21,3 +21,7 @@ T envOrDefault(T)(string key, T default_ = null) if (hasIndirections!T) {
   if (Env.keys.dup.sort.contains(key)) return Env[key].to!T;
   return default_;
 }
+
+unittest {
+  assert(envOrDefault("PORT", 200) == 200);
+}

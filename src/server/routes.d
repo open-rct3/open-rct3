@@ -17,7 +17,7 @@ auto router() {
   import vibe.http.fileserver : serveStaticFiles;
 
   const publicDir = envOrDefault("PUBLIC_DIR", "public/").expandTilde.asAbsolutePath.array.to!string;
-  logInfo("Serving static files from: %s", publicDir);
+  logInfo("Reading static files from: %s", publicDir);
 
   /// Use `/ws` to identify WebSocket requests, otherwise, serve files out of the public folder.
   auto router = new URLRouter;

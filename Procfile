@@ -1,1 +1,1 @@
-web: ./bin/OpenRCT3\ Server
+web: ./bin/OpenRCT3\ Server --port $PORT

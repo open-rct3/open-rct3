@@ -20,9 +20,12 @@ shared static this() {
     res.render!("error.dt", req, error);
   }
 
+  // Default to the external interface address on port 49152.
   auto settings = new HTTPServerSettings;
   settings.port = envOrDefault("PORT", Server.defaultPort);
-  settings.bindAddresses = ["::1", "127.0.0.1"];
+  readOption("port|p", &settings.port, "Sets the port used for serving HTTP.");
+  settings.bindAddresses = ["0.0.0.0"];
+  readOption("bind-address|bind", &settings.bindAddresses[0], "Sets the address used for serving HTTP.");
   settings.errorPageHandler = toDelegate(&errorPage);
 
   server = tuple!("settings", "router")(settings, router);
