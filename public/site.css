@@ -45,7 +45,7 @@ header {
 header nav > ul {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   margin: 0;
   padding: 0;
   height: 100%;
