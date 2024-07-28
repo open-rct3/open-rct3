@@ -1,9 +1,11 @@
 extends layout
 
 block banner
-  #noGpu.banner.warn
-    i.icon.fa-warn
-    p.message.flex!= "Please <a href=\"https://browserleaks.com/webgpu\">troubleshoot</a> issues with WebGPU in your browser."
+  #noGpu.banner.info
+    i.icon.fas.fa-info-circle
+    p.message.flex
+      strong Disclaimer&nbsp;
+      span!= "This is a <i>volunteer-driven</i> project. Please temper your expectations accordingly."
     button.btn.btn-sm.btn-close(title="Dismiss", aria-label="Dismiss this message", onclick="this.parentElement.remove()")
 
 block content

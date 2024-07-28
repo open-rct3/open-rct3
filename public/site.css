@@ -69,26 +69,41 @@ header nav > ul {
 .banner.error {
   background-color: indianred;
 }
+.banner > .icon + p {
+  margin-inline-start: 8px;
+}
 .banner p {
   margin: 0;
+}
+
+header + main {
+  margin-block-start: 2rem;
 }
 
 main {}
 
 .jumbotron {
+  display: flex;
+  flex-direction: column;
   padding: 1.25rem 1rem;
   margin-block: 2rem;
   color: #f8f1f9;
   background-color: #4E5166;
   border-radius: 0.3rem;
 }
-.jumbotron a.call-to-action {
-  background-color: skyblue;
+.jumbotron .btn.call-to-action {
+  align-self: end;
+}
+header + main .jumbotron {
+  margin-block-start: 0;
 }
 
 footer {
+  display: flex;
+  justify-content: space-between;
   padding-block-start: 0;
 }
 footer p {
+  font-size: small;
   margin: 0;
 }
