@@ -1,7 +1,6 @@
 /// License: GPL 2.0
 module ovl;
 
-import core.stdc.config : c_ulong;
 import std.conv : to;
 import std.exception : enforce;
 static import std.stdio;
@@ -18,48 +17,44 @@ enum VERSION = 2;
 // TODO: https://vibe-serialization.dpldocs.info/v1.0.4/vibe.data.serialization.html
 
 // FIXME: Why isn't `OvlHeader` parsing working?
-import std.conv : text;
-static assert(0, ulong.sizeof.text);
-static assert(0, c_ulong.sizeof.text);
-
 struct OvlHeader {
-  c_ulong magic;
-  c_ulong reserved;
-  c_ulong version_;
-  c_ulong references;
+  uint magic;
+  uint reserved;
+  uint version_;
+  uint references;
 }
 
 struct OvlFilesHeader {
-  c_ulong unk;
-  c_ulong fileTypeCount;
+  uint unk;
+  uint fileTypeCount;
 }
 
 struct File {
-  c_ulong size;
-  c_ulong offset;
-  c_ulong relativeOffset;
+  ulong size;
+  ulong offset;
+  ulong relativeOffset;
   // This is `unsigned char*` in Importer
   ubyte[] data;
-  c_ulong unk;
+  uint unk;
 }
 
 struct Symbol {
   string symbol;
   ulong* data;
-  c_ulong isPointer;
+  uint isPointer;
 }
 
 struct SymbolHashed {
   Symbol symbol;
-  c_ulong checksum;
+  uint checksum;
 }
 
 struct Loader {
-  c_ulong loaderType;
+  uint loaderType;
   ulong* data;
-  c_ulong hasExtraData;
+  uint hasExtraData;
   Symbol* sym;
-  c_ulong symbolsToResolve;
+  uint symbolsToResolve;
 }
 
 struct SymbolRef {
@@ -70,7 +65,7 @@ struct SymbolRef {
 
 struct SymbolRefHashed {
   SymbolRef ref_;
-  c_ulong checksum;
+  uint checksum;
 }
 
 enum OvlType {
@@ -85,7 +80,7 @@ struct TextString {
 
 /// Used in Type 0 Files
 struct Resource {
-  c_ulong length;
+  uint length;
   ulong* data;
 }
 
@@ -136,9 +131,9 @@ struct Color {
 }
 
 struct FlexiTextureData {
-  c_ulong scale;
-  c_ulong width;
-  c_ulong height;
+  uint scale;
+  uint width;
+  uint height;
   /// Combinable recolorability flags.
   BitFlags!Recolorable recolorable;
   ubyte[] palette;
@@ -147,15 +142,15 @@ struct FlexiTextureData {
 }
 
 struct FlexiTextureInfo {
-  c_ulong scale;
-  c_ulong width;
-  c_ulong height;
+  uint scale;
+  uint width;
+  uint height;
   /// Animation Speed, approx. frames per second.
-  c_ulong fps;
+  uint fps;
   BitFlags!Recolorable recolorable;
-  c_ulong offsetCount;
+  uint offsetCount;
   ulong* offset1;
-  c_ulong nextCount;
+  uint nextCount;
   FlexiTextureData* next;
 }
 
