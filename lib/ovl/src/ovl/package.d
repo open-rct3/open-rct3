@@ -218,7 +218,7 @@ class Ovl {
     path = path is null ? [".", name].joiner(pathSeparator).array.to!string : path;
     enforce(path.isValidPath, "File does not exist: " ~ path);
     this.name = path.baseName;
-    const nameLowered = this.name.asLowerCase.array;
+    const nameLowered = this.name.asLowerCase.array.to!string;
     const extIsCommonOvl = nameLowered.endsWith(".common.ovl");
     enforce(extIsCommonOvl || nameLowered.endsWith(".unique.ovl"), "File is not an OVL archive: " ~ path);
     this.path = path;
@@ -250,10 +250,8 @@ class Ovl {
 
     OvlHeader header = file.read!OvlHeader();
     debug header.writeln;
-    // 0x4647524b
-    // 0x4b524746
     // "FGRK"c.representation
-    enforce(header.magic == 0x4647524b, invalidOvlError);
+    enforce(header.magic == 0x4b524746, invalidOvlError);
 
     // Read reference count
     switch (header.version_) {
@@ -261,7 +259,7 @@ class Ovl {
         ovl.references = new string[header.references];
         break;
       default:
-        if (header.version_ != 4 || header.version_ != 5) throw new Exception(
+        if (header.version_ != 4 && header.version_ != 5) throw new Exception(
           format!"Unknown OVL version: %d"(header.version_)
         );
 
@@ -280,6 +278,7 @@ class Ovl {
           }
         }
 
+        // FIXME: This is likely incorrect
         ovl.references = new string[file.read!uint];
         break;
     }
@@ -296,6 +295,7 @@ class Ovl {
 
     // Read file index header
     auto filesHeader = file.read!OvlFilesHeader;
+    debug filesHeader.writeln;
     // Read file loader headers
     struct LoaderHeader {
       string loader;
