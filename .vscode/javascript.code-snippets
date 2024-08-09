@@ -1,0 +1,15 @@
+{
+  // Each snippet is defined under its name and has a prefix, body, and description.
+  // The prefix will trigger the snippet, expanding and inserting the body.
+  // Possible variables are: $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders.
+  // Placeholders with the same IDs are connected.
+  "Log output to console": {
+		"scope": "javascript,typescript",
+    // Hint: Disable the built-in `log` snippet. See https://stackoverflow.com/a/66558298/1363247
+		"prefix": "log",
+		"body": [
+			"console.log($1);$0",
+		],
+		"description": "Log output to console"
+	}
+}

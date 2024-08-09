@@ -1,0 +1,27 @@
+{
+  // See https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "request": "launch",
+      "name": "Debug Desktop Client",
+      "type": "node",
+      "program": "${workspaceFolder}/clients/deno/main.ts",
+      "cwd": "${workspaceFolder}",
+      "env": {},
+      "runtimeExecutable": "deno",
+      "runtimeArgs": [
+        "run",
+        "--inspect-wait",
+        "--allow-all",
+        "--env",
+        "--unstable-ffi",
+        "--allow-ffi",
+        "--allow-read",
+        "--allow-write",
+        "--allow-env=DENO_DIR,PLUGIN_URL,LOCALAPPDATA,RCT3_SERVER_URL"
+      ],
+      "attachSimplePort": 9229
+    }
+  ]
+}

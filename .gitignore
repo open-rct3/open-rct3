@@ -1,3 +1,6 @@
+# Environment Variables
+.env
+
 # Artifacts
 bin/OpenRCT3*
 bin/open-rct3-test-application
