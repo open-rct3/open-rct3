@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OpenRCT3</title>
+  <style>
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  /* See https://css-tricks.com/snippets/css/system-font-stack/ */
+  font-family: system-ui, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  margin-inline: 8px;
+}
+header h1 {
+  flex: 1;
+  font-size: 24px;
+  font-weight: 400;
+  margin-inline-start: 8px;
+}
+
+main {
+  flex: 1;
+  margin: 0 auto;
+}
+
+/* See https://loading.io/css */
+:root {
+  --throbber-size: 40px;
+}
+.throbber.ripple,
+.throbber.ripple div {
+  box-sizing: border-box;
+}
+.throbber.ripple {
+  color: black;
+  display: inline-block;
+  position: relative;
+  width: var(--throbber-size);
+  height: var(--throbber-size);
+}
+.throbber.ripple div {
+  position: absolute;
+  border: calc(var(--throbber-size) / 10 / 2) solid currentColor;
+  opacity: 1;
+  border-radius: 50%;
+  animation: lds-ripple 1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+.throbber.ripple div:nth-child(2) {
+  animation-delay: -0.5s;
+}
+@keyframes lds-ripple {
+  0% {
+    top: calc(var(--throbber-size) * 0.45);
+    left: calc(var(--throbber-size) * 0.45);
+    width: calc(var(--throbber-size) / 10);
+    height: calc(var(--throbber-size) / 10);
+    opacity: 0;
+  }
+  4% {
+    top: calc(var(--throbber-size) * 0.45);
+    left: calc(var(--throbber-size) * 0.45);
+    width: calc(var(--throbber-size) / 10);
+    height: calc(var(--throbber-size) / 10);
+    opacity: 0;
+  }
+  5% {
+    top: calc(var(--throbber-size) * 0.45);
+    left: calc(var(--throbber-size) * 0.45);
+    width: calc(var(--throbber-size) / 10);
+    height: calc(var(--throbber-size) / 10);
+    opacity: 1;
+  }
+  100% {
+    top: 0;
+    left: 0;
+    width: var(--throbber-size);
+    height: var(--throbber-size);
+    opacity: 0;
+  }
+}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="https://rct3.chancesnow.me/logo.png" alt="" />
+    <h1>OpenRCT3</h1>
+    <div class="throbber ripple" title="Loading…"><div></div><div></div></div>
+  </header>
+  <main>
+    <p>Loading…</p>
+  </main>
+</body>
+</html>
