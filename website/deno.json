@@ -4,6 +4,9 @@
     "dev": "deno run --allow-env --allow-net --allow-sys --allow-read --allow-write=./_site dev.ts"
   },
   "imports": {
+    "@cliffy/ansi": "jsr:@cliffy/ansi@1.0.0-rc.5",
+    "@cliffy/ansi/": "jsr:/@cliffy/ansi@1.0.0-rc.5/",
+    "kia": "jsr:@fathym/kia@0",
     "lume": "https://deno.land/x/lume@v2.2.4/mod.ts",
     "lume/": "https://deno.land/x/lume@v2.2.4/"
   },
