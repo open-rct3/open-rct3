@@ -1,23 +1,6 @@
+@import "./mixins";
 @import "./reset";
-
-$header-height: 56px;
-$onTop: 100;
-
-@mixin on-top {
-  & {
-    z-index: $onTop;
-  }
-}
-@mixin backdrop-blur($color: white) {
-  & {
-    backdrop-filter: blur(8px);
-    background-color: rgba($color, 75%);
-    @media (prefers-reduced-transparency) {
-      background-color: $color;
-      backdrop-filter: none;
-    }
-  }
-}
+@import "./variables";
 
 :root {
   // Colors
@@ -25,12 +8,12 @@ $onTop: 100;
   --gray: rgb(96, 115, 159);
   --gray-light: rgb(229, 233, 240);
   --gray-dark: rgb(34, 41, 57);
-  --accent: #2337ff;
-  --accent-dark: #000d8a;
+  --accent: #3C98DC;
+  --accent-dark: #28b;
   --black-shadow-lighter: rgba(15, 18, 25, 10%);
   --black-shadow-light: rgba(15, 18, 25, 25%);
   --black-shadow: rgba(15, 18, 25, 50%);
-  --link: rgb(0, 0, 238);
+  --link: #28b;
   // Gradients & Shadows
   --gray: 20, 20, 20;
   --gray-gradient: rgba(lightgray, 50%), #fff;
@@ -68,23 +51,36 @@ a {
   color: var(--link);
   text-decoration: none;
 
-  &:has(.icon:first-child:last-child) {
-    color: inherit;
-    line-height: 1;
-
-    &:hover {
-      color: var(--accent);
-      text-decoration: none;
-    }
-  }
-
   &:hover:not(.btn) {
     text-decoration: underline;
   }
 }
 
+a, button, input {
+  outline-color: var(--link);
+
+  &:has(.icon:first-child:last-child) {
+    color: inherit;
+    line-height: 1;
+
+    &:hover {
+      color: var(--link);
+      text-decoration: none;
+      outline: none;
+    }
+  }
+}
+
 .flex {
   flex: 1;
+}
+
+.icon {
+  display: flex;
+  min-width: 24px;
+  min-height: 24px;
+  justify-content: center;
+  align-items: center;
 }
 
 header {
@@ -110,6 +106,7 @@ header {
     }
 
     img {
+      max-width: unset;
       border-radius: 0;
       filter: drop-shadow(0 0 4px gray);
       overflow: hidden;
@@ -141,7 +138,7 @@ header {
 
 .alert {
   position: sticky;
-  top: $header-height + 8px;
+  top: $headerHeight + 8px;
   display: flex;
   align-items: baseline;
   margin-inline: 8px;
@@ -223,7 +220,7 @@ header {
 }
 /* Factor difference of the alert, if any, including it's border. */
 main > .alert + .jumbotron {
-  margin-block-start: calc(3em - #{$header-height - 2px} + 16px);
+  margin-block-start: calc(3em - #{$headerHeight - 2px} + 16px);
 }
 .jumbotron .btn.call-to-action {
   align-self: end;

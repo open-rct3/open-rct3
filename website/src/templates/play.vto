@@ -50,12 +50,18 @@
   <script>
 (function () {
   const header = document.querySelector('body > header');
-  function showHeader(ev) {
-    header.classList.add("shown");
-  }
-  header.addEventListener("mouseenter", showHeader);
-  header.addEventListener("mouseleave", function (ev) {
-    header.classList.remove("shown");
+  const nub = header.querySelector("button.nub");
+  const nav = header.querySelector("nav");
+  let headerShown = false;
+
+  nub.addEventListener("click", function (ev) {
+    header.classList.toggle("shown");
+    headerShown = header.classList.contains("shown");
+    if (!headerShown) nav.classList.remove("shown");
+  });
+  header.addEventListener("transitionend", function (ev) {
+    if (ev.propertyName !== "width") return;
+    if (headerShown) nav.classList.add("shown");
   });
 })();
   </script>

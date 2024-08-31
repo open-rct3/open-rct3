@@ -186,18 +186,17 @@
   transition: width $duration ease-out, opacity $opacityDuration ease;
   transition-delay: $delay, $delay + $opacityDuration;
 
-  @starting-style {
-    width: $widthFrom;
-    opacity: 0;
-    transition-delay: $delay, $delay + $opacityDuration;
-  }
-
   @at-root {
     #{unify-activation-selector($activationSelector, &)} {
       // @debug "Using '#{&}' selector for Grow & Fade In animation.";
       width: $widthTo;
       opacity: 1;
       transition-delay: $delay, $delay + $duration - $opacityDuration;
+
+      @starting-style {
+        width: $widthFrom;
+        opacity: 0;
+      }
     }
   }
 }

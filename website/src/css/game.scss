@@ -1,47 +1,59 @@
 @import "./animations";
-
-$header-height: 56px;
+@import "./mixins";
+@import "./variables";
 
 body {
   overflow: hidden;
 }
 
 header {
-  width: fit-content;
+  width: 88px;
+  background-color: transparent;
   border-bottom-right-radius: 4px;
+  transition: width 300ms ease-out;
 
   .logo button.nub {
-    margin-inline-start: 2px;
-    padding: 0;
+    $spacing: 4px;
+
+    position: relative;
+    left: -$spacing;
+    margin: 0;
+    padding-block: $spacing;
+    padding-inline: $spacing;
     background: transparent;
     border: none;
-    transition: margin-inline 300ms ease-out;
-    // @include slide-in("header.shown", -(24px + 8px));
+    transition: left 300ms ease-out;
 
-    @at-root {
-      header.shown .logo button.nub {
-        margin-inline: 8px;
-      }
+    &:hover, &:focus, &:active {
+      left: 0;
+      outline: none;
+      transition-duration: 250ms;
     }
   }
 
-  .wordmark {
-    @include fade-in("header.shown");
-  }
-
-  .logo ~ * {
+  nav {
     display: none;
+    align-self: stretch;
+    align-items: center;
   }
 
   &.shown {
-    width: auto;
+    width: 100vw;
+    border-bottom-right-radius: 4px;
 
-    nav {
-      display: inherit;
+    .logo button.nub {
+      left: 0;
     }
 
-    .logo ~ * {
+    nav.shown {
       display: inherit;
+      opacity: 1;
+      transition: opacity 250ms ease;
+      // transition-delay: 350ms;
+
+      @starting-style {
+        opacity: 0;
+      }
     }
   }
 }
