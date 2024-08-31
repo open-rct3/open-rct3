@@ -1,0 +1,263 @@
+@import "./reset";
+
+$header-height: 56px;
+$onTop: 100;
+
+@mixin on-top {
+  & {
+    z-index: $onTop;
+  }
+}
+@mixin backdrop-blur($color: white) {
+  & {
+    backdrop-filter: blur(8px);
+    background-color: rgba($color, 75%);
+    @media (prefers-reduced-transparency) {
+      background-color: $color;
+      backdrop-filter: none;
+    }
+  }
+}
+
+:root {
+  // Colors
+  --black: rgb(15, 18, 25);
+  --gray: rgb(96, 115, 159);
+  --gray-light: rgb(229, 233, 240);
+  --gray-dark: rgb(34, 41, 57);
+  --accent: #2337ff;
+  --accent-dark: #000d8a;
+  --black-shadow-lighter: rgba(15, 18, 25, 10%);
+  --black-shadow-light: rgba(15, 18, 25, 25%);
+  --black-shadow: rgba(15, 18, 25, 50%);
+  --link: rgb(0, 0, 238);
+  // Gradients & Shadows
+  --gray: 20, 20, 20;
+  --gray-gradient: rgba(lightgray, 50%), #fff;
+  --box-shadow-lowest: 0 2px 4px rgba(var(--gray), 33%);
+  --box-shadow: 0 2px 6px rgba(var(--gray), 25%), 0 8px 24px rgba(var(--gray), 33%);
+  --box-shadow-highest: 0 2px 6px rgba(var(--gray), 25%), 0 8px 24px rgba(var(--gray), 33%),
+		0 16px 32px rgba(var(--gray), 33%);
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  /* See https://css-tricks.com/snippets/css/system-font-stack/ */
+  font-family: system-ui, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  color: var(--black);
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 100%;
+  overscroll-behavior-x: none;
+
+  @media (max-width: 720px) {
+	  font-size: 18px;
+  }
+}
+body > main {
+  flex: 1;
+  z-index: 1;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+
+  &:has(.icon:first-child:last-child) {
+    color: inherit;
+    line-height: 1;
+
+    &:hover {
+      color: var(--accent);
+      text-decoration: none;
+    }
+  }
+
+  &:hover:not(.btn) {
+    text-decoration: underline;
+  }
+}
+
+.flex {
+  flex: 1;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  position: sticky;
+  top: -1px;
+  padding-block-start: 8px;
+  padding-inline: 8px;
+  box-shadow: var(--box-shadow-lowest);
+  transition: box-shadow 0.25s ease;
+  @include backdrop-blur();
+  @include on-top();
+
+  &.pinned-to-viewport {
+    padding-block-start: 8px + 1px;
+  }
+
+  .logo {
+    &, &:hover, &:active {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      border-radius: 0;
+      filter: drop-shadow(0 0 4px gray);
+      overflow: hidden;
+    }
+
+    img + * {
+      margin-inline-start: 8px;
+    }
+  }
+
+  nav {
+    display: flex;
+    gap: 1rem;
+
+    a, a:hover {
+      color: inherit;
+    }
+    a:has(.icon) {
+      align-self: center;
+    }
+    a:has(.icon.fas) {
+      font-size: 16px;
+    }
+    a:has(.icon.devicons) {
+      font-size: 24px;
+    }
+  }
+}
+
+.alert {
+  position: sticky;
+  top: $header-height + 8px;
+  display: flex;
+  align-items: baseline;
+  margin-inline: 8px;
+  margin-block: 8px 0;
+  padding: 8px;
+  height: min-content;
+  border-color: currentcolor;
+  transform: translateY(0);
+  transform-origin: top center;
+  opacity: 1;
+  transition: margin-block 350ms ease-out, padding-block 350ms ease-out, height 350ms ease-out, transform 250ms ease-out, opacity 200ms ease-out;
+  transition-delay: 0ms, 0ms, 50ms, 0ms, 0ms;
+  overflow: hidden;
+  @include on-top();
+
+  &.dismissed {
+    margin-block: 0;
+    padding-block: 0;
+    height: 0;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition-timing-function: ease-out, ease-in, ease-out;
+    transition-delay: 0ms, 0ms, 0ms, 0ms, 0ms;
+    overflow-y: hidden;
+  }
+
+  &.alert-warning {
+    background-color: lightgoldenrodyellow;
+  }
+  &.alert-info {
+    color: #043944;
+    background-color: skyblue;
+  }
+  &.alert-danger {
+    color: #290a0d;
+    background-color: indianred;
+  }
+
+  h1.title, p {
+    font-size: 0.875em;
+  }
+  h1.title {
+    font-weight: bold;
+    margin-block: 0;
+    margin-inline: 8px;
+  }
+  p {
+    flex: 1;
+    margin: 0;
+  }
+  .icon + p {
+    margin-inline-start: 8px;
+  }
+  .btn.btn-sm {
+    padding-block: 0;
+    padding-inline: 0.25em;
+    align-self: center;
+  }
+  p + .btn {
+    margin-inline-start: 4px;
+  }
+}
+.alert.notification {
+  display: inline-flex;
+
+  button.btn-close {
+    margin-inline-start: 8px;
+  }
+}
+
+.jumbotron {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0.75rem;
+  color: #f8f1f9;
+  background-color: #4E5166;
+  border-radius: 0.3rem;
+  transition: margin-block-start 0.3s ease-out;
+}
+/* Factor difference of the alert, if any, including it's border. */
+main > .alert + .jumbotron {
+  margin-block-start: calc(3em - #{$header-height - 2px} + 16px);
+}
+.jumbotron .btn.call-to-action {
+  align-self: end;
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  margin-block: 8px;
+  margin-inline: 8px;
+  padding-block-start: 0;
+
+  p {
+    font-size: small;
+    margin: 0;
+  }
+}
+
+.sr-only {
+	border: 0;
+	padding: 0;
+	margin: 0;
+	position: absolute !important;
+	height: 1px;
+	width: 1px;
+	overflow: hidden;
+	/* IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box */
+	clip: rect(1px 1px 1px 1px);
+	/* maybe deprecated but we need to support legacy browsers */
+	clip: rect(1px, 1px, 1px, 1px);
+	/* modern browsers, clip-path works inwards from each corner */
+	clip-path: inset(50%);
+	/* added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space */
+	white-space: nowrap;
+}
+
+@import "./social";

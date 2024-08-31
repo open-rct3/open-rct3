@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{- title ? title + " " + siteTitle : siteTitle }}</title>
+  <!-- CSS -->
+  <link rel="stylesheet" href="https://snow.llc/stylesheets/bootstrap.css" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/solid.css" integrity="sha384-Tv5i09RULyHKMwX0E8wJUqSOaXlyu3SQxORObAI08iUwIalMmN5L6AvlPX2LMoSE" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/fontawesome.css" integrity="sha384-jLKHWM3JRmfMU0A5x5AkjWkw/EYfGUAGagvnfryNV3F9VqM98XiIH7VBGVoxVSc7" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://snow.llc/stylesheets/devicons.min.css" crossorigin="anonymous">
+  <link rel="stylesheet" href="/css/site.css">
+  <link rel="stylesheet" href="/css/game.css">
+  <!-- Icons & Theme -->
+  <link rel="icon" href="/favicon.png">
+</head>
+<body class="game">
+  <header>
+    {{ include "partials/logo.vto" { onGamePage: true } }}
+    <div class="flex-grow-1"></div>
+    <nav>
+      <a href="/" target="_blank">Website</a>
+      <a href="/" target="_blank">Wiki</a>
+      <a href="https://forum.rct3.chancesnow.me" target="_blank">Forum</a>
+      <a href="#help">
+        <i class="icon fas fa-question" title="Get Help"></i>
+      </a>
+      <a href="https://github.com/open-rct3/open-rct3#readme" target="_blank">
+        <span class="icon devicons devicons-github_badge" title="Open source on GitHub"></span>
+      </a>
+    </nav>
+  </header>
+  <main>
+    <noscript>
+      <div class="alert alert-danger">
+        <i class="icon fas fa-exclamation-triangle"></i>
+        <p class="message flex">{{ siteTitle }} requires JavaScript to be enabled.</p>
+        <a class="btn btn-sm btn-outline-dark" href="https://enablejavascript.com">Enable JavaScript</a>
+      </div>
+    </noscript>
+    {{ content }}
+  </main>
+  <section id="credits" class="panel">
+    <h1>Credits</h1>
+    <footer class="flex-md-nowrap flex-wrap">
+      <p>Copyright © 2024, OpenRCT3 Contributors.</p>
+      <p>OpenRCT3 is made with ♥️ by <a target="_blank" href="https://github.com/open-rct3/open-rct3/contributors">its contributors</a>.</p>
+    </footer>
+  </section>
+  <script>
+(function () {
+  const header = document.querySelector('body > header');
+  function showHeader(ev) {
+    header.classList.add("shown");
+  }
+  header.addEventListener("mouseenter", showHeader);
+  header.addEventListener("mouseleave", function (ev) {
+    header.classList.remove("shown");
+  });
+})();
+  </script>
+  <!-- TODO: <script src="/js/main.js"></script> -->
+</body>
+</html>

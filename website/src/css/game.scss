@@ -1,0 +1,74 @@
+@import "./animations";
+
+$header-height: 56px;
+
+body {
+  overflow: hidden;
+}
+
+header {
+  width: fit-content;
+  border-bottom-right-radius: 4px;
+
+  .logo button.nub {
+    margin-inline-start: 2px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    transition: margin-inline 300ms ease-out;
+    // @include slide-in("header.shown", -(24px + 8px));
+
+    @at-root {
+      header.shown .logo button.nub {
+        margin-inline: 8px;
+      }
+    }
+  }
+
+  .wordmark {
+    @include fade-in("header.shown");
+  }
+
+  .logo ~ * {
+    display: none;
+  }
+
+  &.shown {
+    width: auto;
+
+    nav {
+      display: inherit;
+    }
+
+    .logo ~ * {
+      display: inherit;
+    }
+  }
+}
+
+main {
+  display: block;
+
+  & + footer {
+    display: none;
+  }
+}
+
+#notifications {
+  position: absolute;
+  top: unset;
+  right: 0;
+  bottom: 0;
+}
+.alert {
+  margin-block: 0 8px;
+  transform-origin: bottom center;
+}
+
+canvas#game {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
+}

@@ -1,0 +1,203 @@
+@use 'sass:math';
+@use 'sass:selector';
+
+// See https://developer.mozilla.org/en-US/docs/Web/CSS/transition-behavior#examples
+// See https://developer.mozilla.org/en-US/docs/Web/CSS/@starting-style
+
+// See https://kittygiraudel.com/2013/08/08/advanced-sass-list-functions/
+@function last($list) {
+  @return nth($list, length($list));
+}
+
+// See https://kittygiraudel.com/2013/08/08/advanced-sass-list-functions/
+@function remove($list, $value) {
+  $result: ();
+
+  @for $i from 1 through length($list) {
+    @if nth($list, $i) != $value {
+      $result: append($result, nth($list, $i));
+    }
+  }
+
+  @return $result;
+}
+
+// See https://kittygiraudel.com/2013/08/08/advanced-sass-list-functions/
+@function slice($list, $start: 1, $end: length($list)) {
+  $result: null;
+
+  @if type-of($start) != number or type-of($end) != number {
+    @warn "Either $start or $end are not a number for `slice`.";
+  } @else if $start > $end {
+    @warn "The start index has to be lesser than or equals to the end index for `slice`.";
+  } @else if $start < 1 or $end < 1 {
+    @warn "List indexes must be non-zero integers for `slice`.";
+  } @else if $start > length($list) {
+    @warn "List index is #{$start} but list is only #{length($list)} item long for `slice`.";
+  } @else if $end > length($list) {
+    @warn "List index is #{$end} but list is only #{length($list)} item long for `slice`.";
+  } @else {
+    $result: ();
+    @for $i from $start through $end { $result: append($result, nth($list, $i)); }
+  }
+
+  @return $result;
+}
+
+// See https://kittygiraudel.com/2013/08/08/advanced-sass-list-functions/
+@function replace($list, $old-value, $new-value, $recursive: false) {
+  $result: ();
+
+  @for $i from 1 through length($list) {
+    @if type-of(nth($list, $i)) == list and $recursive {
+      $result: append(
+        $result,
+        replace(nth($list, $i), $old-value, $new-value, $recursive)
+      );
+    } @else {
+      $result: if(nth($list, $i) == $old-value, append($result, $new-value), append($result, nth($list, $i)));
+    }
+  }
+
+  @return $result;
+}
+
+/**
+ * Finds the ancestor of the given `selector` from a `list` of super selectors.
+ *
+ * See:
+ * Example:
+ * ```scss
+ * section {
+ *   button.danger {
+ *     $ancestor: find-ancestor(selector.parse(&), "section.hover");
+ *     @debug "Super: " + $ancestor;
+ *   }
+ * }
+ * ```
+ * Result:
+ * ```text
+ * Super: section
+ * ```
+*/
+@function find-ancestor($list, $selector) {
+  $needle: $selector;
+  // @debug "Finding ancestor selector in haystack: " + join($list, (), $separator: comma);
+  // @debug "Using needle: '" + $needle + "'";
+  @for $i from 1 through length($list) {
+    $super: nth($list, $i);
+    @if length($super) > 1 {
+      // This is a combined selector, e.g. 'section p.muted'.
+      // Search each selector in reverse order to find the nearest matching ancestor
+      @for $v from length($super) through 1 {
+        $sel: nth($super, $v);
+        // @debug  "Does '" + $sel + "' match?";
+        @if selector.is-superselector(quote($sel), $needle) {
+          @return if($v > 1, selector.nest(slice($super, 1, $v), $needle), $sel);
+        }
+      }
+    } @else if selector.is-superselector(quote($super), $needle) {
+      // @debug  "Does '" + $super + "' match?";
+      @return $super;
+    }
+  }
+  @return null;
+}
+
+// See https://tinyurl.com/ymxxx7uc
+@function unify-activation-selector($activationSelector, $parent) {
+  $ancestor: find-ancestor(selector.parse($parent), $activationSelector);
+  @return selector.replace($parent, $ancestor, $activationSelector);
+}
+
+@mixin fade-in($activationSelector, $duration: 250ms, $delay: 0ms) {
+  @if math.is-unitless($duration) { @warn "Duration must have a unit!"; }
+  @if math.is-unitless($delay) { @warn "Delay must have a unit!"; }
+
+  opacity: 0;
+  transition: opacity $duration ease;
+  transition-delay: $delay;
+
+  @starting-style {
+    opacity: 0;
+  }
+
+  @at-root {
+    #{unify-activation-selector($activationSelector, &)} {
+      // @debug "Using '#{&}' selector for Fade In animation.";
+      opacity: 1;
+    }
+  }
+}
+
+@mixin slide-in($activationSelector, $offsetFrom: 0, $offsetTo: 0, $duration: 250ms, $delay: 0ms) {
+  @if math.is-unitless($duration) { @warn "Duration must have a unit!"; }
+  @if math.is-unitless($delay) { @warn "Delay must have a unit!"; }
+
+  transform: translateX($offsetFrom);
+  transition: transform $duration ease;
+  transition-delay: $delay;
+
+  @starting-style {
+    transform: translateX($offsetFrom);
+  }
+
+  @at-root {
+    #{unify-activation-selector($activationSelector, &)} {
+      // @debug "Using '#{&}' selector for Slide In animation.";
+      transform: translateX($offsetTo);
+    }
+  }
+}
+
+@mixin slide-and-fade-in($activationSelector, $offsetFrom: 0, $offsetTo: 0, $duration: 250ms, $delay: 0ms) {
+  @if math.is-unitless($duration) { @warn "Duration must have a unit!"; }
+  @if math.is-unitless($delay) { @warn "Delay must have a unit!"; }
+  $opacityDuration: $duration * 0.33;
+
+  opacity: 0;
+  transform: translateX($offsetFrom);
+  transition: opacity $opacityDuration ease-out, transform $duration ease;
+  transition-delay: $delay, $delay;
+
+  @starting-style {
+    opacity: 0;
+    transform: translateX($offsetFrom);
+  }
+
+  @at-root {
+    #{unify-activation-selector($activationSelector, &)} {
+      // @debug "Using '#{&}' selector for Slide & Fade In animation.";
+      opacity: 1;
+      transform: translateX($offsetTo);
+      transition-delay: $delay + $duration - $opacityDuration, $delay;
+    }
+  }
+}
+
+@mixin grow-and-fade-in($activationSelector, $widthFrom: 0, $widthTo: fit-content, $duration: 250ms, $delay: 0ms) {
+  @if math.is-unitless($duration) { @warn "Duration must have a unit!"; }
+  @if math.is-unitless($delay) { @warn "Delay must have a unit!"; }
+  $opacityDuration: $duration * 0.26;
+
+  width: $widthFrom;
+  opacity: 0;
+  overflow-x: hidden;
+  transition: width $duration ease-out, opacity $opacityDuration ease;
+  transition-delay: $delay, $delay + $opacityDuration;
+
+  @starting-style {
+    width: $widthFrom;
+    opacity: 0;
+    transition-delay: $delay, $delay + $opacityDuration;
+  }
+
+  @at-root {
+    #{unify-activation-selector($activationSelector, &)} {
+      // @debug "Using '#{&}' selector for Grow & Fade In animation.";
+      width: $widthTo;
+      opacity: 1;
+      transition-delay: $delay, $delay + $duration - $opacityDuration;
+    }
+  }
+}
