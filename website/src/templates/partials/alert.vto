@@ -3,7 +3,11 @@
   <i class="icon fas {{ icon || 'fa-info-circle' }}"></i>
   {{ if alertTitle }}<h1 class="title">{{ alertTitle }}</h1>{{ /if }}
   <p class="message">{{ message |> md(true) }}</p>
+  {{ if action }}
+  {{ action }}
+  {{ else }}
   <button class="btn btn-sm btn-close" title="Dismiss" aria-label="Dismiss this alert"></button>
+  {{ /if }}
 </div>
 {{ if id }}
 <script>

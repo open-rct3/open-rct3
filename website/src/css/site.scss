@@ -200,7 +200,11 @@ header {
     align-self: center;
   }
   p + .btn {
-    margin-inline-start: 4px;
+    margin-inline-start: 8px;
+
+    &.btn-close {
+      margin-inline-start: 4px;
+    }
   }
 }
 .alert.notification {

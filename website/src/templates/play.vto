@@ -42,7 +42,10 @@
   </main>
   <section id="notifications">
     {{ include "partials/alert.vto" { id: "disclaimer", alertTitle: "Disclaimer", message: "This is a _volunteer-driven_ project. Please temper your expectations accordingly." } }}
-    {{ include "partials/alert.vto" { id: "noWebGpu", type: "warning", icon: "fa-exclamation-triangle", message: "Please [troubleshoot](https://browserleaks.com/webgpu) issues with WebGPU in your browser." } }}
+    <template id="noWebGpu">
+      <!-- TODO: Abstract errors like this, e.g. A "Details" button that opens a modal. Use `[data-troubleshoot-href]` for self-directed investigative links. Also, remind the user this app has no warranty. -->
+      {{ include "partials/alert.vto" { type: "warning", icon: "fa-exclamation-triangle", message: "[WebGPU](https://en.wikipedia.org/wiki/WebGPU) is not supported.", action: "<a class=\"btn btn-sm btn-outline-dark\" href=\"https://browserleaks.com/webgpu\">Troubleshoot</a>" } }}
+    </template>
   </section>
   <article id="credits" class="panel">
     <h1>Credits</h1>
