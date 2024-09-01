@@ -40,7 +40,7 @@
     </noscript>
     {{ content }}
   </main>
-  <section id="notifications">
+  <section id="notifications" class="panel notifications">
     {{ include "partials/alert.vto" { id: "disclaimer", alertTitle: "Disclaimer", message: "This is a _volunteer-driven_ project. Please temper your expectations accordingly." } }}
     <template id="noWebGpu">
       <!-- TODO: Abstract errors like this, e.g. A "Details" button that opens a modal. Use `[data-troubleshoot-href]` for self-directed investigative links. Also, remind the user this app has no warranty. -->

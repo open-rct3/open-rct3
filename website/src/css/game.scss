@@ -250,6 +250,14 @@ main {
   transform-origin: bottom center;
 }
 
+.panel {
+  display: none;
+
+  &.shown {
+    display: inherit;
+  }
+}
+
 canvas#game {
   position: absolute;
   top: 0;
