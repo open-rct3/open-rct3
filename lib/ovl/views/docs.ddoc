@@ -1,0 +1,237 @@
+FOOTER=<footer>
+  <a href="https://github.com/open-rct3/open-rct3/tree/ovl/trunk/lib/ovl#readme">GitHub</a>
+  <span class="faint" style="float: right;">Generated using <a href="https://code.dlang.org/packages/ddox">DDOX</a></span>
+</footer>
+
+DDOC=<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>$(TITLE) - libOVL API</title>
+    <link rel="stylesheet" href="styles/docs.css" />
+    <link rel="stylesheet" href="styles/dub.css" />
+  </head>
+  <body>
+    $(HEADER)
+    <main>
+      <a id="downloadButton" href="https://code.dlang.org/packages/ovl">
+        <div class="bs-hbtn right black">
+          <div class="content">get <strong>ovl</strong><br><large>{{ DUB_VERSION }}</large></div>
+        </div><div class="bs-hbtn left red">
+          <div class="dub-logo"></div>
+        </div>
+      </a>
+      <aside class="flex row">
+        <nav>
+          <header class="flex row">
+            <h1>
+              <span>libOVL</span>
+              <span class="faint">D Library</span>
+            </h1>
+          </header>
+          <ul style="list-style: none; padding: 0;">
+            <li>
+              <a href="https://chances.github.io/dbpf-d">API Reference</a>
+            </li>
+            <li>
+              <a href="https://code.dlang.org/packages/ovl">Download</a>
+            </li>
+            <li>
+              <a href="https://github.com/open-rct3/open-rct3/tree/ovl/trunk/lib/ovl#readme">Open Source on GitHub</a>
+            </li>
+          </ul>
+          <h2>API Reference</h2>
+          <form id="symbolSearchForm" action="#" method="GET">
+            <input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(40);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" tabindex="1000">
+          </form>
+          <!-- TODO: Collect and write list of symbols -->
+          <!--ul id="symbols">{{#each SYMBOLS}}
+            <li>{{ this }}</li>
+          {{/each}}</ul-->
+        </nav>
+      </aside>
+      <article class="module">
+        $(ARTICLE_HEADER)
+        <h1>$(MODULE_LABEL) $(TITLE)</h1>
+        <section class="source">
+          <h4>Source</h4>
+          <p><a href="https://github.com/open-rct3/open-rct3/blob/ovl/trunk/lib/ovl/$(SRCFILENAME)">$(SRCFILENAME)</a></p>
+        </section>
+        $(BODY)
+      </article>
+    </main>
+    $(FOOTER)
+  </body>
+</html>
+
+ESCAPES =
+  /</&lt;/
+  />/&gt;/
+  /&/&amp;/
+  /GPL 2.0/<a href="https:\/\/opensource.org\/licenses\/GPL-2">GPL 2.0 License</a>/
+
+BCKGND_BGCOLOR=#6080a0
+BCKGND_FGCOLOR=#ffffff
+MAIN_BGCOLOR=#e0e0e0
+MAIN_FGCOLOR=#000000
+INTRO_BGCOLOR=$(NEST1_BGCOLOR)
+INTRO_FGCOLOR=$(NEST1_FGCOLOR)
+NEST1_BGCOLOR=#f0f0f0
+NEST1_FGCOLOR=$(MAIN_FGCOLOR)
+NEST2_BGCOLOR=#f8f8f8
+NEST2_FGCOLOR=$(MAIN_FGCOLOR)
+NEST3_BGCOLOR=#ffffff
+NEST3_FGCOLOR=$(MAIN_FGCOLOR)
+CODEBLK_BGCOLOR=#ffffc0
+CODEBLK_FGCOLOR=#000000
+
+MODULE_LABEL=Module
+TITLE=<code>$0</code>
+MEMBERS_HEADER=<h2>Members</h2>
+
+RED=<span style="color:red">$0</span>
+BLUE=<span style="color:blue">$0</span>
+GREEN=<span style="color:green">$0</span>
+YELLOW=<span style="color:yellow">$0</span>
+BLACK=<span style="color:black">$0</span>
+WHITE=<span style="color:white">$0</span>
+
+DDOC_SECTIONS=$0
+
+DDOC_LICENSE = <section class="license">
+  <h4>License</h4>
+  <p>
+    $0
+  </p>
+</section>$(LF)
+
+DDOC_AUTHORS = <section class="authors">
+  <h4>Authors</h4>
+  <p>
+    $0
+  </p>
+</section>$(LF)
+
+DDOC_BUGS = <section class="bugs">
+  <h4>Bugs</h4>
+  <p>
+    $0
+  </p>
+</section>$(LF)
+
+DDOC_COPYRIGHT = <section class="copyright">
+  <h4>Copyright</h4>
+  <p>
+    $0
+  </p>
+</section>$(LF)
+
+DDOC_DATE = <section class="date">
+  <h4>Date</h4>
+  <p>
+    $0
+  </p>
+</section>$(LF)
+
+DDOC_DEPRECATED = <section class="deprecated">
+  <h4>Deprecated</h4>
+  <p>
+    $0
+  </p>
+</section>$(LF)
+
+DDOC_HISTORY = <section class="history">
+  <h4>History</h4>
+  <p>
+    $0
+  </p>
+</section>$(LF)
+
+DDOC_SEE_ALSO = <section class="see-also">
+  <h4>See Also</h4>
+  <p>
+    $0
+  </p>
+</section>$(LF)
+
+DDOC_STANDARDS = <section class="standards">
+  <h4>Standards</h4>
+  <p>
+    $0
+  </p>
+</section>
+
+DDOC_THROWS = <section class="throws">
+  <h4>Throws</h4>
+  <p>
+    $0
+  </p>
+</section>
+
+DDOC_VERSION = <section class="version">
+  <h4>Version</h4>
+  <p>
+    $0
+  </p>
+</section>
+
+DDOC_MODULE_MEMBERS=<section class="members">
+    $(MEMBERS_HEADER)
+    <ul>$0</ul>
+  </section>
+
+DDOC_MEMBERS = <ul class="members">
+  $0
+</ul>
+
+DDOC_CLASS_MEMBERS=<h4 class="class members">Members</h4>
+  <dl>$0</dl>
+DDOC_STRUCT_MEMBERS = <ul class="struct members">
+  $0
+</ul>
+DDOC_ENUM_MEMBERS = <ul class="enum members">
+  $0
+</ul>
+DDOC_TEMPLATE_MEMBERS = <ul class="template members">
+  $0
+</ul>
+
+DDOC_MEMBER = <li class="member">
+  $0
+</li>
+
+DDOC_MEMBER_HEADER = <h3>$0</h3>
+DDOC_HEADER_ANCHOR = <a id="$1" href="#$1"><code class="code">$2</code></a>
+
+DDOC_ANCHOR = <span class="anchor" id="$1"></span>
+DDOC_DECL=<dt class="decl"><code>$0</code></dt>
+DDOC_PSYMBOL=<strong>$0</strong>
+DDOC_DECL_DD=<dd class="decl">$0</dd>
+
+DDOC_SUMMARY=<p>$0</p>
+DDOC_DESCRIPTION=<p>$0</p>
+DDOC_BLANKLINE=</p><p>
+
+CODE=<code>$0</code>
+DDOC_PARAMS = <div class="ddoc_params">
+  <h4>Parameters</h4>
+  <table cellspacing="0" cellpadding="5" border="0" class="params">
+    <tbody>
+      $0
+    </tbody>
+  </table>
+</div>$(LF)
+DDOC_PARAM_ROW=<tr>$0</tr>
+DDOC_PARAM_ID=<td class="param name">$(CODE $0)</td>
+DDOC_PARAM_DESC=<td class="param desc"><p>$0</p></td>
+DDOC_PARAM=$(CODE $(I $0))
+
+DDOC_SECTION_H=<h4 class="section">$0</h4>
+DDOC_SECTION=<p>$0</p>
+SECTION=$(DDOC_SECTION_H $1) $(DDOC_SECTION $2)
+
+DDOC_ENUM_BASETYPE=<a href="https://dlang.org/spec/type.html#basic-data-types">$0</a>
+
+DDOC_RETURNS=<p><strong>Returns:</strong> $0</p>
+DDOC_EXAMPLES=$(SECTION Examples, $0)
+DDOC_BUGS=$(SECTION $(RED Bugs), $0)

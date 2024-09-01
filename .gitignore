@@ -1,18 +1,19 @@
-# Compiled Object files
+# Environment Variables
+.env
+
+# Artifacts
+bin/OpenRCT3*
+bin/open-rct3-test-application
+bin/open-rct3-unittest
 *.o
 *.obj
-
-# Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
-
-# Compiled Static libraries
 *.a
 *.lib
-
-# Executables
 *.exe
+*.pdb
 
 # DUB
 .dub
@@ -20,5 +21,5 @@ docs.json
 __dummy.html
 docs/
 
-# Code coverage
+# Code Coverage
 *.lst

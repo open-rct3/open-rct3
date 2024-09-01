@@ -1,0 +1,15 @@
+{
+  "lock": false,
+  "tasks": {
+    "dev": "deno run --allow-env --allow-net --allow-sys --allow-read --allow-write=./_site dev.ts"
+  },
+  "imports": {
+    "lume": "https://deno.land/x/lume@v2.2.4/mod.ts",
+    "lume/": "https://deno.land/x/lume@v2.2.4/"
+  },
+  "compilerOptions": {
+    "types": [
+      "lume/types.ts"
+    ]
+  }
+}

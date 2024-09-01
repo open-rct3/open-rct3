@@ -1,0 +1,91 @@
+<html>
+<head>
+  <title></title>
+  <meta charset="UTF-8">
+  <title>libOVL API Documentation</title>
+  <link rel="stylesheet" href="styles/docs.css" />
+  <link rel="stylesheet" href="styles/dub.css" />
+</head>
+<body>
+  <main>
+    <a id="downloadButton" href="https://code.dlang.org/packages/ovl">
+      <div class="bs-hbtn right black">
+        <div class="content">get <strong>ovl</strong><br><large>{{ DUB_VERSION }}</large></div>
+      </div><div class="bs-hbtn left red">
+        <div class="dub-logo"></div>
+      </div>
+    </a>
+    <aside class="flex row">
+      <nav>
+        <header class="flex row">
+          <h1>
+            <span>libOVL</span>
+            <span class="faint">D Library</span>
+          </h1>
+        </header>
+        <ul style="list-style: none; padding: 0;">
+          <li>
+            <a href="https://chances.github.io/dbpf-d">API Reference</a>
+          </li>
+          <li>
+            <a href="https://code.dlang.org/packages/ovl">Download</a>
+          </li>
+          <li>
+            <a href="https://github.com/open-rct3/open-rct3/tree/ovl/trunk/lib/ovl#readme">Open Source on GitHub</a>
+          </li>
+        </ul>
+        <h2>API Reference</h2>
+        <form id="symbolSearchForm" action="#" method="GET">
+					<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(40);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" tabindex="1000">
+				</form>
+        <!-- TODO: Collect and write list of symbols -->
+        <!--ul id="symbols">{{#each SYMBOLS}}
+          <li>{{ this }}</li>
+        {{/each}}</ul-->
+      </nav>
+    </aside>
+    <article>
+      <h1>libOVL D Library</h1>
+      <p>
+        <a href="https://code.dlang.org/packages/ovl">
+          <img src="https://img.shields.io/dub/v/ovl.svg" alt="DUB Package">
+        </a>
+        <a target="_blank" href="https://opensource.org/licenses/GPL-2">
+          <img src="https://img.shields.io/badge/license-GPL%2D2.0-blue" alt="MIT License">
+        </a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/open-rct3/open-rct3/actions/workflows/ovl.yml">
+          <img src="https://github.com/open-rct3/open-rct3/actions/workflows/ovl.yml/badge.svg" alt="DBPF CI">
+        </a>
+        <a href="https://codecov.io/gh/chances/dbpf-d">
+          <img src="https://codecov.io/gh/chances/dbpf-d/branch/master/graph/badge.svg" alt="codecov">
+        </a>
+      </p>
+      <p>
+        <span>D library to read and write <a href="https://opennaja.github.io/cobra-tools/Development/Reverse-Engineering/OVL-File-Formats">Overlay</a> (OVL) archives.</span>
+        <span>Port of <a href="https://github.com/chances/rct3-importer/tree/svn/trunk/RCT3%20Importer/src/libOVL">libOVL</a> to <a href="https://dlang.org">D</a>.</span>
+      </p>
+      <h2 id="Usage">Usage</h2>
+      <pre class="json">
+"dependencies": {
+  "ovl": "{{ DUB_VERSION }}"
+}
+      </pre>
+      <h2>Modules</h2>
+      <ul>
+        <!-- TODO: Collect and write list of symbols -->
+        <!--{{#each MODULES}}<li><a href="{{ this.file }}">{{ this.name }}</a></li>{{/each}}-->
+        <li><a href="package.html">ovl</a></li>
+        <li><a href="enums.html">ovl.enums</a></li>
+        <li><a href="gui.html">ovl.gui</a></li>
+      </ul>
+    </article>
+  </main>
+  <footer>
+    <a href="https://github.com/open-rct3/open-rct3/tree/ovl/trunk/lib/ovl#readme">GitHub</a>
+    <span class="faint" style="float: right;">Generated using <a href="https://dlang.org/spec/ddoc.html">Ddoc</a></span>
+  </footer>
+  <!-- TODO: Collect and write list of symbols -->
+  <!--script type="application/javascript">const symbols = [{{#each SYMBOLS}}{{ this }},{{/each}}];</script-->
+  <script type="application/javascript">const symbols = [];</script>
+  <script type="application/javascript" src="scripts/symbols.js"></script>
+</body>

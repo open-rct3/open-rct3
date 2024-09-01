@@ -1,0 +1,43 @@
+{
+  // See https://code.visualstudio.com/docs/editor/tasks#vscode
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "make",
+      "problemMatcher": [
+        "$deno-lint"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Test",
+      "type": "shell",
+      "command": "make test",
+      "problemMatcher": [
+        "$deno-test"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Desktop Client",
+      "type": "shell",
+      "command": "deno task -c clients/deno/deno.json dev",
+      "problemMatcher": [
+        "$deno-test"
+      ]
+    },
+    {
+      "label": "Desktop Client (Watch)",
+      "type": "shell",
+      "command": "deno task -c clients/deno/deno.json watch"
+    }
+  ]
+}

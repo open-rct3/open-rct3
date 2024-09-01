@@ -1,0 +1,40 @@
+<!-- TODO: Only render alert if its cookie is unset. -->
+<div id="{{ if id }}{{ id }}{{ /if }}" class="alert alert-{{ type || 'info' }}" role="alert">
+  <i class="icon fas {{ icon || 'fa-info-circle' }}"></i>
+  {{ if title }}<h1 class="title">{{ title }}</h1>{{ /if }}
+  <p class="message">{{ message |> md(true) }}</p>
+  <button class="btn btn-sm btn-close" title="Dismiss" aria-label="Dismiss this alert"></button>
+</div>
+{{ if id }}
+<script>
+Number.prototype.clamp = function(min, max) {
+  return Math.min(Math.max(this, min), max);
+};
+// Set a unique cookie when the user dismisses this alert
+(function () {
+  const expiry = new Date();
+  expiry.setUTCMonth((expiry.getUTCMonth() + 1 + 12) % 12);
+
+  const alert = document.getElementById("{{ id }}");
+  const cookieName = `__${alert.id}_alert_dismissed`;
+  if (document.cookie.split(";").find((row) => row.trim().startsWith(cookieName))) return alert.remove(alert);
+  const cookieSuffixes = ["Path=/", `Domain=${window.location.hostname}`, `Expires=${expiry.toUTCString()}`];
+  const isHttps = window.location.protocol.includes("https");
+  if (window.isSecureContext || isHttps) cookieSuffixes.push("Secure");
+  const cookie = `${cookieName}=true; ${ cookieSuffixes.join("; ") }`;
+  let closing = false;
+  alert.addEventListener("transitionend", function (ev) {
+    if (ev.propertyName === "height" && closing) alert.remove(alert);
+  });
+  alert.querySelector("button.btn-close")?.addEventListener("click", function () {
+    document.cookie = cookie;
+    alert.style.height = `${alert.getBoundingClientRect().height}px`;
+    requestAnimationFrame(function() {
+      alert.style.height = null;
+      alert.classList.add("dismissed");
+      closing = true;
+    });
+  });
+})();
+</script>
+{{ /if }}

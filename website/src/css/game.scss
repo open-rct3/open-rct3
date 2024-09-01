@@ -1,0 +1,83 @@
+@import "./animations";
+@import "./mixins";
+@import "./variables";
+
+body {
+  overflow: hidden;
+}
+
+header {
+  width: 88px;
+  background-color: transparent;
+  border-bottom-right-radius: 4px;
+  transition: width 300ms ease-out;
+
+  .logo button.nub {
+    $spacing: 4px;
+
+    position: relative;
+    left: -$spacing;
+    margin: 0;
+    padding-block: $spacing;
+    padding-inline: $spacing;
+    background: transparent;
+    border: none;
+    transition: left 300ms ease-out;
+
+    &:hover, &:focus, &:active {
+      outline: none;
+      transition-duration: 250ms;
+    }
+  }
+
+  nav {
+    display: none;
+  }
+
+  &.shown {
+    width: 100vw;
+    border-bottom-right-radius: 4px;
+
+    .logo button.nub {
+      left: 0;
+    }
+
+    nav.shown {
+      display: inherit;
+      opacity: 1;
+      transition: opacity 250ms ease;
+      // transition-delay: 350ms;
+
+      @starting-style {
+        opacity: 0;
+      }
+    }
+  }
+}
+
+main {
+  display: block;
+
+  & + footer {
+    display: none;
+  }
+}
+
+#notifications {
+  position: absolute;
+  top: unset;
+  right: 0;
+  bottom: 0;
+}
+.alert {
+  margin-block: 0 8px;
+  transform-origin: bottom center;
+}
+
+canvas#game {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
+}

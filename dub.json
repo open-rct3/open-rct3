@@ -1,0 +1,36 @@
+{
+  "name": "open-rct3",
+  "description": "An open source re-implementation of RollerCoaster Tycoon 3",
+  "license": "AGPL-3.0-only",
+  "copyright": "Copyright © 2024, Chance Snow",
+  "authors": [
+    "Chance Snow <rct3@chancesnow.me>"
+  ],
+  "targetPath": "bin",
+  "targetType": "executable",
+  "dependencies": {
+    "dotenv": "~>0.1.1",
+    "observable": "~>1.5.0",
+    "ovl": {
+      "path": "./lib/ovl"
+    },
+    "vibe-d": "~>0.10.0",
+    "vibe-stream:tls": "~>1.1.0"
+  },
+  "subConfigurations": {
+    "vibe-stream:tls": "openssl-static"
+  },
+  "configurations": [{
+      "name": "application",
+      "preBuildCommands": [],
+      "targetName": "OpenRCT3 Server",
+      "libs-osx": [],
+      "libs-linux": [],
+      "libs-windows": []
+    },
+    {
+      "name": "unittest",
+      "targetName": "open-rct3-unittest"
+    }
+  ]
+}
