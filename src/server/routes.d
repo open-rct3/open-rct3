@@ -23,9 +23,6 @@ auto router() {
   auto router = new URLRouter;
   /// Section: Routes
   router.registerWebInterface(new API);
-  router.get("/play", (scope HTTPServerRequest req, scope HTTPServerResponse res) {
-    res.render!("play.dt");
-  });
   if (publicDir.isRooted && publicDir.exists)
     router.get("*", serveStaticFiles(publicDir));
 
@@ -50,12 +47,6 @@ static struct User {
 @requiresAuth
 class API {
   private SessionVar!(User, "user") user;
-
-  /// `GET /`
-  @noAuth
-  void index() {
-    render!("index.dt");
-  }
 
   /// `POST /login`
   @method(HTTPMethod.POST) @noAuth

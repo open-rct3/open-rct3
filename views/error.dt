@@ -1,7 +1,0 @@
-extends layout
-
-block content
-  h1.container Not Found
-  p.container The page you requested was not found.
-  p.container
-    a(href="/") Go Home

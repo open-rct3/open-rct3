@@ -16,8 +16,8 @@ shared static this() {
 
   Env.load;
 
-  void errorPage(HTTPServerRequest req, HTTPServerResponse res, HTTPServerErrorInfo error) {
-    res.render!("error.dt", req, error);
+  void errorPage(HTTPServerRequest _, HTTPServerResponse res, HTTPServerErrorInfo error) {
+    res.redirect("/404.html");
   }
 
   // Default to the external interface address on port 49152.
