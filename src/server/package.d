@@ -2,6 +2,7 @@
 module rct3.server;
 
 import rct3.env;
+import std.json;
 import std.stdio;
 import std.typecons : Tuple, tuple;
 import vibe.d;
@@ -14,8 +15,20 @@ shared static this() {
   import rct3 : Server;
   import rct3.server.routes : router;
 
-  void errorPage(HTTPServerRequest _, HTTPServerResponse res, HTTPServerErrorInfo error) {
-    res.redirect("/404.html");
+  void errorPage(HTTPServerRequest req, HTTPServerResponse res, HTTPServerErrorInfo error) {
+    logError("Error %d: %s\n%s", error.code, error.message, error.debugMessage);
+    JSONValue response = ["error": JSONValue([
+      "code": JSONValue(error.code),
+      "message": JSONValue(error.message)
+    ])];
+
+    // Flash the error to the user's session
+    auto session = !req.session ? res.startSession() : req.session;
+    session.set("flash", response.toString);
+    // TODO: Remove flash from session when reading data
+
+    // TODO: Content type negotiation, i.e. only reply this way if the request expects HTML.
+    if (error.code == 404) res.redirect("/404.html");
   }
 
   // Default to the external interface address on port 49152.
