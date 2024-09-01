@@ -4,3 +4,112 @@ layout: play.vto
 ---
 
 <canvas id="game"></canvas>
+
+<header>
+  <button id="showObjectives" class="icon-button" title="Show Scenario Objectives">
+    <span class="icon">🧢</span>
+  </button>
+  <button id="dayNightCycleToggle" class="icon-button" title="Toggle Day/Night Cycle">
+    <span class="icon">☀️</span>
+  </button>
+  <div id="gameSpeed" class="radio-group">
+    <input type="radio" id="pause" name="gameSpeed" value="0" title="Pause">
+    <label for="pause"><span class="icon">⏸</span></label>
+    <input type="radio" id="play" name="gameSpeed" value="1" title="Play" checked="checked">
+    <label for="play"><span class="icon">⏵</span></label>
+    <input type="radio" id="fastForward" name="gameSpeed" value="2" title="Fast-Forward">
+    <label for="fastForward"><span class="icon">⏩</span></label>
+    <input type="radio" id="extraFastForward" name="gameSpeed" value="3" title="Extra Fast-Forward">
+    <label for="extraFastForward"><span class="icon">⏭</span></label>
+  </div>
+  <span class="currency">$</span>
+  <span id="funds" class="funds">unlimited</span>
+  <span id="approvalRating" class="approval rating indicator title="Approval Rating">700</span>
+  <span class="approval indicator icon negative">👎</span>
+  <meter class="approval" value="100"></meter>
+  <span class="approval indicator icon positive">👍</span>
+  <div class="drawer-grip-spacer"></div>
+  <span id="temperature">71°</span>
+  <span id="temperatureUnit">F</span>
+  <span id="weatherIcon" class="indicator icon">⛅️</span>
+  <span id="date">1 January, Year 1</span>
+  <span id="time">10:00 am</span>
+  <button class="icon-button indicator" disabled title="Tranquilize Escaped Animal" aria-label="Indicates whether an animal has escaped. Click to tranquilize it.">
+    <span class="icon" aria-hidden="true">🎯</span>
+    <template id="escapedAnimalIndicator">
+      <span class="sr-only" role="alert">An animal has escaped! Tranquilize it to keep your guests safe.</span>
+    </template>
+  </button>
+  <button class="icon-button indicator" disabled title="Focus MixMaster Display" aria-label="Indicates whether a MixMaster display is playing. Click to focus the camera on it.">
+    <span class="icon" aria-hidden="true">🧨</span>
+    <template id="mixMasterIndicator">
+      <span class="sr-only" role="alert">One of the park's MixMaster displays is playing.</span>
+    </template>
+  </button>
+  <button class="icon-button indicator" title="Toggle Peep Indicator" role="switch" aria-checked="false" aria-label="Click to toggle custom peep indicators.">
+    <span class="icon" aria-hidden="true">👨‍👩‍👧</span>
+  </button>
+</header>
+<div id="notificationDrawer" class="notifications drawer">
+  <ul></ul>
+  <button id="drawerGrip" title="Toggle Notifications" aria-label="Click to toggle the notification drawer.">
+    <i class="icon fas fa-bars"></i>
+  </button>
+  <template id="noNotifications">
+    <p class="text-center">There are no notifications.</p>
+  </template>
+  <template id="notification">
+    <li></li>
+  </template>
+</div>
+<aside>
+  <button class="icon-button" title="Park Map">🗺️</button>
+  <button class="icon-button" title="Info Views">👓</button>
+  <button class="icon-button" title="Game Settings">🛠️</button>
+  <button class="icon-button" title="Save & Quit">🚪</button>
+  <button class="icon-button" title="Graphs">📉</button>
+  <button class="icon-button" title="Rides">🎡</button>
+  <button class="icon-button" title="Shops">🛍️</button>
+  <button class="icon-button" title="Scenery">🏡</button>
+  <button class="icon-button" title="Paths">🚏</button>
+  <button class="icon-button" title="Landscaping">🪴</button>
+  <button class="icon-button" title="Bulldozer">🗑️</button>
+</aside>
+<script>
+(function () {
+  const marker = document.querySelector('main.game header .drawer-grip-spacer');
+  const grip = document.querySelector('#drawerGrip');
+  const drawer = document.querySelector('#notificationDrawer');
+  const styleOverrides = document.createElement("style");
+  document.head.append(styleOverrides);
+  function measureDrawer() {
+    const header = document.querySelector('main.game header').getBoundingClientRect();
+    const headerPadding = 4;
+    const markerRect = marker.getBoundingClientRect();
+    const markerRight = markerRect.right - header.left;
+    const markerLeft = markerRect.left - header.left - headerPadding / 2;
+    const markerWidth = markerRight - markerLeft;
+    const height = header.height + headerPadding;
+    const markerRadius = markerRect.width / 2;
+    const cutout = `path('M 0 0 L ${header.width} 0 L ${header.width} ${height} L ${markerRight} ${height} A ${markerRadius},${markerRadius * 1.2} 0 0 0 ${markerLeft},${height} L 0 ${height}')`;
+    // TODO: Use measured height of content to set minimum height for `#notificationDrawer.shown`.
+    styleOverrides.innerHTML = `main.game header:before { clip-path: ${cutout}; }`;
+
+    drawer.style.left = `${header.left + headerPadding}px`;
+    drawer.style.width = `${header.width - headerPadding}px`;
+    grip.style.left = `${markerLeft - headerPadding / 2}px`;
+  }
+  window.addEventListener('load', measureDrawer)
+  window.addEventListener('resize', measureDrawer)
+  measureDrawer();
+
+  grip.addEventListener("click", function () {
+    drawer.classList.toggle("shown");
+    const isShown = drawer.classList.contains("shown");
+    if (isShown) drawer.focus();
+  });
+
+  const emptyTemplate = document.querySelector('#noNotifications');
+  // FIXME: drawer.insertBefore(emptyTemplate.content.cloneNode(), grip);
+})();
+</script>

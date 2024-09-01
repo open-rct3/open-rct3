@@ -14,8 +14,8 @@
   <!-- Icons & Theme -->
   <link rel="icon" href="/favicon.png">
 </head>
-<body class="game">
-  <header>
+<body>
+  <header class="nav">
     {{ include "partials/logo.vto" { onGamePage: true } }}
     <div class="flex-grow-1"></div>
     <nav>
@@ -30,7 +30,7 @@
       </a>
     </nav>
   </header>
-  <main>
+  <main class="game">
     <noscript>
       <div class="alert alert-danger">
         <i class="icon fas fa-exclamation-triangle"></i>
