@@ -1,7 +1,7 @@
 <!-- TODO: Only render alert if its cookie is unset. -->
 <div id="{{ if id }}{{ id }}{{ /if }}" class="alert alert-{{ type || 'info' }}" role="alert">
   <i class="icon fas {{ icon || 'fa-info-circle' }}"></i>
-  {{ if title }}<h1 class="title">{{ title }}</h1>{{ /if }}
+  {{ if alertTitle }}<h1 class="title">{{ alertTitle }}</h1>{{ /if }}
   <p class="message">{{ message |> md(true) }}</p>
   <button class="btn btn-sm btn-close" title="Dismiss" aria-label="Dismiss this alert"></button>
 </div>

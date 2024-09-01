@@ -34,7 +34,7 @@
         <a class="btn btn-sm btn-outline-dark" href="https://enablejavascript.com">Enable JavaScript</a>
       </div>
     </noscript>
-    {{ include "partials/alert.vto" { id: "disclaimer", title: "Disclaimer", message: "This is a _volunteer-driven_ project. Please temper your expectations accordingly." } }}
+    {{ include "partials/alert.vto" { id: "disclaimer", alertTitle: "Disclaimer", message: "This is a _volunteer-driven_ project. Please temper your expectations accordingly." } }}
     {{ if notification }}{{ notification }}{{ /if }}
     {{ content }}
   </main>

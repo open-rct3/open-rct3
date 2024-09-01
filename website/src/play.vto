@@ -3,9 +3,4 @@ title: Play
 layout: play.vto
 ---
 
-<section id="notifications">
-  {{ include "partials/alert.vto" { id: "disclaimer", title: "Disclaimer", message: "This is a _volunteer-driven_ project. Please temper your expectations accordingly." } }}
-  {{ include "partials/alert.vto" { id: "noWebGpu", type: "warning", icon: "fa-exclamation-triangle", message: "Please [troubleshoot](https://browserleaks.com/webgpu) issues with WebGPU in your browser." } }}
-</section>
-
 <canvas id="game"></canvas>
