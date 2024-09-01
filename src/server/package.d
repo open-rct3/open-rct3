@@ -14,8 +14,6 @@ shared static this() {
   import rct3 : Server;
   import rct3.server.routes : router;
 
-  Env.load;
-
   void errorPage(HTTPServerRequest _, HTTPServerResponse res, HTTPServerErrorInfo error) {
     res.redirect("/404.html");
   }

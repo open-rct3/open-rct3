@@ -5,6 +5,12 @@ public import dotenv;
 
 import std.conv : to;
 import std.traits : hasIndirections, isScalarType;
+import vibe.core.log;
+
+shared static this() {
+  Env.load();
+  logInfo("Loaded environment.");
+}
 
 ///
 T envOrDefault(T)(string key, T default_ = T.init) if (isScalarType!T) {
