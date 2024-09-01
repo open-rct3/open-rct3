@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Open RollerCoaster Tycoon 3</title>
+  <link rel="icon" href="../assets/icons/app.ico">
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
 
@@ -175,7 +176,7 @@ function measureDrawer() {
   const height = header.height + 4;
   const cutout = `path('M 0 0 L ${header.width} 0 L ${header.width} ${height} L ${right} ${height} C ${right},${height / 3} ${left},${height / 3} ${left},${height} L 0 ${height}')`;
   styleOverrides.innerHTML = `header:after { clip-path: ${cutout}; }`;
-  
+
   drawer.style.left = `${header.left}px`;
   drawer.style.width = `${header.width}px`;
 }
