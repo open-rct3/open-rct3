@@ -52,16 +52,35 @@
   const header = document.querySelector('body > header');
   const nub = header.querySelector("button.nub");
   const nav = header.querySelector("nav");
-  let headerShown = false;
+  // Prevents conflicts between the `nub.onclick` and  the nav's focus events
+  let focusedFromMouse = false;
 
-  nub.addEventListener("click", function (ev) {
+  nub.addEventListener("click", (ev) => {
+    // Let focus events show the navigation.
+    if (focusedFromMouse) return focusedFromMouse = false;
+
+    const wasHeaderShown = header.classList.contains("shown");
     header.classList.toggle("shown");
-    headerShown = header.classList.contains("shown");
-    if (!headerShown) nav.classList.remove("shown");
+    if (wasHeaderShown) nav.classList.remove("shown");
   });
   header.addEventListener("transitionend", function (ev) {
     if (ev.propertyName !== "width") return;
-    if (headerShown) nav.classList.add("shown");
+    if (header.classList.contains("shown")) nav.classList.add("shown");
+  });
+  header.addEventListener("focusin", function (ev) {
+    if (header.classList.contains("shown")) return;
+    header.classList.add("shown");
+    // See https://stackoverflow.com/a/78812378/1363247
+    focusedFromMouse = !event.target.matches(':focus-visible');
+  });
+  header.addEventListener("focusout", function (ev) {
+    const isNavStillFocused = header.contains(ev.relatedTarget);
+    // See https://developer.mozilla.org/en-US/docs/Glossary/Transient_activation
+    const isWindowInactive = !(navigator.userActivation?.isActive ?? false);
+    if (isNavStillFocused || isWindowInactive) return;
+
+    header.classList.remove("shown");
+    nav.classList.remove("shown");
   });
 })();
   </script>
