@@ -1,7 +1,8 @@
 {
   "lock": false,
   "tasks": {
-    "dev": "deno run --allow-env --allow-net --allow-sys --allow-read --allow-write=./_site dev.ts"
+    "dev": "deno run --allow-env --allow-net --allow-sys --allow-read --allow-write=./_site dev.ts",
+    "build": "deno run --allow-env --allow-net --allow-sys --allow-read --allow-write=./_site build.ts"
   },
   "imports": {
     "lume": "https://deno.land/x/lume@v2.2.4/mod.ts",

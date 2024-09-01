@@ -22,7 +22,9 @@
   },
   "configurations": [{
       "name": "application",
-      "preBuildCommands": [],
+      "postBuildCommands": [
+        "deno task -c website/deno.json build"
+      ],
       "targetName": "OpenRCT3 Server",
       "libs-osx": [],
       "libs-linux": [],
