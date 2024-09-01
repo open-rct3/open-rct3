@@ -85,7 +85,7 @@ a, button, input {
 
 header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   position: sticky;
   top: -1px;
   padding-block-start: 8px;
@@ -119,6 +119,8 @@ header {
 
   nav {
     display: flex;
+    align-self: stretch;
+    align-items: center;
     gap: 1rem;
 
     a, a:hover {
