@@ -49,8 +49,8 @@ void main() {
   auto listener = listenHTTP(server.settings, server.router);
   running = true;
   runEventLoop();
+  running = false;
 
   // Server has exited
   listener.stopListening();
-  running = false;
 }
