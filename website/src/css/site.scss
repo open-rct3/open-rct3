@@ -14,6 +14,7 @@
   --black-shadow-light: rgba(15, 18, 25, 25%);
   --black-shadow: rgba(15, 18, 25, 50%);
   --link: #28b;
+  --link-outline: rgba(34, 136, 187, 75%);
   // Gradients & Shadows
   --gray: 20, 20, 20;
   --gray-gradient: rgba(lightgray, 50%), #fff;
@@ -42,10 +43,6 @@ body {
 	  font-size: 18px;
   }
 }
-body > main {
-  flex: 1;
-  z-index: 1;
-}
 
 a {
   color: var(--link);
@@ -56,8 +53,8 @@ a {
   }
 }
 
-a, button, input {
-  outline-color: var(--link);
+a, button, button:focus, input {
+  outline-color: var(--link-outline);
 
   &:has(.icon:first-child:last-child) {
     color: inherit;
@@ -126,8 +123,25 @@ header {
     a, a:hover {
       color: inherit;
     }
+    a:hover:focus {
+      text-decoration: none;
+    }
+    a:not(:has(.icon:first-child:last-child)) {
+      font-weight: 500;
+      border-bottom: solid 2px transparent;
+      outline: none;
+      transition: border-bottom-color 200ms ease;
+
+      &:focus {
+        border-bottom-color: var(--accent);
+      }
+    }
     a:has(.icon) {
       align-self: center;
+
+      &:focus {
+        color: var(--link);
+      }
     }
     a:has(.icon.fas) {
       font-size: 16px;
@@ -213,6 +227,10 @@ header {
   button.btn-close {
     margin-inline-start: 8px;
   }
+}
+
+main {
+  flex: 1;
 }
 
 .jumbotron {
