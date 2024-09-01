@@ -25,7 +25,6 @@ header {
     transition: left 300ms ease-out;
 
     &:hover, &:focus, &:active {
-      left: 0;
       outline: none;
       transition-duration: 250ms;
     }
