@@ -133,9 +133,14 @@ main {
     button.icon-button.indicator {
       cursor: pointer;
 
-      &[role=switch][aria-checked=false], &:disabled .icon {
-        opacity: 75%;
-        filter: grayscale(100%);
+      &:disabled {
+        cursor: default;
+      }
+      &[role=switch][aria-checked=false], &:disabled {
+        .icon {
+          opacity: 75%;
+          filter: grayscale(100%);
+        }
       }
     }
   }
