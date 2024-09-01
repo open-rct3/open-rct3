@@ -91,6 +91,7 @@ layout: play.vto
     const markerWidth = markerRight - markerLeft;
     const height = header.height + headerPadding;
     const markerRadius = markerRect.width / 2;
+    // See https://sean.brunnock.com/SVG/ArcGenerator
     const cutout = `path('M 0 0 L ${header.width} 0 L ${header.width} ${height} L ${markerRight} ${height} A ${markerRadius},${markerRadius * 1.2} 0 0 0 ${markerLeft},${height} L 0 ${height}')`;
     // TODO: Use measured height of content to set minimum height for `#notificationDrawer.shown`.
     styleOverrides.innerHTML = `main.game header:before { clip-path: ${cutout}; }`;
