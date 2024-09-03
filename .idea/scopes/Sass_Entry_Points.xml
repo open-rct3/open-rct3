@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Sass Entry Points" pattern="file:clients/website/src/css/game.scss||file:clients/website/src/css/site.scss" />
+</component>
