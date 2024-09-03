@@ -3,23 +3,31 @@ import { join } from "jsr:@std/path";
 
 import build, { BuildState } from "./build.ts";
 
-const cwd = import.meta?.dirname ?? Deno.cwd();
+const website = import.meta?.dirname ?? Deno.cwd();
 
 if (import.meta.main) {
+  const siteChanges = Deno.watchFs([join(website, "src")], { recursive: true });
   // TODO: Use WMR programmatically
   const wmr = new Deno.Command("npx", {
     args: [
       "wmr",
       "serve",
+      "--public",
+      join(website, "_site"),
       "--out",
-      join(cwd, "_site")
+      join(website, "_site")
     ],
-    stdout: "piped"
+    stdout: "piped",
+    stderr: "piped"
   }).spawn();
-  Deno.addSignalListener("SIGINT", () => wmr.kill());
 
   try {
     // TODO: Refactor to a spinner interface
+    Deno.addSignalListener("SIGINT", () => {
+      siteChanges.close();
+      wmr.kill();
+    });
+
     const wmrStarted = wmr.stdout.values({ preventCancel: true }).next();
     await build().then(delay(750));
     console.clear();
@@ -29,11 +37,7 @@ if (import.meta.main) {
     console.log("Watching for changes…");
 
     const rebuildInfrequently = debounce((event) => rebuild(event), 250);
-    for await (const event of Deno.watchFs(join(cwd, "src"), { recursive: true })) {
-      await rebuildInfrequently(event);
-    }
-
-    // FIXME: console.write((await command.output()).stderr);
+    for await (const event of siteChanges) await rebuildInfrequently(event);
     Deno.exit(0);
   } catch (err) {
     console.error(err instanceof Error ? `${err.stack}` : `Error: ${err.toString()}`);
