@@ -10,12 +10,16 @@ release: desktop
 	dub build -b release
 
 .PHONY: desktop
-desktop:
-	deno task -c clients/desktop/deno.json compile
+desktop: ovl
+	deno task build:desktop
+
+.PHONY: website
+website: ovl
+	deno task build:website
 
 .PHONY: debug
-debug:
-	deno task -c clients/website/deno.json dev
+debug: ovl
+	deno task dev
 
 .PHONY: ovl
 ovl:

@@ -1,5 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Deno: Run" type="DenoConfigurationType" inputPath="$FilePath$" programParameters="run">
-    <method v="2" />
-  </configuration>
-</component>
