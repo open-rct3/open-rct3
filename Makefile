@@ -15,7 +15,7 @@ desktop:
 
 .PHONY: debug
 debug:
-	deno task -c clients/deno/deno.json dev
+	deno task -c clients/website/deno.json dev
 
 .PHONY: ovl
 ovl:

@@ -3,23 +3,52 @@ import { join } from "jsr:@std/path";
 
 import build, { BuildState } from "./build.ts";
 
+const cwd = import.meta?.dirname ?? Deno.cwd();
+
 if (import.meta.main) {
+  // TODO: Use WMR programmatically
+  const wmr = new Deno.Command("npx", {
+    args: [
+      "wmr",
+      "serve",
+      "--out",
+      join(cwd, "_site")
+    ],
+    stdout: "piped"
+  }).spawn();
+  Deno.addSignalListener("SIGINT", () => wmr.kill());
+
   try {
-    await rebuild();
+    // TODO: Refactor to a spinner interface
+    const wmrStarted = wmr.stdout.values({ preventCancel: true }).next();
+    await build().then(delay(750));
+    console.clear();
+    console.log("Starting dev server…");
+    await wmrStarted.then(delay(750));
+    console.clear();
+    console.log("Watching for changes…");
+
     const rebuildInfrequently = debounce((event) => rebuild(event), 250);
-    for await (const event of Deno.watchFs(join(import.meta?.dirname ?? Deno.cwd(), "src"), { recursive: true })) {
+    for await (const event of Deno.watchFs(join(cwd, "src"), { recursive: true })) {
       await rebuildInfrequently(event);
     }
+
+    // FIXME: console.write((await command.output()).stderr);
     Deno.exit(0);
   } catch (err) {
     console.error(err instanceof Error ? `${err.stack}` : `Error: ${err.toString()}`);
+    // FIXME: Don't exit for recoverable errors.
+    wmr.kill();
     Deno.exit(1);
   }
 }
 
 async function rebuild(event?: Deno.FsEvent) {
-  if (event && event.kind !== "modify") return;
+  // Only rebuild if a project file has been modified
+  const fileWasModified = (event?.isFile ?? false) && event?.kind === "modify";
+  // FIXME: Also rebuild if a file was created
+  if (!fileWasModified) return;
+  console.debug(event?.kind ?? "First build!");
   const result = await build();
-  if (result?.state === BuildState.success) await delay(1500).then(() => console.clear());
-  console.log("Watching for changes…");
+  if (result?.state === BuildState.success) await delay(1000).then(() => console.clear());
 }
