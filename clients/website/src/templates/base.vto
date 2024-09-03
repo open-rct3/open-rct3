@@ -16,6 +16,7 @@
 <body>
   <header class="nav">
     {{ include "partials/logo.vto" }}
+    <a class="sr-only shown-on-focus" href="#main">Skip to main content.</a>
     <div class="flex-grow-1"></div>
     <nav>
       <a href="/">Home</a>
@@ -26,7 +27,7 @@
       </a>
     </nav>
   </header>
-  <main>
+  <main id="main">
     <noscript>
       <div class="alert alert-danger">
         <i class="icon fas fa-exclamation-triangle"></i>

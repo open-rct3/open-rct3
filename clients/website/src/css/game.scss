@@ -1,10 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
 
 @import "./animations";
+@import "./colors";
 @import "./mixins";
 @import "./variables";
 
-$headerCollapsedWidth: 96px;
 $hudHeight: 36px;
 $hudBorderRadius: 12px;
 $drawerGripSize: 32px;
@@ -38,11 +38,16 @@ header.nav {
     }
   }
 
+  a.shown-on-focus {
+    position: absolute;
+    left: $headerCollapsedWidth;
+  }
+
   nav {
     display: none;
   }
 
-  &.shown {
+  &.shown, &:focus-within {
     width: 100vw;
     border-bottom-right-radius: 4px;
 

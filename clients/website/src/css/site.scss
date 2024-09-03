@@ -4,18 +4,6 @@
 @import "./variables";
 
 :root {
-  // Colors
-  --black: $black;
-  --shadow-gray: $gray;
-  --gray-light: $grayLight;
-  --gray-dark: $grayDark;
-  --accent: $accent;
-  --accent-dark: $accentDark;
-  --black-shadow-lighter: $blackShadowLighter;
-  --black-shadow-light: $blackShadowLight;
-  --black-shadow: $blackShadow;
-  --link: $link;
-  --link-outline: $linkOutline;
   // Gradients & Shadows
   --gray-gradient: rgba(lightgray, 50%), #fff;
   --box-shadow-lowest: 0 2px 4px rgba($shadowGray, 33%);
@@ -118,41 +106,53 @@ header.nav {
     }
   }
 
+  a {
+    color: inherit;
+
+    &.shown-on-focus:focus {
+      margin-inline-start: 8px;
+      font-size: inherit;
+      text-decoration: none;
+    }
+  }
+  a:not(:has(.icon:first-child:last-child)) {
+    font-weight: 500;
+    border-bottom: solid 2px transparent;
+    outline: none;
+    transition: border-bottom-color 200ms ease;
+
+    &:focus {
+      border-bottom-color: var(--accent);
+      border-radius: 4px;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      @include backdrop-blur();
+
+      &:hover {
+        text-decoration: none;
+      }
+    }
+  }
+  a:has(.icon) {
+    align-self: center;
+
+    &:focus {
+      color: var(--link);
+    }
+
+    &:has(.icon.fas) {
+      font-size: 16px;
+    }
+    &:has(.icon.devicons) {
+      font-size: 24px;
+    }
+  }
+
   nav {
     display: flex;
     align-self: stretch;
     align-items: center;
     gap: 1rem;
-
-    a, a:hover {
-      color: inherit;
-    }
-    a:hover:focus {
-      text-decoration: none;
-    }
-    a:not(:has(.icon:first-child:last-child)) {
-      font-weight: 500;
-      border-bottom: solid 2px transparent;
-      outline: none;
-      transition: border-bottom-color 200ms ease;
-
-      &:focus {
-        border-bottom-color: var(--accent);
-      }
-    }
-    a:has(.icon) {
-      align-self: center;
-
-      &:focus {
-        color: var(--link);
-      }
-    }
-    a:has(.icon.fas) {
-      font-size: 16px;
-    }
-    a:has(.icon.devicons) {
-      font-size: 24px;
-    }
   }
 }
 
@@ -245,6 +245,11 @@ main {
   background-color: #4E5166;
   border-radius: 0.3rem;
   transition: margin-block-start 0.3s ease-out;
+
+  &:focus-within {
+    outline: 2px var(--link) solid;
+    outline-offset: 2px;
+  }
 }
 /* Factor difference of the alert, if any, including it's border. */
 main > .alert + .jumbotron {
@@ -268,21 +273,47 @@ footer {
 }
 
 .sr-only {
-	border: 0;
-	padding: 0;
-	margin: 0;
 	position: absolute !important;
-	height: 1px;
+	margin: 0;
+	padding: 0;
 	width: 1px;
+	height: 1px;
+	border: 0;
 	overflow: hidden;
-	/* IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box */
+	// IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box
 	clip: rect(1px 1px 1px 1px);
-	/* maybe deprecated but we need to support legacy browsers */
+	// Maybe deprecated, but we try to support legacy browsers
 	clip: rect(1px, 1px, 1px, 1px);
-	/* modern browsers, clip-path works inwards from each corner */
+	// Modern browsers, clip-path works inwards from each corner
 	clip-path: inset(50%);
-	/* added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space */
+	// Added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space
 	white-space: nowrap;
+
+  &.shown-on-focus:focus {
+    font-size: 1.5rem;
+    font-weight: 500;
+    text-decoration: underline;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative !important;
+    left: unset;
+    right: unset;
+    padding: unset;
+    padding-inline: 4px;
+    width: unset;
+    height: fit-content;
+    border: unset;
+    border-radius: 4px;
+    overflow: visible;
+    clip: initial;
+    clip-path: initial;
+    // TODO: Extract this into a mixin, i.e. `@include on-top-for-sr();`
+    z-index: $onTop * 200;
+  }
+  &.shown-on-focus:focus-visible {
+    outline-color: var(--link);
+  }
 }
 
 @import "./social";

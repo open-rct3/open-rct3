@@ -17,6 +17,7 @@
 <body>
   <header class="nav">
     {{ include "partials/logo.vto" { onGamePage: true } }}
+    <a class="sr-only shown-on-focus" href="#game">Skip to game content.</a>
     <div class="flex-grow-1"></div>
     <nav>
       <a href="/" target="_blank">Website</a>
@@ -30,7 +31,7 @@
       </a>
     </nav>
   </header>
-  <main class="game">
+  <main id="game" class="game">
     <noscript>
       <div class="alert alert-danger">
         <i class="icon fas fa-exclamation-triangle"></i>
