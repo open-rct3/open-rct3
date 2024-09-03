@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json.schemastore.org/importmap.json",
+  "imports": {
+    "npm:lit@3": "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js",
+    "npm:lit@3/decorators.js": "https://cdn.jsdelivr.net/npm/lit@3/decorators.js"
+  }
+}

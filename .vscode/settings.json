@@ -1,6 +1,8 @@
 {
   "deno.enable": true,
-  "deno.config": "clients/website/deno.json",
+  "deno.codeLens.test": true,
+  "deno.codeLens.references": true,
+  "deno.config": "deno.json",
   "makefile.configureOnOpen": false,
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"

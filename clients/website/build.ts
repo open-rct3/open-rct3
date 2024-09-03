@@ -65,15 +65,15 @@ export default async function build(options?: { timeout?: number }) {
       }
     })
   ]);
-  if (result.state === BuildState.success) console.log(`✅ Built site in ${formatMeasure(result.measure!)}s.`);
+  if (result.state === BuildState.success) console.log(`✅ Built site in ${formatMeasure(result.measure!)}.`);
 
   Deno.removeSignalListener("SIGINT", abortBuild);
   return result;
 }
 
-function formatMeasure(measure: PerformanceMeasure) {
-  if (measure.duration % 1000 !== 0) return (measure.duration / 1000.0).toFixed(1);
-  return (measure.duration / 1000).toFixed(0);
+export function formatMeasure(measure: PerformanceMeasure) {
+  if (measure.duration % 1000 !== 0) return `${(measure.duration / 1000.0).toFixed(1)}s`;
+  return `${(measure.duration / 1000).toFixed(0)}s`;
 }
 
 if (import.meta.main) await build().then(() => Deno.exit(0));
