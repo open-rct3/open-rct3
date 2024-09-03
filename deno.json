@@ -9,12 +9,12 @@
     "build:website": "deno run --allow-env --allow-net --allow-sys --allow-read --allow-write=./clients/website/_site clients/website/build.ts"
   },
   "imports": {
+    "@deno/emit": "jsr:@deno/emit@^0.45.0",
     "@std/assert": "jsr:@std/assert@1",
     "@std/async": "jsr:@std/async@1",
     "@std/fs": "jsr:@std/fs@^1.0.2",
     "@std/path": "jsr:@std/path@^1.0.3",
     "@webview/webview": "jsr:@webview/webview@^0.8.0",
-    "esbuild": "https://deno.land/x/esbuild@v0.23.1/mod.js",
     "lume": "https://deno.land/x/lume@v2.2.4/mod.ts",
     "lume/": "https://deno.land/x/lume@v2.2.4/"
   },

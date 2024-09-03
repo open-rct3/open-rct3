@@ -75,6 +75,13 @@ layout: play.vto
   <button class="icon-button" title="Landscaping">🪴</button>
   <button class="icon-button" title="Bulldozer">🗑️</button>
 </aside>
+<script>
+const h = function (tag, attrs, ...content) {
+  const element = document.createElement(tag);
+  // FIXME: Apply attributes and content to the new tag
+  console.log('h', tag, attrs, content, element);
+}
+</script>
 <script type="module" src="./js/game.js"></script>
 <script>
 (function () {

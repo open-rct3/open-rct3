@@ -1,6 +1,15 @@
 {
   "$schema": "https://json.schemastore.org/importmap.json",
   "imports": {
+    "@lit/reactive-element/decorators/custom-element.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/custom-element.js",
+    "@lit/reactive-element/decorators/property.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/property.js",
+    "@lit/reactive-element/decorators/state.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/state.js",
+    "@lit/reactive-element/decorators/event-options.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/event-options.js",
+    "@lit/reactive-element/decorators/query.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/query.js",
+    "@lit/reactive-element/decorators/query-all.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/query-all.js",
+    "@lit/reactive-element/decorators/query-async.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/query-async.js",
+    "@lit/reactive-element/decorators/query-assigned-elements.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/query-assigned-elements.js",
+    "@lit/reactive-element/decorators/query-assigned-nodes.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/query-assigned-nodes.js",
     "npm:lit@3": "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js",
     "npm:lit@3/decorators.js": "https://cdn.jsdelivr.net/npm/lit@3/decorators.js"
   }
