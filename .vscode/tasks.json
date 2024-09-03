@@ -29,7 +29,7 @@
     {
       "label": "Desktop Client",
       "type": "shell",
-      "command": "deno task -c clients/deno/deno.json dev",
+      "command": "deno task -c clients/desktop/deno.json dev",
       "problemMatcher": [
         "$deno-test"
       ]
@@ -37,7 +37,7 @@
     {
       "label": "Desktop Client (Watch)",
       "type": "shell",
-      "command": "deno task -c clients/deno/deno.json watch"
+      "command": "deno task -c clients/desktop/deno.json watch"
     }
   ]
 }

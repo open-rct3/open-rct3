@@ -6,7 +6,7 @@
       "request": "launch",
       "name": "Debug Desktop Client",
       "type": "node",
-      "program": "${workspaceFolder}/clients/deno/main.ts",
+      "program": "${workspaceFolder}/clients/desktop/main.ts",
       "cwd": "${workspaceFolder}",
       "env": {},
       "runtimeExecutable": "deno",

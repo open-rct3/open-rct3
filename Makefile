@@ -11,7 +11,7 @@ release: desktop
 
 .PHONY: desktop
 desktop:
-	deno task -c clients/deno/deno.json compile
+	deno task -c clients/desktop/deno.json compile
 
 .PHONY: debug
 debug:
@@ -28,4 +28,4 @@ dumper:
 .PHONY: test
 test:
 	dub test
-	deno check -c clients/deno/deno.json clients/deno/main.ts
+	deno check -c clients/desktop/deno.json clients/desktop/main.ts
