@@ -35,7 +35,7 @@ if (import.meta.main) {
  * Bundle a set of TypeScript modules.
  * @see [jsr:@libs/bundle:bundle](https://jsr.io/@libs/bundle/doc/ts/~/bundle#function_bundle_0)
  **/
-export async function build(options?: { entryPoints?: string[] }): Promise<string[]> {
+export function build(options?: { entryPoints?: string[] }): Promise<string[]> {
   const encoder = new TextEncoder();
   // Ensure destination exists
   const jsPath = path.parse(import.meta.resolve("./../website/src/js"));
@@ -60,7 +60,7 @@ export async function build(options?: { entryPoints?: string[] }): Promise<strin
 }
 
 async function bundle(root: string): Promise<string> {
-  const dir = path.dirname(root);
+  const bundleDir = path.dirname(root);
   // TODO: Use the live URL in production builds
   const publicPath = import.meta?.dirname ?? "https://rct3.chancesnow.me";
 
@@ -75,7 +75,7 @@ async function bundle(root: string): Promise<string> {
           ...config.imports,
           ...importMap.imports
         }
-      },
+      } as ImportMap,
       // TODO: Turn this on in production builds
       minify: false,
     });
