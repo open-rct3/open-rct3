@@ -1,7 +1,7 @@
 {
   "tasks": {
     "dev:desktop": "deno run --env --unstable-ffi --allow-ffi --allow-read --allow-write --allow-env=DENO_AUTH_TOKENS,DENO_DIR,PLUGIN_URL,LOCALAPPDATA,RCT3_SERVER_URL clients/desktop/main.ts",
-    "dev:website": "deno run --allow-env --allow-net --allow-sys --allow-run --allow-read --allow-write=./clients/website/_site clients/website/dev.ts",
+    "dev:website": "deno run --watch --allow-env --allow-net --allow-sys --allow-run --allow-read --allow-write=./clients/website/_site clients/website/dev.ts",
     "watch": "deno run --env --watch --unstable-ffi --allow-ffi --allow-read --allow-write --allow-env=DENO_AUTH_TOKENS,DENO_DIR,PLUGIN_URL,LOCALAPPDATA,RCT3_SERVER_URL clients/desktop/main.ts",
     "lint": "deno check clients/desktop/main.ts clients/isomorphic/main.ts",
     "build": "make",
@@ -14,6 +14,7 @@
     "@std/assert": "jsr:@std/assert@1",
     "@std/async": "jsr:@std/async@1",
     "@std/fs": "jsr:@std/fs@^1.0.2",
+    "@std/media-types": "jsr:@std/media-types@^1.0.3",
     "@std/path": "jsr:@std/path@^1.0.3",
     "@webview/webview": "jsr:@webview/webview@^0.8.0",
     "lume": "https://deno.land/x/lume@v2.2.4/mod.ts",

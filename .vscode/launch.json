@@ -3,6 +3,14 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Launch Website",
+      "request": "launch",
+      "type": "msedge",
+      "url": "http://localhost:8080/index.html",
+      "webRoot": "${workspaceFolder}/clients/website/_site"
+    },
+    // TODO: Add a "Debug Website" launch task
+    {
       "request": "launch",
       "name": "Debug Desktop Client",
       "type": "node",
