@@ -1,7 +1,7 @@
 {
   "tasks": {
     "dev:desktop": "deno run --env --unstable-ffi --allow-ffi --allow-read --allow-write --allow-env=DENO_AUTH_TOKENS,DENO_DIR,PLUGIN_URL,LOCALAPPDATA,RCT3_SERVER_URL clients/desktop/main.ts",
-    "dev:website": "deno run --allow-env --allow-net --allow-sys --allow-run --allow-read --allow-write=./clients/website/_site clients/website/dev.ts",
+    "dev:website": "deno run --allow-env --allow-net --allow-sys --allow-ffi --allow-run --allow-read --allow-write=./clients/website/_site clients/website/dev.ts",
     "watch": "deno run --env --watch --unstable-ffi --allow-ffi --allow-read --allow-write --allow-env=DENO_AUTH_TOKENS,DENO_DIR,PLUGIN_URL,LOCALAPPDATA,RCT3_SERVER_URL clients/desktop/main.ts",
     "lint": "deno check clients/desktop/main.ts clients/isomorphic/main.ts",
     "build": "make",
