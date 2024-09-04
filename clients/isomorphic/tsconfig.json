@@ -1,5 +1,8 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig.json",
   "compilerOptions": {
+    "inlineSourceMap": true,
+    "jsx": "react",
     "jsxFactory": "h",
     "jsxFragment": "Fragment"
   }

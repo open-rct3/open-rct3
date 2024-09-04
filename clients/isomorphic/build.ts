@@ -1,16 +1,16 @@
 import * as emit from "@deno/emit";
 import { type ImportMap } from "@deno/emit";
 import { assert } from "@std/assert";
-import { delay } from "@std/async";
 import * as path from "@std/path";
 import { existsSync } from "@std/fs";
 
 import importMap from "./imports.json" with { type: "json" };
 import config from "../../deno.json" with { type: "json" };
+import tsConfig from "./tsconfig.json" with { type: "json" };
 import { formatMeasure } from "../website/build.ts";
 
 export default async function buildApp(
-  options?: { entryPoints?: string[] } = { entryPoints: ["isomorphic/game.tsx"] }
+  options: { entryPoints?: string[] } = { entryPoints: ["isomorphic/game.tsx"] }
 ) {
   return await build(options);
 }
@@ -69,13 +69,7 @@ async function bundle(root: string): Promise<string> {
       type: "classic",
       // Compile remote dependencies
       allowRemote: true,
-      // TypeScript configs
-      compilerOptions: {
-        inlineSourceMap: true,
-        jsx: "react",
-        jsxFactory: "h",
-        jsxFragment: 'Fragment',
-      } as unknown as emit.CompilerOptions,
+      compilerOptions: tsConfig.compilerOptions as unknown as emit.CompilerOptions,
       importMap: {
         imports: {
           ...config.imports,
