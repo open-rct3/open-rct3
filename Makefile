@@ -10,12 +10,16 @@ release: desktop
 	dub build -b release
 
 .PHONY: desktop
-desktop: ovl
+desktop: ovl isomorphic
 	deno task build:desktop
 
 .PHONY: website
 website: ovl
 	deno task build:website
+
+.PHONY: isomorphic
+isomorphic:
+	deno task build:isomorphic
 
 .PHONY: debug
 debug: ovl
