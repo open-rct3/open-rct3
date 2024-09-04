@@ -4,6 +4,7 @@
   "deno.codeLens.references": true,
   "deno.config": "deno.json",
   "makefile.configureOnOpen": false,
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"
   },
