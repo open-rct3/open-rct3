@@ -50,7 +50,13 @@ if (import.meta.main) {
 
 async function delayABit(result?: BuildStatus) { await delay(750); return result; }
 
-async function rebuild(event?: Deno.FsEvent) {
+declare namespace Deno46 {
+  interface FsEvent extends Deno.FsEvent {
+    isFile: boolean;
+  }
+}
+
+async function rebuild(event?: Deno46.FsEvent) {
   // Only rebuild if a project file has been modified
   const fileWasModified = (event?.isFile ?? false) && event?.kind === "modify";
   // FIXME: Also rebuild if a file was created
