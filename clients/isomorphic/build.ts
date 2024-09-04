@@ -18,7 +18,7 @@ export default async function buildApp(
 if (import.meta.main) {
   try {
     // TODO: Refactor to a spinner interface
-    console.log("Building isomorphic client…");
+    console.log("⏳ Bundling isomorphic client…");
     const markerName = Object.getPrototypeOf(build).name;
     const _startMark = performance.mark(markerName);
     const modules = await buildApp();

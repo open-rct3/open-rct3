@@ -7,5 +7,6 @@ export interface LitElementBuilder {
 }
 
 export const h: LitElementBuilder = function (tag, attrs, ...content) {
+  // FIXME: Apply attributes and content to the new tag
   console.log('h', tag, attrs, content)
 }
