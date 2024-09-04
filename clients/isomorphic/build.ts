@@ -36,22 +36,24 @@ if (import.meta.main) {
  * @see [jsr:@libs/bundle:bundle](https://jsr.io/@libs/bundle/doc/ts/~/bundle#function_bundle_0)
  **/
 export async function build(options?: { entryPoints?: string[] }): Promise<string[]> {
+  const encoder = new TextEncoder();
   // Ensure destination exists
-  const js = new URL(import.meta.resolve("./../website/src/js")).pathname;
+  const jsPath = path.parse(import.meta.resolve("./../website/src/js"));
+  const js = path.fromFileUrl(path.format(jsPath));
   if (!existsSync(js)) Deno.mkdirSync(js, { recursive: true });
 
   return Promise.all((options?.entryPoints ?? []).map(async entryPoint => {
-    const entryPath = new URL(import.meta.resolve(`./../${entryPoint}`)).pathname;
-    assert(existsSync(entryPath), `File not found: ${entryPath}`);
-    const bundleName = path.basename(entryPath, path.extname(entryPath));
-    const bundlePath = path.normalize(path.join(js, `${bundleName}.js`));
-    await Deno.writeFile(
-      bundlePath,
-      await bundle(entryPath).catch(err => {
-        console.error(`❌ ${bundlePath}`);
-        throw err;
-      })
-    );
+    const entryPath = path.parse(import.meta.resolve(`./../${entryPoint}`));
+    const entry = path.fromFileUrl(path.format(entryPath));
+    assert(existsSync(entry), `File not found: ${entry}`);
+    const bundleName = path.basename(entry, path.extname(entry));
+    const bundleParsedPath = path.parse(path.join(js, `${bundleName}.js`));
+    const bundlePath = path.format(bundleParsedPath);
+    const bundleContents = await bundle(entry).catch(err => {
+      console.error(`❌ ${bundlePath}`);
+      throw err;
+    });
+    await Deno.writeFile( bundlePath, encoder.encode(bundleContents));
     console.log(`📝 ${bundlePath}`);
     return bundlePath;
   }));
@@ -65,13 +67,15 @@ async function bundle(root: string): Promise<string> {
   try {
     const result = await emit.bundle(root, {
       type: "classic",
+      // Compile remote dependencies
+      allowRemote: true,
+      // TypeScript configs
       compilerOptions: {
         inlineSourceMap: true,
         jsx: "react",
         jsxFactory: "h",
         jsxFragment: 'Fragment',
-      },
-      allowRemote: true,
+      } as unknown as emit.CompilerOptions,
       importMap: {
         imports: {
           ...config.imports,
@@ -85,9 +89,7 @@ async function bundle(root: string): Promise<string> {
     const successful = result.code && result.code.length;
     if (!successful) throw new Error("Could not bundle entry.");
     // QUESTION: Do something with `result.outputFiles[0].hash`?
-
-    const encoder = new TextEncoder();
-    return encoder.encode(result.code);
+    return result.code;
   } catch (err) {
     throw new Error(err instanceof Error ? err.message : err.toString(), { cause: err });
   }
