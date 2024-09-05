@@ -13,10 +13,11 @@ import build, { BuildState, BuildStatus } from "./build.ts";
 
 const port = 8080;
 const website = import.meta?.dirname ?? Deno.cwd();
+const appDir = path.resolve(path.join(".", "clients", "isomorphic"));
 const filesDir = path.resolve(path.join(".", "clients", "website", "_site"));
 
 if (import.meta.main) {
-  const siteChanges = Deno.watchFs([join(website, "src")], { recursive: true });
+  const siteChanges = Deno.watchFs([appDir, join(website, "src")], { recursive: true });
   const abortion = new AbortController();
 
   // TODO: Refactor to a spinner interface

@@ -1,6 +1,10 @@
 {
   "dvelop.fmt.braceStyle" : "knr",
-  "editor.default_syntax" : "d",
-  "workspace.color" : 6,
-  "workspace.name" : "OpenRCT3"
+  "editor.default_syntax" : "typescript",
+  "workspace.art_style" : 1,
+  "workspace.color" : 12,
+  "workspace.name" : "OpenRCT3",
+  "workspace.preview_root" : "clients\/website\/_site",
+  "workspace.preview_type" : "custom",
+  "workspace.preview_url" : "https:\/\/localhost:8080\/play"
 }
