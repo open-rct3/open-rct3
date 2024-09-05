@@ -17,6 +17,10 @@ desktop: ovl isomorphic
 website: ovl
 	deno task build:website
 
+.PHONY: serve-website
+serve-website: ovl
+	deno task dev:website
+
 .PHONY: isomorphic
 isomorphic:
 	deno task build:isomorphic
