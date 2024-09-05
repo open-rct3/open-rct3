@@ -11,8 +11,11 @@
   },
   "imports": {
     "@deno/emit": "jsr:@deno/emit@^0.45.0",
+    "@fathym/kia": "jsr:@fathym/kia@^0.0.117",
     "@std/assert": "jsr:@std/assert@1",
     "@std/async": "jsr:@std/async@1",
+    "@std/cli": "jsr:@std/cli@^1.0.5",
+    "@std/cli/": "jsr:/@std/cli@^1.0.5/",
     "@std/fs": "jsr:@std/fs@^1.0.2",
     "@std/media-types": "jsr:@std/media-types@^1.0.3",
     "@std/path": "jsr:@std/path@^1.0.3",

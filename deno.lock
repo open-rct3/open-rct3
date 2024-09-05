@@ -7,6 +7,7 @@
       "jsr:@deno/emit@^0.45.0": "jsr:@deno/emit@0.45.0",
       "jsr:@deno/graph@^0.69.7": "jsr:@deno/graph@0.69.10",
       "jsr:@denosaurs/plug@^1.0.5": "jsr:@denosaurs/plug@1.0.6",
+      "jsr:@fathym/kia@^0.0.117": "jsr:@fathym/kia@0.0.117",
       "jsr:@geacko/serve-file": "jsr:@geacko/serve-file@1.0.3",
       "jsr:@std/assert@1": "jsr:@std/assert@1.0.3",
       "jsr:@std/assert@^0.218.2": "jsr:@std/assert@0.218.2",
@@ -17,12 +18,14 @@
       "jsr:@std/bytes@^0.218.2": "jsr:@std/bytes@0.218.2",
       "jsr:@std/cli@0.224.7": "jsr:@std/cli@0.224.7",
       "jsr:@std/cli@^0.224.7": "jsr:@std/cli@0.224.7",
+      "jsr:@std/cli@^1.0.5": "jsr:@std/cli@1.0.5",
       "jsr:@std/collections@^1.0.4": "jsr:@std/collections@1.0.5",
       "jsr:@std/crypto@1.0.1": "jsr:@std/crypto@1.0.1",
       "jsr:@std/encoding@1.0.0-rc.2": "jsr:@std/encoding@1.0.0-rc.2",
       "jsr:@std/encoding@1.0.1": "jsr:@std/encoding@1.0.1",
       "jsr:@std/encoding@^0.221.0": "jsr:@std/encoding@0.221.0",
       "jsr:@std/fmt@0.225.6": "jsr:@std/fmt@0.225.6",
+      "jsr:@std/fmt@1.0.1": "jsr:@std/fmt@1.0.1",
       "jsr:@std/fmt@^0.218.2": "jsr:@std/fmt@0.218.2",
       "jsr:@std/fmt@^0.221.0": "jsr:@std/fmt@0.221.0",
       "jsr:@std/fmt@^0.225.4": "jsr:@std/fmt@0.225.6",
@@ -108,6 +111,12 @@
           "jsr:@std/path@^0.221.0"
         ]
       },
+      "@fathym/kia@0.0.117": {
+        "integrity": "07b17d791b274a1c01b484ba14a2deb129843ab1162484d8b6ac40499c45e6dc",
+        "dependencies": [
+          "jsr:@std/fmt@1.0.1"
+        ]
+      },
       "@geacko/serve-file@1.0.3": {
         "integrity": "65257320fc27e01316b4c2a34776d54d3ea3b6f165bffb7cdf530fbbafecc44c"
       },
@@ -134,6 +143,9 @@
       },
       "@std/cli@0.224.7": {
         "integrity": "654ca6477518e5e3a0d3fabafb2789e92b8c0febf1a1d24ba4b567aba94b5977"
+      },
+      "@std/cli@1.0.5": {
+        "integrity": "c93cce26ffd26f617c15a12874e1bfeabc90b1eee86017c9639093734c2bf587"
       },
       "@std/collections@1.0.5": {
         "integrity": "ab9eac23b57a0c0b89ba45134e61561f69f3d001f37235a248ed40be260c0c10"
@@ -891,8 +903,10 @@
   "workspace": {
     "dependencies": [
       "jsr:@deno/emit@^0.45.0",
+      "jsr:@fathym/kia@^0.0.117",
       "jsr:@std/assert@1",
       "jsr:@std/async@1",
+      "jsr:@std/cli@^1.0.5",
       "jsr:@std/fs@^1.0.2",
       "jsr:@std/media-types@^1.0.3",
       "jsr:@std/path@^1.0.3",
