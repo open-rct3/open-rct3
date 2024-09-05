@@ -41,7 +41,12 @@ See the full [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap) on o
 
 ## Development
 
-1. Install [D](https://dlang.org/install) and [Deno](https://docs.deno.com/runtime/#install-deno).
+1. Install [D](https://dlang.org/install), [Deno](https://docs.deno.com/runtime/#install-deno), and [`blogc`]().
+
+    `blogc` is also available as a Brew bottle:
+    ```shell
+    brew install blogc
+    ```
 2. Build OpenRCT3:
     ```shell
     dub build
