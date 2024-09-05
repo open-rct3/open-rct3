@@ -47,7 +47,7 @@ header.nav {
     display: none;
   }
 
-  &.shown, &:focus-within {
+  &.shown {
     width: 100vw;
     border-bottom-right-radius: 4px;
 
