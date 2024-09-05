@@ -9,8 +9,10 @@ import config from "../../deno.json" with { type: "json" };
 import tsConfig from "./tsconfig.json" with { type: "json" };
 import { formatMeasure } from "../website/build.ts";
 
+export const entryPoints = ["isomorphic/game.tsx"];
+
 export default async function buildApp(
-  options: { entryPoints?: string[] } = { entryPoints: ["isomorphic/game.tsx"] }
+  options: { entryPoints?: string[] } = { entryPoints }
 ) {
   return await build(options);
 }
