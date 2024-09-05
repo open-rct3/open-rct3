@@ -44,11 +44,13 @@ if (import.meta.main) {
         });
 
         // Open the site's URL in the user's browser
+        // TODO: Fix remote debugging. See https://stackoverflow.com/a/69368719/1363247
         // TODO: Make this optional
         open(`${addressUrl}/play`, { url: true, background: true });
 
         console.log("👁 Watching for changes…");
         const rebuildInfrequently = debounce((event) => rebuild(event), 250);
+        // FIXME: This isn't rebuilding the site... 🙄
         for await (const event of siteChanges) await rebuildInfrequently(event);
 
         await server.finished.then(() => delayABit());
