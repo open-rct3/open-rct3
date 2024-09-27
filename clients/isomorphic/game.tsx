@@ -6,6 +6,7 @@ import { } from "npm:@use-gpu/webgpu";
 @customElement('open-rct3-game')
 // deno-lint-ignore no-unused-vars
 class Game extends LitElement {
+  // See https://lit.dev/docs/components/styles
   static styles = css`
 canvas#game {
   position: absolute;
