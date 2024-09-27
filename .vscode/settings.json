@@ -1,5 +1,6 @@
 {
   "deno.enable": true,
+  "deno.lint": true,
   "deno.codeLens.test": true,
   "deno.codeLens.references": true,
   "deno.config": "deno.json",
@@ -8,7 +9,10 @@
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"
   },
-  "[handlebars]": {
-    "editor.defaultFormatter": "vscode.html-language-features"
+  "[javascript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
   }
 }

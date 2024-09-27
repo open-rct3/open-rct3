@@ -5,7 +5,7 @@
     {
       "name": "Launch Website",
       "request": "launch",
-      "type": "msedge",
+      "type": "pwa-chrome",
       "url": "http://localhost:8080/index.html",
       "webRoot": "${workspaceFolder}/clients/website/_site"
     },
