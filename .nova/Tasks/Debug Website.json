@@ -1,0 +1,13 @@
+{
+  "actions" : {
+    "clean" : {
+      "enabled" : true,
+      "script" : "#!\/bin\/sh\nmake clean\n"
+    },
+    "run" : {
+      "enabled" : true,
+      "script" : "#!\/bin\/zsh\ndeno task dev:website\n"
+    }
+  },
+  "openLogOnRun" : "fail"
+}

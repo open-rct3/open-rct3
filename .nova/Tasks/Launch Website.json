@@ -1,0 +1,15 @@
+{
+  "extension" : {
+    "identifier" : "panic.JavaScript",
+    "name" : "JavaScript"
+  },
+  "extensionTemplate" : "chromeDebug",
+  "extensionValues" : {
+    "launchArgs" : [
+      "--remote-debugging-port=9222"
+    ],
+    "launchPath" : "\/Applications\/Arc.app",
+    "request" : "launch"
+  },
+  "openLogOnRun" : "fail"
+}

@@ -1,0 +1,11 @@
+{
+  "extension" : {
+    "identifier" : "panic.JavaScript",
+    "name" : "JavaScript"
+  },
+  "extensionTemplate" : "denoDebug",
+  "extensionValues" : {
+    "scriptPath" : "clients\/desktop\/main.ts"
+  },
+  "openLogOnRun" : "fail"
+}
