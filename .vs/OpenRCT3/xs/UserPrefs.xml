@@ -1,0 +1,34 @@
+﻿<Properties StartupConfiguration="{5D93B874-87C2-474C-B1B1-E1D96373EBF3}|Default">
+  <MultiItemStartupConfigurations />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workbench ActiveDocument="OpenRCT3/Views/WebGpuWindow.cs">
+    <Files>
+      <File FileName="src/ovl/OVL.cs" Line="26" Column="1" />
+      <File FileName="OpenRCT3/Program.cs" Line="11" Column="19" />
+      <File FileName="OpenRCT3/Views/MainWindow.axaml" Line="20" Column="1" />
+      <File FileName="OpenRCT3/Views/MainWindow.axaml.cs" Line="5" Column="41" />
+      <File FileName="OpenRCT3/Views/WebGpuWindow.cs" Line="32" Column="1" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="OpenRCT3" expanded="True">
+            <Node name="OpenRCT3">
+              <Node name="ViewModels" expanded="True" />
+              <Node name="Views">
+                <Node name="MainWindow.axaml" expanded="True" />
+                <Node name="WebGpuWindow.cs" selected="True" />
+              </Node>
+              <Node name="App.axaml" expanded="True" />
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.ItemProperties.OpenRCT3 PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+</Properties>
