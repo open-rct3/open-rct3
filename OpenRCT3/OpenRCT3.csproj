@@ -1,0 +1,93 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-macos10.14</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Display name -->
+    <ApplicationTitle>OpenRCT3</ApplicationTitle>
+    <Company>OpenRCT3 Contributors</Company>
+    <Copyright>Copyright © 2024 OpenRCT3 Contributors. All rights reserved.</Copyright>
+    <!-- App ID -->
+    <ApplicationId>llc.snow.rct3</ApplicationId>
+    <ApplicationIdGuid>af680530-78f7-406c-aa4b-f38a376fdbb9</ApplicationIdGuid>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+<!--    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">10.15</SupportedOSPlatformVersion>-->
+<!--    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>-->
+<!--    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>-->
+  </PropertyGroup>
+
+  <!-- Exclude platform-specific sources, per platform. -->
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <CreatePackage>false</CreatePackage>
+    <UseSGen>false</UseSGen>
+    <WarningLevel>4</WarningLevel>
+    <LinkMode>None</LinkMode>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <CreatePackage>false</CreatePackage>
+    <UseSGen>false</UseSGen>
+    <LinkMode>None</LinkMode>
+  </PropertyGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('macos')) != true">
+    <Compile Remove="**\*.macOS.cs" />
+    <None Include="**\*.macOS.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows')) != true">
+    <Compile Remove="**\*.Windows.cs" />
+    <None Include="**\*.Windows.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+  </ItemGroup>
+
+<!--  <ItemGroup>-->
+<!--    <Folder Include="Models\" />-->
+<!--    <Folder Include="Assets\" />-->
+<!--    <Folder Include="Views\" />-->
+<!--    <Folder Include="Platform\" />-->
+<!--  </ItemGroup>-->
+
+<!--  <ItemGroup>-->
+<!--    <None Remove="Assets\" />-->
+<!--    <None Remove="Views\" />-->
+<!--    <None Remove="Platform\" />-->
+<!--  </ItemGroup>-->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.91" />
+    <PackageReference Include="Silk.NET.WebGPU" Version="2.21.0" />
+    <PackageReference Include="Silk.NET.WebGPU.Extensions.WGPU" Version="2.21.0" />
+    <PackageReference Include="Silk.NET.WebGPU.Native.WGPU" Version="2.21.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Platforms\macOS\MainWindow.designer.cs">
+      <DependentUpon>MainWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Platforms\macOS\GameViewController.designer.cs">
+      <DependentUpon>GameViewController.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <Choose>
+    <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
+      <PropertyGroup>
+        <EvergineProfileName>macOS</EvergineProfileName>
+        <!-- See https://github.com/xamarin/xamarin-macios -->
+        <TargetFramework>net8.0-macos</TargetFramework>
+        <ImplicitUsings>true</ImplicitUsings>
+        <TargetPlatformVersion>10.15</TargetPlatformVersion>
+      </PropertyGroup>
+      <ItemGroup>
+      </ItemGroup>
+    </When>
+    <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
+      <PropertyGroup>
+        <EvergineProfileName>Windows</EvergineProfileName>
+      </PropertyGroup>
+      <ItemGroup>
+      </ItemGroup>
+    </When>
+  </Choose>
+</Project>

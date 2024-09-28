@@ -2,6 +2,8 @@
 .env
 
 # Artifacts
+obj/
+OpenRCT3/bin/
 bin/OpenRCT3*
 bin/open-rct3-test-application
 bin/open-rct3-unittest
@@ -20,6 +22,10 @@ bin/open-rct3-unittest
 docs.json
 __dummy.html
 docs/
+
+# Visual Studio
+.vs/**/project-cache/*.json
+.vs/OpenRCT3/xs/UserPrefs.xml
 
 # Code Coverage
 *.lst
