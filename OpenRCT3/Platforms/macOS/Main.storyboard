@@ -2,6 +2,7 @@
 <document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="21701" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="21701"/>
+        <plugIn identifier="com.apple.WebKit2IBPlugin" version="21701"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -438,37 +439,23 @@
             <objects>
                 <viewController id="XfG-lQ-9wD" customClass="GameViewController" sceneMemberID="viewController">
                     <view key="view" wantsLayer="YES" id="m2S-Jp-Qdl">
-                        <rect key="frame" x="0.0" y="0.0" width="480" height="270"/>
+                        <rect key="frame" x="0.0" y="0.0" width="640" height="270"/>
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <splitView fixedFrame="YES" arrangesAllSubviews="NO" dividerStyle="thin" vertical="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Gtu-8E-UHV">
-                                <rect key="frame" x="0.0" y="0.0" width="480" height="270"/>
+                                <rect key="frame" x="0.0" y="0.0" width="640" height="270"/>
                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 <subviews>
-                                    <scrollView fixedFrame="YES" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" usesPredominantAxisScrolling="NO" id="19R-pJ-81w">
-                                        <rect key="frame" x="0.0" y="0.0" width="185" height="270"/>
-                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                        <clipView key="contentView" id="2MG-g0-4T6">
-                                            <rect key="frame" x="1" y="1" width="183" height="268"/>
-                                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                            <subviews>
-                                                <view id="tlf-R9-LI6">
-                                                    <rect key="frame" x="0.0" y="0.0" width="168" height="253"/>
-                                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                                </view>
-                                            </subviews>
-                                        </clipView>
-                                        <scroller key="horizontalScroller" wantsLayer="YES" verticalHuggingPriority="750" horizontal="YES" id="Ukx-GV-TAJ">
-                                            <rect key="frame" x="1" y="253" width="183" height="16"/>
-                                            <autoresizingMask key="autoresizingMask"/>
-                                        </scroller>
-                                        <scroller key="verticalScroller" wantsLayer="YES" verticalHuggingPriority="750" doubleValue="1" horizontal="NO" id="g2n-Wv-IE8">
-                                            <rect key="frame" x="168" y="1" width="16" height="268"/>
-                                            <autoresizingMask key="autoresizingMask"/>
-                                        </scroller>
-                                    </scrollView>
+                                    <wkWebView wantsLayer="YES" focusRingType="none" fixedFrame="YES" allowsLinkPreview="NO" id="Url-sH-ush">
+                                        <rect key="frame" x="0.0" y="0.0" width="200" height="270"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <wkWebViewConfiguration key="configuration" allowsAirPlayForMediaPlayback="NO" applicationNameForUserAgent="OpenRCT3" userInterfaceDirectionPolicy="system">
+                                            <audiovisualMediaTypes key="mediaTypesRequiringUserActionForPlayback" none="YES"/>
+                                            <wkPreferences key="preferences" javaScriptCanOpenWindowsAutomatically="NO"/>
+                                        </wkWebViewConfiguration>
+                                    </wkWebView>
                                     <containerView fixedFrame="YES" id="Kap-w6-2EH">
-                                        <rect key="frame" x="186" y="0.0" width="294" height="270"/>
+                                        <rect key="frame" x="201" y="0.0" width="439" height="270"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                     </containerView>
                                 </subviews>
@@ -481,7 +468,7 @@
                     </view>
                     <connections>
                         <outlet property="game" destination="Kap-w6-2EH" id="5Aj-6w-Xkl"/>
-                        <outlet property="inspector" destination="tlf-R9-LI6" id="J1Y-UK-LJy"/>
+                        <outlet property="inspector" destination="Url-sH-ush" id="23C-2w-xKV"/>
                         <outlet property="splitView" destination="Gtu-8E-UHV" id="9wr-tB-hYe"/>
                     </connections>
                 </viewController>

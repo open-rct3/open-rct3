@@ -1,7 +1,8 @@
-// WARNING
+﻿// WARNING
 //
-// This file has been generated automatically by Visual Studio to store outlets and
-// actions made in the UI designer. If it is removed, they will be lost.
+// This file has been generated automatically by Rider IDE
+//   to store outlets and actions made in Xcode.
+// If it is removed, they will be lost.
 // Manual changes to this file may not be handled correctly.
 //
 using Foundation;
@@ -16,16 +17,16 @@ namespace OpenRCT3.Platforms.macOS
 		AppKit.NSView game { get; set; }
 
 		[Outlet]
-		AppKit.NSView inspector { get; set; }
+		WebKit.WKWebView inspector { get; set; }
 
 		[Outlet]
 		AppKit.NSSplitView splitView { get; set; }
-		
+
 		void ReleaseDesignerOutlets ()
 		{
-			if (splitView != null) {
-				splitView.Dispose ();
-				splitView = null;
+			if (game != null) {
+				game.Dispose ();
+				game = null;
 			}
 
 			if (inspector != null) {
@@ -33,10 +34,11 @@ namespace OpenRCT3.Platforms.macOS
 				inspector = null;
 			}
 
-			if (game != null) {
-				game.Dispose ();
-				game = null;
+			if (splitView != null) {
+				splitView.Dispose ();
+				splitView = null;
 			}
+
 		}
 	}
 }

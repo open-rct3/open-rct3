@@ -62,14 +62,6 @@
     <PackageReference Include="Silk.NET.WebGPU.Extensions.WGPU" Version="2.21.0" />
     <PackageReference Include="Silk.NET.WebGPU.Native.WGPU" Version="2.21.0" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Update="Platforms\macOS\MainWindow.designer.cs">
-      <DependentUpon>MainWindow.cs</DependentUpon>
-    </Compile>
-    <Compile Update="Platforms\macOS\GameViewController.designer.cs">
-      <DependentUpon>GameViewController.cs</DependentUpon>
-    </Compile>
-  </ItemGroup>
   <Choose>
     <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
       <PropertyGroup>
@@ -80,6 +72,14 @@
         <TargetPlatformVersion>10.15</TargetPlatformVersion>
       </PropertyGroup>
       <ItemGroup>
+      </ItemGroup>
+      <ItemGroup>
+        <Compile Update="Platforms\macOS\MainWindow.designer.cs">
+          <DependentUpon>MainWindow.cs</DependentUpon>
+        </Compile>
+        <Compile Update="Platforms\macOS\GameViewController.designer.cs">
+          <DependentUpon>GameViewController.cs</DependentUpon>
+        </Compile>
       </ItemGroup>
     </When>
     <When Condition="$([MSBuild]::IsOSPlatform('windows'))">

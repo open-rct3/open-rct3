@@ -15,9 +15,8 @@ using Silk.NET.WebGPU;
 
 namespace OpenRCT3.Platforms.macOS;
 
-public partial class GameViewController : NSViewController {
-  public GameViewController(NativeHandle handle) : base(handle) { }
-
+// ReSharper disable once ClassNeverInstantiated.Global
+public partial class GameViewController(NativeHandle handle) : NSViewController(handle) {
   public event SurfaceChanged? SurfaceChanged;
 
   public NSView Game => this.game;
@@ -25,10 +24,11 @@ public partial class GameViewController : NSViewController {
   public override unsafe void AwakeFromNib() {
     base.AwakeFromNib();
 
-    // TODO: https://github.com/dagronf/DSFInspectorPanes in `this.inspector`.
+    this.inspector.LoadRequest(new NSUrlRequest(new NSUrl("https://google.com")));
 
-    // Do NOT simplify this to `CALayer`. WebGPU requires a Metal layer.
     this.game.WantsLayer = true;
+    // Do NOT simplify this to `CALayer`. WebGPU requires a Metal layer.
+    // ReSharper disable once AccessToStaticMemberViaDerivedType
     this.game.Layer = CAMetalLayer.Create();
 
     var metalDesc = new SurfaceDescriptorFromMetalLayer(
