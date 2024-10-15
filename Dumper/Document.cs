@@ -1,0 +1,72 @@
+// Document
+//
+// Authors:
+//   - Chance Snow <git@chancesnow.me>
+//
+// Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
+using System;
+using System.Diagnostics;
+
+using AppKit;
+using Foundation;
+
+using OVL;
+
+namespace Dumper;
+
+[Register("Document")]
+public class Document : NSDocument {
+  private Ovl? ovl = null;
+
+  /// <summary>
+  /// Create a new Untitled document.
+  /// </summary>
+  public Document() : base() { }
+  /// <see cref="https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl"/>
+  public Document(NSUrl file, out NSError? error) : base(file, "ovl", out error) {
+    // Add your subclass-specific initialization here.
+  }
+  /// <see cref="https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl"/>
+  public Document(string fileName, out NSError? error) : base(new NSUrl(fileName), "ovl", out error) {
+    // Add your subclass-specific initialization here.
+  }
+
+  public override void WindowControllerDidLoadNib(NSWindowController windowController) {
+    base.WindowControllerDidLoadNib(windowController);
+    // Add any code here that needs to be executed once the windowController has loaded the document's window.
+  }
+
+  [Export("autosavesInPlace")]
+  public static bool AutosaveInPlace() {
+    return true;
+  }
+
+  public override void MakeWindowControllers() {
+    // Override to return the Storyboard file name of the document.
+    AddWindowController((NSWindowController) NSStoryboard.FromName("Main", null).InstantiateControllerWithIdentifier("Document Window Controller"));
+  }
+
+  public override bool ReadFromUrl(NSUrl url, string typeName, out NSError? outError) {
+    try {
+      Debug.Assert(url.Path != null);
+      ovl = Ovl.Open(url.Path);
+
+      outError = null;
+      return true;
+    } catch (Exception ex) {
+      Console.WriteLine(ex.Message);
+      new NSAlert {
+        MessageText = $"{typeName}: {ex.Message}",
+        AlertStyle = NSAlertStyle.Informational
+      }.BeginSheet(this.WindowForSheet);
+      // FIXME: 
+      outError = NSError.FromDomain(NSError.OsStatusErrorDomain, -4);
+      return false;
+    }
+  }
+
+  public override bool WriteToUrl(NSUrl url, string typeName, out NSError? outError) {
+    // TODO: Implement OVL editing
+    throw new NotImplementedException();
+  }
+}

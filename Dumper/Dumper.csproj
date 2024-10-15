@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ProjectGuid>{9281AEA1-C96C-4881-B00F-2D4D6521B081}</ProjectGuid>
+    <ProjectTypeGuids>{A3F8F2AB-B479-4A4A-A458-A89E7DC349F1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-macos10.14</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Dumper</RootNamespace>
+    <!--<MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>-->
+    <AssemblyName>OVL Dumper</AssemblyName>
+    <!-- Display name -->
+    <ApplicationTitle>OVL Dumper</ApplicationTitle>
+    <Company>OpenRCT3 Contributors</Company>
+    <Copyright>Copyright © 2024 OpenRCT3 Contributors. All rights reserved.</Copyright>
+    <!-- App ID -->
+    <ApplicationId>me.chancesnow.rct3.dumper</ApplicationId>
+    <ApplicationIdGuid>81da2b98-244c-454d-9a84-31541eff0ffd</ApplicationIdGuid>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <CodesigningKey>Mac Developer</CodesigningKey>
+    <IncludeMonoRuntime>false</IncludeMonoRuntime>
+    <UseSGen>true</UseSGen>
+    <UseRefCounting>true</UseRefCounting>
+    <HttpClientHandler></HttpClientHandler>
+    <AOTMode></AOTMode>
+    <CreatePackage>false</CreatePackage>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <DefineConstants></DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <CreatePackage>true</CreatePackage>
+    <UseSGen>true</UseSGen>
+    <UseRefCounting>true</UseRefCounting>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+    <HttpClientHandler></HttpClientHandler>
+    <LinkMode>SdkOnly</LinkMode>
+    <AOTMode></AOTMode>
+  </PropertyGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('macos')) != true">
+    <Compile Remove="**\*.macOS.cs" />
+    <None Include="**\*.macOS.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows')) != true">
+    <Compile Remove="**\*.Windows.cs" />
+    <None Include="**\*.Windows.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\ovl\libOVL.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Sidebar.designer.cs">
+      <DependentUpon>Sidebar.cs</DependentUpon>
+    </Compile>
+    <Compile Update="EditorContainer.designer.cs">
+      <DependentUpon>EditorContainer.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Editor.designer.cs">
+      <DependentUpon>Editor.cs</DependentUpon>
+    </Compile>
+    <Compile Update="ProjectWindow.designer.cs">
+      <DependentUpon>ProjectWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Update="DocumentViewController.designer.cs">
+      <DependentUpon>DocumentViewController.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <Choose>
+    <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
+      <PropertyGroup>
+        <EvergineProfileName>macOS</EvergineProfileName>
+        <!-- See https://github.com/xamarin/xamarin-macios -->
+        <TargetFramework>net8.0-macos</TargetFramework>
+        <ImplicitUsings>true</ImplicitUsings>
+        <TargetPlatformVersion>15.0</TargetPlatformVersion>
+      </PropertyGroup>
+      <ItemGroup>
+      </ItemGroup>
+      <ItemGroup>
+        <Folder Include="Resources\" />
+      </ItemGroup>
+      <ItemGroup>
+        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-512%402x.png">
+          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-512%402x.png</Link>
+        </ImageAsset>
+        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-32%402x.png">
+          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-32%402x.png</Link>
+        </ImageAsset>
+        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-16%402x.png">
+          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-16%402x.png</Link>
+        </ImageAsset>
+        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-256%402x.png">
+          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-256%402x.png</Link>
+        </ImageAsset>
+        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-128%402x.png">
+          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-128%402x.png</Link>
+        </ImageAsset>
+      </ItemGroup>
+    </When>
+    <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
+      <PropertyGroup>
+        <EvergineProfileName>Windows</EvergineProfileName>
+      </PropertyGroup>
+      <ItemGroup>
+      </ItemGroup>
+    </When>
+  </Choose>
+</Project>

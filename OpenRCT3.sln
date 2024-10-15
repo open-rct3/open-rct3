@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "libOVL", "src\ovl\libOVL.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRCT3", "OpenRCT3\OpenRCT3.csproj", "{5D93B874-87C2-474C-B1B1-E1D96373EBF3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dumper", "Dumper\Dumper.csproj", "{9281AEA1-C96C-4881-B00F-2D4D6521B081}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +26,10 @@ Global
 		{5D93B874-87C2-474C-B1B1-E1D96373EBF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5D93B874-87C2-474C-B1B1-E1D96373EBF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5D93B874-87C2-474C-B1B1-E1D96373EBF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9281AEA1-C96C-4881-B00F-2D4D6521B081}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9281AEA1-C96C-4881-B00F-2D4D6521B081}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9281AEA1-C96C-4881-B00F-2D4D6521B081}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9281AEA1-C96C-4881-B00F-2D4D6521B081}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		Policies = $0
