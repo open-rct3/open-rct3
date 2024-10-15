@@ -7,36 +7,36 @@ using AppKit;
 using CoreAnimation;
 using ObjCRuntime;
 
-namespace OpenRCT3.Platforms.macOS {
-  public partial class MainWindow : NSWindow, IWindow {
-    private List<IObserver<Surface>> observers = new();
+namespace OpenRCT3.Platforms.macOS;
 
-    public MainWindow(NativeHandle handle) : base(handle) {
-      this.MakeKeyAndOrderFront(this);
-    }
+public partial class MainWindow : NSWindow, IWindow {
+  private List<IObserver<Surface>> observers = new();
 
-    public uint FrameBufferWidth => (uint) Math.Round(
-      Controller?.Game.Bounds.Width.Value * BackingScaleFactor.Value ?? 640
-    );
-    public uint FrameBufferHeight => (uint) Math.Round(
-      Controller?.Game.Bounds.Height.Value * BackingScaleFactor.Value ?? 420
-    );
+  public MainWindow(NativeHandle handle) : base(handle) {
+    this.MakeKeyAndOrderFront(this);
+  }
 
-    private GameViewController? Controller => ContentViewController as GameViewController;
+  public uint FrameBufferWidth => (uint) Math.Round(
+    Controller?.Game.Bounds.Width.Value * BackingScaleFactor.Value ?? 640
+  );
+  public uint FrameBufferHeight => (uint) Math.Round(
+    Controller?.Game.Bounds.Height.Value * BackingScaleFactor.Value ?? 420
+  );
 
-    public override void AwakeFromNib() {
-      base.AwakeFromNib();
+  private GameViewController? Controller => ContentViewController as GameViewController;
 
-      if (Controller != null) Controller.SurfaceChanged += SurfaceChanged;
-    }
+  public override void AwakeFromNib() {
+    base.AwakeFromNib();
 
-    private void SurfaceChanged(Surface surface) {
-      foreach (var observer in observers) observer.OnNext(surface);
-    }
+    if (Controller != null) Controller.SurfaceChanged += SurfaceChanged;
+  }
 
-    public IDisposable Subscribe(IObserver<Surface> observer) {
-      if (!observers.Contains(observer)) observers.Add(observer);
-      return new SurfaceSubscription(observers, observer);
-    }
+  private void SurfaceChanged(Surface surface) {
+    foreach (var observer in observers) observer.OnNext(surface);
+  }
+
+  public IDisposable Subscribe(IObserver<Surface> observer) {
+    if (!observers.Contains(observer)) observers.Add(observer);
+    return new SurfaceSubscription(observers, observer);
   }
 }
