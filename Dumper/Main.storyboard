@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="21701" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="bjc-x0-6ft">
     <dependencies>
-        <deployment identifier="macosx"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="21701"/>
         <capability name="NSView safe area layout guides" minToolsVersion="12.0"/>
         <capability name="Search Toolbar Item" minToolsVersion="12.0" minSystemVersion="11.0"/>
@@ -436,23 +435,57 @@
             </objects>
             <point key="canvasLocation" x="74" y="658"/>
         </scene>
+        <!--Title Bar-->
+        <scene sceneID="Ubi-Nn-9Dh">
+            <objects>
+                <viewController id="F5A-jT-wVR" customClass="TitleBar" sceneMemberID="viewController">
+                    <view key="view" id="ktK-1k-BRZ">
+                        <rect key="frame" x="0.0" y="0.0" width="350" height="50"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                        <subviews>
+                            <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="oGL-Wb-Pge">
+                                <rect key="frame" x="0.0" y="17" width="24" height="16"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES"/>
+                                <buttonCell key="cell" type="roundRect" bezelStyle="roundedRect" image="NSActionTemplate" imagePosition="only" alignment="center" lineBreakMode="truncatingTail" state="on" imageScaling="proportionallyDown" inset="2" id="xlP-eZ-PI5">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="system" size="14"/>
+                                </buttonCell>
+                                <connections>
+                                    <outlet property="menu" destination="cB8-8c-PJC" id="13l-Zi-F3s"/>
+                                </connections>
+                            </button>
+                        </subviews>
+                    </view>
+                </viewController>
+                <customObject id="qRb-SR-uMb" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
+                <menu id="cB8-8c-PJC">
+                    <items>
+                        <menuItem title="Open" keyEquivalent="o" id="4pX-1F-V0y"/>
+                        <menuItem title="Close" keyEquivalent="w" id="ryP-Vp-Ks6"/>
+                        <menuItem isSeparatorItem="YES" id="06w-Dn-HjX"/>
+                        <menuItem title="Export…" keyEquivalent="e" id="Rhq-Ab-YhI"/>
+                    </items>
+                </menu>
+            </objects>
+            <point key="canvasLocation" x="-372" y="119"/>
+        </scene>
         <!--Window Controller-->
         <scene sceneID="tdp-Hy-D7g">
             <objects>
                 <windowController showSeguePresentationStyle="single" id="bjc-x0-6ft" customClass="ProjectWindow" sceneMemberID="viewController">
-                    <window key="window" title="OVL Dumper" subtitle="style.common.ovl" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" frameAutosaveName="" animationBehavior="default" id="k1C-7u-SoB">
+                    <window key="window" title="OVL Dumper" subtitle="style.common.ovl" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" frameAutosaveName="" animationBehavior="default" id="k1C-7u-SoB" customClass="MainWindow">
                         <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES" fullSizeContentView="YES"/>
-                        <rect key="contentRect" x="196" y="238" width="575" height="300"/>
+                        <rect key="contentRect" x="196" y="238" width="650" height="300"/>
                         <rect key="screenRect" x="0.0" y="0.0" width="1440" height="875"/>
-                        <value key="minSize" type="size" width="575" height="300"/>
+                        <value key="minSize" type="size" width="650" height="300"/>
                         <view key="contentView" id="RpL-4p-CvU">
-                            <rect key="frame" x="0.0" y="0.0" width="575" height="300"/>
+                            <rect key="frame" x="0.0" y="0.0" width="650" height="300"/>
                             <autoresizingMask key="autoresizingMask"/>
                         </view>
-                        <toolbar key="toolbar" implicitIdentifier="09D11707-F4A3-4FD5-970E-AC5832E91C2B" autosavesConfiguration="NO" allowsUserCustomization="NO" displayMode="iconAndLabel" sizeMode="regular" id="ixX-vH-dd5">
+                        <toolbar key="toolbar" implicitIdentifier="09D11707-F4A3-4FD5-970E-AC5832E91C2B" centeredItem="tHK-7z-jNe" autosavesConfiguration="NO" allowsUserCustomization="NO" displayMode="iconAndLabel" sizeMode="regular" id="ixX-vH-dd5">
                             <allowedToolbarItems>
                                 <toolbarItem implicitItemIdentifier="NSToolbarShowColorsItem" id="rSW-3M-o6j"/>
-                                <toolbarItem implicitItemIdentifier="72DBC086-617E-437A-A9EA-78616A822137" label="Export…" paletteLabel="Export…" tag="-1" image="square.and.arrow.up" catalog="system" title="Export…" id="WkR-v4-Prr">
+                                <toolbarItem implicitItemIdentifier="72DBC086-617E-437A-A9EA-78616A822137" label="Share" paletteLabel="Share" tag="-1" image="square.and.arrow.up" catalog="system" id="WkR-v4-Prr">
                                     <size key="minSize" width="27" height="25"/>
                                     <size key="maxSize" width="27" height="25"/>
                                 </toolbarItem>
@@ -472,10 +505,10 @@
                                 <toolbarItem implicitItemIdentifier="NSToolbarFlexibleSpaceItem" id="Qi2-S9-t6Z"/>
                             </allowedToolbarItems>
                             <defaultToolbarItems>
-                                <searchToolbarItem reference="tHK-7z-jNe"/>
-                                <toolbarItem reference="Qi2-S9-t6Z"/>
-                                <toolbarItem reference="rSW-3M-o6j"/>
                                 <toolbarItem reference="WkR-v4-Prr"/>
+                                <toolbarItem reference="rSW-3M-o6j"/>
+                                <toolbarItem reference="Qi2-S9-t6Z"/>
+                                <searchToolbarItem reference="tHK-7z-jNe"/>
                             </defaultToolbarItems>
                         </toolbar>
                         <connections>
@@ -488,7 +521,7 @@
                 </windowController>
                 <customObject id="Yvo-z1-tXK" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="122" y="244"/>
+            <point key="canvasLocation" x="159" y="244"/>
         </scene>
         <!--Editor Split View-->
         <scene sceneID="qPp-Vt-OJn">
@@ -509,7 +542,7 @@
                 </splitViewController>
                 <customObject id="wDu-FI-XA2" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="731" y="249"/>
+            <point key="canvasLocation" x="787" y="250"/>
         </scene>
         <!--Sidebar-->
         <scene sceneID="SvK-KU-gva">
@@ -524,7 +557,7 @@
                 </viewController>
                 <customObject id="gsg-oJ-SMZ" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1261" y="57"/>
+            <point key="canvasLocation" x="1261" y="58"/>
         </scene>
         <!--Editor Container-->
         <scene sceneID="hqc-f4-JUf">
@@ -548,7 +581,7 @@
                 </viewController>
                 <customObject id="YOf-LJ-ppE" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1391" y="429"/>
+            <point key="canvasLocation" x="1391" y="430"/>
         </scene>
         <!--Document View Controller-->
         <scene sceneID="hIz-AP-VOD">
@@ -592,6 +625,7 @@
         </scene>
     </scenes>
     <resources>
+        <image name="NSActionTemplate" width="20" height="20"/>
         <image name="magnifyingglass" catalog="system" width="16" height="15"/>
         <image name="square.and.arrow.up" catalog="system" width="15" height="17"/>
     </resources>

@@ -32,6 +32,8 @@ public class DocumentController : NSDocumentController {
       if (result != 1) return;
       base.OpenDocument(dialog.Url, true, out NSError err);
     });
+    dialog.BecomeKeyWindow();
+    dialog.MakeKeyAndOrderFront(this);
   }
 
   public override void NewDocument(NSObject? sender) {

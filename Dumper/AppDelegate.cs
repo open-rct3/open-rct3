@@ -5,6 +5,7 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 using AppKit;
 using Foundation;
@@ -17,11 +18,9 @@ namespace Dumper {
       _ = new DocumentController();
     }
 
+    [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "This app requires at least macOS 10.15")]
     public override void DidFinishLaunching(NSNotification notification) {
-#pragma warning disable CA1416 // Validate platform compatibility
       NSApplication.SharedApplication.DisableRelaunchOnLogin();
-      NSApplication.SharedApplication.Activate();
-#pragma warning restore CA1416
     }
 
     public override void WillTerminate(NSNotification notification) {

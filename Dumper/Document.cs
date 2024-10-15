@@ -5,6 +5,7 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 using System;
+using System.Threading.Tasks;
 using System.Diagnostics;
 
 using AppKit;
@@ -54,13 +55,10 @@ public class Document : NSDocument {
       outError = null;
       return true;
     } catch (Exception ex) {
-      Console.WriteLine(ex.Message);
-      new NSAlert {
-        MessageText = $"{typeName}: {ex.Message}",
-        AlertStyle = NSAlertStyle.Informational
-      }.BeginSheet(this.WindowForSheet);
-      // FIXME: 
-      outError = NSError.FromDomain(NSError.OsStatusErrorDomain, -4);
+      ShowError(new Exception($"{typeName}: {ex.Message}", ex)).Wait();
+
+      // FIXME: https://benscheirman.com/2019/10/troubleshooting-appkit-file-permissions.html
+      outError = NSErrorExtensions.FromException(ex);
       return false;
     }
   }
@@ -68,5 +66,31 @@ public class Document : NSDocument {
   public override bool WriteToUrl(NSUrl url, string typeName, out NSError? outError) {
     // TODO: Implement OVL editing
     throw new NotImplementedException();
+  }
+
+  private async Task ShowError(Exception ex) {
+    var sheetCompleted = new TaskCompletionSource();
+    new NSAlert {
+      MessageText = ex.Message,
+      AlertStyle = NSAlertStyle.Informational
+    }.BeginSheet(this.WindowForSheet, () => {
+      sheetCompleted.SetException(ex);
+    });
+    await sheetCompleted.Task;
+  }
+}
+
+internal enum ErrorCode : ushort {
+  Exception = 1
+}
+
+internal static class NSErrorExtensions {
+  public static NSError FromException(Exception ex) {
+    var domain = new NSString(NSBundle.MainBundle.BundleIdentifier);
+    var exData = new NSDictionary();
+    Debug.Assert(exData.TryAdd(new NSString("domain"), domain));
+    Debug.Assert(exData.TryAdd(new NSString("message"), new NSString(ex.Message)));
+    Debug.Assert(exData.TryAdd(new NSString("stack"), new NSString(ex.StackTrace ?? "Could not retreive stack trace!")));
+    return new NSError(domain, (nint) ErrorCode.Exception, exData);
   }
 }
