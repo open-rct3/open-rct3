@@ -26,10 +26,6 @@ public partial class ProjectWindow : NSWindowController {
     handler.UpdateSubtitle += (sender, e) => { Window.Subtitle = e; };
     Window.BecomeMainWindow();
     NSApplication.SharedApplication.RequestUserAttention(NSRequestUserAttentionType.InformationalRequest);
-
-    //await Task.Delay(500);
-    // Prompt the user to open an OVL file
-    NSDocumentController.SharedDocumentController.OpenDocument(this);
   }
 
   public override NSDocument? Document {

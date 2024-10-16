@@ -38,9 +38,7 @@ internal class MainWindowDelegate : NSWindowDelegate {
   }
 
   internal string Subtitle {
-    get {
-      return subtitle;
-    }
+    get => subtitle;
     set {
       subtitle = value;
       UpdateSubtitle?.Invoke(this, value);

@@ -16,6 +16,14 @@ public class DocumentController : NSDocumentController {
   public DocumentController() : base(NSObjectFlag.Empty) { }
   public DocumentController(NativeHandle handle) : base(handle) { }
 
+  /// <summary>
+  /// Prompt the user to open an OVL file.
+  /// </summary>
+  public void OpenDocument() {
+    // ReSharper disable once IntroduceOptionalParameters.Global
+    OpenDocument(null);
+  }
+
   // See https://learn.microsoft.com/en-us/dotnet/api/appkit.nsdocumentcontroller.opendocument?view=xamarin-mac-sdk-14
   // See https://stackoverflow.com/a/29709860/1363247
   [SuppressMessage("Interoperability", "CA1422:Validate platform compatibility", Justification = "This app requires at least macOS 10.15")]

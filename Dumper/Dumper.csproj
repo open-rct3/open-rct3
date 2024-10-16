@@ -88,7 +88,7 @@
         <!-- See https://github.com/xamarin/xamarin-macios -->
         <TargetFramework>net8.0-macos</TargetFramework>
         <ImplicitUsings>true</ImplicitUsings>
-        <TargetPlatformVersion>15.0</TargetPlatformVersion>
+        <TargetPlatformVersion>10.15</TargetPlatformVersion>
       </PropertyGroup>
       <ItemGroup>
       </ItemGroup>

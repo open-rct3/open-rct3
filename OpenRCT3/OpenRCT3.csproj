@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-macos10.14</TargetFramework>
+    <TargetFrameworks>net8.0-macos;net8.0-windows</TargetFrameworks>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
@@ -67,7 +67,7 @@
       <PropertyGroup>
         <EvergineProfileName>macOS</EvergineProfileName>
         <!-- See https://github.com/xamarin/xamarin-macios -->
-        <TargetFramework>net8.0-macos</TargetFramework>
+        <TargetFramework>net8.0-macos10.15</TargetFramework>
         <ImplicitUsings>true</ImplicitUsings>
         <TargetPlatformVersion>10.15</TargetPlatformVersion>
       </PropertyGroup>
