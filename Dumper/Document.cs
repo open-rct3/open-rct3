@@ -55,6 +55,8 @@ public class Document : NSDocument {
     try
     {
       Debug.Assert(url.Path != null);
+      // FIXME: The app hangs here and becomes unresponsive
+      // TODO: Add a spinner indicator and spin it while the OVL is loading in a BG thread
       ovl = Ovl.Open(url.Path);
 
       outError = null;
