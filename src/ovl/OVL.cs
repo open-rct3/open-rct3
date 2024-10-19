@@ -33,16 +33,16 @@ struct OvlFilesHeader {
   public uint fileTypeCount;
 }
 
-public struct File {
-  public uint size;
-  public uint offset;
-  public uint relativeOffset;
+public record struct File {
+  public ulong size;
+  public ulong offset;
+  public ulong relativeOffset;
   /// This is `unsigned char*` in Importer
-  public byte[] data;
+  public byte[]? data;
   public uint unk;
 }
 
-public struct Symbol {
+public record struct Symbol {
   public string symbol;
   public ulong[] data;
   public uint isPointer;
@@ -54,7 +54,7 @@ public struct SymbolHashed {
   public uint checksum;
 }
 
-public struct Loader {
+public record struct Loader {
   public uint loaderType;
   public ulong[] data;
   public uint hasExtraData;
@@ -62,7 +62,7 @@ public struct Loader {
   public uint symbolsToResolve;
 }
 
-public struct SymbolRef {
+public record struct SymbolRef {
   public ulong? reference;
   public string symbol;
   public Loader? loader;
@@ -86,8 +86,7 @@ public struct TextString {
 }
 
 /// Used in Type 0 Files
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Resource {
+public record struct Resource {
   public uint length;
   public ulong[] data;
 }
@@ -155,7 +154,7 @@ public struct Color {
   public byte blue, green, red, alpha;
 }
 
-public struct FlexiTextureData {
+public record struct FlexiTextureData {
   public uint scale;
   public uint width, height;
   /// Combinable recolorability flags.
@@ -165,7 +164,7 @@ public struct FlexiTextureData {
   public byte[] alpha;
 }
 
-public unsafe struct FlexiTextureInfo {
+public record struct FlexiTextureInfo {
   public uint scale;
   public uint width;
   public uint height;
@@ -178,7 +177,7 @@ public unsafe struct FlexiTextureInfo {
   public FlexiTextureData? next;
 }
 
-public struct FlexiTexture {
+public record struct FlexiTexture {
   public string textureName;
   public byte[] data;
   public byte[] alphaChannel;
@@ -196,6 +195,7 @@ public struct EffectPoint {
 public class Ovl {
   private string internalName;
   private Stream file;
+  private long fileSize;
   private BinaryReader reader;
   private OvlType type;
   private File[] files = new File[9];
@@ -212,6 +212,7 @@ public class Ovl {
     this.file = stream;
     this.name = this.internalName = fileName ?? "OVL";
     this.reader = new BinaryReader(file, Encoding.ASCII, false);
+    fileSize = fileName != null ? file.Length : 0;
   }
 
   public static Ovl Open(string fileName) {
@@ -231,9 +232,12 @@ public class Ovl {
     var maybeHeader = stream.ReadStruct<OvlHeader>();
     Debug.Assert(maybeHeader.HasValue);
     var header = maybeHeader.Value;
+    // Ensure archive's magic string matches "FGRK"
     // QUESTION: How to properly handle endianness?
     // 0x4647524b
     // 0x4b524746
+    // FGDK: Frontier Graphics Development Kit (?)
+    // FGRK: Frontier Graphics Resource Kit (?)
     // "FGRK"c.representation
     Debug.Assert(header.magic == 0x4b524746, invalidOvlError);
 
@@ -261,8 +265,127 @@ public class Ovl {
     if (header.version != (uint) Version.one)
       ovl.references.EnsureCapacity(ovl.reader.ReadInt32());
 
+    // Read references
+    ovl.references = ovl.references.Select(reference => ovl.ReadString()).ToList();
+
+    // Read file index header
+    var filesHeader = stream.ReadStruct<OvlFilesHeader>();
+    Debug.Assert(filesHeader.HasValue, "Could not read file index!");
+    Debug.WriteLine(filesHeader);
+
+    // Read file loader headers
+    Debug.Assert(ovl.file.Position < ovl.fileSize, "Expected file loaders!");
+    var loaders = new LoaderHeader[filesHeader.Value.fileTypeCount];
+    for (var i = 0; i < loaders.Length; i += 1)  {
+      loaders[i] = new LoaderHeader() {
+        loader = ovl.ReadString(),
+        name = ovl.ReadString(),
+        type = ovl.reader.ReadInt32(),
+        tag = ovl.ReadString()
+      };
+    }
+
+    // V5 Loader Header stuff, number of symbols for each file type / loader header by index
+    // This applies to the current common/unique file
+    // The order the loaders appear here is important for the symbol order, they are primarily
+    // sorted by the file type in this order, secondarily they are sorted by hash
+    if (header.version == 5) for (var i = 0; i < loaders.Length; i += 1)
+      loaders[ovl.reader.ReadInt64()].symbolCount = ovl.reader.ReadInt64();
+
+    // Read file index, i.e. nine file blocks common to all OVL archives
+    var fileBlocks = new FileBlock[9];
+    for (var i = 0; i < fileBlocks.Length; i += 1) {
+      var block = fileBlocks[i] = new FileBlock() {
+        fileSizes = new long[ovl.reader.ReadUInt32()]
+      };
+
+      if (header.version == 1) continue;
+
+      // Skip unknowns
+      ovl.file.Seek(4 + (header.version == 5 ? 8 : 4), SeekOrigin.Current);
+
+      // Read the size of each file in this block
+      for (var v = 0; v < block.fileSizes.Length; v++)
+        block.fileSizes[v] = ovl.reader.ReadUInt32();
+
+      // Sum the total size of the files in this block
+      block.size = (long) Math.Round(block.fileSizes.Sum(size => (decimal) size));
+    }
+
+    // Skip unknowns
+    if (header.version == 4) ovl.file.Seek(8, SeekOrigin.Current);
+    if (header.version == 5) {
+      var unkBytesCount = ovl.reader.ReadUInt32();
+      ovl.file.Seek(4 + unkBytesCount, SeekOrigin.Current);
+      for (ulong x = 0; x < ovl.reader.ReadUInt32(); x += 1) ovl.file.Seek(4, SeekOrigin.Current);
+    }
+
+    // Read file table
+    var offset = ovl.file.Position;
+    foreach (var file in ovl.files) {
+      var i = Array.IndexOf(ovl.files, file);
+      Debug.Assert(i < ovl.files.Length, "File index is out-of-range!");
+      fileBlocks[i] = fileBlocks[i] with { relativeOffset = ovl.file.Position - offset };
+      for (var fileSizeIndex = 0; fileSizeIndex < fileBlocks[i].fileSizes.Length; fileSizeIndex += 1) {
+        if (ovl.file.Position == ovl.fileSize) throw new EndOfStreamException($"File overflow at ({i}, {fileSizeIndex})");
+
+        // Read size
+        if (header.version == 1) {
+          fileBlocks[i].fileSizes[fileSizeIndex] = ovl.reader.ReadInt32();
+          fileBlocks[i] = fileBlocks[i] with {
+            size = fileBlocks[i].size + fileBlocks[i].fileSizes[fileSizeIndex]
+          };
+        }
+
+        // Read the data
+        var size = fileBlocks[i].fileSizes[fileSizeIndex];
+        if (ovl.file.Position == ovl.fileSize) continue;
+        var filePosition = (ulong) ovl.file.Position;
+        ovl.files[i] = file with {
+          offset = filePosition,
+          relativeOffset = filePosition - (ulong) offset,
+          data = size > 0 ? ovl.reader.ReadBytes((int) size) : null
+        };
+        offset += size;
+      }
+    }
+
+    // Read relocations
+    var relocations = new ulong[ovl.reader.ReadUInt32()];
+    for (var i = 0; i < relocations.Length; i++)
+      relocations[i] = ovl.reader.ReadUInt32();
+    // Skip relocation unknowns (this may be a false assumption)
+    if (header.version > 1) ovl.file.Seek(4, SeekOrigin.Current);
+
+    // Read checksum
+    var checksum = ovl.reader.ReadChars(2);
+    // TODO: Assert the checksum matches internal state?
+
+    Debug.Assert(ovl.file.Position == ovl.fileSize, "Archive was not ingested in its entirety!");
+    ovl.file.Close();
+
     return ovl;
   }
+
+  private string ReadString() {
+    Debug.Assert(file.Position < fileSize, "Unexpected EOF!");
+    return new string(reader.ReadChars(reader.ReadUInt16()));
+  }
+}
+
+internal record struct LoaderHeader {
+  public string loader;
+  public string name;
+  public long type;
+  public string tag;
+  public long symbolCount;
+  public int symbolCountOrder;
+}
+
+internal record struct FileBlock {
+  public long[] fileSizes;
+  public long relativeOffset;
+  public long size;
 }
 
 public static class StreamExtensions {

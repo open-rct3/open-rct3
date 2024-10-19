@@ -31,6 +31,7 @@ docs/
 # Visual Studio
 .vs/**/project-cache/*.json
 .vs/OpenRCT3/xs/UserPrefs.xml
+*.sln.DotSettings.user
 
 # Code Coverage
 *.lst

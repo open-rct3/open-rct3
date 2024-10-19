@@ -12,7 +12,7 @@ public partial class Tests {
   }
 
   [Test]
-  public void OpenArchive() {
+  public void ReadArchive() {
     var stream = assembly.GetManifestResourceStream("OVL.Tests.style.common.ovl");
     Assert.That(stream, Is.Not.Null);
 
