@@ -1,4 +1,4 @@
-﻿// OVL 
+﻿// OVL
 //
 // Authors:
 //  - Chance Snow <git@chancesnow.me>
@@ -195,7 +195,7 @@ public struct EffectPoint {
 
 public class Ovl {
   private string internalName;
-  private FileStream file;
+  private Stream file;
   private BinaryReader reader;
   private OvlType type;
   private File[] files = new File[9];
@@ -208,9 +208,9 @@ public class Ovl {
   public Mesh[] meshes = Array.Empty<Mesh>();
   public FlexiTextureInfo[] flexiTextureItems = Array.Empty<FlexiTextureInfo>();
 
-  public Ovl(FileStream stream) {
+  public Ovl(Stream stream, string? fileName = null) {
     this.file = stream;
-    this.name = this.internalName = Path.GetFileName(file.Name);
+    this.name = this.internalName = fileName ?? "OVL";
     this.reader = new BinaryReader(file, Encoding.ASCII, false);
   }
 
@@ -220,20 +220,27 @@ public class Ovl {
     //Debug.Assert(info.Exists);
 
     var file = System.IO.File.Open(fileName, FileMode.Open);
-    var ovl = new Ovl(file);
     Debug.Assert(file.Length >= Marshal.SizeOf<OvlHeader>(), invalidOvlError);
+    return Read(file, Path.GetFileName(file.Name));
+  }
 
-    var maybeHeader = file.ReadStruct<OvlHeader>();
+  public static Ovl Read(Stream stream, string fileName = "Unnamed OVL") {
+    var invalidOvlError = $"File is not an OVL archive: {fileName}";
+    var ovl = new Ovl(stream, fileName);
+
+    var maybeHeader = stream.ReadStruct<OvlHeader>();
     Debug.Assert(maybeHeader.HasValue);
     var header = maybeHeader.Value;
+    // QUESTION: How to properly handle endianness?
     // 0x4647524b
     // 0x4b524746
     // "FGRK"c.representation
-    Debug.Assert(header.magic == 0x4647524b, invalidOvlError);
+    Debug.Assert(header.magic == 0x4b524746, invalidOvlError);
 
     // Read reference count
     if (header.version == (uint) Version.one)
       ovl.references.EnsureCapacity((int) header.references);
+    // ReSharper disable once MergeIntoLogicalPattern
     else if (header.version != 4 || header.version != 5)
       throw new Exception($"Unknown OVL version: {header.version}");
     else if (header.version == 5) {

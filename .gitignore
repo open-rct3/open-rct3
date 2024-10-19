@@ -3,10 +3,11 @@
 
 # Artifacts
 obj/
-Dumper/bin/Debug/**/osx-x64/*.items
-Dumper/bin/Debug/**/osx-x64/createdump
-Dumper/bin/Debug/**/osx-x64/OVL Dumper.app
-Dumper/bin/Debug/**/osx-x64/OVL Dumper.runtimeconfig.json
+**/bin/Debug/**/*.app
+**/bin/Debug/**/Coverlet*
+**/bin/Debug/**/createdump
+**/bin/Debug/*/*.deps.json
+**/bin/Debug/**/*.items
 OpenRCT3/bin/
 bin/OpenRCT3*
 bin/open-rct3-test-application
