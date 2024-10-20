@@ -2,32 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleName</key>
-	<string>OVL Dumper</string>
-	<key>CFBundleIdentifier</key>
-	<string>me.chancesnow.rct3.dumper</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
-	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>10.15</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>NSHumanReadableCopyright</key>
-	<string></string>
-	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
-	<key>NSMainStoryboardFile</key>
-	<string>Main</string>
-	<key>XSAppIconAssets</key>
-	<string>Assets.xcassets/AppIcon.appiconset</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -36,18 +12,71 @@
 				<string>ovl</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string></string>
+			<string>OvlIcon</string>
 			<key>CFBundleTypeName</key>
-			<string>DocumentType</string>
+			<string>OVL</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
-				<string>????</string>
+				<string>FGRK</string>
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.frontier.rct3.ovl</string>
+			</array>
 			<key>NSDocumentClass</key>
 			<string>Document</string>
 		</dict>
 	</array>
+	<key>CFBundleIdentifier</key>
+	<string>me.chancesnow.rct3.dumper</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>OVL Dumper</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>0.1.0</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.15</string>
+	<key>NSHumanReadableCopyright</key>
+	<string></string>
+	<key>NSMainStoryboardFile</key>
+	<string>Main</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeDescription</key>
+			<string>OVL Archive</string>
+			<key>UTTypeIconFile</key>
+			<string>OvlIcon</string>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconBadgeName</key>
+				<string>OvlIcon</string>
+			</dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.frontier.rct3.ovl</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ovl</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>XSAppIconAssets</key>
+	<string>Assets.xcassets/AppIcon.appiconset</string>
 </dict>
 </plist>

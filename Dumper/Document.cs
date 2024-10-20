@@ -14,6 +14,7 @@ using OVL;
 
 namespace Dumper;
 
+// See https://developer.apple.com/documentation/uniformtypeidentifiers/defining-file-and-data-types-for-your-app
 [Register("Document")]
 public class Document : NSDocument {
   private Ovl? ovl = null;
@@ -42,6 +43,14 @@ public class Document : NSDocument {
   public static bool AutosaveInPlace() {
     return true;
   }
+
+  public override string DefaultDraftName => "OVL";
+
+  public override bool IsDocumentEdited => false;
+
+  public override bool IsEntireFileLoaded => false;
+
+  public override bool IsInViewingMode => true;
 
   public override void MakeWindowControllers() {
     // Override to return the Storyboard file name of the document.
