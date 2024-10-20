@@ -273,7 +273,6 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
     // Read file index header
     var filesHeader = stream.ReadStruct<OvlFilesHeader>();
     Debug.Assert(filesHeader.HasValue, "Could not read file index!");
-    Debug.WriteLine(filesHeader);
 
     // Read file loader headers
     Debug.Assert(ovl.file.Position < ovl.fileSize, "Expected file loaders!");
