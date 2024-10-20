@@ -13,6 +13,7 @@ using AppKit;
 namespace Dumper;
 
 public partial class DocumentViewController : NSViewController {
+  public DocumentViewController() { }
   public DocumentViewController(NativeHandle handle) : base(handle) { }
 
   public override void ViewDidLoad() {

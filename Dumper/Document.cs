@@ -10,14 +10,22 @@ using Foundation;
 using System;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using UniformTypeIdentifiers;
+
 using OVL;
 
 namespace Dumper;
 
+// See https://developer.apple.com/documentation/appkit/documents_data_and_pasteboard/developing_a_document-based_app
 // See https://developer.apple.com/documentation/uniformtypeidentifiers/defining-file-and-data-types-for-your-app
+// TODO: https://developer.apple.com/documentation/appkit/nsdocument#1652154
 [Register("Document")]
 public class Document : NSDocument {
   private const string WindowControllerName = "OVL Document Window Controller";
+
+  [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "This app requires at least macOS 10.15")]
+  private readonly UTType ovlContentType = UTType.CreateFromIdentifier("com.open-rct3.ovl")!;
 
   private Ovl? ovl;
   private long oldHash;
@@ -41,7 +49,8 @@ public class Document : NSDocument {
   {
     get => ovl?.Description;
     set {
-      if (ovl != null) ovl.Description = value ?? ovl.Name;
+      Debug.Assert(ovl != null);
+      ovl.Description = value ?? ovl.FileName;
     }
   }
 
@@ -65,20 +74,15 @@ public class Document : NSDocument {
   public override bool ReadFromUrl(NSUrl url, string typeName, out NSError? outError) {
     try {
       Debug.Assert(url.Path != null);
-      // FIXME: The app hangs here and becomes unresponsive
       // TODO: Add a spinner indicator and spin it while the OVL is loading in a BG thread
       ovl = Ovl.Open(url.Path);
       oldHash = ovl.GetHashCode();
 
       outError = null;
       return true;
-    }
-    catch (Exception ex)
-    {
-      ShowError(new Exception($"{typeName}: {ex.Message}", ex)).Wait();
-
+    } catch (Exception ex) {
       // FIXME: https://benscheirman.com/2019/10/troubleshooting-appkit-file-permissions.html
-      outError = NSErrorExtensions.FromException(ex);
+      outError = ex.ToError();
       return false;
     }
   }
@@ -86,33 +90,5 @@ public class Document : NSDocument {
   public override bool WriteToUrl(NSUrl url, string typeName, out NSError? outError) {
     // TODO: Implement OVL editing
     throw new NotImplementedException();
-  }
-
-  private async Task ShowError(Exception ex) {
-    var sheetCompleted = new TaskCompletionSource();
-    new NSAlert {
-      MessageText = ex.Message,
-      AlertStyle = NSAlertStyle.Informational
-    }.BeginSheet(this.WindowForSheet, () => { sheetCompleted.SetException(ex); });
-    await sheetCompleted.Task;
-  }
-}
-
-internal enum ErrorCode : ushort {
-  Exception = 1
-}
-
-// ReSharper disable once InconsistentNaming
-internal static class NSErrorExtensions {
-  // See https://stackoverflow.com/a/3276356/1363247
-  public static NSError FromException(Exception ex) {
-    var domain = new NSString(NSBundle.MainBundle.BundleIdentifier);
-    var exData = new NSDictionary();
-    Debug.Assert(exData.TryAdd(new NSString("domain"), domain));
-    Debug.Assert(exData.TryAdd(new NSString("message"), new NSString(ex.Message)));
-    Debug.Assert(
-      exData.TryAdd(new NSString("stack"), new NSString(ex.StackTrace ?? "Could not retreive stack trace!"))
-    );
-    return new NSError(domain, (nint) ErrorCode.Exception, exData);
   }
 }

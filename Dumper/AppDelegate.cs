@@ -14,6 +14,9 @@ namespace Dumper;
 
 [Register("AppDelegate")]
 public partial class AppDelegate : NSApplicationDelegate {
+  public static AppDelegate Instance => (AppDelegate) NSApplication.SharedApplication.Delegate;
+  public static NSDocumentController DocumentController => NSDocumentController.SharedDocumentController;
+
   public AppDelegate() {
     // Use our own document controller
     _ = new DocumentController();
@@ -46,8 +49,11 @@ public partial class AppDelegate : NSApplicationDelegate {
     return false;
   }
 
+  [SuppressMessage("Interoperability", "CA1422:Validate platform compatibility")]
   public override bool OpenFile(NSApplication sender, string fileName) {
-    NSDocumentController.SharedDocumentController.AddDocument(new Document(fileName, out NSError? err));
+    // ReSharper disable once SuggestVarOrType_SimpleTypes
+    NSDocumentController.SharedDocumentController
+      .OpenDocument(NSUrl.FromFilename(fileName), true, out NSError? err);
     // TODO: Better error handling
     if (err != null) throw new Exception(err.ToString());
     return true;

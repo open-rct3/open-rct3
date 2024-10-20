@@ -194,7 +194,7 @@ public struct EffectPoint {
 
 public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
   public const string UnnamedOvl = "Unnamed OVL";
-  public string Name { get; }
+  public string FileName { get; }
   public string Description { get; set; }
   public OvlType Type { get; }
   // QUESTION: Is char FileName[MAX_PATH]; in importer?
@@ -211,7 +211,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
 
   public Ovl(Stream stream, string? fileName = null) {
     file = stream;
-    Name = fileName ?? "OVL";
+    FileName = fileName ?? "OVL";
     Description = fileName != null ? Path.GetFileName(fileName) : UnnamedOvl;
     Type = Path.GetFileName(fileName)?.ToLower().EndsWith(".common.ovl") ?? true ? OvlType.Common : OvlType.Unique;
     reader = new BinaryReader(file, Encoding.ASCII, false);
