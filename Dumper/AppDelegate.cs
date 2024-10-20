@@ -29,14 +29,13 @@ public partial class AppDelegate : NSApplicationDelegate {
     _ = new DocumentController();
   }
 
-  [SuppressMessage(
-    "Interoperability",
-    "CA1416:Validate platform compatibility",
-    Justification = "This app requires at least macOS 10.15"
-  )]
-  public override void DidFinishLaunching(NSNotification notification) {
+  // Setup app here because `willFinishLaunching` is sent before `application(_:openFile:)`.
+  // See https://developer.apple.com/documentation/appkit/nsapplicationdelegate/1428612-application#discussion
+  public override void WillFinishLaunching(NSNotification notification) {
     NSApplication.SharedApplication.DisableRelaunchOnLogin();
   }
+
+  public override void DidFinishLaunching(NSNotification notification) { }
 
   public override void WillTerminate(NSNotification notification) {
     // Insert code here to tear down your application
@@ -46,8 +45,8 @@ public partial class AppDelegate : NSApplicationDelegate {
     return true;
   }
 
+  // See https://forums.developer.apple.com/forums/thread/91781
   public override bool ApplicationShouldOpenUntitledFile(NSApplication sender) {
-    // See https://forums.developer.apple.com/forums/thread/91781
     return false;
   }
 
@@ -58,12 +57,25 @@ public partial class AppDelegate : NSApplicationDelegate {
 
   [SuppressMessage("Interoperability", "CA1422:Validate platform compatibility")]
   public override bool OpenFile(NSApplication sender, string fileName) {
-    // ReSharper disable once SuggestVarOrType_SimpleTypes
-    NSDocumentController.SharedDocumentController
-      .OpenDocument(NSUrl.FromFilename(fileName), true, out NSError? err);
-    // TODO: Better error handling
-    if (err != null) throw new Exception(err.ToString());
-    return true;
+    var opened = new TaskCompletionSource<NSDocument>();
+    try {
+      DocumentController.OpenDocument(NSUrl.FromFilename(fileName), true,
+        (document, _, err) => {
+          if (err is null) opened.SetResult(document);
+          else opened.SetException(err.ToException());
+        });
+    } catch (Exception e) {
+      Trace.TraceError(e.Message);
+      opened.SetException(e);
+    }
+
+    opened.Task.Wait(TimeSpan.FromMilliseconds(1500));
+    if (opened.Task.IsFaulted) opened.Task.Exception.Flatten().ShowAlert();
+    return opened.Task.IsCompletedSuccessfully;
+  }
+
+  public override bool OpenTempFile(NSApplication sender, string filename) {
+    return false;
   }
 
   [SuppressMessage("Performance", "CA1822:Mark members as static")]
