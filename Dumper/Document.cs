@@ -5,6 +5,10 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
+#if DEBUG
+#define TRACE
+#endif
+
 using AppKit;
 using Foundation;
 using System;
@@ -82,6 +86,7 @@ public class Document : NSDocument {
       oldHash = ovl.GetHashCode();
 
       outError = null;
+      Trace.TraceInformation($"Document opened: \"{url.Path}\"");
       return true;
     } catch (Exception ex) {
       // FIXME: https://benscheirman.com/2019/10/troubleshooting-appkit-file-permissions.html

@@ -4,6 +4,9 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
+#if DEBUG
+#define TRACE
+#endif
 
 using AppKit;
 using Foundation;
@@ -18,6 +21,10 @@ public partial class AppDelegate : NSApplicationDelegate {
   public static NSDocumentController DocumentController => NSDocumentController.SharedDocumentController;
 
   public AppDelegate() {
+#if TRACE
+    Trace.Listeners.Add(new ConsoleTraceListener());
+#endif
+
     // Use our own document controller
     _ = new DocumentController();
   }
