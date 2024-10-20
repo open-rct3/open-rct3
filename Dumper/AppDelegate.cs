@@ -17,8 +17,9 @@ namespace Dumper;
 
 [Register("AppDelegate")]
 public partial class AppDelegate : NSApplicationDelegate {
+  public static NSApplication Application => NSApplication.SharedApplication;
   public static AppDelegate Instance => (AppDelegate) NSApplication.SharedApplication.Delegate;
-  public static NSDocumentController DocumentController => NSDocumentController.SharedDocumentController;
+  public static DocumentController DocumentController => (DocumentController) NSDocumentController.SharedDocumentController;
 
   public AppDelegate() {
 #if TRACE
