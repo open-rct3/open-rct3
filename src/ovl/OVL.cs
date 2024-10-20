@@ -192,12 +192,12 @@ public struct EffectPoint {
   public Matrix4x4 transform;
 }
 
-public class Ovl {
+public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
   public readonly OvlType type;
-  private Stream file;
-  private long fileSize;
-  private BinaryReader reader;
-  private File[] files = new File[9];
+  private readonly Stream file;
+  private readonly long fileSize;
+  private readonly BinaryReader reader;
+  private readonly File[] files = new File[9];
   private List<string> references = new();
 
   // QUESTION: Is char FileName[MAX_PATH]; in importer?
@@ -367,6 +367,26 @@ public class Ovl {
 
     ovl.file.Close();
     return ovl;
+  }
+
+  public void Dispose() {
+    file.Close();
+    file.Dispose();
+    reader.Dispose();
+  }
+
+  public override int GetHashCode() {
+    return files.GetHashCode();
+  }
+
+  public int CompareTo(Ovl? other) {
+    if (other == null) return 1;
+    if (type != other.type) return type == OvlType.Common ? -1 : 1;
+    return GetHashCode().CompareTo(other.GetHashCode());
+  }
+
+  public object Clone() {
+    throw new NotImplementedException();
   }
 
   private string ReadString() {

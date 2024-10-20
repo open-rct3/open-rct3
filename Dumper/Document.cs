@@ -17,26 +17,22 @@ namespace Dumper;
 // See https://developer.apple.com/documentation/uniformtypeidentifiers/defining-file-and-data-types-for-your-app
 [Register("Document")]
 public class Document : NSDocument {
+  private long oldHash = 0;
   private Ovl? ovl = null;
 
   /// <summary>
   /// Create a new Untitled document.
   /// </summary>
-  public Document() : base() { }
+  public Document() { }
 
-  /// <see cref="https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl"/>
+  // See https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl
   public Document(NSUrl file, out NSError? error) : base(file, "ovl", out error) {
     // Add your subclass-specific initialization here.
   }
 
-  /// <see cref="https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl"/>
+  // See https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl
   public Document(string fileName, out NSError? error) : base(new NSUrl(fileName), "ovl", out error) {
     // Add your subclass-specific initialization here.
-  }
-
-  public override void WindowControllerDidLoadNib(NSWindowController windowController) {
-    base.WindowControllerDidLoadNib(windowController);
-    // Add any code here that needs to be executed once the windowController has loaded the document's window.
   }
 
   [Export("autosavesInPlace")]
@@ -45,6 +41,11 @@ public class Document : NSDocument {
   }
 
   public override string DefaultDraftName => "OVL";
+
+  public override bool IsDraft {
+    get => (ovl?.GetHashCode() ?? 0) == oldHash;
+    set => base.IsDraft = value;
+  }
 
   public override bool IsDocumentEdited => false;
 
@@ -67,6 +68,7 @@ public class Document : NSDocument {
       // FIXME: The app hangs here and becomes unresponsive
       // TODO: Add a spinner indicator and spin it while the OVL is loading in a BG thread
       ovl = Ovl.Open(url.Path);
+      oldHash = ovl.GetHashCode();
 
       outError = null;
       return true;
