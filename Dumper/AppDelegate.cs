@@ -50,9 +50,9 @@ public partial class AppDelegate : NSApplicationDelegate {
     return false;
   }
 
+  // See https://developer.apple.com/documentation/appkit/nsapplicationdelegate/1428638-applicationshouldhandlereopen
   public override bool ApplicationShouldHandleReopen(NSApplication sender, bool hasVisibleWindows) {
-    // See https://forums.developer.apple.com/forums/thread/91781
-    return false;
+    return !hasVisibleWindows && DocumentController.Documents.Length > 0;
   }
 
   [SuppressMessage("Interoperability", "CA1422:Validate platform compatibility")]
