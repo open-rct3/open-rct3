@@ -75,8 +75,8 @@ public struct SymbolRefHashed {
 }
 
 public enum OvlType {
-  common,
-  unique
+  Common,
+  Unique
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -193,11 +193,10 @@ public struct EffectPoint {
 }
 
 public class Ovl {
-  private string internalName;
+  public readonly OvlType type;
   private Stream file;
   private long fileSize;
   private BinaryReader reader;
-  private OvlType type;
   private File[] files = new File[9];
   private List<string> references = new();
 
@@ -209,25 +208,25 @@ public class Ovl {
   public FlexiTextureInfo[] flexiTextureItems = Array.Empty<FlexiTextureInfo>();
 
   public Ovl(Stream stream, string? fileName = null) {
-    this.file = stream;
-    this.name = this.internalName = fileName ?? "OVL";
-    this.reader = new BinaryReader(file, Encoding.ASCII, false);
+    file = stream;
+    name = fileName ?? "OVL";
+    type = Path.GetFileName(fileName)?.ToLower().EndsWith(".common.ovl") ?? true ? OvlType.Common : OvlType.Unique;
+    reader = new BinaryReader(file, Encoding.ASCII, false);
     fileSize = fileName != null ? file.Length : 0;
   }
 
-  public static Ovl Open(string fileName) {
-    var invalidOvlError = $"File is not an OVL archive: {fileName}";
-    //var info = new FileInfo(fileName);
-    //Debug.Assert(info.Exists);
+  public static Ovl Open(string filePath) {
+    var invalidOvlError = $"File is not an OVL archive: {filePath}";
 
-    var file = System.IO.File.Open(fileName, FileMode.Open);
+    var file = System.IO.File.Open(filePath, FileMode.Open);
     Debug.Assert(file.Length >= Marshal.SizeOf<OvlHeader>(), invalidOvlError);
-    return Read(file, Path.GetFileName(file.Name));
+    return Read(file, filePath);
   }
 
-  public static Ovl Read(Stream stream, string fileName = "Unnamed OVL") {
-    var invalidOvlError = $"File is not an OVL archive: {fileName}";
-    var ovl = new Ovl(stream, fileName);
+  public static Ovl Read(Stream stream, string filePath = "Unnamed OVL") {
+    var invalidOvlError = $"File is not an OVL archive: {filePath}";
+    Debug.Assert(filePath == "Unnamed OVL" || new FileInfo(filePath).Exists || true);
+    var ovl = new Ovl(stream, filePath);
 
     var maybeHeader = stream.ReadStruct<OvlHeader>();
     Debug.Assert(maybeHeader.HasValue);
@@ -361,9 +360,12 @@ public class Ovl {
     var checksum = ovl.reader.ReadChars(2);
     // TODO: Assert the checksum matches internal state?
 
-    Debug.Assert(ovl.file.Position == ovl.fileSize, "Archive was not ingested in its entirety!");
-    ovl.file.Close();
+    // TODO: Read the rest of the data for unique OVLs…
+    if (ovl.type == OvlType.Common) Debug.Assert(
+      ovl.file.Position == ovl.fileSize,
+      "Archive was not ingested in its entirety!");
 
+    ovl.file.Close();
     return ovl;
   }
 

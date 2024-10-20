@@ -1,8 +1,25 @@
+// ReadArchive
+//
+// Authors:
+//   - Chance Snow <git@chancesnow.me>
+//
+// Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
+
+using System.Collections;
 using System.Reflection;
-using System.Resources;
 
 namespace OVL.Tests;
 
+internal class OvlArchives {
+  public static IEnumerable Archives {
+    get {
+      yield return new TestCaseData("OVL.Tests.style.common.ovl", OvlType.Common);
+      yield return new TestCaseData("OVL.Tests.style.unique.ovl", OvlType.Unique);
+    }
+  }
+}
+
+[TestFixture]
 public partial class Tests {
   private Assembly assembly;
 
@@ -12,13 +29,16 @@ public partial class Tests {
   }
 
   [Test]
-  public void ReadArchive() {
-    var stream = assembly.GetManifestResourceStream("OVL.Tests.style.common.ovl");
+  [TestCaseSource(typeof(OvlArchives), nameof(OvlArchives.Archives))]
+  public void ReadArchive(string fileName, OvlType type) {
+    var stream = assembly.GetManifestResourceStream(fileName);
     Assert.That(stream, Is.Not.Null);
 
     Assert.DoesNotThrow(() =>
     {
-      Assert.That(Ovl.Read(stream), Is.InstanceOf<Ovl>());
+      var ovl = Ovl.Read(stream, fileName);
+      Assert.That(ovl, Is.InstanceOf<Ovl>());
+      Assert.That(ovl.type, Is.EqualTo(type));
     });
   }
 }
