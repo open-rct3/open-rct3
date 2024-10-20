@@ -17,8 +17,10 @@ namespace Dumper;
 // See https://developer.apple.com/documentation/uniformtypeidentifiers/defining-file-and-data-types-for-your-app
 [Register("Document")]
 public class Document : NSDocument {
-  private long oldHash = 0;
-  private Ovl? ovl = null;
+  private const string WindowControllerName = "OVL Document Window Controller";
+
+  private Ovl? ovl;
+  private long oldHash;
 
   /// <summary>
   /// Create a new Untitled document.
@@ -54,10 +56,9 @@ public class Document : NSDocument {
   public override bool IsInViewingMode => true;
 
   public override void MakeWindowControllers() {
-    // Override to return the Storyboard file name of the document.
     AddWindowController(
       (NSWindowController) NSStoryboard.FromName("Main", null)
-        .InstantiateControllerWithIdentifier("Document Window Controller")
+        .InstantiateControllerWithIdentifier(WindowControllerName)
     );
   }
 
