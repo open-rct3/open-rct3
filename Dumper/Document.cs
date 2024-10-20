@@ -24,7 +24,11 @@ namespace Dumper;
 public class Document : NSDocument {
   private const string WindowControllerName = "OVL Document Window Controller";
 
-  [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "This app requires at least macOS 10.15")]
+  [SuppressMessage(
+    "Interoperability",
+    "CA1416:Validate platform compatibility",
+    Justification = "This app requires at least macOS 10.15"
+  )]
   private readonly UTType ovlContentType = UTType.CreateFromIdentifier("com.open-rct3.ovl")!;
 
   private Ovl? ovl;
@@ -45,13 +49,11 @@ public class Document : NSDocument {
     return true;
   }
 
-  public override string? DisplayName
-  {
-    get => ovl?.Description;
-    set {
-      Debug.Assert(ovl != null);
-      ovl.Description = value ?? ovl.FileName;
-    }
+  public override string? DisplayName {
+    get => ovl?.Description ?? Ovl.UnnamedOvl;
+    set => base.DisplayName = ovl != null
+      ? ovl.Description = value ?? ovl.FileName
+      : value ?? Ovl.UnnamedOvl;
   }
 
   public override string DefaultDraftName => Ovl.UnnamedOvl;
@@ -60,6 +62,7 @@ public class Document : NSDocument {
     get => FileUrl != null && IsDocumentEdited;
     set => base.IsDraft = value;
   }
+
   public override bool IsDocumentEdited => (ovl?.GetHashCode() ?? 0) != oldHash;
   public override bool IsEntireFileLoaded => false;
   public override bool IsInViewingMode => true;
