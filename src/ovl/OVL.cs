@@ -193,15 +193,17 @@ public struct EffectPoint {
 }
 
 public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
-  public readonly OvlType type;
+  public const string UnnamedOvl = "Unnamed OVL";
+  public string Name { get; }
+  public string Description { get; set; }
+  public OvlType Type { get; }
+  // QUESTION: Is char FileName[MAX_PATH]; in importer?
   private readonly Stream file;
   private readonly long fileSize;
   private readonly BinaryReader reader;
   private readonly File[] files = new File[9];
   private List<string> references = new();
 
-  // QUESTION: Is char FileName[MAX_PATH]; in importer?
-  public readonly string name;
   // Added to store the unique ID.
   public EffectPoint[] effectPoints = Array.Empty<EffectPoint>();
   public Mesh[] meshes = Array.Empty<Mesh>();
@@ -209,8 +211,9 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
 
   public Ovl(Stream stream, string? fileName = null) {
     file = stream;
-    name = fileName ?? "OVL";
-    type = Path.GetFileName(fileName)?.ToLower().EndsWith(".common.ovl") ?? true ? OvlType.Common : OvlType.Unique;
+    Name = fileName ?? "OVL";
+    Description = fileName != null ? Path.GetFileName(fileName) : UnnamedOvl;
+    Type = Path.GetFileName(fileName)?.ToLower().EndsWith(".common.ovl") ?? true ? OvlType.Common : OvlType.Unique;
     reader = new BinaryReader(file, Encoding.ASCII, false);
     fileSize = fileName != null ? file.Length : 0;
   }
@@ -223,9 +226,9 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
     return Read(file, filePath);
   }
 
-  public static Ovl Read(Stream stream, string filePath = "Unnamed OVL") {
+  public static Ovl Read(Stream stream, string filePath = UnnamedOvl) {
     var invalidOvlError = $"File is not an OVL archive: {filePath}";
-    Debug.Assert(filePath == "Unnamed OVL" || new FileInfo(filePath).Exists || true);
+    Debug.Assert(filePath == UnnamedOvl || new FileInfo(filePath).Exists || true);
     var ovl = new Ovl(stream, filePath);
 
     var maybeHeader = stream.ReadStruct<OvlHeader>();
@@ -361,7 +364,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
     // TODO: Assert the checksum matches internal state?
 
     // TODO: Read the rest of the data for unique OVLs…
-    if (ovl.type == OvlType.Common) Debug.Assert(
+    if (ovl.Type == OvlType.Common) Debug.Assert(
       ovl.file.Position == ovl.fileSize,
       "Archive was not ingested in its entirety!");
 
@@ -381,7 +384,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
 
   public int CompareTo(Ovl? other) {
     if (other == null) return 1;
-    if (type != other.type) return type == OvlType.Common ? -1 : 1;
+    if (Type != other.Type) return Type == OvlType.Common ? -1 : 1;
     return GetHashCode().CompareTo(other.GetHashCode());
   }
 

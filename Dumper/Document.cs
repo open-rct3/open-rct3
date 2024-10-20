@@ -30,27 +30,27 @@ public class Document : NSDocument {
     // Add your subclass-specific initialization here.
   }
 
-  // See https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl
-  public Document(string fileName, out NSError? error) : base(new NSUrl(fileName), "ovl", out error) {
-    // Add your subclass-specific initialization here.
-  }
-
   [Export("autosavesInPlace")]
   public static bool AutosaveInPlace() {
     return true;
   }
 
-  public override string DefaultDraftName => "OVL";
-
-  public override bool IsDraft {
-    get => (ovl?.GetHashCode() ?? 0) == oldHash;
-    set => base.IsDraft = value;
+  public override string? DisplayName
+  {
+    get => ovl?.Description;
+    set {
+      if (ovl != null) ovl.Description = value ?? ovl.Name;
+    }
   }
 
-  public override bool IsDocumentEdited => false;
+  public override string DefaultDraftName => Ovl.UnnamedOvl;
 
+  public override bool IsDraft {
+    get => FileUrl != null && IsDocumentEdited;
+    set => base.IsDraft = value;
+  }
+  public override bool IsDocumentEdited => (ovl?.GetHashCode() ?? 0) != oldHash;
   public override bool IsEntireFileLoaded => false;
-
   public override bool IsInViewingMode => true;
 
   public override void MakeWindowControllers() {
@@ -62,8 +62,7 @@ public class Document : NSDocument {
   }
 
   public override bool ReadFromUrl(NSUrl url, string typeName, out NSError? outError) {
-    try
-    {
+    try {
       Debug.Assert(url.Path != null);
       // FIXME: The app hangs here and becomes unresponsive
       // TODO: Add a spinner indicator and spin it while the OVL is loading in a BG thread

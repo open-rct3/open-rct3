@@ -38,7 +38,7 @@ public partial class Tests {
     {
       var ovl = Ovl.Read(stream, fileName);
       Assert.That(ovl, Is.InstanceOf<Ovl>());
-      Assert.That(ovl.type, Is.EqualTo(type));
+      Assert.That(ovl.Type, Is.EqualTo(type));
     });
   }
 }
