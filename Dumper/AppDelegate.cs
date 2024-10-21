@@ -19,15 +19,14 @@ namespace Dumper;
 public partial class AppDelegate : NSApplicationDelegate {
   public static NSApplication Application => NSApplication.SharedApplication;
   public static AppDelegate Instance => (AppDelegate) NSApplication.SharedApplication.Delegate;
-  public static DocumentController DocumentController => (DocumentController) NSDocumentController.SharedDocumentController;
+  public static NSDocumentController DocumentController => NSDocumentController.SharedDocumentController;
+
+  public MainWindow? MainWindow { get; set; }
 
   public AppDelegate() {
 #if TRACE
     Trace.Listeners.Add(new ConsoleTraceListener());
 #endif
-
-    // Use our own document controller
-    _ = new DocumentController();
   }
 
   // Setup app here because `willFinishLaunching` is sent before `application(_:openFile:)`.
@@ -53,7 +52,10 @@ public partial class AppDelegate : NSApplicationDelegate {
 
   // See https://developer.apple.com/documentation/appkit/nsapplicationdelegate/1428638-applicationshouldhandlereopen
   public override bool ApplicationShouldHandleReopen(NSApplication sender, bool hasVisibleWindows) {
-    return !hasVisibleWindows && DocumentController.Documents.Length > 0;
+    if (MainWindow?.IsMainWindow ?? false)
+      return !hasVisibleWindows && DocumentController.Documents.Length > 0;
+    MainWindow?.MakeMainWindow();
+    return false;
   }
 
   [SuppressMessage("Interoperability", "CA1422:Validate platform compatibility")]

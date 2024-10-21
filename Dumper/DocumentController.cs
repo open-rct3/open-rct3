@@ -14,6 +14,10 @@ public class DocumentController : NSDocumentController {
   public DocumentController() : base(NSObjectFlag.Empty) { }
   public DocumentController(NativeHandle handle) : base(handle) { }
 
+  public new static void Init() {
+    _ = new DocumentController();
+  }
+
   public override void NoteNewRecentDocumentURL(NSUrl url) {
     Debug.WriteLine(url.ToString());
     base.NoteNewRecentDocumentURL(url);

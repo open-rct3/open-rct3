@@ -22,9 +22,9 @@ public partial class ProjectWindow : NSWindowController {
     base.WindowDidLoad();
 
     Debug.Assert(Window.Delegate != null);
-    var handler = (MainWindowDelegate) Window.Delegate;
-    handler.UpdateSubtitle += (sender, e) => { Window.Subtitle = e; };
-    Window.BecomeMainWindow();
+    ((MainWindowDelegate) Window.Delegate).UpdateSubtitle += (_, e) => { Window.Subtitle = e; };
+
+    Window.MakeMainWindow();
     NSApplication.SharedApplication.RequestUserAttention(NSRequestUserAttentionType.InformationalRequest);
   }
 

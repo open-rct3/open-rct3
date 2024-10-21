@@ -54,10 +54,10 @@ public class Document : NSDocument {
   }
 
   public override string? DisplayName {
-    get => ovl?.Description ?? Ovl.UnnamedOvl;
+    get => ovl?.Description;
     set => base.DisplayName = ovl != null
       ? ovl.Description = value ?? ovl.FileName
-      : value ?? Ovl.UnnamedOvl;
+      : value;
   }
 
   public override string DefaultDraftName => Ovl.UnnamedOvl;

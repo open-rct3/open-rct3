@@ -12,9 +12,16 @@ namespace Dumper
 	[Register ("DocumentViewController")]
 	partial class DocumentViewController
 	{
-		
+		[Outlet]
+		AppKit.NSTextField text { get; set; }
+
 		void ReleaseDesignerOutlets ()
 		{
+			if (text != null) {
+				text.Dispose ();
+				text = null;
+			}
+
 		}
 	}
 }

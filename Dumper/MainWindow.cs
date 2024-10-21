@@ -10,30 +10,34 @@ namespace Dumper;
 
 public partial class MainWindow : NSWindow {
   public MainWindow(NativeHandle handle) : base(handle) {
-    CanBecomeVisibleWithoutLogin = false;
     Delegate = new MainWindowDelegate();
   }
 
   public override bool CanBecomeMainWindow => true;
+  public override bool CanBecomeVisibleWithoutLogin => false;
+
+  public override void MakeMainWindow() {
+    base.MakeMainWindow();
+    MakeKeyAndOrderFront(this);
+  }
 
   public override void BecomeMainWindow() {
-    MakeMainWindow();
-
-    // FIXME: [NSApplication activate]: unrecognized selector sent to instance
-    // FIXME: NSApplication.SharedApplication.Activate();
-    MakeKeyAndOrderFront(this);
+    AppDelegate.Instance.MainWindow = this;
+    base.BecomeMainWindow();
   }
 }
 
 internal class MainWindowDelegate : NSWindowDelegate {
   private string subtitle = "";
 
-  public MainWindowDelegate() : base() { }
-
   public event EventHandler<string>? UpdateSubtitle;
+  public event EventHandler? Closing;
+
+  public override void WillClose(NSNotification notification) {
+    Closing?.Invoke(this, EventArgs.Empty);
+  }
 
   public override void DidBecomeMain(NSNotification notification) {
-    base.DidBecomeMain(notification);
     UpdateSubtitle?.Invoke(this, Subtitle);
   }
 
