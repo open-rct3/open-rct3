@@ -74,8 +74,8 @@
     <Compile Update="ProjectWindow.designer.cs">
       <DependentUpon>ProjectWindow.cs</DependentUpon>
     </Compile>
-    <Compile Update="DocumentViewController.designer.cs">
-      <DependentUpon>DocumentViewController.cs</DependentUpon>
+    <Compile Update="Documents/DocumentViewController.designer.cs">
+      <DependentUpon>Documents/DocumentViewController.cs</DependentUpon>
     </Compile>
     <Compile Update="MainWindow.designer.cs">
       <DependentUpon>MainWindow.cs</DependentUpon>

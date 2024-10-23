@@ -15,4 +15,6 @@ public class Memento<T>(T state) {
       return state.GetHashCode();
     }
   }
+
+  public bool HasChanges => state.GetHashCode() != Hash;
 }

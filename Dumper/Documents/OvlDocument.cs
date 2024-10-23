@@ -15,7 +15,7 @@ using Dumper.Models;
 using OVL;
 using UniformTypeIdentifiers;
 
-namespace Dumper;
+namespace Dumper.Documents;
 
 // See https://developer.apple.com/documentation/appkit/documents_data_and_pasteboard/developing_a_document-based_app
 // See https://developer.apple.com/documentation/uniformtypeidentifiers/defining-file-and-data-types-for-your-app
@@ -23,6 +23,11 @@ namespace Dumper;
 [Register("Document")]
 public sealed class OvlDocument : NSDocument {
   private const string WindowControllerName = "OVL Document Window Controller";
+  [SuppressMessage(
+    "ReSharper",
+    "InconsistentNaming",
+    Justification = "Pascal case would conflict with NSDocument.FileType"
+  )]
   private const string fileType = "ovl";
   [SuppressMessage(
     "Interoperability",
@@ -48,7 +53,7 @@ public sealed class OvlDocument : NSDocument {
   /// Customize the reopening of autosaved documents.
   /// </summary>
   // See https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl
-  public OvlDocument(NSUrl file, out NSError? error) : base(file, "ovl", out error) {
+  public OvlDocument(NSUrl file, out NSError? error) : base(file, fileType, out error) {
     Debug.Assert(file.Path != null, "file.Path != null");
     ReadFromUrl(FileUrl = file, FileType, out error);
     Debug.Assert(ovl != null);
@@ -80,7 +85,7 @@ public sealed class OvlDocument : NSDocument {
     set => base.IsDraft = value;
   }
 
-  public override bool IsDocumentEdited => ovl.GetHashCode() != Memento.Hash;
+  public override bool IsDocumentEdited => Memento.HasChanges;
   public override bool IsEntireFileLoaded => false;
   public override bool IsInViewingMode => true;
 

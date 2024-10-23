@@ -16,7 +16,8 @@ namespace Dumper.Models;
 
 [Serializable]
 public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChanged, IObservable<Ovl>, ISerializable {
-  private string name = "New Project";
+  public const string UnnamedProject = "New Project";
+  private string name = UnnamedProject;
   private readonly ObservableCollection<Ovl> archives = new();
   private readonly ObservableCollection<long> archiveHashes = new();
   private readonly List<IDisposable> subscriptions = new();

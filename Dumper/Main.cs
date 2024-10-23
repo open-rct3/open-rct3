@@ -5,6 +5,7 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 using AppKit;
+using Dumper.Documents;
 
 namespace Dumper;
 

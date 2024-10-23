@@ -15,7 +15,7 @@ using Foundation;
 using AppKit;
 using OVL;
 
-namespace Dumper;
+namespace Dumper.Documents;
 
 // ReSharper disable once UnusedType.Global
 public partial class DocumentViewController(NativeHandle handle) : NSViewController(handle) {
