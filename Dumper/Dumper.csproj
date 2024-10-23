@@ -81,6 +81,10 @@
       <DependentUpon>MainWindow.cs</DependentUpon>
     </Compile>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
+  </ItemGroup>
   <Choose>
     <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
       <PropertyGroup>

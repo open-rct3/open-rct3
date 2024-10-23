@@ -39,8 +39,8 @@ public partial class DocumentViewController(NativeHandle handle) : NSViewControl
       Trace.TraceInformation(value.ToString());
       base.RepresentedObject = value;
       // Update the view
-      Debug.Assert(value is Document);
-      text.Cell.StringValue = (value as Document)?.DisplayName ?? Ovl.UnnamedOvl;
+      Debug.Assert(value is OvlDocument);
+      text.Cell.StringValue = (value as OvlDocument)?.DisplayName ?? Ovl.UnnamedOvl;
     }
   }
 }

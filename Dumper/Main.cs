@@ -9,7 +9,7 @@ using AppKit;
 namespace Dumper;
 
 internal static class Program {
-  static void Main(string[] args) {
+  private static void Main(string[] args) {
     // Use our own document controller
     DocumentController.Init();
 

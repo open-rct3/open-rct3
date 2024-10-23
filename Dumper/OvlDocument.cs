@@ -9,15 +9,11 @@
 #define TRACE
 #endif
 
-using AppKit;
-using Foundation;
-using System;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using UniformTypeIdentifiers;
-
+using Dumper.Models;
 using OVL;
+using UniformTypeIdentifiers;
 
 namespace Dumper;
 
@@ -25,27 +21,41 @@ namespace Dumper;
 // See https://developer.apple.com/documentation/uniformtypeidentifiers/defining-file-and-data-types-for-your-app
 // TODO: https://developer.apple.com/documentation/appkit/nsdocument#1652154
 [Register("Document")]
-public class Document : NSDocument {
+public sealed class OvlDocument : NSDocument {
   private const string WindowControllerName = "OVL Document Window Controller";
-
+  private const string fileType = "ovl";
   [SuppressMessage(
     "Interoperability",
     "CA1416:Validate platform compatibility",
     Justification = "This app requires at least macOS 10.15"
   )]
-  private readonly UTType ovlContentType = UTType.CreateFromIdentifier("com.open-rct3.ovl")!;
+  public readonly UTType ContentType = UTType.CreateFromIdentifier("com.open-rct3.ovl")!;
 
-  private Ovl? ovl;
-  private long oldHash;
+  // TODO: Use the memento pattern for Undo/Redo. See https://refactoring.guru/design-patterns/memento
+  private Ovl ovl;
+  public Memento<Ovl> Memento { get; }
 
   /// <summary>
   /// Create a new Untitled document.
   /// </summary>
-  public Document() { }
+  public OvlDocument(Ovl? archive = null) {
+    ovl = archive ?? new Ovl("untitled.common.ovl");
+    Memento = new Memento<Ovl>(ovl);
+    FileModificationDate = NSDate.Now;
+  }
 
+  /// <summary>
+  /// Customize the reopening of autosaved documents.
+  /// </summary>
   // See https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl
-  public Document(NSUrl file, out NSError? error) : base(file, "ovl", out error) {
-    // Add your subclass-specific initialization here.
+  public OvlDocument(NSUrl file, out NSError? error) : base(file, "ovl", out error) {
+    Debug.Assert(file.Path != null, "file.Path != null");
+    ReadFromUrl(FileUrl = file, FileType, out error);
+    Debug.Assert(ovl != null);
+    Memento = new Memento<Ovl>(ovl);
+
+    var modificationDate = NSFileManager.DefaultManager.GetAttributes(file.Path, out error)?.ModificationDate;
+    FileModificationDate = modificationDate ?? throw new InvalidOperationException();
   }
 
   [Export("autosavesInPlace")]
@@ -53,11 +63,14 @@ public class Document : NSDocument {
     return true;
   }
 
+  public override string FileType {
+    get => fileType;
+    set { }
+  }
+
   public override string? DisplayName {
-    get => ovl?.Description;
-    set => base.DisplayName = ovl != null
-      ? ovl.Description = value ?? ovl.FileName
-      : value;
+    get => ovl.Description;
+    set => base.DisplayName = ovl.Description = value ?? ovl.FileName;
   }
 
   public override string DefaultDraftName => Ovl.UnnamedOvl;
@@ -67,7 +80,7 @@ public class Document : NSDocument {
     set => base.IsDraft = value;
   }
 
-  public override bool IsDocumentEdited => (ovl?.GetHashCode() ?? 0) != oldHash;
+  public override bool IsDocumentEdited => ovl.GetHashCode() != Memento.Hash;
   public override bool IsEntireFileLoaded => false;
   public override bool IsInViewingMode => true;
 
@@ -83,7 +96,6 @@ public class Document : NSDocument {
       Debug.Assert(url.Path != null);
       // TODO: Add a spinner indicator and spin it while the OVL is loading in a BG thread
       ovl = Ovl.Open(url.Path);
-      oldHash = ovl.GetHashCode();
 
       outError = null;
       Trace.TraceInformation($"Document opened: \"{url.Path}\"");

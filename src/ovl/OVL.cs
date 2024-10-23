@@ -209,13 +209,18 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
   public Mesh[] meshes = Array.Empty<Mesh>();
   public FlexiTextureInfo[] flexiTextureItems = Array.Empty<FlexiTextureInfo>();
 
-  public Ovl(Stream stream, string? fileName = null) {
+  public Ovl(string fileName, OvlType type = OvlType.Common) : this(new MemoryStream(), fileName) {
+    Type = type;
+    Description = UnnamedOvl;
+  }
+
+  internal Ovl(Stream stream, string fileName) {
     file = stream;
-    FileName = fileName ?? "OVL";
-    Description = fileName != null ? Path.GetFileName(fileName) : UnnamedOvl;
+    FileName = fileName;
+    Description = Path.GetFileName(fileName);
     Type = Path.GetFileName(fileName)?.ToLower().EndsWith(".common.ovl") ?? true ? OvlType.Common : OvlType.Unique;
     reader = new BinaryReader(file, Encoding.ASCII, false);
-    fileSize = fileName != null ? file.Length : 0;
+    fileSize = file.Length;
   }
 
   public static Ovl Open(string filePath) {
