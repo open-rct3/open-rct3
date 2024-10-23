@@ -9,11 +9,13 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using OVL;
 
 namespace Dumper.Models;
 
-public sealed class Project : IDisposable, ICollection<Ovl>, IObservable<Ovl>, INotifyPropertyChanged {
+[Serializable]
+public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChanged, IObservable<Ovl>, ISerializable {
   private string name = "New Project";
   private readonly ObservableCollection<Ovl> archives = new();
   private readonly ObservableCollection<long> archiveHashes = new();
@@ -30,6 +32,7 @@ public sealed class Project : IDisposable, ICollection<Ovl>, IObservable<Ovl>, I
       PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
     }
   }
+  IReadOnlyCollection<Ovl> Archives => archives.AsReadOnly();
 
   public Project() {
     subscriptions.Add(
@@ -38,8 +41,6 @@ public sealed class Project : IDisposable, ICollection<Ovl>, IObservable<Ovl>, I
       })
     );
   }
-
-  IReadOnlyCollection<Ovl> Archives => archives.AsReadOnly();
 
   public void Dispose() {
     subscriptions.ForEach(x => x.Dispose());
@@ -108,4 +109,9 @@ public sealed class Project : IDisposable, ICollection<Ovl>, IObservable<Ovl>, I
     return true;
   }
   #endregion
+
+  public void GetObjectData(SerializationInfo info, StreamingContext context) {
+    info.AddValue("name", Name);
+    info.AddValue("archives", Archives.Select(x => x.FileName));
+  }
 }
