@@ -244,7 +244,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
     Debug.Assert(header.magic == 0x4b524746, invalidOvlError);
 
     // Read reference count
-    if (header.version == (uint) Version.one)
+    if (header.version == (uint) Version.One)
       ovl.references.EnsureCapacity((int) header.references);
     // ReSharper disable once MergeIntoLogicalPattern
     else if (header.version != 4 || header.version != 5)
@@ -264,7 +264,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
       }
     }
 
-    if (header.version != (uint) Version.one)
+    if (header.version != (uint) Version.One)
       ovl.references.EnsureCapacity(ovl.reader.ReadInt32());
 
     // Read references
