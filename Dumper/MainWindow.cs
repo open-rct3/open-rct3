@@ -2,6 +2,7 @@
 
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Reactive.Linq;
 using ObjCRuntime;
 using Foundation;
@@ -48,7 +49,7 @@ internal class MainWindowDelegate : NSWindowDelegate {
   }
 
   public override void DidBecomeMain(NSNotification notification) {
-    throw new NotImplementedException();
+    Debug.Assert(Project.Name.Length > 0);
   }
 
   public override void DidResignMain(NSNotification notification) {

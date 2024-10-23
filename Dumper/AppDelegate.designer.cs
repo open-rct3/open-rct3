@@ -15,6 +15,15 @@ namespace Dumper
 		[Action ("closeDocument:")]
 		partial void CloseDocument (AppKit.NSMenuItem sender);
 
+		[Action ("duplicateDocument:")]
+		partial void DuplicateDocument (AppKit.NSMenuItem sender);
+
+		[Action ("openQuickly:")]
+		partial void OpenQuickly (AppKit.NSMenuItem sender);
+
+		[Action ("showDocumentInFinder:")]
+		partial void ShowDocumentInFinder (AppKit.NSMenuItem sender);
+
 		void ReleaseDesignerOutlets ()
 		{
 		}

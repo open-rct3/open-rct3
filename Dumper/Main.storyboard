@@ -67,6 +67,10 @@
                                                 <action selector="newDocument:" target="Ady-hI-5gd" id="4Si-XN-c54"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="Add OVLs to Project…" keyEquivalent="a" id="Y11-4G-SQG">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                        </menuItem>
+                                        <menuItem isSeparatorItem="YES" id="A3J-06-mAY"/>
                                         <menuItem title="Open…" keyEquivalent="o" id="IAo-SY-fd9">
                                             <connections>
                                                 <action selector="openDocument:" target="Ady-hI-5gd" id="bVn-NM-KNZ"/>
@@ -84,6 +88,11 @@
                                                     </menuItem>
                                                 </items>
                                             </menu>
+                                        </menuItem>
+                                        <menuItem title="Open Quickly…" keyEquivalent="O" id="ypD-X8-Xdn">
+                                            <connections>
+                                                <action selector="openQuickly:" target="Voe-Tx-rLC" id="scF-Z1-D0d"/>
+                                            </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="YP7-Ez-jhg"/>
                                         <menuItem title="Close" keyEquivalent="w" id="QPC-DF-59a">
@@ -107,15 +116,34 @@
                                                 <action selector="saveDocumentAs:" target="Ady-hI-5gd" id="mDf-zr-I0C"/>
                                             </connections>
                                         </menuItem>
-                                        <menuItem title="Revert to Saved" keyEquivalent="r" id="KaW-ft-85H">
+                                        <menuItem title="Revert to Saved…" id="KaW-ft-85H">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
                                             <connections>
                                                 <action selector="revertDocumentToSaved:" target="Ady-hI-5gd" id="iJ3-Pv-kwq"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Duplicate…" keyEquivalent="d" id="BmY-os-p02">
+                                            <connections>
+                                                <action selector="duplicateDocument:" target="Voe-Tx-rLC" id="WVx-6s-atj"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Save All" keyEquivalent="s" id="hRI-Sh-yUj">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <connections>
+                                                <action selector="saveAllDocuments:" target="Ady-hI-5gd" id="cLr-fL-l8c"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="aJh-i4-bef"/>
                                         <menuItem title="Export…" keyEquivalent="e" id="aTl-1u-JFS">
                                             <connections>
                                                 <action selector="saveDocumentTo:" target="Ady-hI-5gd" id="QTd-u8-x6g"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem isSeparatorItem="YES" id="Ls5-LX-ipe"/>
+                                        <menuItem title="Show in Finder" id="6ZF-81-Wjc">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="showDocumentInFinder:" target="Voe-Tx-rLC" id="YfK-Nf-JVz"/>
                                             </connections>
                                         </menuItem>
                                     </items>
@@ -574,7 +602,7 @@
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <subviews>
                                                                 <imageView fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Wnj-d9-dZJ">
-                                                                    <rect key="frame" x="3" y="0.0" width="17" height="17"/>
+                                                                    <rect key="frame" x="3" y="2.5" width="17" height="11"/>
                                                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                                     <imageCell key="cell" refusesFirstResponder="YES" imageScaling="proportionallyDown" image="questionmark.square.dashed" catalog="system" id="iDm-eL-TQN"/>
                                                                 </imageView>
