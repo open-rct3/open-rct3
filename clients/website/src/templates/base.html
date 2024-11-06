@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!-- See https://blogc.rgm.io/man/blogc-template.7.html -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    {% block listing %}
+    {% ifdef TITLE %}
+    {{ TITLE }} {{ SITE_TITLE }}
+    {% else %}
+    {{ SITE_TITLE }}
+    {% endif %}
+    {% endblock %}
+  </title>
+  <!-- CSS -->
+  <link rel="stylesheet" href="https://snow.llc/stylesheets/bootstrap.css" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/solid.css" integrity="sha384-Tv5i09RULyHKMwX0E8wJUqSOaXlyu3SQxORObAI08iUwIalMmN5L6AvlPX2LMoSE" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/fontawesome.css" integrity="sha384-jLKHWM3JRmfMU0A5x5AkjWkw/EYfGUAGagvnfryNV3F9VqM98XiIH7VBGVoxVSc7" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://snow.llc/stylesheets/devicons.min.css" crossorigin="anonymous">
+  <link rel="stylesheet" href="/site.css">
+  <!-- Icons & Theme -->
+  <link rel="icon" href="/favicon.png">
+</head>
+<body>
+  <header class="nav">
+    <a href="/" class="logo d-flex align-items-center align-self-end">
+      <img src="/logo.png" alt="{{ SITE_TITLE }} Logo">
+      <span class="wordmark">{{ SITE_TITLE }}</span>
+    </a>
+    <a class="sr-only shown-on-focus" href="#main">Skip to main content.</a>
+    <div class="flex-grow-1"></div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/play">Play</a>
+      <a href="https://forum.rct3.chancesnow.me">Forum</a>
+      <a href="https://github.com/open-rct3/open-rct3#readme">
+        <span class="icon devicons devicons-github_badge" title="Open source on GitHub"></span>
+      </a>
+    </nav>
+  </header>
+  <main id="main">
+    <noscript>
+      <div class="alert alert-danger">
+        <i class="icon fas fa-exclamation-triangle"></i>
+        <p class="message flex">{{ SITE_TITLE }} requires JavaScript to be enabled.</p>
+        <a class="btn btn-sm btn-outline-dark" href="https://enablejavascript.com">Enable JavaScript</a>
+      </div>
+    </noscript>
+    {% block listing %}
+    {{ CONTENT }}
+    {% endblock %}
+  </main>
+  <footer class="flex-md-nowrap flex-wrap">
+    <p>Copyright © 2024, OpenRCT3 Contributors.</p>
+    <p>OpenRCT3 is made with ♥️ by <a target="_blank" href="https://github.com/open-rct3/open-rct3/contributors">its contributors</a>.</p>
+    <p>Powered by <strong><a href="https://blogc.rgm.io">blogc</a> {{ BLOGC_VERSION }}</strong>.</p>
+    <p>Last updated {{ BLOGC_SYSINFO_DATETIME }}.</p>
+  </footer>
+  <script>
+new IntersectionObserver(
+  ([e]) => e.target.classList.toggle("pinned-to-viewport", e.intersectionRatio < 1),
+  { threshold: [1] }
+).observe(document.querySelector("body > header"));
+  </script>
+  <!-- TODO: <script src="/js/main.js"></script> -->
+</body>
+</html>

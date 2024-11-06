@@ -1,1 +1,5 @@
 _site/
+
+# Intermediate sources
+src/js/game.js
+src/js/main.js

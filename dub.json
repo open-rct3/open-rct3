@@ -17,13 +17,10 @@
     "vibe-d": "~>0.10.0",
     "vibe-stream:tls": "~>1.1.0"
   },
-  "subConfigurations": {
-    "vibe-stream:tls": "openssl-static"
-  },
   "configurations": [{
       "name": "application",
       "postBuildCommands": [
-        "deno task -c clients/website/deno.json build"
+        "deno task build"
       ],
       "targetName": "OpenRCT3 Server",
       "libs-osx": [],
@@ -34,5 +31,19 @@
       "name": "unittest",
       "targetName": "open-rct3-unittest"
     }
-  ]
+  ],
+  "buildTypes": {
+    "debug": {},
+    "debug-posix": {
+      "subConfigurations": {
+        "vibe-stream:tls": "openssl-static"
+      }
+    },
+    "release": {},
+    "release-posix": {
+      "subConfigurations": {
+        "vibe-stream:tls": "openssl-static"
+      }
+    }
+  }
 }

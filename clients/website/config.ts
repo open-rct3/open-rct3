@@ -10,6 +10,7 @@ const site = lume({
 });
 // TODO: https://deno.land/x/lume@v2.2.4/plugins/sass.ts
 site.data("siteTitle", "OpenRCT3");
+site.copy("js", "js");
 site.copy("public", ".");
 
 // Plugins

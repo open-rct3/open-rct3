@@ -1,3 +1,5 @@
+import * as path from "@std/path";
+
 import site from "./config.ts";
 
 export enum BuildState {
@@ -17,6 +19,12 @@ export class BuildStatus {
   }
 }
 
+const dirname = (function () {
+  const dir = import.meta.dirname;
+  if (dir) return path.normalize(path.resolve(dir, "..", ".."));
+  return Deno.cwd();
+})();
+
 export default async function build(options?: { timeout?: number }) {
   const timeout = AbortSignal.timeout(options?.timeout ?? 10000);
   const shortCircuit = new AbortController();
@@ -34,7 +42,7 @@ export default async function build(options?: { timeout?: number }) {
     if (shortCircuit.signal.reason instanceof BuildStatus && shortCircuit.signal.reason.state === BuildState.success) return;
 
     console.debug(shortCircuit.signal.reason);
-    console.debug("Aborting build…");
+    console.debug("⏳ Aborting build…");
     throw new BuildStatus(BuildState.aborted);
   });
 
@@ -45,35 +53,51 @@ export default async function build(options?: { timeout?: number }) {
   const abortSignal = AbortSignal.any([timeout, shortCircuit.signal]);
 
   // TODO: Prepend an animated spinner to this line
-  console.log("Building site…");
+  console.log("⏳ Compiling website…");
+
+  const buildIsomorphic = new Deno.Command(Deno.execPath(), {
+    cwd: dirname,
+    args: ["task", "build:isomorphic"]
+  });
+
   const result = await Promise.race([
     aborted(abortSignal).then(() => {
-      throw new Error("Build was aborted.");
+      throw new Error("🛑 Build was aborted.");
     }),
     new Promise<BuildStatus>((resolve, reject) => {
       const markerName = Object.getPrototypeOf(build).name;
       const _startMark = performance.mark(markerName);
       try {
-        site.build().then(() => {
-          const result = new BuildStatus(performance.measure(markerName, { start: markerName }));
-          shortCircuit.abort(result);
-          resolve(result);
-        }).catch((err: unknown) => {throw err;});
+        buildIsomorphic.spawn().status
+          .then(() => {
+            console.log("⏳ Building website…");
+            return site.build();
+          })
+          .then(() => {
+            const result = new BuildStatus(performance.measure(markerName, { start: markerName }));
+            shortCircuit.abort(result);
+            resolve(result);
+          }).catch((err: unknown) => { throw err; });
       } catch (err) {
-        console.error(err instanceof Error ? err.message : err.toString());
+        // deno-lint-ignore no-explicit-any
+        console.error(err instanceof Error ? err.message : (err as any).toString());
         reject(new BuildStatus(BuildState.failed));
       }
     })
   ]);
-  if (result.state === BuildState.success) console.log(`✅ Built site in ${formatMeasure(result.measure!)}s.`);
+  if (result.state === BuildState.success) {
+    console.log(`⏱ Built website in ${formatMeasure(result.measure!)}.`);
+    console.log(`✅ Finished build.`);
+  }
 
   Deno.removeSignalListener("SIGINT", abortBuild);
   return result;
 }
 
-function formatMeasure(measure: PerformanceMeasure) {
-  if (measure.duration % 1000 !== 0) return (measure.duration / 1000.0).toFixed(1);
-  return (measure.duration / 1000).toFixed(0);
+export function formatMeasure(measure: PerformanceMeasure) {
+  const durationSeconds = measure.duration / 1000;
+  if (Math.round(measure.duration % 100) % 1 !== 0) return `${(durationSeconds).toFixed(1)}s`;
+  return `${durationSeconds.toFixed(0)}s`;
 }
 
 if (import.meta.main) await build().then(() => Deno.exit(0));
