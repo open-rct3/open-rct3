@@ -23,6 +23,9 @@
   },
   "fmt": {
     "lineWidth": 120,
-    "semiColons": true
+    "semiColons": true,
+    "unstableCss": true,
+    "unstableHtml": true,
+    "unstableYaml": true
   }
 }
