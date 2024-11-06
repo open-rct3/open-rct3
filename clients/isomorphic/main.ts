@@ -6,5 +6,5 @@ document.addEventListener("DOMContentLoaded", bootstrap);
 
 function bootstrap() {
   const canvas = document.querySelector("canvas#game");
-  canvas.replaceWith(Game);
+  canvas?.replaceWith(Game);
 }

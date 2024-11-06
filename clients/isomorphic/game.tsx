@@ -3,7 +3,7 @@ import { css, customElement, LitElement, h, html } from './lit.ts';
 // TODO: Contribute back these lit-html abstractions back to @use-gpu, i.e. a new `@use-gpu/lit` package.
 import { } from "npm:@use-gpu/webgpu";
 
-@customElement('open-rct3-game')
+@customElement('open-rct3')
 // deno-lint-ignore no-unused-vars
 class Game extends LitElement {
   static styles = css`
@@ -21,4 +21,4 @@ canvas#game {
   }
 }
 
-export default <open-rct3-game></open-rct3-game>
+export default <open-rct3></open-rct3>
