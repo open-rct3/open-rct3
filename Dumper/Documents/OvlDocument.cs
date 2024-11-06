@@ -20,9 +20,8 @@ namespace Dumper.Documents;
 // See https://developer.apple.com/documentation/appkit/documents_data_and_pasteboard/developing_a_document-based_app
 // See https://developer.apple.com/documentation/uniformtypeidentifiers/defining-file-and-data-types-for-your-app
 // TODO: https://developer.apple.com/documentation/appkit/nsdocument#1652154
-[Register("Document")]
+[Register("OvlDocument")]
 public sealed class OvlDocument : NSDocument {
-  private const string WindowControllerName = "OVL Document Window Controller";
   [SuppressMessage(
     "ReSharper",
     "InconsistentNaming",
@@ -54,6 +53,7 @@ public sealed class OvlDocument : NSDocument {
   /// </summary>
   // See https://developer.apple.com/documentation/appkit/nsdocument/1515097-initwithcontentsofurl
   public OvlDocument(NSUrl file, out NSError? error) : base(file, fileType, out error) {
+    Debug.WriteLine(file.ToString());
     Debug.Assert(file.Path != null, "file.Path != null");
     ReadFromUrl(FileUrl = file, FileType, out error);
     Debug.Assert(ovl != null);
@@ -73,8 +73,15 @@ public sealed class OvlDocument : NSDocument {
     set { }
   }
 
+  public override NSDate FileModificationDate {
+    // TODO: Instead of now, query the memento for its last changed time
+    get => IsDocumentEdited ? NSDate.Now : base.FileModificationDate;
+    set => base.FileModificationDate = value;
+  }
+
   public override string? DisplayName {
     get => ovl.Description;
+    // FIXME: ovl is null during construction...
     set => base.DisplayName = ovl.Description = value ?? ovl.FileName;
   }
 
@@ -90,14 +97,12 @@ public sealed class OvlDocument : NSDocument {
   public override bool IsInViewingMode => true;
 
   public override void MakeWindowControllers() {
-    AddWindowController(
-      (NSWindowController) NSStoryboard.FromName("Main", null)
-        .InstantiateControllerWithIdentifier(WindowControllerName)
-    );
+    AddWindowController(new OvlWindowController());
   }
 
   public override bool ReadFromUrl(NSUrl url, string typeName, out NSError? outError) {
     try {
+      Debug.WriteLine($"Reading OVL: {url.Path}");
       Debug.Assert(url.Path != null);
       // TODO: Add a spinner indicator and spin it while the OVL is loading in a BG thread
       ovl = Ovl.Open(url.Path);

@@ -15,11 +15,18 @@ using UniformTypeIdentifiers;
 namespace Dumper.Documents;
 
 [Register("ProjectDocument")]
-public class ProjectDocument : NSDocument {
+public sealed class ProjectDocument : NSDocument {
   private const string fileType = "fgdkproj";
   // TODO: Use the memento pattern for Undo/Redo. See https://refactoring.guru/design-patterns/memento
-  private Project project = new();
   public Memento<Project> Memento { get; }
+
+  /// <summary>
+  /// Create a new Untitled document.
+  /// </summary>
+  public ProjectDocument() {
+    Memento = new Memento<Project>(new Project());
+    FileModificationDate = NSDate.Now;
+  }
 
   /// <summary>
   /// Customize the reopening of autosaved documents.
@@ -28,7 +35,7 @@ public class ProjectDocument : NSDocument {
   public ProjectDocument(NSUrl file, out NSError? error) : base(file, fileType, out error) {
     Debug.Assert(file.Path != null, "file.Path != null");
     ReadFromUrl(FileUrl = file, FileType, out error);
-    Memento = new Memento<Project>(project);
+    Memento = new Memento<Project>(new Project());
 
     var modificationDate = NSFileManager.DefaultManager.GetAttributes(file.Path, out error)?.ModificationDate;
     FileModificationDate = modificationDate ?? throw new InvalidOperationException();
@@ -39,15 +46,21 @@ public class ProjectDocument : NSDocument {
     return true;
   }
 
-  public Project Project => project;
+  public Project Project => Memento.Value;
 
   public override string FileType {
     get => fileType;
     set { }
   }
 
+  public override NSDate FileModificationDate {
+    // TODO: Instead of now, query the memento for its last changed time
+    get => IsDocumentEdited ? NSDate.Now : base.FileModificationDate;
+    set => base.FileModificationDate = value;
+  }
+
   public override string? DisplayName {
-    get => project.Name;
+    get => Project.Name;
     set => base.DisplayName = Project.Name = value ?? Project.UnnamedProject;
   }
 

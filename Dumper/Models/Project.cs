@@ -4,6 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
+
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -15,22 +16,24 @@ using OVL;
 namespace Dumper.Models;
 
 [Serializable]
-public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChanged, IObservable<Ovl>, ISerializable {
+public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChanged, INotifyPropertyChanging, IObservable<Ovl>, ISerializable {
   public const string UnnamedProject = "New Project";
   private string name = UnnamedProject;
   private readonly ObservableCollection<Ovl> archives = new();
   private readonly ObservableCollection<long> archiveHashes = new();
   private readonly List<IDisposable> subscriptions = new();
 
+  public event PropertyChangingEventHandler? PropertyChanging;
   public event PropertyChangedEventHandler? PropertyChanged;
   public event EventHandler<string>? Renamed;
 
   public string Name {
     get => name;
     set {
+      OnPropertyChanging();
       name = value;
       Renamed?.Invoke(this, value);
-      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+      SetField(ref name, value);
     }
   }
   IReadOnlyCollection<Ovl> Archives => archives.AsReadOnly();
@@ -67,8 +70,10 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
   }
 
   public void Add(Ovl item) {
+    OnPropertyChanging(nameof(Archives));
     archives.Add(item);
     archiveHashes.Add(item.GetHashCode());
+    OnPropertyChanged(nameof(Archives));
   }
 
   public void Clear() {
@@ -85,8 +90,11 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
   }
 
   public bool Remove(Ovl item) {
+    OnPropertyChanging(nameof(Archives));
     archiveHashes.RemoveAt(archives.IndexOf(item));
-    return archives.Remove(item);
+    var result = archives.Remove(item);
+    OnPropertyChanged(nameof(Archives));
+    return result;
   }
 
   /// <summary>
@@ -98,6 +106,10 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
   #endregion
 
   #region INotifyPropertyChanged Members
+
+  private void OnPropertyChanging([CallerMemberName] string? propertyName = null) {
+    PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(propertyName));
+  }
 
   private void OnPropertyChanged([CallerMemberName] string? propertyName = null) {
     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

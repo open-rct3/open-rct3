@@ -7,19 +7,20 @@ using System.Reactive.Linq;
 using ObjCRuntime;
 using Foundation;
 using AppKit;
+using Dumper.Documents;
 using Dumper.Models;
 
 namespace Dumper;
 
-public partial class MainWindow : NSWindow {
-  public MainWindow(NativeHandle handle) : base(handle) {
-    Delegate = new MainWindowDelegate();
-  }
+public sealed partial class MainWindow : NSWindow {
+  public MainWindow(NativeHandle handle) : base(handle) { }
 
   public override bool CanBecomeMainWindow => true;
   public override bool CanBecomeVisibleWithoutLogin => false;
 
   public override void MakeMainWindow() {
+    Debug.Assert(WindowController != null, nameof(WindowController) + " != null");
+
     base.MakeMainWindow();
     MakeKeyAndOrderFront(this);
   }
@@ -30,29 +31,18 @@ public partial class MainWindow : NSWindow {
   }
 }
 
-internal class MainWindowDelegate : NSWindowDelegate {
-  public readonly Project Project = new();
-
+internal class MainWindowDelegate(Project project) : NSWindowDelegate {
   public event EventHandler? Closing;
-  public readonly IObservable<string> ProjectRenamed;
-
-  public MainWindowDelegate() {
-    ProjectRenamed = Observable.FromEventPattern<EventHandler<string>, string>(
-        h => Project.Renamed += h,
-        h => Project.Renamed -= h
-      )
-      .Select(ev => ev.EventArgs);
-  }
 
   public override void WillClose(NSNotification notification) {
     Closing?.Invoke(this, EventArgs.Empty);
   }
 
   public override void DidBecomeMain(NSNotification notification) {
-    Debug.Assert(Project.Name.Length > 0);
+    Debug.Assert(project.Name.Length > 0);
   }
 
   public override void DidResignMain(NSNotification notification) {
-    throw new NotImplementedException();
+    // TODO: Dispose of any reactive observers
   }
 }

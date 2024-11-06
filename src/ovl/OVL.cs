@@ -10,6 +10,8 @@ using System.Numerics;
 using System.IO;
 using System.Text;
 using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Drawing;
 
@@ -192,35 +194,45 @@ public struct EffectPoint {
   public Matrix4x4 transform;
 }
 
-public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
+public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyChanging {
   public const string UnnamedOvl = "Unnamed OVL";
-  public string FileName { get; }
-  public string Description { get; set; }
-  public OvlType Type { get; }
+
   // QUESTION: Is char FileName[MAX_PATH]; in importer?
+  private string description;
   private readonly Stream file;
   private readonly long fileSize;
   private readonly BinaryReader reader;
   private readonly File[] files = new File[9];
-  private List<string> references = new();
+  private ObservableCollection<string> references = new();
+  private ObservableCollection<EffectPoint> effectPoints = new();
+  private ObservableCollection<Mesh> meshes = new();
+  private ObservableCollection<FlexiTextureInfo> flexiTextureItems = new();
 
-  // Added to store the unique ID.
-  public EffectPoint[] effectPoints = Array.Empty<EffectPoint>();
-  public Mesh[] meshes = Array.Empty<Mesh>();
-  public FlexiTextureInfo[] flexiTextureItems = Array.Empty<FlexiTextureInfo>();
+  public event PropertyChangingEventHandler? PropertyChanging;
+  public string FileName { get; }
+  public string Description {
+    get => description;
+    set {
+      PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(nameof(Description)));
+      description = value;
+    }
+  }
+  public OvlType Type { get; }
 
   public Ovl(string fileName, OvlType type = OvlType.Common) : this(new MemoryStream(), fileName) {
     Type = type;
-    Description = UnnamedOvl;
+    description = UnnamedOvl;
   }
 
-  internal Ovl(Stream stream, string fileName) {
+  private Ovl(Stream stream, string fileName) {
     file = stream;
     FileName = fileName;
-    Description = Path.GetFileName(fileName);
+    description = Path.GetFileName(fileName);
     Type = Path.GetFileName(fileName)?.ToLower().EndsWith(".common.ovl") ?? true ? OvlType.Common : OvlType.Unique;
     reader = new BinaryReader(file, Encoding.ASCII, false);
     fileSize = file.Length;
+
+    // TODO: Observe this list of references, effects, meshes, etc. and invoke PropertyChanging.
   }
 
   public static Ovl Open(string filePath) {
@@ -249,8 +261,8 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
     Debug.Assert(header.magic == 0x4b524746, invalidOvlError);
 
     // Read reference count
-    if (header.version == (uint) Version.One)
-      ovl.references.EnsureCapacity((int) header.references);
+    var referenceCount = 0;
+    if (header.version == (uint) Version.One) referenceCount = (int) header.references;
     // ReSharper disable once MergeIntoLogicalPattern
     else if (header.version != 4 || header.version != 5)
       throw new Exception($"Unknown OVL version: {header.version}");
@@ -269,11 +281,9 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable {
       }
     }
 
-    if (header.version != (uint) Version.One)
-      ovl.references.EnsureCapacity(ovl.reader.ReadInt32());
-
     // Read references
-    ovl.references = ovl.references.Select(reference => ovl.ReadString()).ToList();
+    if (header.version != (uint) Version.One) referenceCount = ovl.reader.ReadInt32();
+    for (var i = 0; i < referenceCount; i += 1) ovl.references.Add(ovl.ReadString());
 
     // Read file index header
     var filesHeader = stream.ReadStruct<OvlFilesHeader>();

@@ -1,4 +1,4 @@
-// DocumentViewController
+// OvlViewController
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
@@ -8,17 +8,19 @@
 #define TRACE
 #endif
 
+using AppKit;
+using Foundation;
 using System;
 using System.Diagnostics;
 using ObjCRuntime;
-using Foundation;
-using AppKit;
 using OVL;
 
 namespace Dumper.Documents;
 
-// ReSharper disable once UnusedType.Global
-public partial class DocumentViewController(NativeHandle handle) : NSViewController(handle) {
+public partial class OvlViewController : NSViewController {
+  public OvlViewController() { }
+  public OvlViewController(NativeHandle handle) : base(handle) { }
+
   // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
   private NSDocument? Document => ViewLoaded && View.Window != null
     ? AppDelegate.DocumentController.DocumentForWindow(View.Window) : null;

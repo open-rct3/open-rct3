@@ -10,7 +10,7 @@ using System.CodeDom.Compiler;
 namespace Dumper
 {
 	[Register ("MainWindow")]
-	partial class MainWindow
+  sealed partial class MainWindow
 	{
 		
 		void ReleaseDesignerOutlets ()

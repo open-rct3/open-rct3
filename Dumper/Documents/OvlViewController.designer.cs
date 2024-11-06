@@ -8,8 +8,8 @@
 
 namespace Dumper.Documents
 {
-	[Register ("DocumentViewController")]
-	partial class DocumentViewController
+	[Register ("OvlViewController")]
+	partial class OvlViewController
 	{
 		[Outlet]
 		AppKit.NSTextField text { get; set; }

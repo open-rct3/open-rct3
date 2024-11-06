@@ -16,16 +16,13 @@ namespace Dumper
 		partial void CloseDocument (AppKit.NSMenuItem sender);
 
 		[Action ("duplicateDocument:")]
-		partial void duplicateDocument (AppKit.NSMenuItem sender);
+		partial void DuplicateDocument (AppKit.NSMenuItem sender);
 
 		[Action ("openQuickly:")]
-		partial void openQuickly (AppKit.NSMenuItem sender);
-
-		[Action ("openQuickly:")]
-		partial void openQuickly (Foundation.NSObject sender);
+		partial void OpenQuickly (AppKit.NSMenuItem sender);
 
 		[Action ("showDocumentInFinder:")]
-		partial void showDocumentInFinder (AppKit.NSMenuItem sender);
+		partial void ShowDocumentInFinder (AppKit.NSMenuItem sender);
 
 		void ReleaseDesignerOutlets ()
 		{

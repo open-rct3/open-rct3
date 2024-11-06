@@ -12,6 +12,7 @@ using AppKit;
 using Foundation;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using Dumper.Documents;
 
 namespace Dumper;
 
@@ -32,13 +33,14 @@ public partial class AppDelegate : NSApplicationDelegate {
   // Setup app here because `willFinishLaunching` is sent before `application(_:openFile:)`.
   // See https://developer.apple.com/documentation/appkit/nsapplicationdelegate/1428612-application#discussion
   public override void WillFinishLaunching(NSNotification notification) {
+    Debug.Assert(NSDocumentController.SharedDocumentController is DocumentController);
     NSApplication.SharedApplication.DisableRelaunchOnLogin();
   }
 
   public override void DidFinishLaunching(NSNotification notification) { }
 
   public override void WillTerminate(NSNotification notification) {
-    // Insert code here to tear down your application
+    // TODO: Tear down the application
   }
 
   public override bool ApplicationShouldTerminateAfterLastWindowClosed(NSApplication sender) {
@@ -60,6 +62,7 @@ public partial class AppDelegate : NSApplicationDelegate {
 
   [SuppressMessage("Interoperability", "CA1422:Validate platform compatibility")]
   public override bool OpenFile(NSApplication sender, string fileName) {
+    Debug.WriteLine($"Opening file: {fileName}");
     var opened = new TaskCompletionSource<NSDocument>();
     try {
       DocumentController.OpenDocument(NSUrl.FromFilename(fileName), true,
