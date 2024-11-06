@@ -14,8 +14,15 @@ desktop: ovl isomorphic
 	deno task build:desktop
 
 .PHONY: website
-website: ovl
+website: ovl clients/website/_site/index.html clients/website/_site/play.html
 	deno task build:website
+
+SITE_TITLE := OpenRCT3
+
+clients/website/_site/index.html: clients/website/src/index.html
+	blogc -l -t clients/website/src/index.html -o $@ -D SITE_TITLE="${SITE_TITLE}"
+clients/website/_site/play.html: clients/website/src/templates/base.html clients/website/src/play.html
+	blogc -l -t clients/website/src/play.html -o $@ -D SITE_TITLE="${SITE_TITLE}"
 
 .PHONY: serve-website
 serve-website: ovl
