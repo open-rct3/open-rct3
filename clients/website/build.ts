@@ -79,7 +79,8 @@ export default async function build(options?: { timeout?: number }) {
             resolve(result);
           }).catch((err: unknown) => { throw err; });
       } catch (err) {
-        console.error(err instanceof Error ? err.message : err.toString());
+        // deno-lint-ignore no-explicit-any
+        console.error(err instanceof Error ? err.message : (err as any).toString());
         reject(new BuildStatus(BuildState.failed));
       }
     })

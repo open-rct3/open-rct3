@@ -1,4 +1,3 @@
-import Kia from "@fathym/kia";
 import { debounce, delay } from "@std/async";
 import { parseArgs } from "@std/cli/parse-args";
 import * as path from "@std/path";
@@ -15,7 +14,6 @@ const websiteDir = path.resolve(path.join(".", "clients", "website", "_site"));
 
 if (import.meta.main) {
   const args = parseArgs<{ open: boolean }>(Deno.args);
-  const kia = new Kia();
   const siteChanges = Deno.watchFs([appDir, websiteDir], { recursive: true });
   Deno.addSignalListener("SIGINT", () => siteChanges.close());
 
@@ -25,27 +23,29 @@ if (import.meta.main) {
   if (args.open) open(`http://localhost:${port}/play`, { url: true, background: true });
 
   console.clear();
-  kia.start("Watching for changes…");
-  const rebuildInfrequently = debounce((event) => rebuild(event), 250);
+  console.log("Watching for changes…");
+  const rebuildInfrequently = debounce((event: Deno46.FsEvent) => rebuild(event), 250);
 
   try {
     // FIXME: This isn't rebuilding the site... 🙄
     for await (const event of siteChanges) {
-      kia.stopWithFlair("File changed.", "👁️");
-      await rebuildInfrequently(event);
+      log("File changed.", "👁️");
+      await rebuildInfrequently(event as Deno46.FsEvent);
       console.clear();
-      kia.start("Watching for changes…");
+      console.log("Watching for changes…");
     }
   } catch (err) {
-    const error = `❌ ${err instanceof Error ? err.message : `Error: ${err.toString()}`}`;
-    kia.stopWithFlair(error, "❌");
-    if (err.stack) console.error(err.stack);
+    // deno-lint-ignore no-explicit-any
+    const error = `${err instanceof Error ? err.message : `Error: ${(err as any).toString()}`}`;
+
+    log(error, "❌");
+    if (err instanceof Error && err.stack) console.error(err.stack);
     // FIXME: Don't exit for recoverable errors.
     siteChanges.close();
     Deno.exit(1);
   }
 
-  kia.stopWithFlair("Finished.", "✅");
+  log("Finished.", "✅");
   Deno.exit();
 }
 
@@ -64,4 +64,8 @@ async function rebuild(event?: Deno46.FsEvent) {
   console.debug(event?.kind ?? "First build!");
   const result = await build();
   if (result?.state === BuildState.success) await delay(1000);
+}
+
+function log(message: string, flair?: string) {
+  console.log(`${flair ? `${flair} ` : ""}${message}`)
 }
