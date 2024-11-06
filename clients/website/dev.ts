@@ -7,32 +7,14 @@ const website = import.meta?.dirname ?? Deno.cwd();
 
 if (import.meta.main) {
   const siteChanges = Deno.watchFs([join(website, "src")], { recursive: true });
-  // TODO: Use WMR programmatically
-  const wmr = new Deno.Command("npx", {
-    args: [
-      "wmr",
-      "serve",
-      "--public",
-      join(website, "_site"),
-      "--out",
-      join(website, "_site")
-    ],
-    stdout: "piped",
-    stderr: "piped"
-  }).spawn();
 
   try {
     // TODO: Refactor to a spinner interface
     Deno.addSignalListener("SIGINT", () => {
       siteChanges.close();
-      wmr.kill();
     });
 
-    const wmrStarted = wmr.stdout.values({ preventCancel: true }).next();
-    await build().then(delay(750));
-    console.clear();
-    console.log("Starting dev server…");
-    await wmrStarted.then(delay(750));
+    await build().then(() => delay(750));
     console.clear();
     console.log("Watching for changes…");
 
@@ -40,9 +22,11 @@ if (import.meta.main) {
     for await (const event of siteChanges) await rebuildInfrequently(event);
     Deno.exit(0);
   } catch (err) {
-    console.error(err instanceof Error ? `${err.stack}` : `Error: ${err.toString()}`);
+    console.error(
+      // deno-lint-ignore no-explicit-any
+      err instanceof Error ? `${err.stack}` : `Error: ${(err as any).toString()}`,
+    );
     // FIXME: Don't exit for recoverable errors.
-    wmr.kill();
     Deno.exit(1);
   }
 }
