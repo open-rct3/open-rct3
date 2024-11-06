@@ -65,9 +65,9 @@
   <Choose>
     <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
       <PropertyGroup>
-        <EvergineProfileName>macOS</EvergineProfileName>
+        <ProfileName>macOS</ProfileName>
         <!-- See https://github.com/xamarin/xamarin-macios -->
-        <TargetFramework>net8.0-macos10.15</TargetFramework>
+        <TargetFramework>net8.0-macos</TargetFramework>
         <ImplicitUsings>true</ImplicitUsings>
         <TargetPlatformVersion>10.15</TargetPlatformVersion>
       </PropertyGroup>
@@ -84,7 +84,8 @@
     </When>
     <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
       <PropertyGroup>
-        <EvergineProfileName>Windows</EvergineProfileName>
+        <ProfileName>Windows</ProfileName>
+        <TargetFramework>net8.0-windows</TargetFramework>
       </PropertyGroup>
       <ItemGroup>
       </ItemGroup>
