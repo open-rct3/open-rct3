@@ -6,9 +6,9 @@ import { open } from 'https://deno.land/x/open/index.ts';
 import build, { BuildState, BuildStatus } from "./build.ts";
 import { port } from "./server.ts";
 
-const dirname = import.meta?.dirname ?? Deno.cwd();
-const appDir = path.resolve(path.join(".", "clients", "isomorphic"));
-const websiteDir = path.resolve(path.join(".", "clients", "website", "_site"));
+const dirname = import.meta.dirname ? path.resolve(import.meta.dirname, "..", "..") : Deno.cwd();
+const appDir = path.resolve(path.join(dirname, "clients", "isomorphic"));
+const websiteDir = path.resolve(path.join(dirname, "clients", "website", "src"));
 
 // TODO: Fix remote debugging. See https://stackoverflow.com/a/69368719/1363247
 

@@ -7,7 +7,7 @@
     "lint": "deno check clients/desktop/main.ts clients/isomorphic/main.ts",
     "build": "make",
     "build:desktop": "deno compile --env --no-prompt --unstable-ffi --allow-ffi --allow-read --allow-write --allow-env=DENO_AUTH_TOKENS,DENO_DIR,PLUGIN_URL,LOCALAPPDATA,RCT3_SERVER_URL --allow-run=cmd,tar --allow-net=github.com:443,objects.githubusercontent.com:443 --output bin/OpenRCT3 clients/desktop/main.ts",
-    "build:isomorphic": "deno run --allow-env --allow-net --allow-sys --allow-read --allow-write=./clients/website clients/isomorphic/build.ts",
+    "build:isomorphic": "deno run --allow-env --allow-net --allow-sys --allow-read --allow-write clients/isomorphic/build.ts",
     "build:website": "deno run --allow-env --allow-net --allow-sys --allow-run --allow-read --allow-write=./clients/website/_site clients/website/build.ts"
   },
   "imports": {
@@ -19,13 +19,17 @@
     "@std/fs": "jsr:@std/fs@^1.0.2",
     "@std/media-types": "jsr:@std/media-types@^1.0.3",
     "@std/path": "jsr:@std/path@^1.0.3",
+    "@use-gpu/core": "npm:@use-gpu/core@^0.12.0",
+    "@use-gpu/live": "npm:@use-gpu/live@^0.12.0",
+    "@use-gpu/webgpu": "npm:@use-gpu/webgpu@^0.12.0",
+    "@use-gpu/workbench": "npm:@use-gpu/workbench@^0.12.0",
     "@webview/webview": "jsr:@webview/webview@^0.8.0",
     "lume": "https://deno.land/x/lume@v2.2.4/mod.ts",
     "lume/": "https://deno.land/x/lume@v2.2.4/"
   },
   "compilerOptions": {
     "jsx": "react",
-    "jsxFactory": "h",
+    "jsxFactory": "React.createElement",
     "types": [
       "lume/types.ts"
     ],

@@ -1,10 +1,11 @@
-import { css, customElement, LitElement, h, html } from './lit.ts';
+import { css, customElement, LitElement, html } from './lit.ts';
 // See https://usegpu.live/docs/reference-live-@use-gpu-live
-// TODO: Contribute back these lit-html abstractions back to @use-gpu, i.e. a new `@use-gpu/lit` package.
-import { } from "npm:@use-gpu/webgpu";
+import { type LC, hot, useFiber } from '@use-gpu/live';
+// TODO: Contribute back my lit-html abstractions back to @use-gpu, i.e. a new `@use-gpu/lit` package.
+import React from '@use-gpu/live';
+import { AutoCanvas, ErrorRenderer, WebGPU } from "@use-gpu/webgpu";
 
 @customElement('open-rct3')
-// deno-lint-ignore no-unused-vars
 class Game extends LitElement {
   static styles = css`
 canvas#game {
@@ -16,9 +17,26 @@ canvas#game {
 }
   `;
 
+  /** @returns The viewport's clear color, black. */
+  static get clearColor(): GPUColor {
+    return [0];
+  }
+  static get canvas() {
+    return document.querySelector("canvas#game")! as HTMLCanvasElement;
+  }
+
+  static fallback(err: Error): ReturnType<ErrorRenderer> {
+    // TODO: Surface a human-readable error to the user via a toast alert
+    console.error(err);
+  }
+
   render() {
-    return html`<canvas id="game"></canvas>`;
+    return html`<canvas id="game"><slot></slot></canvas>`;
   }
 }
 
-export default <open-rct3></open-rct3>
+export default <open-rct3>
+  <WebGPU fallback={Game.fallback}>
+    <AutoCanvas canvas={Game.canvas} backgroundColor={Game.clearColor}></AutoCanvas>
+  </WebGPU>
+</open-rct3>

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "inlineSourceMap": true,
     "jsx": "react",
-    "jsxFactory": "h",
+    "jsxFactory": "React.createElement",
     "jsxFragment": "Fragment"
   }
 }

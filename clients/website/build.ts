@@ -59,6 +59,12 @@ export default async function build(options?: { timeout?: number }) {
     cwd: dirname,
     args: ["task", "build:isomorphic"]
   });
+  async function copyFiles() {
+    const website = path.resolve(dirname, "clients", "website");
+    const sources = path.resolve(website, "src");
+    const scripts = path.resolve(sources, "js")
+    await Deno.copyFile(path.resolve(scripts, "main.js"), path.resolve(website, "_site", "js", "main.js"));
+  }
 
   const result = await Promise.race([
     aborted(abortSignal).then(() => {
@@ -73,6 +79,7 @@ export default async function build(options?: { timeout?: number }) {
             console.log("⏳ Building website…");
             return site.build();
           })
+          .then(copyFiles)
           .then(() => {
             const result = new BuildStatus(performance.measure(markerName, { start: markerName }));
             shortCircuit.abort(result);
