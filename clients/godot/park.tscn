@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3 uid="uid://oxkmw024oadu"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_kivu8"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_ewnh8"]
+sky_material = SubResource("ProceduralSkyMaterial_kivu8")
+
+[sub_resource type="Environment" id="Environment_6pjhb"]
+background_mode = 2
+sky = SubResource("Sky_ewnh8")
+reflected_light_source = 2
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_1a7sh"]
+
+[node name="Park" type="Node3D"]
+
+[node name="Environment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_6pjhb")
+
+[node name="Terrain" type="MeshInstance3D" parent="."]
+transform = Transform3D(255, 0, 0, 0, 1, 0, 0, 0, 255, 0, 0, 0)
+mesh = SubResource("PlaneMesh_1a7sh")
+metadata/_edit_lock_ = true
