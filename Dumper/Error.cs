@@ -4,6 +4,8 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
+using System;
+
 namespace Dumper;
 
 // See https://stackoverflow.com/a/3276356/1363247

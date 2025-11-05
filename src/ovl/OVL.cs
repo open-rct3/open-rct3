@@ -5,6 +5,7 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
+using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.IO;

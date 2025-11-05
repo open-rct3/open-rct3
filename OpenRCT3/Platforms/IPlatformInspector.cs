@@ -5,6 +5,8 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
+using System;
+
 namespace OpenRCT3.Platforms;
 
 public interface IPlatformInspector : IObservable<ViewModels.Inspector> { }

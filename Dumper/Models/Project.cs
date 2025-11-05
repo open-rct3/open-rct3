@@ -5,9 +5,12 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;

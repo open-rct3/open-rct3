@@ -4,7 +4,7 @@
     <ProjectGuid>{9281AEA1-C96C-4881-B00F-2D4D6521B081}</ProjectGuid>
     <ProjectTypeGuids>{A3F8F2AB-B479-4A4A-A458-A89E7DC349F1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-macos10.14</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>Dumper</RootNamespace>
     <!--<MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>-->
@@ -54,35 +54,12 @@
     <None Include="**\*.macOS.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows')) != true">
-    <Compile Remove="**\*.Windows.cs" />
-    <None Include="**\*.Windows.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+    <Compile Remove="**\*.windows.cs" />
+    <None Include="**\*.windows.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\src\ovl\libOVL.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Update="Sidebar.designer.cs">
-      <DependentUpon>Sidebar.cs</DependentUpon>
-    </Compile>
-    <Compile Update="EditorContainer.designer.cs">
-      <DependentUpon>EditorContainer.cs</DependentUpon>
-    </Compile>
-    <Compile Update="Editor.designer.cs">
-      <DependentUpon>Editor.cs</DependentUpon>
-    </Compile>
-    <Compile Update="ProjectWindow.designer.cs">
-      <DependentUpon>ProjectWindow.cs</DependentUpon>
-    </Compile>
-    <Compile Update="Documents\OvlViewController.designer.cs">
-      <DependentUpon>Documents/OvlViewController.cs</DependentUpon>
-    </Compile>
-    <Compile Update="Documents\OvlWindowController.designer.cs">
-      <DependentUpon>Documents/OvlWindowController.cs</DependentUpon>
-    </Compile>
-    <Compile Update="MainWindow.designer.cs">
-      <DependentUpon>MainWindow.cs</DependentUpon>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
@@ -119,12 +96,63 @@
           <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-128%402x.png</Link>
         </ImageAsset>
       </ItemGroup>
+      <ItemGroup>
+        <Compile Update="AppDelegate.designer.cs">
+          <DependentUpon>AppDelegate.cs</DependentUpon>
+        </Compile>
+        <Compile Update="Sidebar.designer.cs">
+          <DependentUpon>Sidebar.cs</DependentUpon>
+        </Compile>
+        <Compile Update="EditorContainer.designer.cs">
+          <DependentUpon>EditorContainer.cs</DependentUpon>
+        </Compile>
+        <Compile Update="Editor.designer.cs">
+          <DependentUpon>Editor.cs</DependentUpon>
+        </Compile>
+        <Compile Update="ProjectWindow.designer.cs">
+          <DependentUpon>ProjectWindow.cs</DependentUpon>
+        </Compile>
+        <Compile Update="Documents\OvlViewController.designer.cs">
+          <DependentUpon>Documents/OvlViewController.cs</DependentUpon>
+        </Compile>
+        <Compile Update="Documents\OvlWindowController.designer.cs">
+          <DependentUpon>Documents/OvlWindowController.cs</DependentUpon>
+        </Compile>
+        <Compile Update="MainWindow.designer.cs">
+          <DependentUpon>MainWindow.cs</DependentUpon>
+        </Compile>
+      </ItemGroup>
     </When>
     <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
       <PropertyGroup>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <UseWindowsForms>true</UseWindowsForms>
         <EvergineProfileName>Windows</EvergineProfileName>
       </PropertyGroup>
       <ItemGroup>
+        <Compile Remove="Documents/DocumentController.cs" />
+        <Compile Remove="Documents/OvlDocument.cs" />
+        <Compile Remove="Documents/OvlViewController.cs" />
+        <Compile Remove="Documents/OvlViewController.designer.cs" />
+        <Compile Remove="Documents/OvlWindowController.cs" />
+        <Compile Remove="Documents/OvlWindowController.designer.cs" />
+        <Compile Remove="Documents/ProjectDocument.cs" />
+        <Compile Remove="AppDelegate.cs" />
+        <Compile Remove="AppDelegate.designer.cs" />
+        <Compile Remove="Editor.cs" />
+        <Compile Remove="Editor.designer.cs" />
+        <Compile Remove="EditorContainer.cs" />
+        <Compile Remove="EditorContainer.designer.cs" />
+        <Compile Remove="EditorController.cs" />
+        <Compile Remove="EditorController.designer.cs" />
+        <Compile Remove="Error.cs" />
+        <Compile Remove="MainWindow.cs" />
+        <Compile Remove="MainWindow.designer.cs" />
+        <Compile Remove="NSErrorExtensions.cs" />
+        <Compile Remove="ProjectWindow.cs" />
+        <Compile Remove="ProjectWindow.designer.cs" />
+        <Compile Remove="Sidebar.cs" />
+        <Compile Remove="Sidebar.designer.cs" />
       </ItemGroup>
     </When>
   </Choose>
