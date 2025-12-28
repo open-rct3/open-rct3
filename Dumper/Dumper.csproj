@@ -128,6 +128,8 @@
         <TargetFramework>net8.0-windows</TargetFramework>
         <UseWindowsForms>true</UseWindowsForms>
         <EvergineProfileName>Windows</EvergineProfileName>
+        <!-- Icon -->
+        <ApplicationIcon>Dumper.ico</ApplicationIcon>
       </PropertyGroup>
       <ItemGroup>
         <Compile Remove="Documents/DocumentController.cs" />
@@ -153,6 +155,9 @@
         <Compile Remove="ProjectWindow.designer.cs" />
         <Compile Remove="Sidebar.cs" />
         <Compile Remove="Sidebar.designer.cs" />
+      </ItemGroup>
+      <ItemGroup>
+        <Content Include="Dumper.ico" />
       </ItemGroup>
     </When>
   </Choose>
