@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <RootNamespace>OVL.Tests</RootNamespace>
@@ -23,7 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\src\ovl\libOVL.csproj" />
+      <ProjectReference Include="..\OVL\OVL.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -32,5 +31,4 @@
       <None Remove="style.unique.ovl" />
       <EmbeddedResource Include="style.unique.ovl" />
     </ItemGroup>
-
 </Project>

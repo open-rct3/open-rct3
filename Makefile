@@ -1,16 +1,16 @@
-all: desktop
-	dub build
+all: gui
+	dotnet build OpenRCT3/OpenRCT3.csproj
 
 .PHONY: install
 install: release
 # TODO: Bundle the app for this OS
 
 .PHONY: release
-release: desktop
-	dub build -b release
+release: gui
+	dotnet build OpenRCT3/OpenRCT3.csproj -c Release
 
-.PHONY: desktop
-desktop: ovl
+.PHONY: gui
+gui: ovl
 	deno task build:desktop
 
 .PHONY: website
@@ -23,13 +23,13 @@ debug: ovl
 
 .PHONY: ovl
 ovl:
-	dub build --root=lib/ovl
+	dotnet build OpenCobra/OVL/OVL.csproj
 
 .PHONY: dumper
 dumper:
-	dub build --root=lib/ovl/dumper
+	dotnet run --project Dumper/Dumper.csproj
 
 .PHONY: test
 test:
-	dub test
-	deno check -c clients/desktop/deno.json clients/desktop/main.ts
+	deno check clients/desktop/main.ts
+	dotnet test

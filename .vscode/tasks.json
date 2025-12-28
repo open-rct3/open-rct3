@@ -27,17 +27,18 @@
       }
     },
     {
-      "label": "Desktop Client",
+      "label": "OpenRCT3",
       "type": "shell",
-      "command": "deno task -c clients/desktop/deno.json dev",
-      "problemMatcher": [
-        "$deno-test"
-      ]
+      "command": "dotnet run --project OpenRCT3/OpenRCT3.csproj",
+      "group": {
+        "kind": "run",
+        "isDefault": true
+      }
     },
     {
-      "label": "Desktop Client (Watch)",
+      "label": "Dumper",
       "type": "shell",
-      "command": "deno task -c clients/desktop/deno.json watch"
+      "command": "dotnet run --project Dumper/Dumper.csproj"
     }
   ]
 }

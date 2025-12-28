@@ -7,6 +7,7 @@ obj/
 **/bin/Debug/**/Coverlet*
 **/bin/Debug/**/createdump
 **/bin/Debug/*/*.deps.json
+**/bin/Debug/*/*.runtimeconfig.json
 **/bin/Debug/**/*.items
 OpenRCT3/bin/
 bin/OpenRCT3*
@@ -22,6 +23,9 @@ bin/open-rct3-unittest
 *.exe
 *.pdb
 
+# Tests
+nunit_random_seed.tmp
+
 # DUB
 .dub
 docs.json
@@ -30,7 +34,11 @@ docs/
 
 # Visual Studio
 .vs/**/project-cache/*.json
+.vs/OpenRCT3/v18/*
 .vs/OpenRCT3/xs/UserPrefs.xml
+.vs/OpenRCT3/DesignTimeBuild/*
+.vs/ProjectEvaluation/*
+**/FileContentIndex/*.vsidx
 *.sln.DotSettings.user
 
 # Code Coverage
