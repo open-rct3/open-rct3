@@ -1,4 +1,4 @@
-﻿// OVL
+// OVL
 //
 // Authors:
 //  - Chance Snow <git@chancesnow.me>
@@ -203,11 +203,12 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
   private readonly Stream file;
   private readonly long fileSize;
   private readonly BinaryReader reader;
-  private readonly File[] files = new File[9];
   private ObservableCollection<string> references = new();
   private ObservableCollection<EffectPoint> effectPoints = new();
   private ObservableCollection<Mesh> meshes = new();
   private ObservableCollection<FlexiTextureInfo> flexiTextureItems = new();
+
+  public readonly File[] Files = new File[9];
 
   public event PropertyChangingEventHandler? PropertyChanging;
   public string FileName { get; }
@@ -339,9 +340,9 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
 
     // Read file table
     var offset = ovl.file.Position;
-    foreach (var file in ovl.files) {
-      var i = Array.IndexOf(ovl.files, file);
-      Debug.Assert(i < ovl.files.Length, "File index is out-of-range!");
+    foreach (var file in ovl.Files) {
+      var i = Array.IndexOf(ovl.Files, file);
+      Debug.Assert(i < ovl.Files.Length, "File index is out-of-range!");
       fileBlocks[i] = fileBlocks[i] with { relativeOffset = ovl.file.Position - offset };
       for (var fileSizeIndex = 0; fileSizeIndex < fileBlocks[i].fileSizes.Length; fileSizeIndex += 1) {
         if (ovl.file.Position == ovl.fileSize) throw new EndOfStreamException($"File overflow at ({i}, {fileSizeIndex})");
@@ -358,7 +359,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
         var size = fileBlocks[i].fileSizes[fileSizeIndex];
         if (ovl.file.Position == ovl.fileSize) continue;
         var filePosition = (ulong) ovl.file.Position;
-        ovl.files[i] = file with {
+        ovl.Files[i] = file with {
           offset = filePosition,
           relativeOffset = filePosition - (ulong) offset,
           data = size > 0 ? ovl.reader.ReadBytes((int) size) : null
@@ -394,7 +395,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
   }
 
   public override int GetHashCode() {
-    return files.GetHashCode();
+    return Files.GetHashCode();
   }
 
   public int CompareTo(Ovl? other) {
