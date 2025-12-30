@@ -6,12 +6,13 @@ install: release
 # TODO: Bundle the app for this OS
 
 .PHONY: release
-release: desktop
+release: ovl isomorphic
 	dub build -b release
+	deno task build:desktop
 
 .PHONY: desktop
-desktop: ovl isomorphic
-	deno task build:desktop
+desktop: ovl
+	deno task dev:desktop
 
 .PHONY: website
 website: ovl clients/website/_site/index.html clients/website/_site/play.html
