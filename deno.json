@@ -20,6 +20,7 @@
     "@std/media-types": "jsr:@std/media-types@^1.0.3",
     "@std/path": "jsr:@std/path@^1.0.3",
     "@webview/webview": "jsr:@webview/webview@^0.8.0",
+    "four": "npm:fourwastaken@^0.4.2",
     "lume": "https://deno.land/x/lume@v2.2.4/mod.ts",
     "lume/": "https://deno.land/x/lume@v2.2.4/"
   },
