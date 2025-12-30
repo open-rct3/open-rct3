@@ -1,11 +1,14 @@
-import { css, customElement, LitElement, h, html } from './lit.ts';
-// See https://usegpu.live/docs/reference-live-@use-gpu-live
-// TODO: Contribute back these lit-html abstractions back to @use-gpu, i.e. a new `@use-gpu/lit` package.
-import { } from "npm:@use-gpu/webgpu";
+import { assert, assertInstanceOf } from "@std/assert";
+import { WebGPURenderer } from "four";
+
+import { css, customElement, LitElement, h, html, ref, PropertyValues } from './lit.ts';
 
 @customElement('open-rct3')
 // deno-lint-ignore no-unused-vars
 class Game extends LitElement {
+  readonly #resized = this.resized.bind(this);
+  private renderer: WebGPURenderer | null = null;
+
   static styles = css`
 canvas#game {
   position: absolute;
@@ -16,8 +19,34 @@ canvas#game {
 }
   `;
 
-  render() {
-    return html`<canvas id="game"></canvas>`;
+  override connectedCallback(): void {
+    super.connectedCallback();
+    self.addEventListener("resize", this.#resized);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    self.removeEventListener("resize", this.#resized);
+  }
+
+  override render() {
+    return html`<canvas id="game" ${ref(el => {
+      // TODO: Disconnect the renderer and whatnot from the old canvas
+      if (el === undefined) return;
+
+      assertInstanceOf(el, HTMLCanvasElement);
+      this.renderer = new WebGPURenderer({ canvas: el });
+      this.renderFrame();
+    })}></canvas>`;
+  }
+
+  private renderFrame() {
+    // TODO: Render the game
+  }
+
+  private resized() {
+    if (!this.renderer) return;
+    this.renderer.setSize(this.clientWidth, this.clientHeight);
   }
 }
 

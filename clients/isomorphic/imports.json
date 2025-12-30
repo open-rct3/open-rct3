@@ -10,6 +10,8 @@
     "@lit/reactive-element/decorators/query-async.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/query-async.js",
     "@lit/reactive-element/decorators/query-assigned-elements.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/query-assigned-elements.js",
     "@lit/reactive-element/decorators/query-assigned-nodes.js": "https://cdn.jsdelivr.net/npm/@lit/reactive-element@2/decorators/query-assigned-nodes.js",
+    "@std/assert": "jsr:@std/assert@1",
+    "four": "https://unpkg.com/fourwastaken",
     "npm:lit@3": "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js",
     "npm:lit@3/decorators.js": "https://cdn.jsdelivr.net/npm/lit@3/decorators.js"
   }
