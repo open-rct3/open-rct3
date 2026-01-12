@@ -6,27 +6,44 @@
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
 using Silk.NET.WebGPU;
+using WebGPU = Silk.NET.WebGPU;
 using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Runtime.InteropServices;
 
 namespace OpenRCT3.Platforms;
 
-public interface IWindow : IObservable<Surface> {
-  public string Title { get; set; }
-  public uint FrameBufferWidth { get; }
-  public uint FrameBufferHeight { get; }
+public struct Dpi(float x, float y) {
+  public float X = x;
+  public float Y = y;
 }
 
-public sealed class Surface : SafeHandle {
-  public Surface(nint handle, bool ownsHandle) : base(handle, ownsHandle) { }
+public interface IWindow : IObservable<Surface> {
+  public string Title { get; set; }
+  public Dpi Dpi { get; }
+  public Size FrameBufferSize { get; }
+}
 
-  public SurfaceDescriptor Descriptor { get; set; }
+public abstract class Handle<T> : SafeHandle {
+  private readonly Func<bool>? _disposeHandle;
+
+  public Handle(nint handle, bool ownsHandle, Func<bool>? disposeHandle = null) : base((nint)handle, ownsHandle) {
+    _disposeHandle = disposeHandle;
+  }
+
   public override bool IsInvalid => this.handle == 0;
 
   protected override bool ReleaseHandle() {
-    // QUESTION: WebGPU releases the surface handle for us?
-    return true;
+    if (_disposeHandle != null) return _disposeHandle();
+    else return true;
   }
+}
+
+public sealed class Surface : Handle<WebGPU.Surface> {
+  public Surface(nint handle, bool ownsHandle, Func<bool>? disposeHandle = null) : base(handle, ownsHandle, disposeHandle) { }
+
+  public SurfaceDescriptor Descriptor { get; set; }
 }
 
 public delegate void SurfaceChanged(Surface surface);
