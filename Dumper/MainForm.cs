@@ -4,6 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2025 OpenRCT3 Contributors. All rights reserved.
+using Dumper.Models;
 using OVL;
 using System;
 using System.Threading.Tasks;
@@ -19,13 +20,19 @@ public partial class MainForm : Form {
     InitializeComponent();
   }
 
+  private void LoadOvl(Ovl ovl) {
+    MessageBox.Show(ovl.Files.Length.ToString());
+  }
+
   private async void openToolStripMenuItem_Click(object sender, EventArgs e) {
     statusLabel.Text = openingArchive;
     progressBar.Visible = true;
 
     switch (openDialog.ShowDialog()) {
       case DialogResult.OK:
-        var ovl = await Task.Run(() => Ovl.Open(openDialog.FileName));
+        this.Cursor = Cursors.WaitCursor;
+        LoadOvl(await Task.Run(() => Ovl.Open(openDialog.FileName)));
+        this.Cursor = Cursors.Default;
         break;
     }
 

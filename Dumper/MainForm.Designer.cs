@@ -57,8 +57,16 @@ namespace Dumper
       statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
       progressBar = new System.Windows.Forms.ToolStripProgressBar();
       openDialog = new System.Windows.Forms.OpenFileDialog();
+      splitView = new System.Windows.Forms.SplitContainer();
+      toolStrip = new System.Windows.Forms.ToolStrip();
+      helpToolStripButton = new System.Windows.Forms.ToolStripButton();
+      treeView = new System.Windows.Forms.TreeView();
       menuStrip.SuspendLayout();
       statusStrip.SuspendLayout();
+      ((System.ComponentModel.ISupportInitialize)splitView).BeginInit();
+      splitView.Panel1.SuspendLayout();
+      splitView.SuspendLayout();
+      toolStrip.SuspendLayout();
       SuspendLayout();
       // 
       // menuStrip
@@ -83,7 +91,7 @@ namespace Dumper
       openToolStripMenuItem.ImageTransparentColor = System.Drawing.Color.Magenta;
       openToolStripMenuItem.Name = "openToolStripMenuItem";
       openToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O;
-      openToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+      openToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
       openToolStripMenuItem.Text = "&Open…";
       openToolStripMenuItem.Click += openToolStripMenuItem_Click;
       // 
@@ -256,11 +264,55 @@ namespace Dumper
       openDialog.ShowHiddenFiles = true;
       openDialog.Title = "Open OVL Archive…";
       // 
+      // splitView
+      // 
+      splitView.Dock = System.Windows.Forms.DockStyle.Fill;
+      splitView.Location = new System.Drawing.Point(0, 24);
+      splitView.Name = "splitView";
+      // 
+      // splitView.Panel1
+      // 
+      splitView.Panel1.Controls.Add(toolStrip);
+      splitView.Panel1.Controls.Add(treeView);
+      splitView.Panel1MinSize = 175;
+      splitView.Size = new System.Drawing.Size(584, 315);
+      splitView.SplitterDistance = 175;
+      splitView.TabIndex = 2;
+      // 
+      // toolStrip
+      // 
+      toolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
+      toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { helpToolStripButton });
+      toolStrip.Location = new System.Drawing.Point(0, 0);
+      toolStrip.Name = "toolStrip";
+      toolStrip.Size = new System.Drawing.Size(175, 25);
+      toolStrip.TabIndex = 1;
+      toolStrip.Text = "toolStrip";
+      // 
+      // helpToolStripButton
+      // 
+      helpToolStripButton.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+      helpToolStripButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+      helpToolStripButton.Image = (System.Drawing.Image)resources.GetObject("helpToolStripButton.Image");
+      helpToolStripButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+      helpToolStripButton.Name = "helpToolStripButton";
+      helpToolStripButton.Size = new System.Drawing.Size(23, 22);
+      helpToolStripButton.Text = "He&lp";
+      // 
+      // treeView
+      // 
+      treeView.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+      treeView.Location = new System.Drawing.Point(0, 28);
+      treeView.Name = "treeView";
+      treeView.Size = new System.Drawing.Size(175, 287);
+      treeView.TabIndex = 0;
+      // 
       // MainForm
       // 
       AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
       AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       ClientSize = new System.Drawing.Size(584, 361);
+      Controls.Add(splitView);
       Controls.Add(statusStrip);
       Controls.Add(menuStrip);
       Icon = (System.Drawing.Icon)resources.GetObject("$this.Icon");
@@ -273,6 +325,12 @@ namespace Dumper
       menuStrip.PerformLayout();
       statusStrip.ResumeLayout(false);
       statusStrip.PerformLayout();
+      splitView.Panel1.ResumeLayout(false);
+      splitView.Panel1.PerformLayout();
+      ((System.ComponentModel.ISupportInitialize)splitView).EndInit();
+      splitView.ResumeLayout(false);
+      toolStrip.ResumeLayout(false);
+      toolStrip.PerformLayout();
       ResumeLayout(false);
       PerformLayout();
     }
@@ -307,5 +365,9 @@ namespace Dumper
     private System.Windows.Forms.ToolStripStatusLabel statusLabel;
     private System.Windows.Forms.ToolStripProgressBar progressBar;
     private System.Windows.Forms.OpenFileDialog openDialog;
+    private System.Windows.Forms.SplitContainer splitView;
+    private System.Windows.Forms.TreeView treeView;
+    private System.Windows.Forms.ToolStrip toolStrip;
+    private System.Windows.Forms.ToolStripButton helpToolStripButton;
   }
 }
