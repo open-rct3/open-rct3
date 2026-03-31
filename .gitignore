@@ -10,6 +10,7 @@ obj/
 **/bin/Debug/*/*.runtimeconfig.json
 **/bin/Debug/**/*.items
 OpenRCT3/bin/
+OpenRCT3.Tests/bin/
 bin/OpenRCT3*
 bin/open-rct3-test-application
 bin/open-rct3-unittest
@@ -25,6 +26,7 @@ bin/open-rct3-unittest
 
 # Tests
 nunit_random_seed.tmp
+TestResults/
 
 # DUB
 .dub
@@ -37,6 +39,7 @@ docs/
 .vs/OpenRCT3/v18/*
 .vs/OpenRCT3/xs/UserPrefs.xml
 .vs/OpenRCT3/DesignTimeBuild/*
+.vs/OpenRCT3/CopilotIndices/*
 .vs/ProjectEvaluation/*
 **/FileContentIndex/*.vsidx
 *.sln.DotSettings.user

@@ -1,19 +1,21 @@
-﻿// Program
+// Program
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
-using Evergine.Common.Graphics;
-using Microsoft.Extensions.Logging;
+using OpenRCT3.Platforms.Windows;
 using System;
+using System.Windows.Forms;
 
 namespace OpenRCT3;
 
 internal sealed class Program {
   [STAThread]
   public static void Main(string[] args) {
-    // TODO: var mainWindow = new Window("OpenRCT3", 640, 420);
+    Application.EnableVisualStyles();
+    Application.SetCompatibleTextRenderingDefault(false);
+    Application.Run(new MainForm());
   }
 }

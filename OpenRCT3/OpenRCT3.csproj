@@ -1,11 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <StartupObject>OpenRCT3.Program</StartupObject>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Display name -->
     <ApplicationTitle>OpenRCT3</ApplicationTitle>
@@ -39,8 +40,8 @@
     <None Include="**\*.macOS.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
   </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows')) != true">
-    <Compile Remove="**\*.Windows.cs" />
-    <None Include="**\*.Windows.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+    <Compile Remove="**\*.windows.cs" />
+    <None Include="**\*.windows.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
   </ItemGroup>
 
 <!--  <ItemGroup>-->
@@ -58,9 +59,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
     <PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.92" />
-    <PackageReference Include="Silk.NET.WebGPU" Version="2.21.0" />
-    <PackageReference Include="Silk.NET.WebGPU.Extensions.WGPU" Version="2.21.0" />
-    <PackageReference Include="Silk.NET.WebGPU.Native.WGPU" Version="2.21.0" />
+    <PackageReference Include="OpenTK" Version="5.0.0-pre.15" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Panda.ico" />
+    <InternalsVisibleTo Include="OpenRCT3.Tests" />
   </ItemGroup>
   <Choose>
     <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
@@ -71,8 +74,6 @@
         <ImplicitUsings>true</ImplicitUsings>
         <TargetPlatformVersion>10.15</TargetPlatformVersion>
       </PropertyGroup>
-      <ItemGroup>
-      </ItemGroup>
       <ItemGroup>
         <Compile Update="Platforms\macOS\MainWindow.designer.cs">
           <DependentUpon>MainWindow.cs</DependentUpon>
@@ -85,9 +86,14 @@
     <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
       <PropertyGroup>
         <ProfileName>Windows</ProfileName>
+        <OutputType>WinExe</OutputType>
         <TargetFramework>net8.0-windows</TargetFramework>
+        <UseWindowsForms>true</UseWindowsForms>
+        <TargetPlatformVersion>8.0</TargetPlatformVersion>
       </PropertyGroup>
       <ItemGroup>
+        <Compile Remove="**\*.macOS.cs" />
+        <Compile Remove="**\Platforms\macOS\**\*.cs" />
       </ItemGroup>
     </When>
   </Choose>
