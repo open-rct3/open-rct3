@@ -12,7 +12,6 @@ using ObjCRuntime;
 using CoreAnimation;
 
 using OpenRCT3.ViewModels;
-using Silk.NET.WebGPU;
 
 namespace OpenRCT3.Platforms.macOS;
 
@@ -22,24 +21,15 @@ public partial class GameViewController(NativeHandle handle) : NSViewController(
 
   public NSView Game => this.game;
 
-  public override unsafe void AwakeFromNib() {
+  public override void AwakeFromNib() {
     base.AwakeFromNib();
 
     this.inspector.LoadRequest(new NSUrlRequest(new NSUrl("https://google.com")));
 
     this.game.WantsLayer = true;
-    // Do NOT simplify this to `CALayer`. WebGPU requires a Metal layer.
-    // ReSharper disable once AccessToStaticMemberViaDerivedType
-    this.game.Layer = CAMetalLayer.Create();
+    this.game.Layer = CAOpenGLLayer.Create();
 
-    var metalDesc = new SurfaceDescriptorFromMetalLayer(
-      new ChainedStruct { Next = null, SType = SType.SurfaceDescriptorFromMetalLayer },
-      (void*) (this.game.Layer as INativeObject).Handle
-    );
-    var surface = new Surface((nint) (&metalDesc), true) {
-      Descriptor = new SurfaceDescriptor(&metalDesc.Chain)
-    };
-
+    var surface = new OpenGLSurface(this.game.Layer.Handle, true);
     SurfaceChanged?.Invoke(surface);
 
     // TODO: Update framebuffer on WillResize/DidResize, DidChangeScreen, and DidChangeScreenProfile

@@ -59,9 +59,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
     <PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.92" />
-    <PackageReference Include="Silk.NET.WebGPU" Version="2.22.0" />
-    <PackageReference Include="Silk.NET.WebGPU.Extensions.WGPU" Version="2.22.0" />
-    <PackageReference Include="Silk.NET.WebGPU.Native.WGPU" Version="2.22.0" />
+    <PackageReference Include="OpenTK" Version="5.0.0-pre.15" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Panda.ico" />
+    <InternalsVisibleTo Include="OpenRCT3.Tests" />
   </ItemGroup>
   <Choose>
     <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
@@ -72,8 +74,6 @@
         <ImplicitUsings>true</ImplicitUsings>
         <TargetPlatformVersion>10.15</TargetPlatformVersion>
       </PropertyGroup>
-      <ItemGroup>
-      </ItemGroup>
       <ItemGroup>
         <Compile Update="Platforms\macOS\MainWindow.designer.cs">
           <DependentUpon>MainWindow.cs</DependentUpon>

@@ -5,8 +5,6 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
-using Silk.NET.WebGPU;
-using WebGPU = Silk.NET.WebGPU;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -19,7 +17,7 @@ public struct Dpi(float x, float y) {
   public float Y = y;
 }
 
-public interface IWindow : IObservable<Surface> {
+public interface IWindow : IObservable<OpenGLSurface> {
   public string Title { get; set; }
   public Dpi Dpi { get; }
   public Size FrameBufferSize { get; }
@@ -40,19 +38,17 @@ public abstract class Handle<T> : SafeHandle {
   }
 }
 
-public sealed class Surface : Handle<WebGPU.Surface> {
-  public Surface(nint handle, bool ownsHandle, Func<bool>? disposeHandle = null) : base(handle, ownsHandle, disposeHandle) { }
-
-  public SurfaceDescriptor Descriptor { get; set; }
+public sealed class OpenGLSurface : Handle<nint> {
+  public OpenGLSurface(nint handle, bool ownsHandle, Func<bool>? disposeHandle = null) : base(handle, ownsHandle, disposeHandle) { }
 }
 
-public delegate void SurfaceChanged(Surface surface);
+public delegate void SurfaceChanged(OpenGLSurface surface);
 
 internal class SurfaceSubscription : IDisposable {
-  private readonly List<IObserver<Surface>> _observers;
-  private readonly IObserver<Surface> observer;
+  private readonly List<IObserver<OpenGLSurface>> _observers;
+  private readonly IObserver<OpenGLSurface> observer;
 
-  public SurfaceSubscription(List<IObserver<Surface>> observers, IObserver<Surface> observer) {
+  public SurfaceSubscription(List<IObserver<OpenGLSurface>> observers, IObserver<OpenGLSurface> observer) {
     this._observers = observers;
     this.observer = observer;
   }

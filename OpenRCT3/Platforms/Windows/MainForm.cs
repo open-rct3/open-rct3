@@ -3,57 +3,54 @@
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
 //
-// Copyright © 2025 OpenRCT3 Contributors. All rights reserved.
+// Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
 
-using Microsoft.Extensions.Logging;
-using Silk.NET.Core.Native;
-using Silk.NET.WebGPU;
-using Silk.NET.WebGPU.Extensions.WGPU;
+using OpenTK.Graphics.OpenGL;
+using OpenTK.Windowing.Common;
+using OpenTK.Windowing.Desktop;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Windows.Forms;
 
 namespace OpenRCT3.Platforms.Windows;
 
-internal partial class MainForm : Form, IWindow {
-  private readonly HashSet<IObserver<Surface>> _observers = new();
-  private readonly WebGPU gpu;
-  private Surface? _surface = null;
+internal class MainForm : GameWindow, IWindow {
+  private readonly HashSet<IObserver<OpenGLSurface>> _observers = new();
 
-  public MainForm(WebGPU gpu) {
-    InitializeComponent();
+  public MainForm(NativeWindowSettings settings)
+    : base(GameWindowSettings.Default, settings) { }
 
-    this.gpu = gpu;
-    RecreateSurface();
-  }
-
-  public string Title { get => this.Text; set => this.Text = value; }
+  public new string Title { get => base.Title; set => base.Title = value; }
   public Dpi Dpi {
     get {
-      using Graphics g = this.CreateGraphics();
-      return new Dpi(g.DpiX, g.DpiY);
+      TryGetCurrentMonitorScale(out var x, out var y);
+      return new Dpi(x, y);
     }
   }
-  public Size FrameBufferSize => new(
-    Convert.ToInt32(Math.Round(ClientSize.Width * Dpi.X)),
-    Convert.ToInt32(Math.Round(ClientSize.Height * Dpi.Y))
-  );
+  public Size FrameBufferSize => new(FramebufferSize.X, FramebufferSize.Y);
 
-  public IDisposable Subscribe(IObserver<Surface> observer) {
+  public IDisposable Subscribe(IObserver<OpenGLSurface> observer) {
     _observers.Add(observer);
-    return new Unsubscriber<Surface>(_observers, observer);
+    return new Unsubscriber<OpenGLSurface>(_observers, observer);
   }
 
-  private void RecreateSurface() {
-    //_surface = WebGPU.
+  protected override void OnLoad() {
+    base.OnLoad();
+
+    var clearColor = Color.CornflowerBlue.ToGl();
+    GL.ClearColor(clearColor.X, clearColor.Y, clearColor.Z, clearColor.W);
   }
 
-  private void MainForm_DpiChanged(object sender, DpiChangedEventArgs e) {
-    RecreateSurface();
+  protected override void OnRenderFrame(FrameEventArgs args) {
+    base.OnRenderFrame(args);
+
+    GL.Clear(ClearBufferMask.ColorBufferBit);
+    SwapBuffers();
   }
 
-  private void MainForm_Resize(object sender, EventArgs e) {
-    RecreateSurface();
+  protected override void OnFramebufferResize(FramebufferResizeEventArgs e) {
+    base.OnFramebufferResize(e);
+
+    GL.Viewport(0, 0, e.Width, e.Height);
   }
 }
