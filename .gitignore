@@ -4,6 +4,7 @@
 # Artifacts
 obj/
 **/bin/Debug/**/*.app
+**/bin/Debug/**/*.msCoverage*
 **/bin/Debug/**/Coverlet*
 **/bin/Debug/**/createdump
 **/bin/Debug/*/*.deps.json
