@@ -1,4 +1,4 @@
-﻿// WARNING
+// WARNING
 //
 // This file has been generated automatically by Rider IDE
 //   to store outlets and actions made in Xcode.
@@ -14,6 +14,9 @@ namespace Dumper.Documents
 		[Outlet]
 		AppKit.NSTextField text { get; set; }
 
+		[Outlet]
+		AppKit.NSOutlineView outlineView { get; set; }
+
 		void ReleaseDesignerOutlets ()
 		{
 			if (text != null) {
@@ -21,6 +24,10 @@ namespace Dumper.Documents
 				text = null;
 			}
 
+			if (outlineView != null) {
+				outlineView.Dispose ();
+				outlineView = null;
+			}
 		}
 	}
 }

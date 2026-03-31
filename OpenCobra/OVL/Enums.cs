@@ -8,12 +8,14 @@ using System;
 
 namespace OVL;
 
+/// <summary>OVL archive format version.</summary>
 public enum Version : uint {
   One = 1,
   Four = 4,
   Five = 5
 }
 
+/// <summary>Expansion pack addon identifier.</summary>
 public enum Addon : uint {
   Vanilla = 0x0000,
   Soaked = 0x0001,
@@ -22,6 +24,7 @@ public enum Addon : uint {
   WildHi = 0x0300
 }
 
+/// <summary>Combinable recolorability flags for flexi-textures.</summary>
 [Flags]
 public enum Recolorable : uint {
   First = 1,
@@ -29,7 +32,8 @@ public enum Recolorable : uint {
   Third = 4
 }
 
-// QUESTION: Does this have anything to do with LODs?
+/// <summary>Static vs. dynamic viewport descriptor type.</summary>
+/// <remarks>TODO: Confirm whether this relates to LODs.</remarks>
 public enum SvdType {
   Static = 0,
   Animated = 3,
@@ -42,7 +46,7 @@ public enum SvdFlags : uint {
   /// </remarks>
   Greenery = 0x00000001,
   NoShadow = 0x00000002,
-  // FIXME: Has the same value as `NoShadow`...
+  /// <remarks>FIXME: Has the same value as <see cref="NoShadow"/>.</remarks>
   Flower = 0x00000002,
   Rotation = 0x00000004,
   Unknown01 = 0x00000010,
@@ -55,6 +59,7 @@ public enum SvdFlags : uint {
   SoakedOrWild = 0x03000000
 }
 
+/// <summary>Scenery item tile positioning.</summary>
 public enum SidPosition {
   TileFull = 0,
   PathEdgeInner = 1,
@@ -147,6 +152,7 @@ public enum SidFlags : uint {
   Unknown32 = 0x80000000,
 }
 
+/// <summary>Per-square flags for scenery item tile occupancy.</summary>
 [Flags]
 public enum SidSquareFlags {
   /// <summary>
@@ -169,6 +175,7 @@ public enum SidSquareFlags {
   Unknown44 = 0x00000800
 }
 
+/// <summary>Scenery item type classification.</summary>
 public enum SidType {
   Tree = 0,
   Plant = 1,
@@ -225,4 +232,4 @@ public enum SidType {
   #endregion
 }
 
-// TODO: Tracked rides. See https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/include/rct3constants.h#L505
+/// <remarks>TODO: Tracked rides. See <see href="https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/include/rct3constants.h#L505"/>.</remarks>

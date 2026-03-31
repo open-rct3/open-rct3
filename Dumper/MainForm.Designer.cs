@@ -26,8 +26,7 @@ namespace Dumper
     /// Required method for Designer support - do not modify
     /// the contents of this method with the code editor.
     /// </summary>
-    private void InitializeComponent()
-    {
+    private void InitializeComponent() {
       System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
       menuStrip = new System.Windows.Forms.MenuStrip();
       fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -60,6 +59,7 @@ namespace Dumper
       splitView = new System.Windows.Forms.SplitContainer();
       toolStrip = new System.Windows.Forms.ToolStrip();
       helpToolStripButton = new System.Windows.Forms.ToolStripButton();
+      openArchiveToolStripButton = new System.Windows.Forms.ToolStripButton();
       treeView = new System.Windows.Forms.TreeView();
       menuStrip.SuspendLayout();
       statusStrip.SuspendLayout();
@@ -91,31 +91,31 @@ namespace Dumper
       openToolStripMenuItem.ImageTransparentColor = System.Drawing.Color.Magenta;
       openToolStripMenuItem.Name = "openToolStripMenuItem";
       openToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O;
-      openToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
+      openToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
       openToolStripMenuItem.Text = "&Open…";
       openToolStripMenuItem.Click += openToolStripMenuItem_Click;
       // 
       // toolStripSeparator
       // 
       toolStripSeparator.Name = "toolStripSeparator";
-      toolStripSeparator.Size = new System.Drawing.Size(152, 6);
+      toolStripSeparator.Size = new System.Drawing.Size(177, 6);
       // 
       // exportToolStripMenuItem
       // 
       exportToolStripMenuItem.Name = "exportToolStripMenuItem";
-      exportToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
+      exportToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
       exportToolStripMenuItem.Text = "&Export";
       // 
       // toolStripSeparator1
       // 
       toolStripSeparator1.Name = "toolStripSeparator1";
-      toolStripSeparator1.Size = new System.Drawing.Size(152, 6);
+      toolStripSeparator1.Size = new System.Drawing.Size(177, 6);
       // 
       // exitToolStripMenuItem
       // 
       exitToolStripMenuItem.Name = "exitToolStripMenuItem";
       exitToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4;
-      exitToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
+      exitToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
       exitToolStripMenuItem.Text = "E&xit";
       // 
       // editToolStripMenuItem
@@ -282,7 +282,7 @@ namespace Dumper
       // toolStrip
       // 
       toolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
-      toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { helpToolStripButton });
+      toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { helpToolStripButton, openArchiveToolStripButton });
       toolStrip.Location = new System.Drawing.Point(0, 0);
       toolStrip.Name = "toolStrip";
       toolStrip.Size = new System.Drawing.Size(175, 25);
@@ -298,6 +298,16 @@ namespace Dumper
       helpToolStripButton.Name = "helpToolStripButton";
       helpToolStripButton.Size = new System.Drawing.Size(23, 22);
       helpToolStripButton.Text = "He&lp";
+      // 
+      // openArchiveToolStripButton
+      // 
+      openArchiveToolStripButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+      openArchiveToolStripButton.Image = (System.Drawing.Image)resources.GetObject("openArchiveToolStripButton.Image");
+      openArchiveToolStripButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+      openArchiveToolStripButton.Name = "openArchiveToolStripButton";
+      openArchiveToolStripButton.Size = new System.Drawing.Size(23, 22);
+      openArchiveToolStripButton.Text = "&Open";
+      openArchiveToolStripButton.Click += openArchiveToolStripButton_Click;
       // 
       // treeView
       // 
@@ -369,5 +379,6 @@ namespace Dumper
     private System.Windows.Forms.TreeView treeView;
     private System.Windows.Forms.ToolStrip toolStrip;
     private System.Windows.Forms.ToolStripButton helpToolStripButton;
+    private System.Windows.Forms.ToolStripButton openArchiveToolStripButton;
   }
 }
