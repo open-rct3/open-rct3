@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <StartupObject>OpenRCT3.Program</StartupObject>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Display name -->
     <ApplicationTitle>OpenRCT3</ApplicationTitle>
@@ -88,6 +89,7 @@
         <OutputType>WinExe</OutputType>
         <TargetFramework>net8.0-windows</TargetFramework>
         <UseWindowsForms>true</UseWindowsForms>
+        <TargetPlatformVersion>8.0</TargetPlatformVersion>
       </PropertyGroup>
       <ItemGroup>
         <Compile Remove="**\*.macOS.cs" />
