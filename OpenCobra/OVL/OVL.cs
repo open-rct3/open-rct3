@@ -3,7 +3,7 @@
 // Authors:
 //  - Chance Snow <git@chancesnow.me>
 //
-// Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
+// Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.
 
 using System;
 using System.Diagnostics;
@@ -149,7 +149,7 @@ public struct Mesh {
   public string textureStyle;
   public Vector3D boudingBox1;
   public Vector3D boudingBox2;
-  // FIXME: public MeshData? mesh;
+  // QUESTION: public MeshData? mesh;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -377,7 +377,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
 
     // Read checksum
     var checksum = ovl.reader.ReadChars(2);
-    // TODO: Assert the checksum matches internal state?
+    // QUESTION: Assert the checksum matches internal state?
 
     // TODO: Read the rest of the data for unique OVLs…
     if (ovl.Type == OvlType.Common) Debug.Assert(
