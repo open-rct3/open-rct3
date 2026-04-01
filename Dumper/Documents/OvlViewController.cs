@@ -105,7 +105,7 @@ internal class OvlTreeDataSource : NSOutlineViewDataSource {
     return items.Count;
   }
 
-  public override NSObject GetChild(nint index, NSObject item) {
+  public override NSObject GetChild(NSOutlineView outlineView, nint index, NSObject item) {
     if (item is OvlTreeItemNode node)
       return new OvlTreeItemNode(node.Item.Children[(int) index]);
     return new OvlTreeItemNode(items[(int) index]);

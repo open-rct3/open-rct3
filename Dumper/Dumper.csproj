@@ -64,6 +64,7 @@
   <ItemGroup>
     <PackageReference Include="System.Linq.Async" Version="6.0.3" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
+    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
@@ -85,9 +86,14 @@
         <!-- See https://github.com/xamarin/xamarin-macios -->
         <TargetFramework>net8.0-macos</TargetFramework>
         <ImplicitUsings>true</ImplicitUsings>
-        <TargetPlatformVersion>10.15</TargetPlatformVersion>
+        <TargetPlatformVersion>14.0</TargetPlatformVersion>
+        <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
       </PropertyGroup>
       <ItemGroup>
+        <Compile Remove="MainForm.cs" />
+        <Compile Remove="MainForm.Designer.cs" />
+        <Compile Remove="MainForm.Icons.cs" />
+        <Compile Remove="Main.windows.cs" />
       </ItemGroup>
       <ItemGroup>
         <Folder Include="Resources\" />
