@@ -78,4 +78,8 @@ public partial class MainForm : Form {
     statusLabel.Text = ready;
     progressBar.Visible = false;
   }
+
+  private void exitToolStripMenuItem_Click(object sender, EventArgs e) {
+    Application.Exit();
+  }
 }
