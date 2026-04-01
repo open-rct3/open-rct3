@@ -2,13 +2,19 @@
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <RootNamespace>OVL.Tests</RootNamespace>
-        <AssemblyName>OVL_Tests</AssemblyName>
+        <AssemblyName>Tests</AssemblyName>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
 
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
     </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Remove="TestRunner\**" />
+        <EmbeddedResource Remove="TestRunner\**" />
+        <None Remove="TestRunner\**" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="coverlet.collector" Version="6.0.0" />
@@ -31,11 +37,9 @@
 
     <ItemGroup>
       <None Remove="style.common.ovl" />
-      <None Remove="Water.common.ovl" />
       <None Remove="style.unique.ovl" />
       <EmbeddedResource Include="style.common.ovl" />
       <EmbeddedResource Include="style.unique.ovl" />
-      <EmbeddedResource Include="Water.common.ovl" />
     </ItemGroup>
 
     <ItemGroup>

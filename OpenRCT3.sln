@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11605.240 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRCT3", "OpenRCT3\OpenRCT3.csproj", "{CB37964D-A090-4A9C-AEF8-E44EDEBA8CDF}"
 EndProject
@@ -11,7 +11,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OpenCobra", "OpenCobra", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OVL", "OpenCobra\OVL\OVL.csproj", "{F21234FF-2EDB-400F-AB57-2CECB17CBD86}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OVL Tests", "OpenCobra\OVL Tests\OVL Tests.csproj", "{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "OpenCobra\Tests\Tests.csproj", "{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OvlTestRunner", "OpenCobra\Tests\TestRunner\OvlTestRunner.csproj", "{B9316006-752D-47CF-A5A9-2285B867C2B2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRCT3.Tests", "OpenRCT3.Tests\OpenRCT3.Tests.csproj", "{BFCB3247-C700-41CB-B922-1437ECF6C0C8}"
 EndProject
@@ -19,9 +21,6 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{CB37964D-A090-4A9C-AEF8-E44EDEBA8CDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -40,18 +39,26 @@ Global
 		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BFCB3247-C700-41CB-B922-1437ECF6C0C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BFCB3247-C700-41CB-B922-1437ECF6C0C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BFCB3247-C700-41CB-B922-1437ECF6C0C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BFCB3247-C700-41CB-B922-1437ECF6C0C8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F21234FF-2EDB-400F-AB57-2CECB17CBD86} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
 		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
+		{B9316006-752D-47CF-A5A9-2285B867C2B2} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		Policies = $0
-		$0.TextStylePolicy = $1
+		$0.TextStylePolicy = $3
 		$1.FileWidth = 100
 		$1.TabsToSpaces = True
 		$1.scope = text/x-csharp
@@ -71,7 +78,6 @@ Global
 		$2.NewLineForFinally = False
 		$2.scope = text/x-csharp
 		$2.SpaceAfterCast = True
-		$0.TextStylePolicy = $3
 		$3.FileWidth = 80
 		$3.TabsToSpaces = True
 		$3.scope = text/plain
