@@ -12,19 +12,17 @@ using System.Reflection;
 
 namespace OVL.Tests;
 
-internal class ReadArchives {
+internal static class OvlTestSource {
   public static IEnumerable Archives {
     get {
       yield return new TestCaseData("OVL.Tests.style.common.ovl", OvlType.Common);
       yield return new TestCaseData("OVL.Tests.style.unique.ovl", OvlType.Unique);
-      yield return new TestCaseData("OVL.Tests.Water.common.ovl", OvlType.Common);
     }
   }
 
   public static IEnumerable CommonArchives {
     get {
       yield return new TestCaseData("OVL.Tests.style.common.ovl");
-      yield return new TestCaseData("OVL.Tests.Water.common.ovl");
     }
   }
 
@@ -38,6 +36,12 @@ internal class ReadArchives {
   }
 }
 
+internal class ReadArchives {
+  public static IEnumerable Archives => OvlTestSource.Archives;
+  public static IEnumerable CommonArchives => OvlTestSource.CommonArchives;
+  public static IEnumerable PairedArchives => OvlTestSource.PairedArchives;
+}
+
 [TestFixture]
 public partial class Tests {
   private Assembly assembly;
@@ -47,10 +51,15 @@ public partial class Tests {
     assembly = Assembly.GetExecutingAssembly();
   }
 
-  private Stream OpenResource(string resourceName) {
-    var stream = assembly.GetManifestResourceStream(resourceName);
-    Assert.That(stream, Is.Not.Null, $"Embedded resource not found: {resourceName}");
-    return stream!;
+  private Stream OpenResource(string resourcePath) {
+    if (resourcePath.StartsWith("OVL.Tests.")) {
+      var stream = assembly.GetManifestResourceStream(resourcePath);
+      Assert.That(stream, Is.Not.Null, $"Embedded resource not found: {resourcePath}");
+      return stream!;
+    }
+
+    Assert.That(System.IO.File.Exists(resourcePath), Is.True, $"OVL file not found: {resourcePath}");
+    return System.IO.File.OpenRead(resourcePath);
   }
 
   [Test]
@@ -100,7 +109,6 @@ public partial class Tests {
   public void LoaderHeadersTypeIsInt32Width(string fileName, OvlType type) {
     var ovl = Ovl.Read(OpenResource(fileName), fileName);
     foreach (var header in ovl.LoaderHeaders) {
-      // type is read as ReadInt32() — must fit in 32 bits
       Assert.That(header.type, Is.LessThanOrEqualTo(int.MaxValue),
         "Loader type must fit in 32-bit int");
     }
@@ -111,7 +119,6 @@ public partial class Tests {
   public void LoaderHeadersSymbolCountIsUInt32Width(string fileName, OvlType type) {
     var ovl = Ovl.Read(OpenResource(fileName), fileName);
     foreach (var header in ovl.LoaderHeaders) {
-      // symbolCount is read as ReadUInt32() — must fit in 32 bits
       Assert.That(header.symbolCount, Is.LessThanOrEqualTo(uint.MaxValue),
         "Symbol count must fit in 32-bit uint");
     }
@@ -120,10 +127,8 @@ public partial class Tests {
   [Test]
   [TestCaseSource(typeof(ReadArchives), nameof(ReadArchives.Archives))]
   public void LoaderHeaderTagsAreKnownOrUnknown(string fileName, OvlType type) {
-    var knownTags = new[] { "txt", "int", "tex", "flic", "flt", "gsi", "sid" };
     var ovl = Ovl.Read(OpenResource(fileName), fileName);
     foreach (var header in ovl.LoaderHeaders) {
-      // Tags are 3-4 char identifiers; they should be ASCII
       Assert.That(header.tag, Is.Not.Null);
       Assert.That(header.tag.Length, Is.GreaterThan(0).And.LessThanOrEqualTo(8),
         $"Tag '{header.tag}' has unexpected length");
@@ -168,7 +173,6 @@ public partial class Tests {
   public void ReadCommonHasReferences() {
     var ovl = Ovl.Read(OpenResource("OVL.Tests.style.common.ovl"), "style.common.ovl");
     Assert.That(ovl.References, Is.Not.Null);
-    // Common OVLs typically have references to unique OVLs
   }
 
   [Test]

@@ -29,6 +29,10 @@ bin/open-rct3-unittest
 nunit_random_seed.tmp
 TestResults/
 
+# OVL Tests for Production OVLs
+OpenCobra/OVL Tests/bin/**/ovl-tests.local.json
+OpenCobra/OVL Tests/ovl-tests.local.json
+
 # DUB
 .dub
 docs.json

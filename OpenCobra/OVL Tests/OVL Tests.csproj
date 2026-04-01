@@ -2,6 +2,7 @@
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <RootNamespace>OVL.Tests</RootNamespace>
+        <AssemblyName>OVL_Tests</AssemblyName>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
 
@@ -31,9 +32,15 @@
     <ItemGroup>
       <None Remove="style.common.ovl" />
       <None Remove="Water.common.ovl" />
-      <EmbeddedResource Include="style.common.ovl" />
       <None Remove="style.unique.ovl" />
+      <EmbeddedResource Include="style.common.ovl" />
       <EmbeddedResource Include="style.unique.ovl" />
       <EmbeddedResource Include="Water.common.ovl" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="ovl-tests.local.json" Condition="Exists('ovl-tests.local.json')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 </Project>

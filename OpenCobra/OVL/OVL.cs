@@ -414,6 +414,10 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
   public IReadOnlyList<OvlLoaderEntry> LoaderEntries => allLoaderEntries;
   /// <summary>Structure map: tag → symbol name → data virtual address.</summary>
   public IReadOnlyDictionary<string, Dictionary<string, uint>> StructureMap => structureMap;
+  /// <summary>Common file data (only populated for paired archives via Load).</summary>
+  internal OvlFileData? CommonData => commonData;
+  /// <summary>Unique file data (only populated for paired archives via Load).</summary>
+  internal OvlFileData? UniqueData => uniqueData;
 
   // --- Constructors ---
 
