@@ -1,6 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('macos'))">net8.0-macos</TargetFramework>
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('windows'))">net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -16,4 +18,5 @@
   <ItemGroup>
     <ProjectReference Include="..\OpenRCT3\OpenRCT3.csproj" />
   </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>
