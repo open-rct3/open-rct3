@@ -54,6 +54,8 @@ namespace Dumper
       aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
       statusStrip = new System.Windows.Forms.StatusStrip();
       statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
+      ovlCountLabel = new System.Windows.Forms.ToolStripStatusLabel();
+      resourceCountLabel = new System.Windows.Forms.ToolStripStatusLabel();
       progressBar = new System.Windows.Forms.ToolStripProgressBar();
       openDialog = new System.Windows.Forms.OpenFileDialog();
       splitView = new System.Windows.Forms.SplitContainer();
@@ -235,7 +237,7 @@ namespace Dumper
       // 
       // statusStrip
       // 
-      statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { statusLabel, progressBar });
+      statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { statusLabel, ovlCountLabel, resourceCountLabel, progressBar });
       statusStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
       statusStrip.Location = new System.Drawing.Point(0, 339);
       statusStrip.Name = "statusStrip";
@@ -248,6 +250,20 @@ namespace Dumper
       statusLabel.Name = "statusLabel";
       statusLabel.Size = new System.Drawing.Size(39, 17);
       statusLabel.Text = "Ready";
+      // 
+      // ovlCountLabel
+      // 
+      ovlCountLabel.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+      ovlCountLabel.Name = "ovlCountLabel";
+      ovlCountLabel.Size = new System.Drawing.Size(0, 17);
+      ovlCountLabel.Text = "";
+      // 
+      // resourceCountLabel
+      // 
+      resourceCountLabel.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+      resourceCountLabel.Name = "resourceCountLabel";
+      resourceCountLabel.Size = new System.Drawing.Size(0, 17);
+      resourceCountLabel.Text = "";
       // 
       // progressBar
       // 
@@ -375,6 +391,8 @@ namespace Dumper
     private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
     private System.Windows.Forms.StatusStrip statusStrip;
     private System.Windows.Forms.ToolStripStatusLabel statusLabel;
+    private System.Windows.Forms.ToolStripStatusLabel ovlCountLabel;
+    private System.Windows.Forms.ToolStripStatusLabel resourceCountLabel;
     private System.Windows.Forms.ToolStripProgressBar progressBar;
     private System.Windows.Forms.OpenFileDialog openDialog;
     private System.Windows.Forms.SplitContainer splitView;

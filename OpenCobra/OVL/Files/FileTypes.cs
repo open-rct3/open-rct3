@@ -183,4 +183,40 @@ public static class StringExtensions {
       default: return "FileQuestion";
     }
   }
+
+  /// <summary>Returns a Material Design icon name suitable for a group of the given <see cref="FileType"/>.</summary>
+  public static string ToGroupIconName(this FileType type) {
+    switch (type) {
+      case FileType.Texture: return "ImageMultiple";
+      case FileType.Flic: return "VideoMultiple";
+      case FileType.Text: return "TextBoxMultipleOutline";
+      case FileType.SceneryItem:
+      case FileType.SceneryItemVisual: return "ForestOutline";
+      case FileType.ManifoldMesh:
+      case FileType.StaticShape: return "ViewGridOutline";
+      case FileType.Sound: return "SpeakerMultiple";
+      case FileType.CarriedItem:
+      case FileType.CarriedItemExtra: return "BagPersonalMultipleOutline";
+      case FileType.BoneAnim:
+      case FileType.BoneShape: return "Bone";
+      case FileType.RideCar:
+      case FileType.RideTrain:
+      case FileType.TrackedRide: return "TrainCar";
+      case FileType.AnimatedRide: return "HorseVariant";
+      case FileType.BitmapTable: return "ImageMultiple";
+      case FileType.FlexibleTexture: return "Panorama";
+      case FileType.GuiSkinItem: return "PaletteMultiple";
+      case FileType.PathType:
+      case FileType.QueueType: return "SignDirectionMultiple";
+      case FileType.Spline: return "VectorPolyline";
+      case FileType.TerrainType: return "TextureBox";
+      case FileType.TrackSection: return "TrainCar";
+      case FileType.SpecialAttraction: return "FerrisWheel";
+      case FileType.Stall: return "StorefrontMultiple";
+      case FileType.WildAnimalItem: return "Paw";
+      case FileType.ChangingRoom: return "Door";
+      case FileType.Integer: return "Numeric";
+      default: return "FileMultipleOutline";
+    }
+  }
 }

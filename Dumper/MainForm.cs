@@ -22,6 +22,8 @@ namespace Dumper;
 public partial class MainForm : Form {
   static readonly string ready = "Ready";
   static readonly string openingArchive = "Opening archive…";
+  static readonly string resourcesFmt = "{0} Resources";
+  static readonly string ovlFmt = "{0} OVLs";
 
   public MainForm() {
     InitializeComponent();
@@ -107,11 +109,23 @@ public partial class MainForm : Form {
         var groupedNames = new HashSet<string>(
           frameGroups.Values.SelectMany(g => g).Select(r => r.displayName));
 
+        // Collect non-animated-texture entries
+        var remainingEntries = resolved
+          .Where(r => !groupedNames.Contains(r.displayName))
+          .ToList();
+
+        // Group remaining entries by display name to find duplicates
+        var duplicateGroups = remainingEntries
+          .GroupBy(r => r.displayName)
+          .Where(g => g.Count() > 1)
+          .ToDictionary(g => g.Key, g => g.ToList());
+        var duplicateNames = new HashSet<string>(duplicateGroups.Keys);
+
+        // Add animated texture groups
         foreach (var (entry, displayName, loaderFileType, symbolFileType) in resolved) {
-          // Animated texture group — add parent node once, children are number suffixes
           if (groupedNames.Contains(displayName)) {
             var baseName = StripTrailingDigits(displayName);
-            if (!frameGroups.ContainsKey(baseName)) continue; // already added
+            if (!frameGroups.ContainsKey(baseName)) continue;
 
             var group = frameGroups[baseName];
             var parentNode = fileNode.Nodes.Add(baseName);
@@ -131,9 +145,40 @@ public partial class MainForm : Form {
             frameGroups.Remove(baseName);
             continue;
           }
+        }
 
-          // Non-numbered flic entries use bitmap icon; others use their default icon
-          var iconKey = loaderFileType == FileType.Flic && !EndsWithDigit(displayName)
+        // Add duplicate name groups
+        foreach (var (name, group) in duplicateGroups) {
+          var commonType = group.Select(r => r.loaderFileType).Distinct().Count() == 1
+            ? group.First().loaderFileType
+            : FileType.Unknown;
+          var iconKey = commonType == FileType.Unknown
+            ? "FileMultipleOutline"
+            : commonType.ToGroupIconName();
+          var pluralName = Pluralize(commonType.ToDisplayName());
+          var parentNode = fileNode.Nodes.Add($"{group.Count} {pluralName}");
+          parentNode.ImageKey = iconKey;
+          parentNode.SelectedImageKey = iconKey;
+          parentNode.Tag = commonType;
+          parentNode.ToolTipText = $"{group.Count} entries named \"{name}\"";
+
+          foreach (var (entry, _, loaderFileType, symbolFileType) in group) {
+            var childIconKey = loaderFileType == FileType.Flic
+              ? FileType.Texture.ToIconName()
+              : loaderFileType.ToIconName();
+            var childNode = parentNode.Nodes.Add(name);
+            childNode.ImageKey = childIconKey;
+            childNode.SelectedImageKey = childIconKey;
+            childNode.Tag = loaderFileType;
+            childNode.ToolTipText = BuildEntryTooltip(symbolFileType, loaderFileType);
+          }
+        }
+
+        // Add non-duplicate, non-animated entries
+        foreach (var (entry, displayName, loaderFileType, symbolFileType) in remainingEntries) {
+          if (duplicateNames.Contains(displayName)) continue;
+
+          var iconKey = loaderFileType == FileType.Flic
             ? FileType.Texture.ToIconName()
             : loaderFileType.ToIconName();
           var tooltip = BuildEntryTooltip(symbolFileType, loaderFileType);
@@ -165,14 +210,39 @@ public partial class MainForm : Form {
     foreach (TreeNode fileNode in treeView.Nodes) {
       fileNode.Expand();
       foreach (TreeNode child in fileNode.Nodes) {
-        if (child.Tag is FileType ft && ft != FileType.Flic) {
+        if (child.Tag is FileType ft && ft != FileType.Flic && !IsDuplicateGroup(child.Text)) {
           child.Expand();
         }
       }
     }
     treeView.EndUpdate();
 
+    UpdateStatusBar();
+
     FitSidebarToContent(ClientSize.Width / 2);
+  }
+
+  private void UpdateStatusBar() {
+    var ovlCount = treeView.Nodes.Count;
+    var resourceCount = CountLeafNodes(treeView.Nodes);
+    ovlCountLabel.Text = string.Format(ovlFmt, ovlCount);
+    resourceCountLabel.Text = string.Format(resourcesFmt, resourceCount);
+  }
+
+  private static int CountLeafNodes(TreeNodeCollection nodes) {
+    var count = 0;
+    foreach (TreeNode node in nodes) {
+      if (node.Nodes.Count == 0)
+        count++;
+      else
+        count += CountLeafNodes(node.Nodes);
+    }
+    return count;
+  }
+
+  private void ClearStatusBarCounts() {
+    ovlCountLabel.Text = "";
+    resourceCountLabel.Text = "";
   }
 
   private static string BuildEntryTooltip(FileType symbolType, FileType loaderType) {
@@ -189,6 +259,19 @@ public partial class MainForm : Form {
     var i = name.Length;
     while (i > 0 && char.IsDigit(name[i - 1])) i--;
     return name[..i];
+  }
+
+  private static string Pluralize(string word) {
+    if (word.EndsWith("y"))
+      return word[..^1] + "ies";
+    if (word.EndsWith("s") || word.EndsWith("x") || word.EndsWith("z") || word.EndsWith("ch") || word.EndsWith("sh"))
+      return word + "es";
+    return word + "s";
+  }
+
+  private static bool IsDuplicateGroup(string text) {
+    var spaceIdx = text.IndexOf(' ');
+    return spaceIdx > 0 && int.TryParse(text[..spaceIdx], out _);
   }
 
   private void EnsureTreeImageList() {
@@ -221,6 +304,7 @@ public partial class MainForm : Form {
   private async void openToolStripMenuItem_Click(object sender, EventArgs e) {
     statusLabel.Text = openingArchive;
     progressBar.Visible = true;
+    ClearStatusBarCounts();
     await OpenOvl();
     statusLabel.Text = ready;
     progressBar.Visible = false;
@@ -229,6 +313,7 @@ public partial class MainForm : Form {
   private async void openArchiveToolStripButton_Click(object sender, EventArgs e) {
     statusLabel.Text = openingArchive;
     progressBar.Visible = true;
+    ClearStatusBarCounts();
     await OpenOvl();
     statusLabel.Text = ready;
     progressBar.Visible = false;

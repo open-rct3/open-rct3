@@ -38,6 +38,74 @@ public partial class OvlViewController : NSViewController {
   public override void ViewDidLoad() {
     base.ViewDidLoad();
     if (Document != null) RepresentedObject = Document;
+    CreateStatusBar();
+  }
+
+  private void CreateStatusBar() {
+    var statusBarBg = new NSView {
+      TranslatesAutoresizingMaskIntoConstraints = false
+    };
+    statusBarBg.WantsLayer = true;
+    statusBarBg.Layer.BackgroundColor = NSColor.ControlBackground.CGColor;
+
+    var separator = new NSView {
+      TranslatesAutoresizingMaskIntoConstraints = false
+    };
+    separator.WantsLayer = true;
+    separator.Layer.BackgroundColor = NSColor.SeparatorColor.CGColor;
+
+    ovlCountLabel = new NSTextField {
+      Editable = false,
+      Selectable = false,
+      Bordered = false,
+      DrawsBackground = false,
+      Alignment = NSTextAlignment.Right,
+      TranslatesAutoresizingMaskIntoConstraints = false,
+      StringValue = ""
+    };
+
+    resourceCountLabel = new NSTextField {
+      Editable = false,
+      Selectable = false,
+      Bordered = false,
+      DrawsBackground = false,
+      Alignment = NSTextAlignment.Right,
+      TranslatesAutoresizingMaskIntoConstraints = false,
+      StringValue = ""
+    };
+
+    statusBarBg.AddSubview(separator);
+    statusBarBg.AddSubview(ovlCountLabel);
+    statusBarBg.AddSubview(resourceCountLabel);
+
+    View.AddSubview(statusBarBg);
+    statusBarView = statusBarBg;
+
+    NSLayoutConstraint.ActivateConstraints(new[] {
+      statusBarBg.LeadingAnchor.ConstraintEqualTo(View.LeadingAnchor),
+      statusBarBg.TrailingAnchor.ConstraintEqualTo(View.TrailingAnchor),
+      statusBarBg.BottomAnchor.ConstraintEqualTo(View.BottomAnchor),
+      statusBarBg.HeightAnchor.ConstraintEqualTo(24),
+
+      separator.LeadingAnchor.ConstraintEqualTo(statusBarBg.LeadingAnchor),
+      separator.TrailingAnchor.ConstraintEqualTo(statusBarBg.TrailingAnchor),
+      separator.TopAnchor.ConstraintEqualTo(statusBarBg.TopAnchor),
+      separator.HeightAnchor.ConstraintEqualTo(1),
+
+      ovlCountLabel.TrailingAnchor.ConstraintLessThanOrEqualTo(resourceCountLabel.LeadingAnchor, -12),
+      ovlCountLabel.BottomAnchor.ConstraintEqualTo(statusBarBg.BottomAnchor, -4),
+      ovlCountLabel.HeightAnchor.ConstraintEqualTo(16),
+
+      resourceCountLabel.TrailingAnchor.ConstraintEqualTo(statusBarBg.TrailingAnchor, -8),
+      resourceCountLabel.BottomAnchor.ConstraintEqualTo(statusBarBg.BottomAnchor, -4),
+      resourceCountLabel.HeightAnchor.ConstraintEqualTo(16)
+    });
+
+    if (outlineView != null) {
+      NSLayoutConstraint.ActivateConstraints(new[] {
+        outlineView.BottomAnchor.ConstraintEqualTo(statusBarBg.TopAnchor)
+      });
+    }
   }
 
   public override void ViewDidAppear() {
@@ -107,6 +175,19 @@ public partial class OvlViewController : NSViewController {
           var groupedNames = new HashSet<string>(
             frameGroups.Values.SelectMany(g => g).Select(r => r.displayName));
 
+          // Collect non-animated-texture entries
+          var remainingEntries = resolved
+            .Where(r => !groupedNames.Contains(r.displayName))
+            .ToList();
+
+          // Group remaining entries by display name to find duplicates
+          var duplicateGroups = remainingEntries
+            .GroupBy(r => r.displayName)
+            .Where(g => g.Count() > 1)
+            .ToDictionary(g => g.Key, g => g.ToList());
+          var duplicateNames = new HashSet<string>(duplicateGroups.Keys);
+
+          // Add animated texture groups
           foreach (var (entry, displayName, loaderFileType, symbolFileType) in resolved) {
             if (groupedNames.Contains(displayName)) {
               var baseName = StripTrailingDigits(displayName);
@@ -122,10 +203,36 @@ public partial class OvlViewController : NSViewController {
               }
               fileItem.Children.Add(parentItem);
               frameGroups.Remove(baseName);
-              continue;
             }
+          }
 
-            var iconName = loaderFileType == FileType.Flic && !EndsWithDigit(displayName)
+          // Add duplicate name groups
+          foreach (var (name, group) in duplicateGroups) {
+            var commonType = group.Select(r => r.loaderFileType).Distinct().Count() == 1
+              ? group.First().loaderFileType
+              : FileType.Unknown;
+            var iconKey = commonType == FileType.Unknown
+              ? "FileMultipleOutline"
+              : commonType.ToGroupIconName();
+            var pluralName = Pluralize(commonType.ToDisplayName());
+            var parentItem = new OvlTreeItem($"{group.Count} {pluralName}", commonType, iconKey,
+              $"{group.Count} entries named \"{name}\"");
+
+            foreach (var (e, _, loaderFileType, symbolFileType) in group) {
+              var childIconKey = loaderFileType == FileType.Flic
+                ? FileType.Texture.ToIconName()
+                : loaderFileType.ToIconName();
+              parentItem.Children.Add(new OvlTreeItem(name, loaderFileType, childIconKey,
+                BuildEntryTooltip(symbolFileType, loaderFileType)));
+            }
+            fileItem.Children.Add(parentItem);
+          }
+
+          // Add non-duplicate, non-animated entries
+          foreach (var (entry, displayName, loaderFileType, symbolFileType) in remainingEntries) {
+            if (duplicateNames.Contains(displayName)) continue;
+
+            var iconName = loaderFileType == FileType.Flic
               ? FileType.Texture.ToIconName()
               : loaderFileType.ToIconName();
             var tooltip = BuildEntryTooltip(symbolFileType, loaderFileType);
@@ -153,13 +260,40 @@ public partial class OvlViewController : NSViewController {
       foreach (var fileItem in treeItems) {
         outlineView.ExpandItem(new OvlTreeItemNode(fileItem));
         foreach (var child in fileItem.Children) {
-          if (child.FileType != FileType.Flic) {
+          if (child.FileType != FileType.Flic && !IsDuplicateGroup(child.Name)) {
             outlineView.ExpandItem(new OvlTreeItemNode(child));
           }
         }
       }
       FitSidebarToContent();
     }
+
+    UpdateStatusBar();
+  }
+
+  private void UpdateStatusBar() {
+    var ovlCount = treeItems.Count;
+    var resourceCount = CountLeafNodes(treeItems);
+    if (ovlCountLabel != null)
+      ovlCountLabel.StringValue = $"{ovlCount} OVLs";
+    if (resourceCountLabel != null)
+      resourceCountLabel.StringValue = $"{resourceCount} Resources";
+  }
+
+  private static int CountLeafNodes(List<OvlTreeItem> items) {
+    var count = 0;
+    foreach (var item in items)
+      count += CountLeafNodesRecursive(item);
+    return count;
+  }
+
+  private static int CountLeafNodesRecursive(OvlTreeItem item) {
+    if (item.Children.Count == 0)
+      return 1;
+    var count = 0;
+    foreach (var child in item.Children)
+      count += CountLeafNodesRecursive(child);
+    return count;
   }
 
   private void FitSidebarToContent() {
@@ -192,6 +326,19 @@ public partial class OvlViewController : NSViewController {
     var i = name.Length;
     while (i > 0 && char.IsDigit(name[i - 1])) i--;
     return name[..i];
+  }
+
+  private static string Pluralize(string word) {
+    if (word.EndsWith("y"))
+      return word[..^1] + "ies";
+    if (word.EndsWith("s") || word.EndsWith("x") || word.EndsWith("z") || word.EndsWith("ch") || word.EndsWith("sh"))
+      return word + "es";
+    return word + "s";
+  }
+
+  private static bool IsDuplicateGroup(string text) {
+    var spaceIdx = text.IndexOf(' ');
+    return spaceIdx > 0 && int.TryParse(text[..spaceIdx], out _);
   }
 }
 

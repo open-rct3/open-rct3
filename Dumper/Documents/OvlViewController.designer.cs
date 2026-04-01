@@ -17,6 +17,15 @@ namespace Dumper.Documents
 		[Outlet]
 		AppKit.NSOutlineView outlineView { get; set; }
 
+		[Outlet]
+		AppKit.NSView statusBarView { get; set; }
+
+		[Outlet]
+		AppKit.NSTextField ovlCountLabel { get; set; }
+
+		[Outlet]
+		AppKit.NSTextField resourceCountLabel { get; set; }
+
 		void ReleaseDesignerOutlets ()
 		{
 			if (text != null) {
@@ -27,6 +36,21 @@ namespace Dumper.Documents
 			if (outlineView != null) {
 				outlineView.Dispose ();
 				outlineView = null;
+			}
+
+			if (statusBarView != null) {
+				statusBarView.Dispose ();
+				statusBarView = null;
+			}
+
+			if (ovlCountLabel != null) {
+				ovlCountLabel.Dispose ();
+				ovlCountLabel = null;
+			}
+
+			if (resourceCountLabel != null) {
+				resourceCountLabel.Dispose ();
+				resourceCountLabel = null;
 			}
 		}
 	}
