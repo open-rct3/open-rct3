@@ -21,6 +21,7 @@ public partial class MainForm : Form {
 
   public MainForm() {
     InitializeComponent();
+    InitializeComponentIcons();
   }
 
   private async Task OpenOvl() {
