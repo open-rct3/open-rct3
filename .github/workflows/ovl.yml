@@ -1,42 +1,45 @@
-name: libOVL CI
+name: OVL CI
 
 on: push
-#   schedule:
-#   - cron: '0 0 * * SUN'
 
 jobs:
-  test:
-    name: Tests
+  Test:
+    name: Tests (${{ matrix.name }})
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          - name: macOS
+            os: macos-latest
+          - name: Windows 10
+            os: windows-2019
+          - name: Windows 11
+            os: windows-2022
 
     steps:
     - uses: actions/checkout@v4
-    - name: Install D compiler
-      uses: dlang-community/setup-dlang@v1
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
       with:
-        compiler: ldc-latest
-    - name: Cache DUB Artifacts (Posix)
-      if: startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
+        dotnet-version: '8.0.x'
+    - name: Cache NuGet Packages
       uses: actions/cache@v4
       with:
-        path: ~/.dub
-        key: ${{ runner.os }}-dub-${{ hashFiles('**/dub.json') }}
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
-          ${{ runner.os }}-dub-
-    - name: Cache DUB Artifacts (Windows)
-      if: startsWith(runner.os, 'Windows')
-      uses: actions/cache@v4
-      with:
-        path: ~\AppData\Local\dub
-        key: ${{ runner.os }}-dub-${{ hashFiles('**/dub.json') }}
-        restore-keys: |
-          ${{ runner.os }}-dub-
-    - name: Lint
-      continue-on-error: true
-      run: dub run dscanner -- lint lib/ovl/src
+          ${{ runner.os }}-nuget-
+    - name: Restore Workloads
+      if: runner.os == 'macOS'
+      run: dotnet workload restore
+    - name: Restore Dependencies
+      run: dotnet restore
     - name: Test
-      run: cd lib/ovl && dub test --coverage
+      run: dotnet test --no-restore --verbosity normal --collect:"XPlat Code Coverage"
     - name: Upload Coverage to Codecov
       if: success()
-      run: pwd && bash <(curl -s https://codecov.io/bash)
+      uses: codecov/codecov-action@v4
+      with:
+        files: '**/coverage.cobertura.xml'
