@@ -33,7 +33,6 @@ TestResults/
 .dub
 docs.json
 __dummy.html
-docs/
 
 # Visual Studio
 .vs/**/project-cache/*.json
