@@ -98,8 +98,9 @@ public partial class MainForm : Form {
 
         // Group numbered animation frames by their base name (strip trailing digits).
         // Groups with multiple entries are animated textures: parent = base name, children = suffixes.
+        // Only apply this nesting for textures.
         var frameGroups = resolved
-          .Where(r => EndsWithDigit(r.displayName))
+          .Where(r => (r.loaderFileType == FileType.Texture || r.loaderFileType == FileType.Flic) && EndsWithDigit(r.displayName))
           .GroupBy(r => StripTrailingDigits(r.displayName))
           .Where(g => g.Count() > 1)
           .ToDictionary(g => g.Key, g => g.OrderBy(r => r.displayName).ToList());
@@ -170,6 +171,8 @@ public partial class MainForm : Form {
       }
     }
     treeView.EndUpdate();
+
+    FitSidebarToContent(ClientSize.Width / 2);
   }
 
   private static string BuildEntryTooltip(FileType symbolType, FileType loaderType) {
@@ -237,50 +240,30 @@ public partial class MainForm : Form {
 
   private void Splitter_MouseDoubleClick(object? sender, MouseEventArgs e) {
     if (treeView.Nodes.Count == 0) return;
+    FitSidebarToContent(int.MaxValue);
+  }
 
-    // Save expansion state of all nodes
-    var savedState = new Dictionary<string, bool>();
+  private void FitSidebarToContent(int maxWidth) {
+    int contentWidth = 0;
     foreach (TreeNode node in treeView.Nodes)
-      SaveExpansionState(node, savedState);
+      contentWidth = Math.Max(contentWidth, MeasureNodeWidthFast(node));
 
-    // Expand all to measure
-    treeView.ExpandAll();
-
-    // Find max width across all visible nodes
-    int maxWidth = 0;
-    foreach (TreeNode node in treeView.Nodes)
-      maxWidth = Math.Max(maxWidth, MeasureNodeWidth(node));
-
-    // Restore expansion state
-    foreach (TreeNode node in treeView.Nodes)
-      RestoreExpansionState(node, savedState);
-
-    // Set splitter distance to fit content, clamped to valid range
     var padding = SystemInformation.VerticalScrollBarWidth + 8;
-    var target = Math.Min(maxWidth + padding, splitView.Width - splitView.Panel2MinSize);
+    var target = Math.Min(contentWidth + padding, maxWidth);
+    target = Math.Min(target, splitView.Width - splitView.Panel2MinSize);
     target = Math.Max(target, splitView.Panel1MinSize);
     splitView.SplitterDistance = target;
   }
 
-  private static void SaveExpansionState(TreeNode node, Dictionary<string, bool> state) {
-    state[node.FullPath] = node.IsExpanded;
+  private int MeasureNodeWidthFast(TreeNode node) {
+    var textWidth = TextRenderer.MeasureText(node.Text, treeView.Font).Width;
+    var indent = node.Level * treeView.Indent;
+    var iconWidth = treeView.ImageList?.ImageSize.Width ?? 0;
+    var plusMinusBtnWidth = SystemInformation.SmallIconSize.Width;
+    var iconTextGap = 2;
+    var total = indent + plusMinusBtnWidth + iconWidth + iconTextGap + textWidth;
     foreach (TreeNode child in node.Nodes)
-      SaveExpansionState(child, state);
-  }
-
-  private static void RestoreExpansionState(TreeNode node, Dictionary<string, bool> state) {
-    if (state.TryGetValue(node.FullPath, out var expanded)) {
-      if (expanded) node.Expand(); else node.Collapse();
-    }
-    foreach (TreeNode child in node.Nodes)
-      RestoreExpansionState(child, state);
-  }
-
-  private static int MeasureNodeWidth(TreeNode node) {
-    // TreeNode.Bounds includes indent and icon for visible nodes
-    int maxWidth = node.Bounds.Right;
-    foreach (TreeNode child in node.Nodes)
-      maxWidth = Math.Max(maxWidth, MeasureNodeWidth(child));
-    return maxWidth;
+      total = Math.Max(total, MeasureNodeWidthFast(child));
+    return total;
   }
 }

@@ -20,34 +20,37 @@ public class EditorSplitView : NSSplitViewController {
     });
   }
 
-  private void HandleDividerDoubleClick(NSClickGestureRecognizer gesture) {
+  public void FitSidebarToContent(nfloat maxWidth) {
     var outlineView = FindOutlineView(SplitView.Subviews);
     if (outlineView == null || outlineView.RowCount == 0) return;
 
-    // Save expansion state (snapshot row count since it will change)
+    var savedState = new List<bool>();
     var rowCount = outlineView.RowCount;
-    var savedState = new NSObject[rowCount];
     for (int i = 0; i < rowCount; i++)
-      savedState[i] = outlineView.ItemAtRow(i);
+      savedState.Add(outlineView.IsItemExpanded(outlineView.ItemAtRow(i)));
 
-    // Expand all for measurement
     outlineView.ExpandItem(null, expandChildren: true);
 
-    // Measure widest visible row
-    nfloat maxWidth = 0;
+    nfloat contentWidth = 0;
     for (int i = 0; i < outlineView.RowCount; i++) {
       var rect = outlineView.RectOfRow(i);
-      if (rect.Right > maxWidth) maxWidth = rect.Right;
+      if (rect.Right > contentWidth) contentWidth = rect.Right;
     }
 
-    // Restore expansion state in reverse order (bottom-up)
-    for (int i = savedState.Length - 1; i >= 0; i--)
-      outlineView.CollapseItem(savedState[i], collapseChildren: true);
+    for (int i = rowCount - 1; i >= 0; i--) {
+      var item = outlineView.ItemAtRow(i);
+      if (!savedState[i])
+        outlineView.CollapseItem(item, collapseChildren: true);
+    }
 
-    // Resize sidebar to fit content
     var padding = 24.0;
-    var target = (nfloat)Math.Max(maxWidth + padding, 100);
+    var target = (nfloat)Math.Min(contentWidth + padding, (double)maxWidth);
+    target = (nfloat)Math.Max(target, 100);
     SplitView.SetPosition(target, 0);
+  }
+
+  private void HandleDividerDoubleClick(NSClickGestureRecognizer gesture) {
+    FitSidebarToContent(nfloat.MaxValue);
   }
 
   private static NSOutlineView? FindOutlineView(NSView[] views) {

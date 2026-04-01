@@ -98,9 +98,9 @@ public partial class OvlViewController : NSViewController {
             return (entry, displayName, loaderFileType, symbolFileType);
           }).ToList();
 
-          // Group numbered animation frames by base name
+          // Group numbered animation frames by base name. Only apply this nesting for textures.
           var frameGroups = resolved
-            .Where(r => EndsWithDigit(r.displayName))
+            .Where(r => (r.loaderFileType == FileType.Texture || r.loaderFileType == FileType.Flic) && EndsWithDigit(r.displayName))
             .GroupBy(r => StripTrailingDigits(r.displayName))
             .Where(g => g.Count() > 1)
             .ToDictionary(g => g.Key, g => g.OrderBy(r => r.displayName).ToList());
@@ -158,7 +158,24 @@ public partial class OvlViewController : NSViewController {
           }
         }
       }
+      FitSidebarToContent();
     }
+  }
+
+  private void FitSidebarToContent() {
+    var splitView = FindEditorSplitView();
+    if (splitView == null) return;
+    var maxHalfWidth = View.Window?.Frame.Width / 2 ?? 400;
+    splitView.FitSidebarToContent((nfloat)maxHalfWidth);
+  }
+
+  private EditorSplitView? FindEditorSplitView() {
+    NSViewController? vc = this;
+    while (vc != null) {
+      if (vc is EditorSplitView esv) return esv;
+      vc = vc.ParentViewController;
+    }
+    return null;
   }
 
   private static string BuildEntryTooltip(FileType symbolType, FileType loaderType) {
