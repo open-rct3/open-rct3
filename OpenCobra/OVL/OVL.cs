@@ -425,19 +425,22 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
 
   /// <summary>Open an OVL archive.</summary>
   /// <remarks>
-  /// For <c>.common.ovl</c> files, automatically loads the paired <c>.unique.ovl</c>
-  /// and performs full post-processing (relocation resolution, string/symbol/loader parsing).
+  /// Automatically loads the paired archive when available. For <c>.unique.ovl</c> files,
+  /// loads the paired <c>.common.ovl</c> if available. Single-file archives are read and
+  /// post-processed directly.
   /// </remarks>
   public static Ovl Open(string filePath) {
     if (filePath.ToLower().EndsWith(".common.ovl") && System.IO.File.Exists(filePath)) {
       var uniquePath = filePath.Substring(0, filePath.Length - ".common.ovl".Length) + ".unique.ovl";
       if (System.IO.File.Exists(uniquePath))
         return Load(filePath);
+    } else if (filePath.ToLower().EndsWith(".unique.ovl") && System.IO.File.Exists(filePath)) {
+      var commonPath = filePath.Substring(0, filePath.Length - ".unique.ovl".Length) + ".common.ovl";
+      if (System.IO.File.Exists(commonPath))
+        return Load(commonPath);
     }
 
-    var file = System.IO.File.Open(filePath, FileMode.Open);
-    Debug.Assert(file.Length >= Marshal.SizeOf<OvlHeader>(), $"File is not an OVL archive: {filePath}");
-    return Read(file, filePath);
+    return Read(System.IO.File.Open(filePath, FileMode.Open), filePath);
   }
 
   /// <summary>Load a paired common/unique OVL archive with full post-processing.</summary>
@@ -460,8 +463,13 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
 
     ovl.LoaderHeaders = ovl.commonData.LoaderHeaders;
 
-    // Resolve relocations across both files.
+    // Re-resolve relocations across both files (Read() only resolves intra-file).
     // Mirrors the two ResolveRelocation loops in cOVLDump::Load.
+    ovl.allRelocations.Clear();
+    ovl.allStrings.Clear();
+    ovl.allSymbols.Clear();
+    ovl.allLoaderEntries.Clear();
+    ovl.structureMap.Clear();
     ovl.ResolveRelocations();
 
     // Parse string table from block 0 of each file.
@@ -660,6 +668,13 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     }
 
     ovl.commonData = data;
+
+    // Post-processing: resolve relocations and parse string/symbol/loader tables.
+    ovl.ResolveRelocations(data);
+    ovl.ParseStrings(data);
+    ovl.ParseSymbols(data);
+    ovl.ParseLoaders(data);
+
     return ovl;
   }
 
@@ -845,7 +860,8 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     if (blockData.Length <= 1 || blockData[1].Length == 0) return;
 
     var loaderData = blockData[1];
-    var structSize = 20; // sizeof(LoaderStruct)
+    // v5 omits SymbolsToResolve — struct is 16 bytes instead of 20
+    var structSize = data.Header.version == 5 ? 16 : 20;
     var lodCount = loaderData.Length / structSize;
     // Track position for extra data chunks (mirrors m_dataend[type])
     var dataEnd = lodCount * structSize;
@@ -854,33 +870,37 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
       var offset = l * structSize;
       if (offset + structSize > loaderData.Length) break;
 
-      var ldr = MemoryMarshal.Read<LoaderStruct>(loaderData.AsSpan(offset));
+      var reader = new SpanReader(loaderData.AsSpan(offset));
+      var loaderType = reader.ReadUInt32();
+      var dataAddr = reader.ReadUInt32();
+      var hasExtraDataRaw = reader.ReadUInt32();
+      var symAddr = reader.ReadUInt32();
+      var symbolsToResolve = data.Header.version == 5 ? 0u : reader.ReadUInt32();
 
-      var loaderTypeName = ldr.LoaderType < data.LoaderHeaders.Length
-        ? data.LoaderHeaders[ldr.LoaderType].name
-        : $"type_{ldr.LoaderType}";
-      var loaderTag = ldr.LoaderType < data.LoaderHeaders.Length
-        ? data.LoaderHeaders[ldr.LoaderType].tag
+      var loaderTypeName = loaderType < data.LoaderHeaders.Length
+        ? data.LoaderHeaders[loaderType].name
+        : $"type_{loaderType}";
+      var loaderTag = loaderType < data.LoaderHeaders.Length
+        ? data.LoaderHeaders[loaderType].tag
         : "???";
 
       // Resolve symbol name via the SymbolStruct the loader points to
-      var symbolName = ResolveLoaderSymbolName(data, ldr.Sym) ?? "No Symbol";
+      var symbolName = ResolveLoaderSymbolName(data, symAddr) ?? "No Symbol";
 
-      var hasExtraData = ldr.HasExtraData;
       var extraDataCount = 0;
       if (data.Header.version == 5) {
-        extraDataCount = (int) (hasExtraData & 0xFFFF);
+        extraDataCount = (int) (hasExtraDataRaw & 0xFFFF);
       } else {
-        extraDataCount = (int) hasExtraData;
+        extraDataCount = (int) hasExtraDataRaw;
       }
 
       var entry = new OvlLoaderEntry {
-        LoaderType = ldr.LoaderType,
+        LoaderType = loaderType,
         Name = loaderTypeName,
         Tag = loaderTag,
-        DataAddress = ldr.Data,
+        DataAddress = dataAddr,
         SymbolName = symbolName,
-        SymbolsToResolve = ldr.SymbolsToResolve,
+        SymbolsToResolve = symbolsToResolve,
         HasExtraData = extraDataCount > 0
       };
       allLoaderEntries.Add(entry);

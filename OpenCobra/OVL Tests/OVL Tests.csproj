@@ -30,8 +30,10 @@
 
     <ItemGroup>
       <None Remove="style.common.ovl" />
+      <None Remove="Water.common.ovl" />
       <EmbeddedResource Include="style.common.ovl" />
       <None Remove="style.unique.ovl" />
       <EmbeddedResource Include="style.unique.ovl" />
+      <EmbeddedResource Include="Water.common.ovl" />
     </ItemGroup>
 </Project>

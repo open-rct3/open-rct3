@@ -61,24 +61,47 @@ public partial class OvlViewController : NSViewController {
     treeItems.Clear();
     var ovl = doc.Memento.Value;
 
-    // Convert each tag to its FileType and group by FileType
-    var groupsByFileType = ovl.LoaderHeaders
-      .GroupBy(h => h.tag.ToFileType())
-      .ToDictionary(g => g.Key, g => g.GroupBy(h => h.tag).ToList());
-
     // Order by FileType enum value; known types first, Unknown last
     var orderedFileTypes = Enum.GetValues<FileType>();
 
-    foreach (var fileType in orderedFileTypes) {
-      if (!groupsByFileType.TryGetValue(fileType, out var tagGroups))
-        continue;
+    if (ovl.LoaderEntries.Count > 0) {
+      // Group archive files by loader type tag
+      var groupsByFileType = ovl.LoaderEntries
+        .GroupBy(e => e.Tag.ToFileType())
+        .ToDictionary(g => g.Key, g => g.GroupBy(e => e.Tag).ToList());
 
-      var groupItem = new OvlTreeItem(fileType.ToDisplayName());
-      foreach (var tagGroup in tagGroups) {
-        foreach (var header in tagGroup)
-          groupItem.Children.Add(new OvlTreeItem(header.name));
+      foreach (var fileType in orderedFileTypes) {
+        if (!groupsByFileType.TryGetValue(fileType, out var tagGroups))
+          continue;
+
+        var groupItem = new OvlTreeItem(fileType.ToDisplayName());
+        foreach (var tagGroup in tagGroups) {
+          foreach (var entry in tagGroup) {
+            var displayName = entry.SymbolName != "No Symbol"
+              ? entry.SymbolName
+              : $"[Unnamed {fileType.ToDisplayName()}]";
+            groupItem.Children.Add(new OvlTreeItem(displayName));
+          }
+        }
+        treeItems.Add(groupItem);
       }
-      treeItems.Add(groupItem);
+    } else {
+      // Fallback: show loader type descriptors
+      var groupsByFileType = ovl.LoaderHeaders
+        .GroupBy(h => h.tag.ToFileType())
+        .ToDictionary(g => g.Key, g => g.GroupBy(h => h.tag).ToList());
+
+      foreach (var fileType in orderedFileTypes) {
+        if (!groupsByFileType.TryGetValue(fileType, out var tagGroups))
+          continue;
+
+        var groupItem = new OvlTreeItem(fileType.ToDisplayName());
+        foreach (var tagGroup in tagGroups) {
+          foreach (var header in tagGroup)
+            groupItem.Children.Add(new OvlTreeItem(header.name));
+        }
+        treeItems.Add(groupItem);
+      }
     }
 
     // Wire up the outline view data source
