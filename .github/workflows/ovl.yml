@@ -18,7 +18,7 @@ jobs:
         compiler: ldc-latest
     - name: Cache DUB Artifacts (Posix)
       if: startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: ~/.dub
         key: ${{ runner.os }}-dub-${{ hashFiles('**/dub.json') }}
@@ -26,7 +26,7 @@ jobs:
           ${{ runner.os }}-dub-
     - name: Cache DUB Artifacts (Windows)
       if: startsWith(runner.os, 'Windows')
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: ~\AppData\Local\dub
         key: ${{ runner.os }}-dub-${{ hashFiles('**/dub.json') }}
