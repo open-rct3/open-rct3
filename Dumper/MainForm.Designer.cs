@@ -317,6 +317,7 @@ namespace Dumper
       treeView.Name = "treeView";
       treeView.Size = new System.Drawing.Size(175, 287);
       treeView.TabIndex = 0;
+      treeView.ShowNodeToolTips = true;
       // 
       // MainForm
       // 

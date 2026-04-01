@@ -97,7 +97,8 @@ public sealed class OvlDocument : NSDocument {
   public override bool IsInViewingMode => true;
 
   public override void MakeWindowControllers() {
-    AddWindowController(new OvlWindowController());
+    var controller = new OvlWindowController { FilePath = FileUrl?.Path };
+    AddWindowController(controller);
   }
 
   public override bool ReadFromUrl(NSUrl url, string typeName, out NSError? outError) {

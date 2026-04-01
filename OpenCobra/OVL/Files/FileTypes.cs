@@ -146,4 +146,41 @@ public static class StringExtensions {
       default: return "Unknown";
     }
   }
+
+  /// <summary>Returns a Material Design icon name for the given <see cref="FileType"/>.</summary>
+  public static string ToIconName(this FileType type) {
+    switch (type) {
+      case FileType.Unknown: return "FileQuestion";
+      case FileType.Text: return "TextBoxOutline";
+      case FileType.Integer: return "Numeric";
+      case FileType.Texture: return "Image";
+      case FileType.Flic: return "Filmstrip";
+      case FileType.FlexibleTexture: return "Panorama";
+      case FileType.GuiSkinItem: return "PaletteOutline";
+      case FileType.SceneryItem: return "Tree";
+      case FileType.BitmapTable: return "ImageMultiple";
+      case FileType.AnimatedRide: return "HorseVariant";
+      case FileType.BoneAnim: return "Bone";
+      case FileType.BoneShape: return "Bone";
+      case FileType.CarriedItemExtra: return "BagPersonalOutline";
+      case FileType.ChangingRoom: return "Door";
+      case FileType.CarriedItem: return "BagPersonalOutline";
+      case FileType.ManifoldMesh: return "CubeOutline";
+      case FileType.PathType: return "Routes";
+      case FileType.QueueType: return "Routes";
+      case FileType.RideCar: return "CarSide";
+      case FileType.RideTrain: return "Train";
+      case FileType.SpecialAttraction: return "FerrisWheel";
+      case FileType.StaticShape: return "ShapeOutline";
+      case FileType.Sound: return "VolumeHigh";
+      case FileType.Spline: return "VectorPolyline";
+      case FileType.Stall: return "StorefrontOutline";
+      case FileType.SceneryItemVisual: return "Tree";
+      case FileType.TerrainType: return "TextureBox";
+      case FileType.TrackSection: return "Train";
+      case FileType.TrackedRide: return "Train";
+      case FileType.WildAnimalItem: return "Paw";
+      default: return "FileQuestion";
+    }
+  }
 }

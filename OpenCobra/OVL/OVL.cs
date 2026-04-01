@@ -320,6 +320,8 @@ public record struct OvlLoaderEntry {
   public string SymbolName;
   public uint SymbolsToResolve;
   public bool HasExtraData;
+  /// <summary>Source file name (e.g. "Water.common.ovl").</summary>
+  public string SourceFile;
 }
 
 #endregion
@@ -475,6 +477,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     // Parse string table from block 0 of each file.
     // Mirrors MakeStrings(OVLT_COMMON) then MakeStrings(OVLT_UNIQUE).
     ovl.ParseStrings(ovl.commonData!);
+    var commonStringCount = ovl.allStrings.Count;
     ovl.ParseStrings(ovl.uniqueData!);
 
     // Parse symbol table from block 2, sub-block 0.
@@ -484,8 +487,9 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
 
     // Parse loader table from block 2, sub-block 1.
     // Mirrors MakeLoaders(OVLT_COMMON) then MakeLoaders(OVLT_UNIQUE).
-    ovl.ParseLoaders(ovl.commonData!);
-    ovl.ParseLoaders(ovl.uniqueData!);
+    // Pass string offset so unique entries can resolve names from the merged string table.
+    ovl.ParseLoaders(ovl.commonData!, 0);
+    ovl.ParseLoaders(ovl.uniqueData!, commonStringCount);
 
     return ovl;
   }
@@ -587,6 +591,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
       }
     }
 
+
     // Read 9 file block headers
     // Mirrors the "Parse 9 blocks for count and unknown stuff" loop
     var fileBlocks = new FileBlockEntry[9];
@@ -673,7 +678,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     ovl.ResolveRelocations(data);
     ovl.ParseStrings(data);
     ovl.ParseSymbols(data);
-    ovl.ParseLoaders(data);
+    ovl.ParseLoaders(data, 0);
 
     return ovl;
   }
@@ -854,28 +859,88 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
 
   /// <summary>Parse the loader table from block 2, sub-block 1.</summary>
   /// <remarks>Mirrors <c>cOVLDump::MakeLoaders</c>.</remarks>
-  private void ParseLoaders(OvlFileData data) {
+  private void ParseLoaders(OvlFileData data, int stringOffset = 0) {
     if (data.FileBlocks[2].Count <= 1) return;
     var blockData = data.FileBlockData[2];
     if (blockData.Length <= 1 || blockData[1].Length == 0) return;
 
     var loaderData = blockData[1];
-    // v5 omits SymbolsToResolve — struct is 16 bytes instead of 20
-    var structSize = data.Header.version == 5 ? 16 : 20;
+    var structSize = 20;
     var lodCount = loaderData.Length / structSize;
     // Track position for extra data chunks (mirrors m_dataend[type])
     var dataEnd = lodCount * structSize;
+
+    // For v4/v5: build symbol name list from the string table.
+    // The string table entries are symbol names in "name:tag" format.
+    // For v5, loader headers' symbolCount fields determine per-type counts.
+    // For v4, strings are assigned sequentially to loader entries.
+    Dictionary<uint, Queue<string>> symbolNamesByType = new();
+    if (data.Header.version >= 4) {
+      var symNames = new List<string>();
+      var block0Data = data.FileBlockData[0];
+      if (block0Data.Length > 0 && block0Data[0].Length > 0) {
+        var strData = block0Data[0];
+        var pos = 0;
+        while (pos < strData.Length) {
+          var end = Array.IndexOf(strData, (byte) 0, pos);
+          if (end < 0) end = strData.Length;
+          if (end > pos)
+            symNames.Add(System.Text.Encoding.ASCII.GetString(strData, pos, end - pos));
+          pos = end + 1;
+        }
+      } else if (stringOffset > 0) {
+        symNames.AddRange(allStrings.Skip(stringOffset));
+      }
+
+      if (data.Header.version == 5) {
+        // v5: distribute by symbol count order
+        var headersByOrder = data.LoaderHeaders
+          .Select((h, i) => (header: h, index: (uint) i, order: h.symbolCountOrder))
+          .Where(x => x.header.symbolCount > 0)
+          .OrderBy(x => x.order)
+          .ToList();
+
+        var strIdx = 0;
+        foreach (var (header, index, _) in headersByOrder) {
+          var queue = new Queue<string>();
+          for (uint s = 0; s < header.symbolCount && strIdx < symNames.Count; s++, strIdx++)
+            queue.Enqueue(symNames[strIdx]);
+          symbolNamesByType[index] = queue;
+        }
+      } else {
+        // v4: strings are ordered by loader type, matching entry order
+        // Group entries by type and assign strings sequentially per type
+        var entriesByType = new Dictionary<uint, List<int>>();
+        for (var l = 0; l < lodCount; l++) {
+          var lt = BitConverter.ToUInt32(loaderData, l * structSize);
+          if (!entriesByType.ContainsKey(lt)) entriesByType[lt] = new List<int>();
+          entriesByType[lt].Add(l);
+        }
+        // Match string counts to entry counts per type
+        var strIdx = 0;
+        foreach (var kv in entriesByType.OrderBy(k => k.Key)) {
+          var queue = new Queue<string>();
+          for (var s = 0; s < kv.Value.Count && strIdx < symNames.Count; s++, strIdx++)
+            queue.Enqueue(symNames[strIdx]);
+          symbolNamesByType[kv.Key] = queue;
+        }
+      }
+    }
 
     for (var l = 0; l < lodCount; l++) {
       var offset = l * structSize;
       if (offset + structSize > loaderData.Length) break;
 
-      var reader = new SpanReader(loaderData.AsSpan(offset));
-      var loaderType = reader.ReadUInt32();
-      var dataAddr = reader.ReadUInt32();
-      var hasExtraDataRaw = reader.ReadUInt32();
-      var symAddr = reader.ReadUInt32();
-      var symbolsToResolve = data.Header.version == 5 ? 0u : reader.ReadUInt32();
+      var loaderType = BitConverter.ToUInt32(loaderData, offset);
+      // v5 has an extra 4-byte field at offset 4, shifting Data and Sym by 4 bytes
+      var dataOffset = data.Header.version == 5 ? 8 : 4;
+      var dataAddr = BitConverter.ToUInt32(loaderData, offset + dataOffset);
+      var hasExtraDataRaw = data.Header.version == 5
+        ? BitConverter.ToUInt32(loaderData, offset + 12)
+        : BitConverter.ToUInt32(loaderData, offset + 8);
+      var symbolsToResolve = data.Header.version == 5
+        ? 0u
+        : BitConverter.ToUInt32(loaderData, offset + 16);
 
       var loaderTypeName = loaderType < data.LoaderHeaders.Length
         ? data.LoaderHeaders[loaderType].name
@@ -884,8 +949,13 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
         ? data.LoaderHeaders[loaderType].tag
         : "???";
 
-      // Resolve symbol name via the SymbolStruct the loader points to
-      var symbolName = ResolveLoaderSymbolName(data, symAddr) ?? "No Symbol";
+      // Resolve symbol name from the string table queue for this loader type
+      string symbolName;
+      if (symbolNamesByType.TryGetValue(loaderType, out var queue) && queue.Count > 0) {
+        symbolName = queue.Dequeue();
+      } else {
+        symbolName = "No Symbol";
+      }
 
       var extraDataCount = 0;
       if (data.Header.version == 5) {
@@ -901,7 +971,8 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
         DataAddress = dataAddr,
         SymbolName = symbolName,
         SymbolsToResolve = symbolsToResolve,
-        HasExtraData = extraDataCount > 0
+        HasExtraData = extraDataCount > 0,
+        SourceFile = Path.GetFileName(data.FilePath)
       };
       allLoaderEntries.Add(entry);
 
@@ -910,7 +981,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
       if (!string.IsNullOrEmpty(symbolName) && symbolName != "No Symbol") {
         if (!structureMap.TryGetValue(loaderTag, out var tagMap))
           structureMap[loaderTag] = tagMap = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
-        tagMap[symbolName] = ldr.Data;
+        tagMap[symbolName] = dataAddr;
       }
 
       // Skip extra data chunks
@@ -924,54 +995,9 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
   }
 
   /// <summary>Resolve a <see cref="LoaderStruct.Sym"/> pointer to a symbol name string.</summary>
+  /// <summary>Resolve a relocated loader <c>Sym</c> pointer to a symbol name string.</summary>
   /// <remarks>
-  /// The <c>Sym</c> field is a virtual address pointing to a <see cref="SymbolStruct"/> within block 2, sub-block 1.
-  /// That struct's <see cref="SymbolStruct.Symbol"/> field points to a string in block 0, sub-block 0.
-  /// </remarks>
-  private string? ResolveLoaderSymbolName(OvlFileData data, uint symAddr) {
-    if (symAddr == 0) return null;
-
-    // The Sym address points into block 2, sub-block 1 data
-    // First, calculate the byte offset within the loader sub-block data
-    var block2 = data.FileBlocks[2];
-    if (block2.Count <= 1) return null;
-
-    var loaderSubBlockBase = block2.RelOffset;
-    // Sum sizes of sub-blocks 0 to get the offset where sub-block 1 starts
-    for (uint i = 0; i < 1 && i < block2.Count; i++)
-      loaderSubBlockBase += block2.SubBlockSizes[i];
-
-    // The SymbolStruct resides in block 2, sub-block 0 (symbol table)
-    // But the Sym field value is a virtual address to a SymbolStruct that was resolved by relocations
-    // In the reference, lo.symbol->target points to the actual SymbolStruct data
-    // The symbol struct's Symbol field then points to a string in block 0
-
-    // Try to find a relocation whose source address matches symAddr
-    // The relocation's target would point to the SymbolStruct data
-    var symReloc = allRelocations.FirstOrDefault(r => r.Address == symAddr);
-    if (symReloc.TargetAddress == 0) return null;
-
-    // Read the SymbolStruct from the target location
-    var targetData = GetBlockData(symReloc.TargetFileType, symReloc.TargetFile, symReloc.TargetBlock);
-    if (targetData == null) return null;
-
-    var symStructOffset = (int) symReloc.TargetAddress -
-      (int) (symReloc.TargetFileType == OvlType.Common ? commonData : uniqueData)!
-        .FileBlocks[symReloc.TargetFile].RelOffset -
-      (int) SumSizes(
-        (symReloc.TargetFileType == OvlType.Common ? commonData : uniqueData)!
-          .FileBlocks[symReloc.TargetFile],
-        symReloc.TargetBlock);
-
-    if (symStructOffset < 0 || symStructOffset + 12 > targetData.Length) return null;
-
-    // Read the SymbolStruct (using v1 layout since both v1 and v4/v5 have Symbol at offset 0)
-    var symNameAddr = BitConverter.ToUInt32(targetData, symStructOffset);
-
-    // Resolve the symbol name address to a string in block 0
-    return ResolveStringFromAddress(data, symNameAddr);
-  }
-
+  /// The <c>symAddr</c> is the resolved target address of the <see cref="LoaderStruct.Sym"/> field,
   /// <summary>Resolve a virtual address to a null-terminated string in block 0, sub-block 0.</summary>
   private string? ResolveStringFromAddress(OvlFileData data, uint address) {
     if (address == 0) return null;

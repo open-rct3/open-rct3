@@ -47,8 +47,9 @@ public partial class MainForm {
     helpToolStripButton.Image = RenderIcon(icons, "HelpCircle", helpColor);
   }
 
-  private static Bitmap RenderIcon(IEmbeddedIcons icons, string name, DuoToneColor color) {
-    var icon = icons.GetIcon(name)!;
+  private static Bitmap? RenderIcon(IEmbeddedIcons icons, string name, DuoToneColor color) {
+    var icon = icons.GetIcon(name);
+    if (icon == null) return null;
     var bmp = new Bitmap(IconSize, IconSize);
     using var g = Graphics.FromImage(bmp);
     g.SmoothingMode = SmoothingMode.HighQuality;

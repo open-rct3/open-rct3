@@ -169,6 +169,7 @@
         <Compile Remove="EditorContainer.designer.cs" />
         <Compile Remove="EditorController.cs" />
         <Compile Remove="EditorController.designer.cs" />
+        <Compile Remove="EditorSplitView.cs" />
         <Compile Remove="Error.cs" />
         <Compile Remove="MainWindow.cs" />
         <Compile Remove="MainWindow.designer.cs" />
