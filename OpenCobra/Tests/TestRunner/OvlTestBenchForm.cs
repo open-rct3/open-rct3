@@ -185,16 +185,9 @@ public partial class OvlTestBenchForm : Form {
 
         if (!ct.IsCancellationRequested) {
           var totalElapsed = stopwatch.Elapsed;
-          Invoke(() => {
-            UpdateStatus($"Done: {ovlPairs.Count} archive(s) processed");
-            timingLabel.Text = FormatDuration(totalElapsed);
-          });
-        } else {
-          Invoke(() => {
-            UpdateStatus("Cancelled");
-            progressBar.Style = ProgressBarStyle.Blocks;
-          });
-        }
+          UpdateStatus($"Done: {ovlPairs.Count} archives examined");
+          UpdateTiming(FormatDuration(totalElapsed));
+        } else UpdateStatus("Cancelled");
       }, ct);
     } catch (OperationCanceledException) {
       // Task was cancelled
@@ -470,17 +463,15 @@ public partial class OvlTestBenchForm : Form {
       });
     }
 
-    // Fall back to folder picker
-    using var fbd = new FolderBrowserDialog {
-      Description = "Select your RCT3 Assets folder (e.g. Contents\\Assets)",
+    // Fall back and let the user find their RCT3 installation
+    using var openFolderDialog = new FolderBrowserDialog {
+      Description = "Select the root of your RCT3 installation",
       UseDescriptionForTitle = true,
     };
-    if (fbd.ShowDialog() != DialogResult.OK) {
-      return ([], "Cancelled");
-    }
+    if (openFolderDialog.ShowDialog() != DialogResult.OK) return ([], "Cancelled");
 
     UpdateStatus("Scanning for OVL files...");
-    var assetsDir = fbd.SelectedPath;
+    var assetsDir = openFolderDialog.SelectedPath;
     return await Task.Run(() => {
       var pairsFromPicker = new List<OvlPair>();
       var commonFromPicker = new List<(string path, string name)>();

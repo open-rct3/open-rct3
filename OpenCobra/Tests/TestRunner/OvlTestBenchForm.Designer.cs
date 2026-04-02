@@ -46,17 +46,17 @@ partial class OvlTestBenchForm {
     progressRow.SuspendLayout();
     statusStrip.SuspendLayout();
     SuspendLayout();
-    // 
+    //
     // resultsTree
-    // 
+    //
     resultsTree.Font = new Font("Consolas", 9F);
     resultsTree.Location = new Point(3, 71);
     resultsTree.Name = "resultsTree";
     resultsTree.Size = new Size(399, 166);
     resultsTree.TabIndex = 0;
-    // 
+    //
     // mainColumn
-    // 
+    //
     mainColumn.AutoSize = true;
     mainColumn.Controls.Add(startStopButton);
     mainColumn.Controls.Add(diagButton);
@@ -68,9 +68,9 @@ partial class OvlTestBenchForm {
     mainColumn.Name = "mainColumn";
     mainColumn.Size = new Size(404, 241);
     mainColumn.TabIndex = 3;
-    // 
+    //
     // startStopButton
-    // 
+    //
     startStopButton.ImageAlign = ContentAlignment.MiddleLeft;
     startStopButton.Location = new Point(3, 3);
     startStopButton.Name = "startStopButton";
@@ -78,21 +78,23 @@ partial class OvlTestBenchForm {
     startStopButton.TabIndex = 0;
     startStopButton.Text = "Start";
     startStopButton.TextImageRelation = TextImageRelation.ImageBeforeText;
+    startStopButton.TextAlign = ContentAlignment.MiddleRight;
     startStopButton.Click += StartStopButton_Click;
-    // 
+    //
     // diagButton
-    // 
+    //
     diagButton.ImageAlign = ContentAlignment.MiddleLeft;
     diagButton.Location = new Point(84, 3);
     diagButton.Name = "diagButton";
     diagButton.Size = new Size(130, 26);
     diagButton.TabIndex = 1;
     diagButton.Text = "Gather Diagnostics";
+    diagButton.TextAlign = ContentAlignment.MiddleRight;
     diagButton.TextImageRelation = TextImageRelation.ImageBeforeText;
     diagButton.Click += GatherDiagnosticsButton_Click;
-    // 
+    //
     // configLabel
-    // 
+    //
     configLabel.AutoSize = true;
     mainColumn.SetFlowBreak(configLabel, true);
     configLabel.Location = new Point(222, 9);
@@ -102,9 +104,9 @@ partial class OvlTestBenchForm {
     configLabel.TabIndex = 2;
     configLabel.Text = "Config:";
     configLabel.TextAlign = ContentAlignment.MiddleLeft;
-    // 
+    //
     // progressRow
-    // 
+    //
     progressRow.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
     progressRow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
     progressRow.ColumnCount = 1;
@@ -118,40 +120,40 @@ partial class OvlTestBenchForm {
     progressRow.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
     progressRow.Size = new Size(378, 30);
     progressRow.TabIndex = 4;
-    // 
+    //
     // progressBar
-    // 
+    //
     progressBar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
     progressBar.Location = new Point(3, 3);
     progressBar.Name = "progressBar";
     progressBar.Size = new Size(372, 23);
     progressBar.TabIndex = 1;
-    // 
+    //
     // statusStrip
-    // 
+    //
     statusStrip.Items.AddRange(new ToolStripItem[] { statusLabel, timingLabel });
     statusStrip.LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow;
     statusStrip.Location = new Point(0, 241);
     statusStrip.Name = "statusStrip";
     statusStrip.Size = new Size(404, 20);
     statusStrip.TabIndex = 5;
-    // 
+    //
     // statusLabel
-    // 
+    //
     statusLabel.Name = "statusLabel";
     statusLabel.Size = new Size(39, 15);
     statusLabel.Text = "Ready";
     statusLabel.Alignment = ToolStripItemAlignment.Left;
-    // 
+    //
     // timingLabel
-    // 
+    //
     timingLabel.Alignment = ToolStripItemAlignment.Right;
     timingLabel.Name = "timingLabel";
     timingLabel.Size = new Size(120, 15);
     timingLabel.Text = "ETA: About 5 minutes";
-    // 
+    //
     // OvlTestBenchForm
-    // 
+    //
     BackColor = SystemColors.Control;
     ClientSize = new Size(404, 261);
     Controls.Add(mainColumn);
@@ -161,7 +163,7 @@ partial class OvlTestBenchForm {
     MinimumSize = new Size(420, 300);
     Name = "OvlTestBenchForm";
     StartPosition = FormStartPosition.CenterScreen;
-    Text = "Frontier OVL Test Bench";
+    Text = "RCT3 OVL Test Bench";
     Resize += OvlTestBenchForm_Resize;
     mainColumn.ResumeLayout(false);
     mainColumn.PerformLayout();
