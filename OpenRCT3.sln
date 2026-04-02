@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OVL", "OpenCobra\OVL\OVL.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "OpenCobra\Tests\Tests.csproj", "{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OvlTestRunner", "OpenCobra\Tests\TestRunner\OvlTestRunner.csproj", "{B9316006-752D-47CF-A5A9-2285B867C2B2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OvlTestBench", "OpenCobra\Tests\TestRunner\OvlTestBench.csproj", "{B9316006-752D-47CF-A5A9-2285B867C2B2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRCT3.Tests", "OpenRCT3.Tests\OpenRCT3.Tests.csproj", "{BFCB3247-C700-41CB-B922-1437ECF6C0C8}"
 EndProject

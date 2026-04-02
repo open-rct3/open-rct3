@@ -4,10 +4,15 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
-    <RootNamespace>OvlTestRunner</RootNamespace>
-    <AssemblyName>OvlTestRunner</AssemblyName>
+    <RootNamespace>OvlTestBench</RootNamespace>
+    <AssemblyName>OvlTestBench</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\OVL\OVL.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="ovl-tests.local.json" Condition="Exists('ovl-tests.local.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

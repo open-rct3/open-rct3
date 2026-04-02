@@ -1,0 +1,30 @@
+[
+  {
+    "label": "Debug OpenRCT3",
+    "adapter": "netcoredbg",
+    "request": "launch",
+    "program": "$ZED_WORKTREE_ROOT/OpenRCT3/bin/Debug/net8.0-windows/OpenRCT3.exe",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "env": {
+      "ENVIRONMENT": "Development"
+    },
+    "build": {
+      "command": "dotnet",
+      "args": ["build", "$ZED_WORKTREE_ROOT/OpenRCT3/OpenRCT3.csproj"]
+    }
+  },
+  {
+    "label": "Debug OVL Test Bench",
+    "adapter": "netcoredbg",
+    "request": "launch",
+    "program": "$ZED_WORKTREE_ROOT/OpenCobra/Tests/TestRunner/bin/Debug/net8.0-windows/OvlTestRunner.exe",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "env": {
+      "ENVIRONMENT": "Development"
+    },
+    "build": {
+      "command": "dotnet",
+      "args": ["build", "$ZED_WORKTREE_ROOT/OpenCobra/Tests/TestRunner/OvlTestBench.csproj"]
+    }
+  }
+]

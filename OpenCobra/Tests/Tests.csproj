@@ -41,10 +41,4 @@
       <EmbeddedResource Include="style.common.ovl" />
       <EmbeddedResource Include="style.unique.ovl" />
     </ItemGroup>
-
-    <ItemGroup>
-      <None Update="ovl-tests.local.json" Condition="Exists('ovl-tests.local.json')">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
 </Project>

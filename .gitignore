@@ -30,8 +30,8 @@ nunit_random_seed.tmp
 TestResults/
 
 # Tests for Production OVLs
-OpenCobra/Tests/bin/**/ovl-tests.local.json
-OpenCobra/Tests/ovl-tests.local.json
+OpenCobra/Tests/TestRunner/bin/**/ovl-tests.local.json
+OpenCobra/Tests/TestRunner/ovl-tests.local.json
 
 # DUB
 .dub

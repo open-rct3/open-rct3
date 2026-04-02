@@ -1,0 +1,15 @@
+{
+  // Local OVL test configuration
+  // Copy this file to 'ovl-tests.local.json' in this directory
+  // Update paths to point to your RCT3 installation
+
+  "extraOvls": {
+    // RCT3 scenery themes and custom scenery
+    "Style": "C:/Program Files/RollerCoaster Tycoon 3/Content/Assets/Style/*.*.ovl",
+    // Random objects like litter and animal food
+    "Objects": "C:/Program Files/RollerCoaster Tycoon 3/Content/Assets/Objects/*.*.ovl",
+    // Water textures
+    "Water": "C:/Program Files/RollerCoaster Tycoon 3/Content/Assets/Water/*.*.ovl"
+    // etc.
+  }
+}
