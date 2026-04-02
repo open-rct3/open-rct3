@@ -17,7 +17,7 @@ sealed partial class ContentPanel : UserControl {
   private IViewerPlugin? _activePlugin;
   private bool _webViewReady;
 
-  /// <summary>Fired when the user picks a different viewer from the header dropdown.</summary>
+  /// <summary>Fired when the user picks a different file viewer.</summary>
   public event EventHandler<IViewerPlugin?>? ActiveViewerChanged;
 
   public ContentPanel() {
@@ -50,7 +50,7 @@ sealed partial class ContentPanel : UserControl {
   public void ShowNoViewer(FileType fileType) {
     Reset();
     header.SetMessage(fileType.ToDisplayName());
-    Navigate(EmptyView.RenderNoViewer(fileType.ToDisplayName()));
+    Navigate(EmptyView.RenderNoViewer($"{fileType.ToDisplayName()}s"));
   }
 
   /// <summary>Clear the content panel to its empty state.</summary>
