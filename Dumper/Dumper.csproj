@@ -3,11 +3,11 @@
   <PropertyGroup>
     <ProjectGuid>{9281AEA1-C96C-4881-B00F-2D4D6521B081}</ProjectGuid>
     <ProjectTypeGuids>{A3F8F2AB-B479-4A4A-A458-A89E7DC349F1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <RootNamespace>Dumper</RootNamespace>
-    <!--<MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>-->
     <AssemblyName>OVL Dumper</AssemblyName>
     <!-- Display name -->
     <ApplicationTitle>OVL Dumper</ApplicationTitle>
@@ -19,6 +19,8 @@
     <!-- Versions -->
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
+    <!-- Icon -->
+    <ApplicationIcon>Dumper.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>full</DebugType>
@@ -26,13 +28,6 @@
     <OutputPath>bin\Debug</OutputPath>
     <DefineConstants>DEBUG;</DefineConstants>
     <WarningLevel>4</WarningLevel>
-    <CodesigningKey>Mac Developer</CodesigningKey>
-    <IncludeMonoRuntime>false</IncludeMonoRuntime>
-    <UseSGen>true</UseSGen>
-    <UseRefCounting>true</UseRefCounting>
-    <HttpClientHandler></HttpClientHandler>
-    <AOTMode></AOTMode>
-    <CreatePackage>false</CreatePackage>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -40,23 +35,7 @@
     <OutputPath>bin\Release</OutputPath>
     <DefineConstants></DefineConstants>
     <WarningLevel>4</WarningLevel>
-    <CreatePackage>true</CreatePackage>
-    <UseSGen>true</UseSGen>
-    <UseRefCounting>true</UseRefCounting>
-    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
-    <HttpClientHandler></HttpClientHandler>
-    <LinkMode>SdkOnly</LinkMode>
-    <AOTMode></AOTMode>
   </PropertyGroup>
-
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('macos')) != true">
-    <Compile Remove="**\*.macOS.cs" />
-    <None Include="**\*.macOS.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
-  </ItemGroup>
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows')) != true">
-    <Compile Remove="**\*.windows.cs" />
-    <None Include="**\*.windows.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OpenCobra\OVL\OVL.csproj" />
@@ -64,6 +43,8 @@
   <ItemGroup>
     <PackageReference Include="Extism.runtime.all" Version="*" />
     <PackageReference Include="Extism.Sdk" Version="*" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="*" />
+    <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
     <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
@@ -81,110 +62,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-  <Choose>
-    <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
-      <PropertyGroup>
-        <EvergineProfileName>macOS</EvergineProfileName>
-        <!-- See https://github.com/xamarin/xamarin-macios -->
-        <TargetFramework>net8.0-macos</TargetFramework>
-        <ImplicitUsings>true</ImplicitUsings>
-        <TargetPlatformVersion>14.0</TargetPlatformVersion>
-        <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
-      </PropertyGroup>
-      <ItemGroup>
-        <Compile Remove="MainForm.cs" />
-        <Compile Remove="MainForm.Designer.cs" />
-        <Compile Remove="MainForm.Icons.cs" />
-        <Compile Remove="Main.windows.cs" />
-      </ItemGroup>
-      <ItemGroup>
-        <Folder Include="Resources\" />
-      </ItemGroup>
-      <ItemGroup>
-        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-512%402x.png">
-          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-512%402x.png</Link>
-        </ImageAsset>
-        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-32%402x.png">
-          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-32%402x.png</Link>
-        </ImageAsset>
-        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-16%402x.png">
-          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-16%402x.png</Link>
-        </ImageAsset>
-        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-256%402x.png">
-          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-256%402x.png</Link>
-        </ImageAsset>
-        <ImageAsset Update="Assets.xcassets\AppIcon.appiconset\AppIcon-128%402x.png">
-          <Link>Assets.xcassets\AppIcon.appiconset\AppIcon-128%402x.png</Link>
-        </ImageAsset>
-      </ItemGroup>
-      <ItemGroup>
-        <Compile Update="AppDelegate.designer.cs">
-          <DependentUpon>AppDelegate.cs</DependentUpon>
-        </Compile>
-        <Compile Update="Sidebar.designer.cs">
-          <DependentUpon>Sidebar.cs</DependentUpon>
-        </Compile>
-        <Compile Update="EditorContainer.designer.cs">
-          <DependentUpon>EditorContainer.cs</DependentUpon>
-        </Compile>
-        <Compile Update="Editor.designer.cs">
-          <DependentUpon>Editor.cs</DependentUpon>
-        </Compile>
-        <Compile Update="ProjectWindow.designer.cs">
-          <DependentUpon>ProjectWindow.cs</DependentUpon>
-        </Compile>
-        <Compile Update="Documents\OvlViewController.designer.cs">
-          <DependentUpon>Documents/OvlViewController.cs</DependentUpon>
-        </Compile>
-        <Compile Update="Documents\OvlWindowController.designer.cs">
-          <DependentUpon>Documents/OvlWindowController.cs</DependentUpon>
-        </Compile>
-        <Compile Update="MainWindow.designer.cs">
-          <DependentUpon>MainWindow.cs</DependentUpon>
-        </Compile>
-      </ItemGroup>
-    </When>
-    <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
-      <PropertyGroup>
-        <OutputType>WinExe</OutputType>
-        <TargetFramework>net8.0-windows</TargetFramework>
-        <UseWindowsForms>true</UseWindowsForms>
-        <!-- Icon -->
-        <ApplicationIcon>Dumper.ico</ApplicationIcon>
-      </PropertyGroup>
-      <ItemGroup>
-        <PackageReference Include="Microsoft.Web.WebView2" Version="*" />
-        <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
-      </ItemGroup>
-      <ItemGroup>
-        <Compile Remove="Documents/DocumentController.cs" />
-        <Compile Remove="Documents/OvlDocument.cs" />
-        <Compile Remove="Documents/OvlViewController.cs" />
-        <Compile Remove="Documents/OvlViewController.designer.cs" />
-        <Compile Remove="Documents/OvlWindowController.cs" />
-        <Compile Remove="Documents/OvlWindowController.designer.cs" />
-        <Compile Remove="Documents/ProjectDocument.cs" />
-        <Compile Remove="AppDelegate.cs" />
-        <Compile Remove="AppDelegate.designer.cs" />
-        <Compile Remove="Editor.cs" />
-        <Compile Remove="Editor.designer.cs" />
-        <Compile Remove="EditorContainer.cs" />
-        <Compile Remove="EditorContainer.designer.cs" />
-        <Compile Remove="EditorController.cs" />
-        <Compile Remove="EditorController.designer.cs" />
-        <Compile Remove="EditorSplitView.cs" />
-        <Compile Remove="Error.cs" />
-        <Compile Remove="MainWindow.cs" />
-        <Compile Remove="MainWindow.designer.cs" />
-        <Compile Remove="NSErrorExtensions.cs" />
-        <Compile Remove="ProjectWindow.cs" />
-        <Compile Remove="ProjectWindow.designer.cs" />
-        <Compile Remove="Sidebar.cs" />
-        <Compile Remove="Sidebar.designer.cs" />
-      </ItemGroup>
-      <ItemGroup>
-        <Content Include="Dumper.ico" />
-      </ItemGroup>
-    </When>
-  </Choose>
+  <ItemGroup>
+    <Content Include="Dumper.ico" />
+  </ItemGroup>
 </Project>
