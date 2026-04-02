@@ -17,9 +17,10 @@ static class EmptyView {
     WrapInShell(new HtmlTag("div").AddClass("empty-state")
       .Append(new HtmlTag("p").AddClass("empty-text")
         .AppendHtml("No viewer plugin for ")
-        .Append(new HtmlTag("strong").Text(fileTypeName)))
+        .Append(new HtmlTag("span").Text(fileTypeName).AddClass("empty-file-type"))
+        .AppendText("."))
       .Append(new HtmlTag("p").AddClass("empty-hint")
-        .Text("Install a plugin or choose a different viewer from the header dropdown.")));
+        .Text("Install a plugin or choose a different viewer from the dropdown above.")));
 
   public static string WrapInShell(HtmlTag bodyContent) {
     var colors = CaptureSystemColors();
@@ -165,14 +166,11 @@ body {
 
 .empty-text {
   color: var(--sys-gray-text);
-  font-size: var(--font-size-px);
   line-height: var(--line-height);
 }
 
 .empty-hint {
   color: var(--sys-gray-text);
-  font-size: max(var(--font-size-min), calc(var(--font-size-px) * 0.9));
-  opacity: 0.8;
   max-width: 28em;
 }
 
@@ -191,14 +189,14 @@ pre {
   border: 1px solid var(--sys-control-dark);
   padding: var(--pad-inner);
   font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
-  font-size: max(var(--font-size-min), calc(var(--font-size-px) * 0.93));
+  font-size: max(var(--font-size-min), calc(var(--font-size) * 0.93));
   line-height: 1.5;
   overflow-x: auto;
 }
 
 code {
   font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
-  font-size: max(var(--font-size-min), calc(var(--font-size-px) * 0.93));
+  font-size: max(var(--font-size-min), calc(var(--font-size) * 0.93));
 }
 
 img {
