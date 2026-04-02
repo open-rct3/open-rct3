@@ -62,7 +62,7 @@
     <ProjectReference Include="..\OpenCobra\OVL\OVL.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Linq.Async" Version="6.0.3" />
+    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
     <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
   </ItemGroup>
