@@ -54,10 +54,10 @@ sealed partial class ContentPanel : UserControl {
   }
 
   /// <summary>Clear the content panel to its empty state.</summary>
-  public void ShowEmpty() {
+  public void ShowEmpty(bool isOvlopened = false) {
     Reset();
     header.SetMessage("");
-    Navigate(EmptyView.Render("Select a file to view."));
+    Navigate(EmptyView.Render(isOvlopened ? "Select a file to view." : "Open an OVL archive."));
   }
 
   private void Reset() {

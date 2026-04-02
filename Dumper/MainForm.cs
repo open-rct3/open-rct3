@@ -74,7 +74,7 @@ public partial class MainForm : Form {
   private void LoadOvl(Ovl ovl) {
     _currentOvl = ovl;
     _nodeEntries.Clear();
-    contentPanel.ShowEmpty();
+    contentPanel.ShowEmpty(true);
 
     // Update window title with document name
     var docName = Path.GetFileName(ovl.FileName);
@@ -362,7 +362,7 @@ public partial class MainForm : Form {
 
   private void TreeView_AfterSelect(object? sender, TreeViewEventArgs e) {
     if (e.Node == null || _currentOvl == null) {
-      contentPanel.ShowEmpty();
+      contentPanel.ShowEmpty(_currentOvl != null);
       return;
     }
 
@@ -379,14 +379,15 @@ public partial class MainForm : Form {
 
       var data = _currentOvl.GetResourceBytes(entry);
       if (data == null) {
-        contentPanel.ShowEmpty();
+        contentPanel.ShowEmpty(_currentOvl != null);
+        MessageBox.Show("Failed to load selected resource.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         return;
       }
 
       contentPanel.ShowContent(viewers, data);
     } else {
       // Group node or no entry — show empty
-      contentPanel.ShowEmpty();
+      contentPanel.ShowEmpty(_currentOvl != null);
     }
   }
 
