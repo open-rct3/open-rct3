@@ -39,6 +39,7 @@ docs.json
 __dummy.html
 
 # Visual Studio
+.vs/CopilotSnapshots/
 .vs/**/project-cache/*.json
 .vs/OpenRCT3/v18/*
 .vs/OpenRCT3/xs/UserPrefs.xml
