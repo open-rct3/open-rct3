@@ -30,11 +30,15 @@ public partial class MainForm : Form {
   private readonly ContentPanel _contentPanel = new();
   private Ovl? _currentOvl;
   private readonly Dictionary<TreeNode, OvlLoaderEntry> _nodeEntries = new();
+  private bool _suppressSplitterMoved;
 
   public MainForm() {
     InitializeComponent();
     InitializeComponentIcons();
+    splitView.FixedPanel = FixedPanel.Panel1;
     splitView.MouseDoubleClick += Splitter_MouseDoubleClick;
+    splitView.SplitterMoved += SplitView_SplitterMoved;
+    splitView.SizeChanged += SplitView_SizeChanged;
 
     // Add content panel to the right side of the split view
     splitView.Panel2.Controls.Add(_contentPanel);
@@ -459,7 +463,29 @@ public partial class MainForm : Form {
 
   private void Splitter_MouseDoubleClick(object? sender, MouseEventArgs e) {
     if (treeView.Nodes.Count == 0) return;
-    FitSidebarToContent(int.MaxValue);
+    FitSidebarToContent(ClientSize.Width / 2);
+  }
+
+  private void SplitView_SplitterMoved(object? sender, SplitterEventArgs e) {
+    ClampSplitterDistance();
+  }
+
+  private void SplitView_SizeChanged(object? sender, EventArgs e) {
+    ClampSplitterDistance();
+  }
+
+  private void ClampSplitterDistance() {
+    if (_suppressSplitterMoved) return;
+    // Prevent infinite loops when user's adjust the splitter distance
+    _suppressSplitterMoved = true;
+    try {
+      var maxAllowed = splitView.Width / 2;
+      if (splitView.SplitterDistance > maxAllowed) {
+        splitView.SplitterDistance = maxAllowed;
+      }
+    } finally {
+      _suppressSplitterMoved = false;
+    }
   }
 
   private void FitSidebarToContent(int maxWidth) {
@@ -468,6 +494,10 @@ public partial class MainForm : Form {
       contentWidth = Math.Max(contentWidth, MeasureNodeWidthFast(node));
 
     var padding = SystemInformation.VerticalScrollBarWidth + 8;
+    // Clamp maximum width to no more than 25% wider than content width
+    var maxAllowedWidth = (int)(contentWidth * 1.25);
+    maxWidth = Math.Min(maxWidth, maxAllowedWidth);
+
     var target = Math.Min(contentWidth + padding, maxWidth);
     target = Math.Min(target, splitView.Width - splitView.Panel2MinSize);
     target = Math.Max(target, splitView.Panel1MinSize);
