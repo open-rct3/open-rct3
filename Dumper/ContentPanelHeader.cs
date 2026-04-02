@@ -12,7 +12,7 @@ namespace Dumper;
 /// Shows the current plugin name centered, and a dropdown on the right
 /// to switch between available viewers for the current file type.
 /// </remarks>
-sealed partial class ContentPanelHeader : Panel {
+sealed partial class ContentPanelHeader : TableLayoutPanel {
 
   /// <summary>Fired when the user selects a different viewer from the dropdown.</summary>
   public event EventHandler<IViewerPlugin?>? ViewerChanged;

@@ -1,3 +1,6 @@
+using System.Windows.Forms;
+using System.Xml;
+
 namespace Dumper {
   partial class ContentPanelHeader {
     private System.ComponentModel.IContainer components = null;
@@ -22,28 +25,28 @@ namespace Dumper {
       //
       // nameLabel
       //
-      nameLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-      nameLabel.Font = new System.Drawing.Font(System.Drawing.SystemFonts.DefaultFont.FontFamily, System.Drawing.SystemFonts.DefaultFont.Size, System.Drawing.FontStyle.Bold);
+      nameLabel.AutoSize = true;
       nameLabel.Name = "nameLabel";
-      nameLabel.Padding = new System.Windows.Forms.Padding(0, 0, 100, 0);
+      nameLabel.Padding = new System.Windows.Forms.Padding(0, 7, 0, 0);
       nameLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
       //
       // viewerCombo
       //
-      viewerCombo.Dock = System.Windows.Forms.DockStyle.Right;
+      viewerCombo.Enabled = false;
       viewerCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-      viewerCombo.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
       viewerCombo.Margin = new System.Windows.Forms.Padding(0, 4, 4, 4);
       viewerCombo.Name = "viewerCombo";
-      viewerCombo.Size = new System.Drawing.Size(180, 23);
-      viewerCombo.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+      viewerCombo.Size = new System.Drawing.Size(125, 23);
+      viewerCombo.MaximumSize = new System.Drawing.Size(175, 23);
       //
       // ContentPanelHeader
       //
-      BackColor = System.Drawing.SystemColors.Control;
       BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-      Controls.Add(nameLabel);
-      Controls.Add(viewerCombo);
+      ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+      ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 130F));
+      RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+      Controls.Add(nameLabel, 0, 0);
+      Controls.Add(viewerCombo, 1, 0);
       Dock = System.Windows.Forms.DockStyle.Top;
       Height = 32;
       Name = "ContentPanelHeader";

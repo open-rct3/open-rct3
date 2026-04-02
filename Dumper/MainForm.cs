@@ -4,7 +4,6 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
-using Dumper.Models;
 using Dumper.Plugins;
 using OVL;
 using OVL.Files;
@@ -27,7 +26,6 @@ public partial class MainForm : Form {
   static readonly string ovlFmt = "{0} OVLs";
 
   private readonly PluginManager _pluginManager = new();
-  private readonly ContentPanel _contentPanel = new();
   private Ovl? _currentOvl;
   private readonly Dictionary<TreeNode, OvlLoaderEntry> _nodeEntries = new();
   private bool _suppressSplitterMoved;
@@ -39,9 +37,6 @@ public partial class MainForm : Form {
     splitView.MouseDoubleClick += Splitter_MouseDoubleClick;
     splitView.SplitterMoved += SplitView_SplitterMoved;
     splitView.SizeChanged += SplitView_SizeChanged;
-
-    // Add content panel to the right side of the split view
-    splitView.Panel2.Controls.Add(_contentPanel);
 
     // Wire tree selection to content panel
     treeView.AfterSelect += TreeView_AfterSelect;
@@ -58,7 +53,7 @@ public partial class MainForm : Form {
   protected override void OnShown(EventArgs e) {
     base.OnShown(e);
     // Initialize WebView2 after the form is shown (requires message loop)
-    _ = _contentPanel.InitializeAsync();
+    _ = contentPanel.InitializeAsync();
   }
 
   protected override void OnFormClosed(FormClosedEventArgs e) {
@@ -79,7 +74,7 @@ public partial class MainForm : Form {
   private void LoadOvl(Ovl ovl) {
     _currentOvl = ovl;
     _nodeEntries.Clear();
-    _contentPanel.ShowEmpty();
+    contentPanel.ShowEmpty();
 
     // Update window title with document name
     var docName = Path.GetFileName(ovl.FileName);
@@ -367,7 +362,7 @@ public partial class MainForm : Form {
 
   private void TreeView_AfterSelect(object? sender, TreeViewEventArgs e) {
     if (e.Node == null || _currentOvl == null) {
-      _contentPanel.ShowEmpty();
+      contentPanel.ShowEmpty();
       return;
     }
 
@@ -378,20 +373,20 @@ public partial class MainForm : Form {
       var tag = fileType.Value.ToTagString();
       var viewers = _pluginManager.GetViewers(tag);
       if (viewers.Count == 0) {
-        _contentPanel.ShowNoViewer(fileType.Value);
+        contentPanel.ShowNoViewer(fileType.Value);
         return;
       }
 
       var data = _currentOvl.GetResourceBytes(entry);
       if (data == null) {
-        _contentPanel.ShowEmpty();
+        contentPanel.ShowEmpty();
         return;
       }
 
-      _contentPanel.ShowContent(viewers, data);
+      contentPanel.ShowContent(viewers, data);
     } else {
       // Group node or no entry — show empty
-      _contentPanel.ShowEmpty();
+      contentPanel.ShowEmpty();
     }
   }
 
@@ -422,7 +417,7 @@ public partial class MainForm : Form {
           if (_currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
           var data = _currentOvl.GetResourceBytes(entry);
           if (data == null) return;
-          _contentPanel.ShowContent(viewers, data);
+          contentPanel.ShowContent(viewers, data);
         };
         openWith.DropDownItems.Add(viewerItem);
       }
