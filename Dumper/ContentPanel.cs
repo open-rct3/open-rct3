@@ -15,6 +15,7 @@ sealed partial class ContentPanel : UserControl {
   private byte[]? _currentData;
   private IReadOnlyList<IViewerPlugin>? _currentViewers;
   private IViewerPlugin? _activePlugin;
+  private bool _webViewReady;
 
   /// <summary>Fired when the user picks a different viewer from the header dropdown.</summary>
   public event EventHandler<IViewerPlugin?>? ActiveViewerChanged;
@@ -28,8 +29,10 @@ sealed partial class ContentPanel : UserControl {
   public async System.Threading.Tasks.Task InitializeAsync() {
     try {
       await webView.EnsureCoreWebView2Async();
+      _webViewReady = true;
+      ShowEmpty();
     } catch {
-      webView.Visible = false;
+      // WebView2 runtime not available
     }
   }
 
@@ -41,27 +44,20 @@ sealed partial class ContentPanel : UserControl {
 
     header.SetViewers(_activePlugin, viewers);
     RenderCurrent();
-
-    emptyLabel.Visible = false;
-    webView.Visible = true;
   }
 
   /// <summary>Show a message indicating no viewer is available for this file type.</summary>
   public void ShowNoViewer(FileType fileType) {
     Reset();
     header.SetMessage(fileType.ToDisplayName());
-    emptyLabel.Text = $"No viewer for {fileType.ToString()} files";
-    emptyLabel.Visible = true;
-    webView.Visible = false;
+    Navigate(EmptyView.RenderNoViewer(fileType.ToDisplayName()));
   }
 
   /// <summary>Clear the content panel to its empty state.</summary>
   public void ShowEmpty() {
     Reset();
     header.SetMessage("");
-    emptyLabel.Text = "Select a file to view";
-    emptyLabel.Visible = true;
-    webView.Visible = false;
+    Navigate(EmptyView.Render("Select a file to view."));
   }
 
   private void Reset() {
@@ -81,57 +77,11 @@ sealed partial class ContentPanel : UserControl {
     if (_activePlugin == null || _currentData == null) return;
 
     var html = _activePlugin.Render(_currentData);
-    var wrappedHtml = WrapHtml(html, _activePlugin.Info.Name);
-
-    if (webView.CoreWebView2 != null) {
-      webView.CoreWebView2.NavigateToString(wrappedHtml);
-    }
+    Navigate(EmptyView.WrapInShell(html));
   }
 
-  private static string WrapHtml(string body, string title) {
-    return $@"<!DOCTYPE html>
-<html>
-<head>
-<meta charset='utf-8'>
-<style>
-  body {{
-    margin: 0;
-    padding: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-    color: #1a1a1a;
-    background: #fff;
-  }}
-  pre {{
-    background: #f5f5f5;
-    padding: 12px;
-    border-radius: 4px;
-    overflow-x: auto;
-    font-family: 'Cascadia Code', 'Fira Code', monospace;
-    font-size: 13px;
-  }}
-  img {{
-    max-width: 100%;
-    height: auto;
-  }}
-  table {{
-    border-collapse: collapse;
-    width: 100%;
-  }}
-  th, td {{
-    border: 1px solid #ddd;
-    padding: 6px 10px;
-    text-align: left;
-  }}
-  th {{
-    background: #f0f0f0;
-    font-weight: 600;
-  }}
-</style>
-</head>
-<body>
-{body}
-</body>
-</html>";
+  private void Navigate(string html) {
+    if (_webViewReady && webView.CoreWebView2 != null)
+      webView.CoreWebView2.NavigateToString(html);
   }
 }

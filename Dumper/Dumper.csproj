@@ -43,6 +43,7 @@
   <ItemGroup>
     <PackageReference Include="Extism.runtime.all" Version="*" />
     <PackageReference Include="Extism.Sdk" Version="*" />
+    <PackageReference Include="HtmlTags" Version="10.0.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="*" />
     <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />
