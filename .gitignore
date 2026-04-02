@@ -10,6 +10,8 @@ obj/
 **/bin/Debug/*/*.deps.json
 **/bin/Debug/*/*.runtimeconfig.json
 **/bin/Debug/**/*.items
+**/bin/Debug/**/*.exe.WebView2/
+**/bin/Debug/**/*.WebView2.*.xml
 OpenRCT3/bin/
 OpenRCT3.Tests/bin/
 bin/OpenRCT3*

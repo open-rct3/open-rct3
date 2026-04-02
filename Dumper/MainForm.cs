@@ -5,6 +5,7 @@
 //
 // Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
 using Dumper.Models;
+using Dumper.Plugins;
 using OVL;
 using OVL.Files;
 using Rop.Winforms8.DuotoneIcons;
@@ -25,10 +26,40 @@ public partial class MainForm : Form {
   static readonly string resourcesFmt = "{0} Resources";
   static readonly string ovlFmt = "{0} OVLs";
 
+  private readonly PluginManager _pluginManager = new();
+  private readonly ContentPanel _contentPanel = new();
+  private Ovl? _currentOvl;
+  private readonly Dictionary<TreeNode, OvlLoaderEntry> _nodeEntries = new();
+
   public MainForm() {
     InitializeComponent();
     InitializeComponentIcons();
     splitView.MouseDoubleClick += Splitter_MouseDoubleClick;
+
+    // Add content panel to the right side of the split view
+    splitView.Panel2.Controls.Add(_contentPanel);
+
+    // Wire tree selection to content panel
+    treeView.AfterSelect += TreeView_AfterSelect;
+    treeView.NodeMouseClick += TreeView_NodeMouseClick;
+
+    // Load plugins at startup
+    try {
+      _pluginManager.LoadAll();
+    } catch (Exception ex) {
+      System.Diagnostics.Debug.WriteLine($"Plugin loading failed: {ex.Message}");
+    }
+  }
+
+  protected override void OnShown(EventArgs e) {
+    base.OnShown(e);
+    // Initialize WebView2 after the form is shown (requires message loop)
+    _ = _contentPanel.InitializeAsync();
+  }
+
+  protected override void OnFormClosed(FormClosedEventArgs e) {
+    _pluginManager.Dispose();
+    base.OnFormClosed(e);
   }
 
   private async Task OpenOvl() {
@@ -42,6 +73,10 @@ public partial class MainForm : Form {
   }
 
   private void LoadOvl(Ovl ovl) {
+    _currentOvl = ovl;
+    _nodeEntries.Clear();
+    _contentPanel.ShowEmpty();
+
     // Update window title with document name
     var docName = Path.GetFileName(ovl.FileName);
     var lower = docName.ToLower();
@@ -140,6 +175,7 @@ public partial class MainForm : Form {
               childNode.ImageKey = FileType.Texture.ToIconName();
               childNode.SelectedImageKey = FileType.Texture.ToIconName();
               childNode.ToolTipText = BuildEntryTooltip(frame.symbolFileType, frame.loaderFileType);
+              _nodeEntries[childNode] = frame.entry;
             }
 
             frameGroups.Remove(baseName);
@@ -171,6 +207,7 @@ public partial class MainForm : Form {
             childNode.SelectedImageKey = childIconKey;
             childNode.Tag = loaderFileType;
             childNode.ToolTipText = BuildEntryTooltip(symbolFileType, loaderFileType);
+            _nodeEntries[childNode] = entry;
           }
         }
 
@@ -188,6 +225,7 @@ public partial class MainForm : Form {
           node.SelectedImageKey = iconKey;
           node.Tag = loaderFileType;
           node.ToolTipText = tooltip;
+          _nodeEntries[node] = entry;
         }
       }
     } else {
@@ -321,6 +359,102 @@ public partial class MainForm : Form {
 
   private void exitToolStripMenuItem_Click(object sender, EventArgs e) {
     Application.Exit();
+  }
+
+  private void TreeView_AfterSelect(object? sender, TreeViewEventArgs e) {
+    if (e.Node == null || _currentOvl == null) {
+      _contentPanel.ShowEmpty();
+      return;
+    }
+
+    var fileType = e.Node.Tag as FileType?;
+
+    // If this node has a loader entry, show it via the plugin viewer
+    if (_nodeEntries.TryGetValue(e.Node, out var entry) && fileType != null && fileType != FileType.Unknown) {
+      var tag = fileType.Value.ToTagString();
+      var viewers = _pluginManager.GetViewers(tag);
+      if (viewers.Count == 0) {
+        _contentPanel.ShowNoViewer(fileType.Value);
+        return;
+      }
+
+      var data = _currentOvl.GetResourceBytes(entry);
+      if (data == null) {
+        _contentPanel.ShowEmpty();
+        return;
+      }
+
+      _contentPanel.ShowContent(viewers, data);
+    } else {
+      // Group node or no entry — show empty
+      _contentPanel.ShowEmpty();
+    }
+  }
+
+  private void TreeView_NodeMouseClick(object? sender, TreeNodeMouseClickEventArgs e) {
+    if (e.Button != MouseButtons.Right || e.Node == null) return;
+
+    // Only show context menu on leaf nodes with a known file type and loader entry
+    var fileType = e.Node.Tag as FileType?;
+    if (fileType == null || fileType == FileType.Unknown || !_nodeEntries.ContainsKey(e.Node)) return;
+
+    var tag = fileType.Value.ToTagString();
+    var viewers = _pluginManager.GetViewers(tag);
+
+    var menu = new ContextMenuStrip();
+
+    // --- Open With submenu ---
+    var openWith = new ToolStripMenuItem("Open With");
+    if (viewers.Count > 0) {
+      var defaultViewer = _pluginManager.GetDefaultViewer(tag);
+      foreach (var viewer in viewers) {
+        var viewerItem = new ToolStripMenuItem($"{viewer.Info.Name} v{viewer.Info.Version}") {
+          Tag = viewer,
+          Font = viewer == defaultViewer
+            ? new Font(menu.Font, FontStyle.Bold)
+            : menu.Font,
+        };
+        viewerItem.Click += (_, _) => {
+          if (_currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
+          var data = _currentOvl.GetResourceBytes(entry);
+          if (data == null) return;
+          _contentPanel.ShowContent(viewers, data);
+        };
+        openWith.DropDownItems.Add(viewerItem);
+      }
+      openWith.DropDownItems.Add(new ToolStripSeparator());
+    }
+    var chooseDefault = new ToolStripMenuItem("Choose a default viewer\u2026");
+    chooseDefault.Click += (_, _) => {
+      using var chooser = new DefaultViewerChooser(_pluginManager.GetRegistrySnapshot());
+      if (chooser.ShowDialog(this) == DialogResult.OK && !string.IsNullOrEmpty(chooser.SelectedFileTypeTag)) {
+        _pluginManager.SetDefaultViewer(chooser.SelectedFileTypeTag, chooser.SelectedDefaultPlugin!);
+        // Re-render if this node's type was changed
+        if (tag == chooser.SelectedFileTypeTag)
+          TreeView_AfterSelect(sender, new TreeViewEventArgs(e.Node));
+      }
+    };
+    openWith.DropDownItems.Add(chooseDefault);
+    menu.Items.Add(openWith);
+
+    // --- Export ---
+    var export = new ToolStripMenuItem("Export");
+    export.Click += (_, _) => throw new NotImplementedException("Export is not yet implemented.");
+    menu.Items.Add(export);
+
+    menu.Items.Add(new ToolStripSeparator());
+
+    // --- Properties ---
+    var properties = new ToolStripMenuItem("Properties");
+    properties.Click += (_, _) => {
+      if (_currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
+      var hasViewer = viewers.Count > 0;
+      using var dialog = new ResourceProperties(entry, fileType.Value, hasViewer);
+      dialog.ShowDialog(this);
+    };
+    menu.Items.Add(properties);
+
+    menu.Show(treeView, e.Location);
   }
 
   private void Splitter_MouseDoubleClick(object? sender, MouseEventArgs e) {

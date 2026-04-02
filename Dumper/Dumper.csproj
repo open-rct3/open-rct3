@@ -62,6 +62,8 @@
     <ProjectReference Include="..\OpenCobra\OVL\OVL.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Extism.runtime.all" Version="*" />
+    <PackageReference Include="Extism.Sdk" Version="*" />
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
     <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
@@ -151,6 +153,7 @@
         <ApplicationIcon>Dumper.ico</ApplicationIcon>
       </PropertyGroup>
       <ItemGroup>
+        <PackageReference Include="Microsoft.Web.WebView2" Version="*" />
         <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
       </ItemGroup>
       <ItemGroup>

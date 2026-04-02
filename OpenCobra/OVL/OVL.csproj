@@ -10,6 +10,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Tests" />
     <InternalsVisibleTo Include="OvlTestBench" />
+    <InternalsVisibleTo Include="OVL Dumper" />
   </ItemGroup>
 
   <ItemGroup>

@@ -419,6 +419,20 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
   /// <summary>Unique file data (only populated for paired archives via Load).</summary>
   internal OvlFileData? UniqueData => uniqueData;
 
+  /// <summary>Extract the raw bytes for a specific loader entry by resolving its virtual address.</summary>
+  /// <param name="entry">The loader entry to extract data for.</param>
+  /// <returns>The raw byte slice, or <c>null</c> if the address cannot be resolved.</returns>
+  public byte[]? GetResourceBytes(OvlLoaderEntry entry) {
+    if (!ResolveAddress(entry.DataAddress, out _, out var fileIndex, out var subBlockIndex, out var offset))
+      return null;
+    var data = entry.DataAddress >= uniqueReloBase && uniqueData != null ? uniqueData : commonData;
+    if (data == null) return null;
+    var subBlocks = data.FileBlockData[fileIndex];
+    if (subBlockIndex >= subBlocks.Length) return null;
+    var block = subBlocks[subBlockIndex];
+    return block.AsSpan((int) offset).ToArray();
+  }
+
   // --- Constructors ---
 
   public Ovl(string fileName, OvlType type = OvlType.Common) {

@@ -72,7 +72,7 @@ public enum FileType : ushort {
 }
 
 /// <summary>Extension methods for working with <see cref="FileType"/>.</summary>
-public static class StringExtensions {
+public static class FileTypeExtensions {
   /// <summary>Convert an OVL file type tag string (e.g. <c>"tex"</c>) to the corresponding <see cref="FileType"/>.</summary>
   public static FileType ToFileType(this string extension) {
     switch (extension) {
@@ -107,6 +107,48 @@ public static class StringExtensions {
       case "trr": return FileType.TrackedRide;
       case "wai": return FileType.WildAnimalItem;
       default: return FileType.Unknown;
+    }
+  }
+
+  public static string ToString(this FileType type) {
+    return $"{type.ToDisplayName()} ({type.ToTagString()})";
+  }
+
+  /// <summary>Convert a <see cref="FileType"/> to its OVL file type tag string (e.g. <see cref="FileType.Texture"/> → <c>"tex"</c>).</summary>
+  public static string ToTagString(this FileType type)
+  {
+    switch (type)
+    {
+      case FileType.Text: return "txt";
+      case FileType.Integer: return "int";
+      case FileType.Texture: return "tex";
+      case FileType.Flic: return "flic";
+      case FileType.FlexibleTexture: return "ftx";
+      case FileType.GuiSkinItem: return "gsi";
+      case FileType.SceneryItem: return "sid";
+      case FileType.BitmapTable: return "btbl";
+      case FileType.AnimatedRide: return "anr";
+      case FileType.BoneAnim: return "ban";
+      case FileType.BoneShape: return "bsh";
+      case FileType.CarriedItemExtra: return "ced";
+      case FileType.ChangingRoom: return "chg";
+      case FileType.CarriedItem: return "cid";
+      case FileType.ManifoldMesh: return "mam";
+      case FileType.PathType: return "ptd";
+      case FileType.QueueType: return "qtd";
+      case FileType.RideCar: return "ric";
+      case FileType.RideTrain: return "rit";
+      case FileType.SpecialAttraction: return "sat";
+      case FileType.StaticShape: return "shs";
+      case FileType.Sound: return "snd";
+      case FileType.Spline: return "spl";
+      case FileType.Stall: return "sta";
+      case FileType.SceneryItemVisual: return "svd";
+      case FileType.TerrainType: return "ter";
+      case FileType.TrackSection: return "tks";
+      case FileType.TrackedRide: return "trr";
+      case FileType.WildAnimalItem: return "wai";
+      default: return "";
     }
   }
 
