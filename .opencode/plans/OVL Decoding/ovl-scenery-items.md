@@ -119,20 +119,45 @@ public static class SceneryItems {
 ### Regression Prevention
 
 - No changes to `Ovl.cs`
-- New test file: `OpenCobra/OVL Tests/ReadSceneryItems.cs`
-- Run existing tests before/after
+- New test file: `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItems.cs`
+- Run TestRunner before/after implementation
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
+
+Create new file `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItems.cs`:
 
 ```csharp
-[Test] void Extract_StyleUniqueOvl_ReturnsSceneryItems()
-[Test] void Extract_Item_HasValidUI()
-[Test] void Extract_Item_PositionIsCorrect()
-[Test] void Extract_Item_TileCountMatchesDimensions()
-[Test] void Extract_Item_SvdRefsAreResolved()
-[Test] void Extract_Item_ExtraVersionIsCorrect()
-[Test] void Extract_Item_SoundRefsAreValid()
+using System;
+using System.Linq;
+using OVL;
+
+namespace OvlTestBench.Tests;
+
+public static class ReadSceneryItems {
+  public static readonly OvlTest[] All = [
+    new("SceneryItemEntriesDecoded", pair => {
+      foreach (var file in pair.Files) {
+        if (file.Type != OvlType.Unique) continue;  // SID is unique-only
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var items = SceneryItems.Extract(ovl);
+          if (ovl.LoaderEntries.Any(e => e.Tag == "sid") && items.Count == 0) {
+            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected scenery items but got none");
+          }
+          foreach (var item in items) {
+            Assert.That(!string.IsNullOrEmpty(item.UI.Name), $"{System.IO.Path.GetFileName(file.Path)}: scenery item has empty name");
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+  ];
+}
 ```
+
+Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
 
 ### Success Criteria
 
@@ -141,6 +166,25 @@ public static class SceneryItems {
 - Symbol references to SVD/SND/TXT/GSI resolved
 - Tile data parsed correctly
 - Zero regressions
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing scenery item entries (tag: `"sid"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "sid"` (unique OVL only)
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no SID entries present)
+
+## Post-Implementation Steps
+
+When this decoder is implemented:
+
+1. **Create results file**: Add `.opencode/results/ovl-scenery-items.md` with implementation summary
+2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
+3. **Update this plan**: Change status in "Production OVLs with Entries" section
 
 ### Future Work
 

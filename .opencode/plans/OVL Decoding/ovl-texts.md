@@ -53,19 +53,66 @@ public static class Texts {
 ### Regression Prevention
 
 - No changes to `Ovl.cs`
-- New test file: `OpenCobra/OVL Tests/ReadTexts.cs`
-- Run existing tests before/after
+- New test file: `OpenCobra/Tests/TestRunner/Tests/ReadTexts.cs`
+- Run TestRunner before/after implementation
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
+
+Create new file `OpenCobra/Tests/TestRunner/Tests/ReadTexts.cs`:
 
 ```csharp
-[Test] void Extract_StyleCommonOvl_ReturnsTexts()
-[Test] void Extract_TextValue_IsValidUtf16()
-[Test] void Extract_EmptyOvl_ReturnsEmptyList()
+using System;
+using System.Linq;
+using OVL;
+
+namespace OvlTestBench.Tests;
+
+public static class ReadTexts {
+  public static readonly OvlTest[] All = [
+    new("TextEntriesDecoded", pair => {
+      foreach (var file in pair.Files) {
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var texts = Texts.Extract(ovl);
+          if (ovl.LoaderEntries.Any(e => e.Tag == "txt") && texts.Count == 0) {
+            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected texts but got none");
+          }
+          foreach (var t in texts) {
+            Assert.That(!string.IsNullOrEmpty(t.Value), $"{System.IO.Path.GetFileName(file.Path)}: text '{t.Name}' is empty");
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+  ];
+}
 ```
+
+Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
 
 ### Success Criteria
 
 - All TXT entries extracted as readable strings
 - UTF-16LE decoding correct for all characters
 - Zero regressions
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing text entries (tag: `"txt"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "txt"`
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no TXT entries present)
+
+## Post-Implementation Steps
+
+When this decoder is implemented:
+
+1. **Create results file**: Add `.opencode/results/ovl-texts.md` with implementation summary
+2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
+3. **Update this plan**: Change status in "Production OVLs with Entries" section

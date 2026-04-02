@@ -4,29 +4,30 @@ This directory contains plans for decoding OVL archive file types. Six are [rank
 
 ## Plans
 
-| File                                                         | OVL Tag | File Type |
-| ------------------------------------------------------------ | ------- | --------- |
-| [ovl-integers.md](./ovl-integers.md)                         | `"int"` | Integer   |
-| [ovl-texts.md](./ovl-texts.md)                               | `"txt"` | Text      |
-| [ovl-sounds.md](./ovl-sounds.md)                             | `"snd"` | Sound     |
-| [ovl-splines.md](./ovl-splines.md)                           | `"spl"` | Spline    |
-| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"` | Terrain   |
-| [ovl-manifold-meshes.md](./ovl-manifold-meshes.md)           | `"mam"` | Mesh      |
-| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"` | Shape     |
-| [ovl-scenery-item-visuals.md](./ovl-scenery-item-visuals.md) | `"svd"` | Visual    |
-| [ovl-flexible-textures.md](./ovl-flexible-textures.md)       | `"ftx"` | Texture   |
-| [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"` | Scenery   |
-| [ovl-textures.md](./ovl-textures.md)                         | `"tex"` | Texture   |
+| Plan                                                         | OVL Tag | File Type | Status  |
+| ------------------------------------------------------------ | ------- | --------- | ------- |
+| [ovl-integers.md](./ovl-integers.md)                         | `"int"` | Integer   | Done    |
+| [ovl-texts.md](./ovl-texts.md)                               | `"txt"` | Text      | Planned |
+| [ovl-sounds.md](./ovl-sounds.md)                             | `"snd"` | Sound     | Planned |
+| [ovl-splines.md](./ovl-splines.md)                           | `"spl"` | Spline    | Planned |
+| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"` | Terrain   | Planned |
+| [ovl-manifold-meshes.md](./ovl-manifold-meshes.md)           | `"mam"` | Mesh      | Planned |
+| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"` | Shape     | Planned |
+| [ovl-scenery-item-visuals.md](./ovl-scenery-item-visuals.md) | `"svd"` | Visual    | Planned |
+| [ovl-flexible-textures.md](./ovl-flexible-textures.md)       | `"ftx"` | Texture   | Planned |
+| [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"` | Scenery   | Planned |
+| [ovl-textures.md](./ovl-textures.md)                         | `"tex"` | Texture   | Planned |
 
 ## Implementation Difficulty
 
-### 1. Easiest: [ovl-integers.md](./ovl-integers.md)
+### 1. Done: [ovl-integers.md](./ovl-integers.md)
 
 - **Task**: Decode integer entries (tag: `"int"`)
-- **Complexity**: 70 lines of spec
+- **Complexity**: 95 lines of spec
 - **Key work**: Read 4 bytes, interpret as `int32`
 - **Dependencies**: None beyond existing infrastructure
 - **Verdict**: Trivial — just reads raw bytes
+- **Status**: ✅ Implemented (2026-04-02)
 
 ### 2. Easy: [ovl-texts.md](./ovl-texts.md)
 
@@ -83,15 +84,35 @@ These plans are documented but not yet ranked:
 
 ## Summary Table
 
-| Rank | Plan                 | Lines | Key Challenge                |
-| ---- | -------------------- | ----- | ---------------------------- |
-| 1    | ovl-integers.md      | 70    | Trivial byte reading         |
-| 2    | ovl-texts.md         | 71    | UTF-16LE decoding            |
-| 3    | ovl-splines.md       | 110   | Bézier curve structs         |
-| 4    | ovl-static-shapes.md | 118   | Multi-level mesh hierarchy   |
-| 5    | ovl-scenery-items.md | 149   | Complex metadata, 3 versions |
-| 6    | ovl-textures.md      | 386   | 22 formats, 2 layouts        |
+| Rank | Plan                 | Lines | Status  | Key Challenge                |
+| ---- | -------------------- | ----- | ------- | ---------------------------- |
+| 1    | ovl-integers.md      | 95    | Done    | Trivial byte reading         |
+| 2    | ovl-texts.md         | 71+   | Planned | UTF-16LE decoding            |
+| 3    | ovl-splines.md       | 110+  | Planned | Bézier curve structs         |
+| 4    | ovl-static-shapes.md | 118+  | Planned | Multi-level mesh hierarchy   |
+| 5    | ovl-scenery-items.md | 149+  | Planned | Complex metadata, 3 versions |
+| 6    | ovl-textures.md      | 386+  | Planned | 22 formats, 2 layouts        |
 
 ## Recommendation
 
 Start with `ovl-integers.md` for a quick win, then `ovl-texts.md`. Both can be implemented in under 100 lines of C# and validate the extraction pattern before tackling more complex file types.
+
+## Testing Approach
+
+All tests for OVL decoding implementations are created as new test files in `OpenCobra/Tests/TestRunner/Tests/`, not to NUnit unit tests. Each plan includes a TestRunner test file template following the existing pattern:
+
+1. Create new file: `OpenCobra/Tests/TestRunner/Tests/Read<Feature>.cs`
+2. Each file contains a static class with `OvlTest[] All` array
+3. Tests use `Assert.That(condition, message)` and `Assert.Result(name)`
+4. Tests are registered in the test runner to run against OVL pairs
+5. Run the TestRunner before and after implementation to verify
+
+## Production OVLs Discovery
+
+After implementing each decoder, the results shall document:
+
+1. **Which production OVLs contain entries** of that type (tag)
+2. **Common vs unique** archive distribution
+3. **Sample symbol names** for verification
+
+This is tracked in the `## Production OVLs with Entries` section at the end of each plan and is updated once scanning/verification is complete.

@@ -96,19 +96,45 @@ public static class StaticShapes {
 ### Regression Prevention
 
 - No changes to `Ovl.cs`
-- New test file: `OpenCobra/OVL Tests/ReadStaticShapes.cs`
-- Run existing tests before/after
+- New test file: `OpenCobra/Tests/TestRunner/Tests/ReadStaticShapes.cs`
+- Run TestRunner before/after implementation
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
+
+Create new file `OpenCobra/Tests/TestRunner/Tests/ReadStaticShapes.cs`:
 
 ```csharp
-[Test] void Extract_StyleUniqueOvl_ReturnsShapes()
-[Test] void Extract_Shape_HasValidBoundingBox()
-[Test] void Extract_Mesh_HasCorrectVertexCount()
-[Test] void Extract_Mesh_IndicesAreValid()
-[Test] void Extract_Shape_EffectsAreParsed()
-[Test] void Extract_Mesh_FtxRefIsResolved()
+using System;
+using System.Linq;
+using OVL;
+
+namespace OvlTestBench.Tests;
+
+public static class ReadStaticShapes {
+  public static readonly OvlTest[] All = [
+    new("StaticShapeEntriesDecoded", pair => {
+      foreach (var file in pair.Files) {
+        if (file.Type != OvlType.Unique) continue;  // SHS is unique-only
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var shapes = StaticShapes.Extract(ovl);
+          if (ovl.LoaderEntries.Any(e => e.Tag == "shs") && shapes.Count == 0) {
+            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected shapes but got none");
+          }
+          foreach (var shape in shapes) {
+            Assert.That(shape.Meshes.Count > 0, $"{System.IO.Path.GetFileName(file.Path)}: shape '{shape.Name}' has no meshes");
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+  ];
+}
 ```
+
+Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
 
 ### Success Criteria
 
@@ -116,3 +142,22 @@ public static class StaticShapes {
 - Symbol references to FTX/TXS resolved correctly
 - Effect positions parsed
 - Zero regressions
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing static shape entries (tag: `"shs"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "shs"` (unique OVL only)
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no SHS entries present)
+
+## Post-Implementation Steps
+
+When this decoder is implemented:
+
+1. **Create results file**: Add `.opencode/results/ovl-static-shapes.md` with implementation summary
+2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
+3. **Update this plan**: Change status in "Production OVLs with Entries" section

@@ -62,18 +62,45 @@ public static class ManifoldMeshes {
 ### Regression Prevention
 
 - No changes to `Ovl.cs`
-- New test file: `OpenCobra/OVL Tests/ReadManifoldMeshes.cs`
-- Run existing tests before/after
+- New test file: `OpenCobra/Tests/TestRunner/Tests/ReadManifoldMeshes.cs`
+- Run TestRunner before/after implementation
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
+
+Create new file `OpenCobra/Tests/TestRunner/Tests/ReadManifoldMeshes.cs`:
 
 ```csharp
-[Test] void Extract_StyleCommonOvl_ReturnsMeshes()
-[Test] void Extract_Mesh_HasValidBoundingBox()
-[Test] void Extract_Mesh_VerticesCountMatches()
-[Test] void Extract_Mesh_IndicesArePaddedTo8()
-[Test] void Extract_Mesh_TriangleCountIsCorrect()
+using System;
+using System.Linq;
+using OVL;
+
+namespace OvlTestBench.Tests;
+
+public static class ReadManifoldMeshes {
+  public static readonly OvlTest[] All = [
+    new("ManifoldMeshEntriesDecoded", pair => {
+      foreach (var file in pair.Files) {
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var meshes = ManifoldMeshes.Extract(ovl);
+          if (ovl.LoaderEntries.Any(e => e.Tag == "mam") && meshes.Count == 0) {
+            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected manifold meshes but got none");
+          }
+          foreach (var mesh in meshes) {
+            Assert.That(mesh.Vertices.Count > 0, $"{System.IO.Path.GetFileName(file.Path)}: mesh '{mesh.Name}' has no vertices");
+            Assert.That(mesh.TriangleCount > 0, $"{System.IO.Path.GetFileName(file.Path)}: mesh '{mesh.Name}' has no triangles");
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+  ];
+}
 ```
+
+Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
 
 ### Success Criteria
 
@@ -81,3 +108,22 @@ public static class ManifoldMeshes {
 - Bounding box values correct
 - Index padding handled correctly
 - Zero regressions
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing manifold mesh entries (tag: `"mam"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "mam"`
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no MAM entries present)
+
+## Post-Implementation Steps
+
+When this decoder is implemented:
+
+1. **Create results file**: Add `.opencode/results/ovl-manifold-meshes.md` with implementation summary
+2. **Update README**: Change Status to `Done` in the Plans table
+3. **Update this plan**: Change status in "Production OVLs with Entries" section

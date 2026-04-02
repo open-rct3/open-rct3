@@ -242,70 +242,63 @@ The reference handles two distinct FLIC data layouts:
 
 **CRITICAL: Zero tolerance for regressions in existing OVL parsing.**
 
-1. **Run all existing tests BEFORE any changes** — baseline must pass:
-   - `OpenCobra/OVL Tests/ReadArchives.cs` (21 tests)
-   - `OpenCobra/OVL Tests/ListResources.cs`
-   - `OpenCobra/OVL Tests/ReadProdArchives.cs`
-2. **NEVER modify existing test files** — all texture tests go in new file
-3. **New test file only**: `OpenCobra/OVL Tests/ReadTextures.cs`
+1. **Run TestRunner BEFORE any changes** — baseline must pass
+2. **NEVER modify existing test files** — all texture tests in new file
+3. **New test file**: `OpenCobra/Tests/TestRunner/Tests/ReadTextures.cs`
 4. **No changes to `Ovl.cs` core parsing** — texture code is additive only
-5. **Verify existing tests pass AFTER changes** — CI gate
+5. **Verify TestRunner passes AFTER changes**
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
 
-**New test file: `OpenCobra/OVL Tests/ReadTextures.cs`**
+Create new file `OpenCobra/Tests/TestRunner/Tests/ReadTextures.cs`:
 
 ```csharp
-[TestFixture]
-public class ReadTextures {
-  // Structure parsing tests
-  [Test] void FlicHeader_ParsesCorrectly()
-  [Test] void FlicMipHeader_ParsesCorrectly()
-  [Test] void TextureStruct_ParsesCorrectly()
-  
-  // Format detection tests
-  [Test] void IsCompressed_DXT1_ReturnsTrue()
-  [Test] void IsCompressed_DXT3_ReturnsTrue()
-  [Test] void IsCompressed_DXT5_ReturnsTrue()
-  [Test] void IsCompressed_A8R8G8B8_ReturnsFalse()
-  [Test] void IsCompressed_R8G8B8_ReturnsFalse()
-  [Test] void IsCompressed_R5G6B5_ReturnsFalse()
-  [Test] void IsCompressed_UnknownFormat_ThrowsOrReturnsFalse()
-  
-  // Block size calculation tests
-  [Test] void GetBlockSize_A8R8G8B8_Returns64()
-  [Test] void GetBlockSize_DXT1_Returns8()
-  [Test] void GetBlockSize_DXT3_Returns16()
-  [Test] void GetBlockSize_DXT5_Returns16()
-  [Test] void GetBlockSize_UnknownFormat_Throws()
-  
-  // Dimension calculation tests
-  [Test] void GetDimension_A8R8G8B8_256x256_Returns256()
-  [Test] void GetDimension_DXT3_256x256_Returns256()
-  
-  // Bitmap decoding tests
-  [Test] void DecodeToBitmap_A8R8G8B8_ReturnsValidBitmap()
-  [Test] void DecodeToBitmap_A8R8G8B8_CorrectDimensions()
-  [Test] void DecodeToBitmap_A8R8G8B8_CorrectPixelFormat()
-  [Test] void DecodeToBitmap_R8G8B8_ReturnsValidBitmap()
-  [Test] void DecodeToBitmap_R5G6B5_ReturnsValidBitmap()
-  [Test] void DecodeToBitmap_CompressedFormat_ThrowsNotSupportedException()
-  [Test] void DecodeToBitmap_UnknownFormat_ThrowsNotSupportedException()
-  
-  // Integration tests with real OVL files
-  [Test] void ExtractTextures_StyleCommonOvl_ReturnsTextures()
-  [Test] void ExtractTextures_StyleCommonOvl_A8R8G8B8TexturesDecodable()
-  [Test] void ExtractTextures_WithBTBL_ParsesCorrectly()
-  [Test] void ExtractTextures_WithMipmaps_ExtractsFirstLevel()
-  
-  // Edge case tests
-  [Test] void ExtractTextures_EmptyOvl_ReturnsEmptyList()
-  [Test] void ExtractTextures_NoTexEntries_ReturnsEmptyList()
-  [Test] void DecodeToBitmap_CorruptedData_ThrowsGracefully()
-  [Test] void DecodeToBitmap_ZeroWidth_ThrowsArgumentException()
-  [Test] void DecodeToBitmap_ZeroHeight_ThrowsArgumentException()
+using System;
+using System.Linq;
+using OVL;
+
+namespace OvlTestBench.Tests;
+
+public static class ReadTextures {
+  public static readonly OvlTest[] All = [
+    new("TextureEntriesExtracted", pair => {
+      foreach (var file in pair.Files) {
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var textures = Textures.Extract(ovl);
+          if (ovl.LoaderEntries.Any(e => e.Tag == "tex") && textures.Count == 0) {
+            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected textures but got none");
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+    new("TextureBitmapDecoding", pair => {
+      foreach (var file in pair.Files) {
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var textures = Textures.Extract(ovl);
+          foreach (var tex in textures.Where(t => t.IsSupported)) {
+            try {
+              var bmp = tex.Bitmap;
+              Assert.That(bmp != null, $"{System.IO.Path.GetFileName(file.Path)}: texture '{tex.Name}' returned null bitmap");
+            } catch (NotSupportedException) {
+              // Expected for compressed formats, skip
+            }
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+  ];
 }
 ```
+
+Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
 
 ### Risk Assessment
 
@@ -333,6 +326,25 @@ public class ReadTextures {
 - **All existing tests pass** — zero regressions
 - **New test file with 30+ tests** covering formats, decoding, edge cases
 - Performance acceptable for GUI icon textures (typically 32x32 to 256x256)
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing texture entries (tag: `"tex"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "tex"` or `"flic"` or `"btbl"`
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no TEX entries present)
+
+## Post-Implementation Steps
+
+When this decoder is implemented:
+
+1. **Create results file**: Add `.opencode/results/ovl-textures.md` with implementation summary
+2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
+3. **Update this plan**: Change status in "Production OVLs with Entries" section
 
 ## Future Work: Dumper App Integration
 

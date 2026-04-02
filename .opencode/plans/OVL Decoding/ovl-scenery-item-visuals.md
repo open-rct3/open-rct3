@@ -99,20 +99,45 @@ public static class SceneryItemVisuals {
 ### Regression Prevention
 
 - No changes to `Ovl.cs`
-- New test file: `OpenCobra/OVL Tests/ReadSceneryItemVisuals.cs`
-- Run existing tests before/after
+- New test file: `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItemVisuals.cs`
+- Run TestRunner before/after implementation
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
+
+Create new file `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItemVisuals.cs`:
 
 ```csharp
-[Test] void Extract_StyleUniqueOvl_ReturnsVisuals()
-[Test] void Extract_Visual_HasValidFlags()
-[Test] void Extract_Visual_LODCountIsCorrect()
-[Test] void Extract_LOD_MeshTypeIsIdentified()
-[Test] void Extract_LOD_StaticShapeRefIsResolved()
-[Test] void Extract_LOD_BillboardRefsAreResolved()
-[Test] void Extract_Visual_SwayValueIsCorrect()
+using System;
+using System.Linq;
+using OVL;
+
+namespace OvlTestBench.Tests;
+
+public static class ReadSceneryItemVisuals {
+  public static readonly OvlTest[] All = [
+    new("SceneryItemVisualEntriesDecoded", pair => {
+      foreach (var file in pair.Files) {
+        if (file.Type != OvlType.Unique) continue;  // SVD is unique-only
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var visuals = SceneryItemVisuals.Extract(ovl);
+          if (ovl.LoaderEntries.Any(e => e.Tag == "svd") && visuals.Count == 0) {
+            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected scenery visuals but got none");
+          }
+          foreach (var visual in visuals) {
+            Assert.That(visual.Lods.Count > 0, $"{System.IO.Path.GetFileName(file.Path)}: visual '{visual.Name}' has no LODs");
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+  ];
+}
 ```
+
+Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
 
 ### Success Criteria
 
@@ -121,6 +146,25 @@ public static class SceneryItemVisuals {
 - Symbol references resolved for all mesh types
 - LOD distance thresholds parsed
 - Zero regressions
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing scenery item visual entries (tag: `"svd"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "svd"` (unique OVL only)
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no SVD entries present)
+
+## Post-Implementation Steps
+
+When this decoder is implemented:
+
+1. **Create results file**: Add `.opencode/results/ovl-scenery-item-visuals.md` with implementation summary
+2. **Update README**: Change Status to `Done` in the Plans table
+3. **Update this plan**: Change status in "Production OVLs with Entries" section
 
 ### Future Work
 

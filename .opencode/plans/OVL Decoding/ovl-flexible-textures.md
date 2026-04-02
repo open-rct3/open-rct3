@@ -85,19 +85,47 @@ public static class FlexibleTextures {
 ### Regression Prevention
 
 - No changes to `Ovl.cs`
-- New test file: `OpenCobra/OVL Tests/ReadFlexibleTextures.cs`
-- Run existing tests before/after
+- New test file: `OpenCobra/Tests/TestRunner/Tests/ReadFlexibleTextures.cs`
+- Run TestRunner before/after implementation
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
+
+Create new file `OpenCobra/Tests/TestRunner/Tests/ReadFlexibleTextures.cs`:
 
 ```csharp
-[Test] void Extract_StyleCommonOvl_ReturnsFlexiTextures()
-[Test] void Extract_Frame_HasValidPalette()
-[Test] void Extract_Frame_HasCorrectDimensions()
-[Test] void DecodeBitmap_WithAlpha_ReturnsCorrectImage()
-[Test] void DecodeBitmap_WithoutAlpha_ReturnsCorrectImage()
-[Test] void Extract_AnimationOffsets_AreValid()
+using System;
+using System.Linq;
+using OVL;
+
+namespace OvlTestBench.Tests;
+
+public static class ReadFlexibleTextures {
+  public static readonly OvlTest[] All = [
+    new("FlexibleTextureEntriesDecoded", pair => {
+      foreach (var file in pair.Files) {
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var ftxs = FlexibleTextures.Extract(ovl);
+          if (ovl.LoaderEntries.Any(e => e.Tag == "ftx") && ftxs.Count == 0) {
+            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected flexible textures but got none");
+          }
+          foreach (var ftx in ftxs) {
+            Assert.That(ftx.Frames.Count > 0, $"{System.IO.Path.GetFileName(file.Path)}: ftx '{ftx.Name}' has no frames");
+            foreach (var frame in ftx.Frames) {
+              Assert.That(frame.Palette.Length == 256, $"{System.IO.Path.GetFileName(file.Path)}: ftx '{ftx.Name}' frame has invalid palette size");
+            }
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+  ];
+}
 ```
+
+Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
 
 ### Success Criteria
 
@@ -105,3 +133,22 @@ public static class FlexibleTextures {
 - Bitmap decoding correct for both alpha and non-alpha frames
 - Animation offsets correctly parsed
 - Zero regressions
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing flexible texture entries (tag: `"ftx"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "ftx"`
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no FTX entries present)
+
+## Post-Implementation Steps
+
+When this decoder is implemented:
+
+1. **Create results file**: Add `.opencode/results/ovl-flexible-textures.md` with implementation summary
+2. **Update README**: Change Status to `Done` in the Plans table
+3. **Update this plan**: Change status in "Production OVLs with Entries" section

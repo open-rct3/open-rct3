@@ -82,19 +82,44 @@ public static class Splines {
 ### Regression Prevention
 
 - No changes to `Ovl.cs`
-- New test file: `OpenCobra/OVL Tests/ReadSplines.cs`
-- Run existing tests before/after
+- New test file: `OpenCobra/Tests/TestRunner/Tests/ReadSplines.cs`
+- Run TestRunner before/after implementation
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
+
+Create new file `OpenCobra/Tests/TestRunner/Tests/ReadSplines.cs`:
 
 ```csharp
-[Test] void Extract_StyleCommonOvl_ReturnsSplines()
-[Test] void Extract_Spline_HasCorrectNodeCount()
-[Test] void Extract_Spline_CyclicFlagIsCorrect()
-[Test] void Extract_Spline_TotalLengthMatchesSegments()
-[Test] void Extract_Spline_DataItemsAre14Bytes()
-[Test] void Extract_Spline_MaxYIsCorrect()
+using System;
+using System.Linq;
+using OVL;
+
+namespace OvlTestBench.Tests;
+
+public static class ReadSplines {
+  public static readonly OvlTest[] All = [
+    new("SplineEntriesDecoded", pair => {
+      foreach (var file in pair.Files) {
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var splines = Splines.Extract(ovl);
+          if (ovl.LoaderEntries.Any(e => e.Tag == "spl") && splines.Count == 0) {
+            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected splines but got none");
+          }
+          foreach (var s in splines) {
+            Assert.That(s.Nodes.Count >= 2, $"{System.IO.Path.GetFileName(file.Path)}: spline '{s.Name}' has fewer than 2 nodes");
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+  ];
+}
 ```
+
+Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
 
 ### Success Criteria
 
@@ -102,6 +127,25 @@ public static class Splines {
 - Cyclic/open splines correctly identified
 - Segment lengths sum to total length
 - Zero regressions
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing spline entries (tag: `"spl"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "spl"`
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no SPL entries present)
+
+## Post-Implementation Steps
+
+When this decoder is implemented:
+
+1. **Create results file**: Add `.opencode/results/ovl-splines.md` with implementation summary
+2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
+3. **Update this plan**: Change status in "Production OVLs with Entries" section
 
 ### Future Work
 

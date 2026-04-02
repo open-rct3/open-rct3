@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using OvlTestBench.Tests;
 using SysFile = System.IO.File;
 using SysDirectory = System.IO.Directory;
 using OvlType = OVL.OvlType;
@@ -77,7 +78,7 @@ public partial class OvlTestBenchForm : Form {
         return;
       }
 
-      var totalOps = ovlPairs.Count * 3;
+      var totalOps = ovlPairs.Count * LoadOvls.All.Length;
       var completedOps = 0;
       var ct = cancellationTokenSource.Token;
 
@@ -85,87 +86,22 @@ public partial class OvlTestBenchForm : Form {
         foreach (var pair in ovlPairs) {
           if (ct.IsCancellationRequested) break;
 
-          var pairStart = Stopwatch.GetTimestamp();
           UpdateStatus($"Processing: {pair.Name} ({completedOps + 1}/{totalOps})");
           var groupPassed = true;
           var details = new List<(string name, bool passed, string error)>();
 
-          // Test 1: ReadLocalOvl (read both common and unique)
-          try {
-            var readOk = true;
-            var readErrors = new List<string>();
-            foreach (var file in pair.Files) {
-              try {
-                using var stream = SysFile.OpenRead(file.Path);
-                var ovl = OVL.Ovl.Read(stream, file.Path);
-                if (ovl.Type != file.Type) {
-                  readOk = false;
-                  readErrors.Add($"{Path.GetFileName(file.Path)}: expected {file.Type}, got {ovl.Type}");
-                }
-              } catch (Exception ex) {
-                readOk = false;
-                readErrors.Add($"{Path.GetFileName(file.Path)}: {ex.Message}");
-              }
+          foreach (var test in LoadOvls.All) {
+            try {
+              test.Test(pair);
+            } catch (Exception ex) {
+              Assert.AddError(ex.Message);
             }
-            details.Add(("ReadLocalOvl", readOk, string.Join("; ", readErrors)));
-            if (!readOk) groupPassed = false;
-          } catch (Exception ex) {
-            details.Add(("ReadLocalOvl", false, ex.Message));
-            groupPassed = false;
+            var result = Assert.Result(test.Name);
+            details.Add((result.Name, result.Passed, result.Error));
+            if (!result.Passed) groupPassed = false;
+            completedOps++;
+            UpdateProgressAndEta(completedOps, totalOps, stopwatch);
           }
-          completedOps++;
-          UpdateProgressAndEta(completedOps, totalOps, stopwatch);
-
-          // Test 2: LocalOvlHasLoaderHeaders
-          try {
-            var headersOk = true;
-            var headerErrors = new List<string>();
-            foreach (var file in pair.Files) {
-              try {
-                using var stream = SysFile.OpenRead(file.Path);
-                var ovl = OVL.Ovl.Read(stream, file.Path);
-                if (ovl.CommonData?.LoaderHeaders.Length > 0 && ovl.LoaderHeaders.Length == 0) {
-                  headersOk = false;
-                  headerErrors.Add($"{Path.GetFileName(file.Path)}: expected headers but got none");
-                }
-              } catch (Exception ex) {
-                headersOk = false;
-                headerErrors.Add($"{Path.GetFileName(file.Path)}: {ex.Message}");
-              }
-            }
-            details.Add(("LocalOvlHasLoaderHeaders", headersOk, string.Join("; ", headerErrors)));
-            if (!headersOk) groupPassed = false;
-          } catch (Exception ex) {
-            details.Add(("LocalOvlHasLoaderHeaders", false, ex.Message));
-            groupPassed = false;
-          }
-          completedOps++;
-          UpdateProgressAndEta(completedOps, totalOps, stopwatch);
-
-          // Test 3: PairedArchiveHasLoaderEntries
-          try {
-            var entriesOk = true;
-            var entryErrors = new List<string>();
-            if (!string.IsNullOrEmpty(pair.CommonPath)) {
-              try {
-                var ovl = OVL.Ovl.Load(pair.CommonPath);
-                if (ovl.CommonData?.LoaderHeaders.Length > 0 && ovl.LoaderEntries.Count == 0) {
-                  entriesOk = false;
-                  entryErrors.Add("Expected loader entries but got none");
-                }
-              } catch (Exception ex) {
-                entriesOk = false;
-                entryErrors.Add(ex.Message);
-              }
-            }
-            details.Add(("PairedArchiveHasLoaderEntries", entriesOk, string.Join("; ", entryErrors)));
-            if (!entriesOk) groupPassed = false;
-          } catch (Exception ex) {
-            details.Add(("PairedArchiveHasLoaderEntries", false, ex.Message));
-            groupPassed = false;
-          }
-          completedOps++;
-          UpdateProgressAndEta(completedOps, totalOps, stopwatch);
 
           // Write grouped result in tree view on UI thread
           Invoke(() => {
@@ -563,18 +499,6 @@ public partial class OvlTestBenchForm : Form {
   private void OvlTestBenchForm_Resize(object sender, EventArgs e) {
     UpdateConfigLabel();
   }
-}
-
-internal class OvlPair {
-    public string Name = "";
-    public string CommonPath = "";
-    public string UniquePath = "";
-    public List<OvlFile> Files = new();
-}
-
-internal class OvlFile {
-    public string Path = "";
-    public OvlType Type;
 }
 
 internal class ExtraOvlConfig {

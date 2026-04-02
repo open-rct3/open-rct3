@@ -53,18 +53,63 @@ public static class Integers {
 ### Regression Prevention
 
 - No changes to `Ovl.cs`
-- New test file: `OpenCobra/OVL Tests/ReadIntegers.cs`
-- Run existing tests before/after
+- New test file: `OpenCobra/Tests/TestRunner/Tests/DecodeIntegers.cs`
+- Run TestRunner before/after implementation
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
+
+Create new file `OpenCobra/Tests/TestRunner/Tests/DecodeIntegers.cs`:
 
 ```csharp
-[Test] void Extract_StyleCommonOvl_ReturnsIntegers()
-[Test] void Extract_IntegerValue_IsCorrect()
-[Test] void Extract_EmptyOvl_ReturnsEmptyList()
+using System;
+using System.Linq;
+using OVL;
+using OVL.Files;
+using SysFile = System.IO.File;
+
+namespace OvlTestBench.Tests;
+
+public static class DecodeIntegers {
+  public static readonly OvlTest Test = new("IntegerEntriesDecoded", pair => {
+    foreach (var file in pair.Files) {
+      try {
+        using var stream = SysFile.OpenRead(file.Path);
+        var ovl = Ovl.Read(stream, file.Path);
+        var integers = Integers.Extract(ovl);
+        if (ovl.LoaderEntries.Any(e => e.Tag == "int") && integers.Count == 0) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected integers but got none");
+        }
+      } catch (Exception ex) {
+        Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+      }
+    }
+  });
+}
+```
+
+Register in `LoadOvls.All` array:
+```csharp
+DecodeIntegers.Test,
 ```
 
 ### Success Criteria
 
 - All integer entries extracted with correct values
 - Zero regressions
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing integer entries (tag: `"int"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "int"`
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no INT entries present)
+
+## Post-Implementation Steps (Completed)
+
+1. ✅ **Created results file**: Added `.opencode/results/ovl-integers.md` with implementation summary
+2. ✅ **Updated README**: Changed Status to `Done` in the Plans table and Summary Table
+3. ✅ **Updated this plan**: Changed status in "Production OVLs with Entries" section

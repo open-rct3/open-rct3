@@ -91,20 +91,45 @@ public static class TerrainTypes {
 ### Regression Prevention
 
 - No changes to `Ovl.cs`
-- New test file: `OpenCobra/OVL Tests/ReadTerrainTypes.cs`
-- Run existing tests before/after
+- New test file: `OpenCobra/Tests/TestRunner/Tests/ReadTerrainTypes.cs`
+- Run TestRunner before/after implementation
 
-### Testing Strategy
+### Testing Strategy (TestRunner)
+
+Create new file `OpenCobra/Tests/TestRunner/Tests/ReadTerrainTypes.cs`:
 
 ```csharp
-[Test] void Extract_StyleUniqueOvl_ReturnsTerrainTypes()
-[Test] void Extract_Terrain_HasValidName()
-[Test] void Extract_Terrain_DescriptionRefIsResolved()
-[Test] void Extract_Terrain_IconRefIsResolved()
-[Test] void Extract_Terrain_TextureRefIsResolved()
-[Test] void Extract_Terrain_ParametersHaveDefaults()
-[Test] void Extract_Terrain_VersionIsCorrect()
+using System;
+using System.Linq;
+using OVL;
+
+namespace OvlTestBench.Tests;
+
+public static class ReadTerrainTypes {
+  public static readonly OvlTest[] All = [
+    new("TerrainTypeEntriesDecoded", pair => {
+      foreach (var file in pair.Files) {
+        if (file.Type != OvlType.Unique) continue;  // TER is unique-only
+        try {
+          using var stream = System.IO.File.OpenRead(file.Path);
+          var ovl = Ovl.Read(stream, file.Path);
+          var terrains = TerrainTypes.Extract(ovl);
+          if (ovl.LoaderEntries.Any(e => e.Tag == "ter") && terrains.Count == 0) {
+            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected terrain types but got none");
+          }
+          foreach (var terrain in terrains) {
+            Assert.That(!string.IsNullOrEmpty(terrain.Name), $"{System.IO.Path.GetFileName(file.Path)}: terrain has empty name");
+          }
+        } catch (Exception ex) {
+          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
+        }
+      }
+    }),
+  ];
+}
 ```
+
+Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
 
 ### Success Criteria
 
@@ -112,6 +137,25 @@ public static class TerrainTypes {
 - Symbol references to TXT/GSI/TEX resolved
 - Parameters and unknowns parsed correctly
 - Zero regressions
+
+## Production OVLs with Entries
+
+> **Status**: Not yet identified
+
+Production OVL archives containing terrain type entries (tag: `"ter"`) have not yet been catalogued. To identify:
+1. Scan production OVLs for loader entries with `Tag == "ter"` (unique OVL only)
+2. Document common vs unique archive distribution
+3. Note sample symbol names for verification
+
+**Known test files**: `style.common.ovl`, `style.unique.ovl` (no TER entries present)
+
+## Post-Implementation Steps
+
+When this decoder is implemented:
+
+1. **Create results file**: Add `.opencode/results/ovl-terrain-types.md` with implementation summary
+2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
+3. **Update this plan**: Change status in "Production OVLs with Entries" section
 
 ### Future Work
 
