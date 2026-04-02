@@ -8,6 +8,9 @@
     <AssemblyName>OvlTestBench</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\OVL\OVL.csproj" />
   </ItemGroup>
   <ItemGroup>
