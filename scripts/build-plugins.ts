@@ -1,5 +1,6 @@
 import * as fs from "@std/fs";
 import * as path from "@std/path";
+import { Spinner } from "@std/cli/unstable-spinner";
 import asc from "assemblyscript/asc";
 
 import { setupFileLogger } from "../lib/log.ts";
@@ -16,7 +17,23 @@ const npmCachePath = path.join(denoDir, "npm", "registry.npmjs.org");
 const PLUGINS_DIR = path.resolve(Deno.cwd(), "plugins");
 const OUTPUT_DIR = path.resolve(Deno.cwd(), "bin", "plugins");
 
-async function buildPlugin(pluginDir: string): Promise<void> {
+function formatDuration(ms: number): string {
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  const m = Math.floor(ms / 60_000);
+  const s = Math.round((ms % 60_000) / 1000);
+  return `${m}m ${s}s`;
+}
+
+interface BuildResult {
+  name: string;
+  skipped?: string;
+  size?: number;
+  ms?: number;
+  error?: string;
+  stderr?: string;
+}
+
+async function buildPlugin(pluginDir: string): Promise<BuildResult> {
   const pluginName = path.basename(pluginDir);
   const sourceFile = path.join(pluginDir, "index.ts");
   const outputFile = path.join(OUTPUT_DIR, `${pluginName}.wasm`);
@@ -25,11 +42,10 @@ async function buildPlugin(pluginDir: string): Promise<void> {
   try {
     await Deno.stat(sourceFile);
   } catch {
-    console.error(`Skipping ${pluginName}: no index.ts found`);
-    return;
+    return { name: pluginName, skipped: "no index.ts found" };
   }
 
-  console.log(`Building ${pluginName}...`);
+  const start = performance.now();
 
   await ensureDir(OUTPUT_DIR);
 
@@ -66,17 +82,14 @@ async function buildPlugin(pluginDir: string): Promise<void> {
   });
 
   if (error) {
-    console.error(`Failed to compile ${pluginName}: ${error.message}`);
-    console.error(stderr.toString());
-    // TODO: Prevent the "Build complete!" message from being printed at the end
-    return;
+    return { name: pluginName, error: error.message, stderr: stderr.toString() };
   }
 
   const stats = await Deno.stat(outputFile);
-  console.log(`✓ Built ${pluginName} (${stats.size} bytes)`);
+  return { name: pluginName, size: stats.size, ms: performance.now() - start };
 }
 
-// TODO: Replace with fs.mkdirp, or uquivalent
+// TODO: Replace with fs.mkdirp, or equivalent
 async function ensureDir(dir: string): Promise<void> {
   try {
     await Deno.stat(dir);
@@ -107,16 +120,42 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(`Found ${pluginDirs.length} plugin${pluginDirs.length !== 1 ? "s" : ""}.`);
-  console.log("Compiling...");
+  const total = pluginDirs.length;
+  const useSpinner = Deno.stderr.isTerminal();
+  const spinnerMsg = (n: number) => `Compiling ${total} plugin${total !== 1 ? "s" : ""}... (${n}/${total})`;
+  const spinner = useSpinner ? new Spinner({ message: spinnerMsg(0), color: "yellow" }) : null;
+  spinner?.start();
+
+  let completed = 0;
+  const results = await Promise.all(pluginDirs.map(async (pluginDir) => {
+    const result = await buildPlugin(pluginDir);
+    if (spinner) spinner.message = spinnerMsg(++completed);
+    return result;
+  }));
+
+  spinner?.stop();
   console.log("");
 
-  for (const pluginDir of pluginDirs) {
-    await buildPlugin(pluginDir);
+  let failed = 0;
+  for (const result of results) {
+    if (result.skipped) {
+      console.log(`- Skipped ${result.name}: ${result.skipped}`);
+    } else if (result.error) {
+      console.error(`✗ Failed to compile ${result.name}: ${result.error}`);
+      if (result.stderr) console.error(result.stderr);
+      failed++;
+    } else {
+      console.log(`✅ Built ${result.name} (${result.size} bytes, ${formatDuration(result.ms!)})`);
+    }
   }
 
   console.log("");
-  console.log("Build complete!");
+  if (failed > 0) {
+    console.error(`${failed} plugin${failed !== 1 ? "s" : ""} failed to compile.`);
+    Deno.exit(1);
+  } else {
+    console.log("Build complete!");
+  }
 }
 
 await setupFileLogger("build-plugins", verbose);

@@ -4,7 +4,9 @@
     "jsr:@davidbonnet/astring@1.8.6": "1.8.6",
     "jsr:@denosaurs/plug@^1.0.6": "1.1.0",
     "jsr:@std/assert@1": "1.0.15",
+    "jsr:@std/cli@*": "0.224.7",
     "jsr:@std/cli@0.224.7": "0.224.7",
+    "jsr:@std/cli@1": "1.0.28",
     "jsr:@std/cli@~0.224.7": "0.224.7",
     "jsr:@std/collections@^1.0.4": "1.0.5",
     "jsr:@std/crypto@1.0.1": "1.0.1",
@@ -79,6 +81,12 @@
     },
     "@std/cli@0.224.7": {
       "integrity": "654ca6477518e5e3a0d3fabafb2789e92b8c0febf1a1d24ba4b567aba94b5977"
+    },
+    "@std/cli@1.0.28": {
+      "integrity": "74ef9b976db59ca6b23a5283469c9072be6276853807a83ec6c7ce412135c70a",
+      "dependencies": [
+        "jsr:@std/internal@^1.0.12"
+      ]
     },
     "@std/collections@1.0.5": {
       "integrity": "ab9eac23b57a0c0b89ba45134e61561f69f3d001f37235a248ed40be260c0c10"
@@ -621,6 +629,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1",
+      "jsr:@std/cli@1",
       "jsr:@std/fs@~0.229.3",
       "jsr:@std/log@0.224",
       "jsr:@std/path@^1.0.1",

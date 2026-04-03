@@ -28,12 +28,12 @@ function renderHexView(data: Uint8Array): string {
     html += "<th>" + h.toString(16).toUpperCase() + "</th>";
   }
   html += "<th>ASCII</th></tr></thead><tbody>";
-  
+
   let rowCount = data.length / 16;
   for (let r = 0; r < rowCount; r++) {
     let offset = r * 16;
     html += "<tr><td>" + toHex(offset, 4) + "</td>";
-    
+
     let ascii = "";
     for (let i = 0; i < 16; i++) {
       let idx = offset + i;
@@ -49,10 +49,10 @@ function renderHexView(data: Uint8Array): string {
         html += "<td></td>";
       }
     }
-    
+
     html += "<td>" + ascii + "</td></tr>";
   }
-  
+
   html += "</tbody></table></div>";
   return html;
 }
@@ -65,14 +65,14 @@ function renderIntTable(data: Uint8Array, signed: bool): string {
   if (data.length == 0) {
     return "<p class='empty'>No data to display.</p><p class='hint'>Could not decipher data. If this was unexpected, you may have found a bug. See the <a href='https://github.com/open-rct3/open-rct3/issues?q=state%3Aopen%20label%3Aplugin' target='_blank'>open plugin issues</a> or <a href='https://github.com/open-rct3/open-rct3/issues/new' target='_blank'>report a new issue</a>.</p>";
   }
-  
+
   let count = data.length / 4;
   if (count == 0 || data.length % 4 != 0) {
     return "<p class='error'>Data length is not a multiple of 4 bytes. Showing hex view instead.</p>" + renderHexView(data);
   }
-  
+
   let html = "<div class='int-table-wrapper'><table class='int-table'><thead><tr><th>#</th><th>Decimal</th><th>Hex</th><th>Binary</th></tr></thead><tbody>";
-  
+
   for (let i = 0; i < count; i++) {
     let offset = i * 4;
     let value = readU32LE(data, offset);
@@ -83,10 +83,10 @@ function renderIntTable(data: Uint8Array, signed: bool): string {
       signedVal = i32(value);
     }
     let displayVal = signed ? signedVal.toString() : value.toString();
-    
-    html += "<tr><td>" + i + "</td><td>" + displayVal + "</td><td>" + toHex(value) + "</td><td class='binary'>" + toBinary(value) + "</td></tr>";
+
+    html += "<tr><td>" + i.toString() + "</td><td>" + displayVal + "</td><td>" + toHex(value) + "</td><td class='binary'>" + toBinary(value) + "</td></tr>";
   }
-  
+
   html += "</tbody></table></div>";
   return html;
 }
@@ -94,10 +94,10 @@ function renderIntTable(data: Uint8Array, signed: bool): string {
 export function render(): i32 {
   let data = Host.input();
   let signed = Config.get("signed") == "true";
-  
+
   let html = renderIntTable(data, signed);
   html += renderHexView(data);
-  
+
   Host.outputString(html);
   return 0;
 }
