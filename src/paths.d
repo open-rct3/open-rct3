@@ -46,7 +46,7 @@ struct Data {
     "%USERPROFILE%\\Documents\\RCT3"
   ];
   else version (OSX) static const auto userData = [
-    // FIXME: This path may vary based on version
+    // FIXME: This path may vary based on RCT3 version and download source
     "$HOME/Library/Containers/com.aspyr.rct3.appstore/Data/Library/Application Support/RollerCoaster Tycoon 3 Platinum"
   ];
   else version (Linux) static const auto userData = [

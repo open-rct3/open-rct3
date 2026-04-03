@@ -11,16 +11,23 @@ Organized by [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap) phas
 ## 🔴 Phase 1: Engine & Rendering Scaffolding (Current Priority)
 
 ### Game Framework & OVL Format
-- [ ] Confirm LODs relation in OVL enums (`OpenCobra/OVL/Enums.cs:36`)
-- [ ] Verify NoShadow duplicate value (`OpenCobra/OVL/Enums.cs:49`)
-- [ ] Implement tracked rides support (`OpenCobra/OVL/Enums.cs:235`)
-- [ ] Do not assume icon format, look it up from source (`OpenRCT3/Icons.cs:45`)
-- [ ] Create data model for inspector items (`OpenRCT3/ViewModels/Inspector.cs:14`)
-- [ ] Handle version-dependent game paths (`src/paths.d:34,49`)
+- [ ] Confirm LODs relation in OVL enums (`OpenCobra/OVL/Enums.cs:36`) — see [.opencode/plans/ovl-enum-verification.md](.opencode/plans/ovl-enum-verification.md)
+- [ ] Verify NoShadow duplicate value (`OpenCobra/OVL/Enums.cs:49`) — see [.opencode/plans/ovl-enum-verification.md](.opencode/plans/ovl-enum-verification.md)
+- [ ] Implement tracked rides support (`OpenCobra/OVL/Enums.cs:235`) — **deferred**; will implement after OVL decoder is ready
+- [x] Do not assume icon format, look it up from source (`OpenRCT3/Icons.cs:45`)
+- [x] Create data model for inspector items (`OpenRCT3/ViewModels/Inspector.cs:14`)
+- [ ] Handle OS-dependent and game-store-dependent game paths (`src/paths.d:34,49`)
+
+### OVL Viewer Plugins
+- [x] Integer viewer plugin (`plugins/int-viewer/`) — displays int32 values as decimal, hex, and binary
+- [x] Text viewer plugin (`plugins/txt-viewer/`) — decodes UTF-16LE and ASCII text with fallback hex view
+- [x] Splines viewer plugin (`plugins/spl-viewer/`) — displays Spline header metadata and hex view
+- [x] Sounds viewer plugin (`plugins/snd-viewer/`) — displays WAVEFORMATEX audio format metadata and duration
+- [x] Manifold meshes viewer plugin (`plugins/mam-viewer/`) — displays mesh vertex/face counts and bounding box
 
 ### Engine & Rendering
 - [ ] Update framebuffer on window resize/screen changes (`OpenRCT3/Platforms/macOS/GameViewController.cs:35`)
-- [ ] Tear down WebGPU and unmanaged resources (`OpenRCT3/Platforms/macOS/AppDelegate.cs:24`)
+- [ ] Tear down graphics and other unmanaged resources (`OpenRCT3/Platforms/macOS/AppDelegate.cs:24`)
 
 ### Server/Engine Communication
 - [ ] Write spec for game's WebSocket protocol (`src/server/routes.d:101`)

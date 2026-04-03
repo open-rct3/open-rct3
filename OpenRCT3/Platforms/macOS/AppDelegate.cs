@@ -21,7 +21,7 @@ public class AppDelegate : NSApplicationDelegate {
   }
 
   public override void WillTerminate(NSNotification notification) {
-    // TODO: Tear down WebGPU and other unmanaged resources
+    // TODO: Tear down graphics and other unmanaged resources
   }
 
   public override bool ApplicationShouldTerminateAfterLastWindowClosed(NSApplication sender) {
