@@ -30,7 +30,9 @@ website: ovl
 
 .PHONY: debug
 debug: ovl
-	deno task dev
+	deno task build:plugins
+	deno task build:desktop
+	dotnet run --project OpenRCT3/OpenRCT3.csproj
 
 .PHONY: ovl
 ovl:
@@ -43,6 +45,7 @@ dumper:
 .PHONY: test
 test: test-plugins
 	deno check clients/desktop/main.ts
+	deno task check:plugins
 	dotnet test
 
 .PHONY: test-plugins

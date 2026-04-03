@@ -1,7 +1,7 @@
 # TODOs
 
 ## 📋 Documentation & Tooling
-- [ ] Bundle the app for all OSes (`Makefile:6`)
+- [x] Bundle the app for all OSes (`Makefile:6`)
 - [ ] Add Zed agent rules to CLAUDE.md
 
 ---
