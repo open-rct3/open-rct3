@@ -1,6 +1,7 @@
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using Silk.NET.OpenGL;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,6 +16,7 @@ public class GLSurface : Control, IWindow {
   private GlNativeWindow? _nativeWindow;
   private GLSurfaceSettings _settings;
   private readonly HashSet<IObserver<OpenGLSurface>> _observers = new();
+  private GL? _gl;
 
   public GLSurface() : this(null) { }
 
@@ -52,6 +54,9 @@ public class GLSurface : Control, IWindow {
 
   [Browsable(false)]
   public bool HasValidContext => _nativeWindow != null;
+
+  [Browsable(false)]
+  public GL? GL => _gl;
 
   [Browsable(false)]
   public override string Text { get => base.Text; set => base.Text = value; }
@@ -108,6 +113,7 @@ public class GLSurface : Control, IWindow {
       APIVersion = _settings.APIVersion,
       ClientSize = new OpenTK.Mathematics.Vector2i(Width, Height),
       StartVisible = false,
+      AutoLoadBindings = false,
     };
 
     _nativeWindow = new GlNativeWindow(nativeSettings);
@@ -128,6 +134,9 @@ public class GLSurface : Control, IWindow {
 
     ResizeNativeWindow();
     _nativeWindow.IsVisible = true;
+
+    _nativeWindow.MakeCurrent();
+    _gl = new GL(new OpenRCT3.OpenGL.WindowsGLContext());
   }
 
   private void ResizeNativeWindow() {
@@ -152,6 +161,8 @@ public class GLSurface : Control, IWindow {
 
   protected override void OnHandleDestroyed(EventArgs e) {
     base.OnHandleDestroyed(e);
+    _gl?.Dispose();
+    _gl = null;
     if (_nativeWindow != null) {
       _nativeWindow.Dispose();
       _nativeWindow = null;
