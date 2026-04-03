@@ -42,8 +42,13 @@
     "jsr:@std/yaml@0.224.3": "0.224.3",
     "jsr:@std/yaml@^1.0.0-rc.1": "1.0.4",
     "jsr:@webview/webview@0.8": "0.8.1",
+    "npm:@extism/as-pdk@1": "1.0.0",
+    "npm:@extism/as-pdk@1.0.0": "1.0.0",
     "npm:@js-temporal/polyfill@0.4.4": "0.4.4",
     "npm:@types/estree@1.0.5": "1.0.5",
+    "npm:assemblyscript@*": "0.28.12",
+    "npm:assemblyscript@0.28.10": "0.28.10",
+    "npm:assemblyscript@~0.28.12": "0.28.12",
     "npm:autoprefixer@10.4.19": "10.4.19_postcss@8.4.39",
     "npm:estree-walker@3.0.3": "3.0.3",
     "npm:markdown-it-attrs@4.1.6": "4.1.6_markdown-it@14.1.0",
@@ -195,6 +200,9 @@
     }
   },
   "npm": {
+    "@extism/as-pdk@1.0.0": {
+      "integrity": "sha512-sD5xQskoOWoSeH73HltP7rJXR/E5nk1BTne8bmHdCxqMLUR0n/L1KdmRsPdl7XqNnJj2Anvs9QN0sJ+b+6K05g=="
+    },
     "@js-temporal/polyfill@0.4.4": {
       "integrity": "sha512-2X6bvghJ/JAoZO52lbgyAPFj8uCflhTo2g7nkFzEQdXd/D8rEeD4HtmTEpmtGCva260fcd66YNXBOYdnmHqSOg==",
       "dependencies": [
@@ -215,6 +223,22 @@
     "argparse@2.0.1": {
       "integrity": "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="
     },
+    "assemblyscript@0.28.10": {
+      "integrity": "sha512-MGqjjNlPMmcWjfnme3cGFKmbBY/rj0bmE4M1Wg8tNqmHusA1PAjOMgWK67KWBK63lmvotFDoP8e5N0URxKlR/Q==",
+      "dependencies": [
+        "binaryen",
+        "long"
+      ],
+      "bin": true
+    },
+    "assemblyscript@0.28.12": {
+      "integrity": "sha512-kGesNg7lWT5lOXbcxAb3TmMU/yhk2eINaC6PSjvguSB+O17S6TjVRPkcCbqQM+QRc4bUh1cOeFmddrAvV6YWLA==",
+      "dependencies": [
+        "binaryen",
+        "long"
+      ],
+      "bin": true
+    },
     "autoprefixer@10.4.19_postcss@8.4.39": {
       "integrity": "sha512-BaENR2+zBZ8xXhM4pUaKUxlVdxZ0EZhjvbopwnXmxRUfqDmwSpC2lAi/QXvx7NRdPCo1WKEcEF6mV64si1z4Ew==",
       "dependencies": [
@@ -230,6 +254,10 @@
     },
     "binary-extensions@2.3.0": {
       "integrity": "sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw=="
+    },
+    "binaryen@123.0.0-nightly.20250530": {
+      "integrity": "sha512-d1zPHBN5YlOd3Ff+OUxvVExuFeh8heSnqe+X3bjItFxGLvn4VGBKmrvv7pgy/cRhrIUGuPW138iaWfDhwjyDqg==",
+      "bin": true
     },
     "braces@3.0.3": {
       "integrity": "sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==",
@@ -344,6 +372,9 @@
       "dependencies": [
         "uc.micro"
       ]
+    },
+    "long@5.3.2": {
+      "integrity": "sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA=="
     },
     "markdown-it-attrs@4.1.6_markdown-it@14.1.0": {
       "integrity": "sha512-O7PDKZlN8RFMyDX13JnctQompwrrILuz2y43pW2GagcwpIIElkAdfeek+erHfxUOlXWPsjFeWmZ8ch1xtRLWpA==",
@@ -601,7 +632,15 @@
       "jsr:@std/assert@1",
       "jsr:@std/fs@~0.229.3",
       "jsr:@std/path@^1.0.1",
-      "jsr:@webview/webview@0.8"
-    ]
+      "jsr:@webview/webview@0.8",
+      "npm:@extism/as-pdk@1.0.0",
+      "npm:assemblyscript@*"
+    ],
+    "packageJson": {
+      "dependencies": [
+        "npm:@extism/as-pdk@1",
+        "npm:assemblyscript@~0.28.12"
+      ]
+    }
   }
 }

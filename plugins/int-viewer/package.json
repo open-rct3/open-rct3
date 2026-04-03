@@ -1,0 +1,9 @@
+{
+  "name": "int-viewer",
+  "version": "0.1.0",
+  "description": "Integer viewer plugin for OVL Dumper",
+  "type": "module",
+  "dependencies": {
+    "@extism/as-pdk": "^1.0.0"
+  }
+}

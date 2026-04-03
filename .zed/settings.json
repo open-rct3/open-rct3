@@ -1,2 +1,27 @@
 // See https://zed.dev/docs/configuring-zed#settings-files
-{}
+{
+  "languages": {
+    "CSharp": {
+      "language_servers": ["roslyn", "!omnisharp"]
+    },
+    "TypeScript": {
+      "language_servers": ["deno", "!typescript-language-server", "!vtsls", "!eslint"],
+    },
+    "TSX": {
+      "language_servers": ["deno", "!typescript-language-server", "!vtsls", "!eslint"],
+    }
+  },
+  "lsp": {
+    // See https://zed.dev/docs/languages/deno
+    "deno": {
+      "settings": {
+        "deno": {
+          "enable": true
+        }
+      }
+    },
+    "roslyn": {
+      // TODO: Connect to the globally installed roslyn-language-server dotnet tool.
+    }
+  },
+}

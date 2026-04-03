@@ -4,19 +4,19 @@ This directory contains plans for decoding OVL archive file types. Six are [rank
 
 ## Plans
 
-| Plan                                                         | OVL Tag | File Type | Status  |
-| ------------------------------------------------------------ | ------- | --------- | ------- |
-| [ovl-integers.md](./ovl-integers.md)                         | `"int"` | Integer   | Done    |
-| [ovl-texts.md](./ovl-texts.md)                               | `"txt"` | Text      | Planned |
-| [ovl-sounds.md](./ovl-sounds.md)                             | `"snd"` | Sound     | Planned |
-| [ovl-splines.md](./ovl-splines.md)                           | `"spl"` | Spline    | Planned |
-| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"` | Terrain   | Planned |
-| [ovl-manifold-meshes.md](./ovl-manifold-meshes.md)           | `"mam"` | Mesh      | Planned |
-| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"` | Shape     | Planned |
-| [ovl-scenery-item-visuals.md](./ovl-scenery-item-visuals.md) | `"svd"` | Visual    | Planned |
-| [ovl-flexible-textures.md](./ovl-flexible-textures.md)       | `"ftx"` | Texture   | Planned |
-| [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"` | Scenery   | Planned |
-| [ovl-textures.md](./ovl-textures.md)                         | `"tex"` | Texture   | Planned |
+| Plan                                                         | OVL Tag | File Type | Status                              |
+| ------------------------------------------------------------ | ------- | --------- | ----------------------------------- |
+| [ovl-integers.md](./ovl-integers.md)                         | `"int"` | Integer   | Planned |
+| [ovl-texts.md](./ovl-texts.md)                               | `"txt"` | Text      | Planned                             |
+| [ovl-sounds.md](./ovl-sounds.md)                             | `"snd"` | Sound     | Planned                             |
+| [ovl-splines.md](./ovl-splines.md)                           | `"spl"` | Spline    | Planned                             |
+| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"` | Terrain   | Planned                             |
+| [ovl-manifold-meshes.md](./ovl-manifold-meshes.md)           | `"mam"` | Mesh      | Planned                             |
+| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"` | Shape     | Planned                             |
+| [ovl-scenery-item-visuals.md](./ovl-scenery-item-visuals.md) | `"svd"` | Visual    | Planned                             |
+| [ovl-flexible-textures.md](./ovl-flexible-textures.md)       | `"ftx"` | Texture   | Planned                             |
+| [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"` | Scenery   | Planned                             |
+| [ovl-textures.md](./ovl-textures.md)                         | `"tex"` | Texture   | Planned                             |
 
 ## Implementation Difficulty
 
