@@ -12,11 +12,11 @@ obj/
 **/bin/Debug/**/*.items
 **/bin/Debug/**/*.exe.WebView2/
 **/bin/Debug/**/*.WebView2.*.xml
+**/bin/Release/**/*.deps.json
 OpenRCT3/bin/
 OpenRCT3.Tests/bin/
 bin/OpenRCT3*
-bin/open-rct3-test-application
-bin/open-rct3-unittest
+bin/open-rct3-*
 *.o
 *.obj
 *.so
