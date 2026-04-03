@@ -12,6 +12,8 @@ obj/
 **/bin/Debug/**/*.items
 **/bin/Debug/**/*.exe.WebView2/
 **/bin/Debug/**/*.WebView2.*.xml
+**/bin/Debug/**/OvlTestBench
+**/bin/Debug/**/plugins/*.wasm
 **/bin/Release/**/*.deps.json
 OpenRCT3/bin/
 OpenRCT3.Tests/bin/

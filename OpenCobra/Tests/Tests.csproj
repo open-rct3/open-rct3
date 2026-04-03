@@ -12,8 +12,11 @@
 
     <ItemGroup>
         <Compile Remove="TestRunner\**" />
+        <Compile Remove="Integration\**" />
         <EmbeddedResource Remove="TestRunner\**" />
+        <EmbeddedResource Remove="Integration\**" />
         <None Remove="TestRunner\**" />
+        <None Remove="Integration\**" />
     </ItemGroup>
 
     <ItemGroup>

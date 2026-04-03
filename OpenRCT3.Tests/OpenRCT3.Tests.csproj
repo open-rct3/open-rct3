@@ -2,6 +2,10 @@
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <PropertyGroup>
     <TargetFramework Condition="$([MSBuild]::IsOSPlatform('macos'))">net8.0-macos</TargetFramework>
+    <ApplicationId Condition="$([MSBuild]::IsOSPlatform('macos'))">llc.snow.openrct3.tests</ApplicationId>
+    <RuntimeIdentifier Condition="$([MSBuild]::IsOSPlatform('macos'))">osx-x64</RuntimeIdentifier>
+    <SelfContained Condition="$([MSBuild]::IsOSPlatform('macos'))">true</SelfContained>
+    <PublishTrimmed Condition="$([MSBuild]::IsOSPlatform('macos'))">true</PublishTrimmed>
     <TargetFramework Condition="$([MSBuild]::IsOSPlatform('windows'))">net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>

@@ -41,6 +41,10 @@ dumper:
 	dotnet run --project Dumper/Dumper.csproj
 
 .PHONY: test
-test:
+test: test-plugins
 	deno check clients/desktop/main.ts
 	dotnet test
+
+.PHONY: test-plugins
+test-plugins:
+	dotnet run --project OpenCobra/Tests/TestRunner/OvlTestBench.csproj -- --plugins

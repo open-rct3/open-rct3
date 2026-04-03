@@ -1,26 +1,51 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <RootNamespace>OvlTestBench</RootNamespace>
     <AssemblyName>OvlTestBench</AssemblyName>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Extism.Sdk" Version="*" />
-    <PackageReference Include="Extism.runtime.all" Version="*" />
+
+  <Choose>
+    <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
+      <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <UseWindowsForms>true</UseWindowsForms>
+      </PropertyGroup>
+      <ItemGroup>
+        <Compile Remove="Program.cli.cs" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+      </PropertyGroup>
+      <ItemGroup>
+        <Compile Remove="Program.cs" />
+        <Compile Remove="OvlTestBenchForm.cs" />
+        <Compile Remove="OvlTestBenchForm.Designer.cs" />
+        <Compile Remove="OvlTestBenchForm.Icons.cs" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows'))">
     <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
   </ItemGroup>
+
   <ItemGroup>
+    <ProjectReference Include="..\Integration\Integration.csproj" />
     <ProjectReference Include="..\..\OVL\OVL.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <Content Include="..\..\..\bin\plugins\*.wasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>plugins\%(Filename)%(Extension)</Link>
     </Content>
   </ItemGroup>
+
   <ItemGroup>
     <None Update="ovl-tests.local.json" Condition="Exists('ovl-tests.local.json')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

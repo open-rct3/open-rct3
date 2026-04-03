@@ -22,6 +22,9 @@
     <!-- Icon -->
     <ApplicationIcon>Dumper.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
