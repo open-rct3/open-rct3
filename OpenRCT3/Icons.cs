@@ -36,15 +36,17 @@ internal static class Icons {
     var rect = new Rectangle(0, 0, size, size);
     using var bmp = icon.ToBitmap();
     using var converted = bmp.Clone(rect, PixelFormat.Format32bppArgb);
-    var bits = converted.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+    var bits = converted.LockBits(rect, ImageLockMode.ReadOnly, converted.PixelFormat);
     var pixels = new byte[bits.Stride * bits.Height];
     Marshal.Copy(bits.Scan0, pixels, 0, pixels.Length);
     converted.UnlockBits(bits);
 
     // GDI+ Format32bppArgb is BGRA; OpenTK Image expects RGBA
-    // TODO: Do not assume this format. Look it up from the source `icon`.
-    for (var i = 0; i < pixels.Length; i += 4)
-      (pixels[i], pixels[i + 2]) = (pixels[i + 2], pixels[i]);
+    // Swap only if format is indeed BGRA
+    if (converted.PixelFormat == PixelFormat.Format32bppArgb) {
+      for (var i = 0; i < pixels.Length; i += 4)
+        (pixels[i], pixels[i + 2]) = (pixels[i + 2], pixels[i]);
+    }
 
     return new Image(size, size, pixels);
   }
