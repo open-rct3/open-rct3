@@ -28,6 +28,7 @@ public partial class OvlTestBenchForm {
 
     startStopButton.Image = RenderIcon(icons, "Play", successColor);
     diagButton.Image = RenderIcon(icons, "ClipboardCheck", infoColor);
+    testPluginsButton.Image = RenderIcon(icons, "Extension", infoColor);
   }
 
   private static Icon? RenderIconResource(IEmbeddedIcons icons, string name, DuoToneColor color, int[] sizes) {

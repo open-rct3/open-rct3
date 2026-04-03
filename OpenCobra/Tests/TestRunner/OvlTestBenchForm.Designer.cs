@@ -9,6 +9,7 @@ partial class OvlTestBenchForm {
     private FlowLayoutPanel mainColumn = null!;
     private Button startStopButton = null!;
     private Button diagButton = null!;
+    private Button testPluginsButton = null!;
     private Label configLabel = null!;
     private ProgressBar progressBar = null!;
     private TreeView resultsTree = null!;
@@ -36,6 +37,7 @@ partial class OvlTestBenchForm {
     mainColumn = new FlowLayoutPanel();
     startStopButton = new Button();
     diagButton = new Button();
+    testPluginsButton = new Button();
     configLabel = new Label();
     progressRow = new TableLayoutPanel();
     progressBar = new ProgressBar();
@@ -60,6 +62,7 @@ partial class OvlTestBenchForm {
     mainColumn.AutoSize = true;
     mainColumn.Controls.Add(startStopButton);
     mainColumn.Controls.Add(diagButton);
+    mainColumn.Controls.Add(testPluginsButton);
     mainColumn.Controls.Add(configLabel);
     mainColumn.Controls.Add(progressRow);
     mainColumn.Controls.Add(resultsTree);
@@ -93,6 +96,18 @@ partial class OvlTestBenchForm {
     diagButton.TextImageRelation = TextImageRelation.ImageBeforeText;
     diagButton.Click += GatherDiagnosticsButton_Click;
     //
+    // testPluginsButton
+    //
+    testPluginsButton.ImageAlign = ContentAlignment.MiddleLeft;
+    testPluginsButton.Location = new Point(220, 3);
+    testPluginsButton.Name = "testPluginsButton";
+    testPluginsButton.Size = new Size(100, 26);
+    testPluginsButton.TabIndex = 2;
+    testPluginsButton.Text = "Test Plugins";
+    testPluginsButton.TextAlign = ContentAlignment.MiddleRight;
+    testPluginsButton.TextImageRelation = TextImageRelation.ImageBeforeText;
+    testPluginsButton.Click += TestPluginsButton_Click;
+    //
     // configLabel
     //
     configLabel.AutoSize = true;
@@ -101,7 +116,7 @@ partial class OvlTestBenchForm {
     configLabel.Margin = new Padding(5, 9, 0, 0);
     configLabel.Name = "configLabel";
     configLabel.Size = new Size(46, 15);
-    configLabel.TabIndex = 2;
+    configLabel.TabIndex = 3;
     configLabel.Text = "Config:";
     configLabel.TextAlign = ContentAlignment.MiddleLeft;
     //

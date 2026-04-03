@@ -8,10 +8,18 @@
     <AssemblyName>OvlTestBench</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Extism.Sdk" Version="*" />
+    <PackageReference Include="Extism.runtime.all" Version="*" />
     <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\OVL\OVL.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\..\bin\plugins\*.wasm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>plugins\%(Filename)%(Extension)</Link>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Update="ovl-tests.local.json" Condition="Exists('ovl-tests.local.json')">

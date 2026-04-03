@@ -301,6 +301,76 @@ public partial class OvlTestBenchForm : Form {
     }
   }
 
+  private async void TestPluginsButton_Click(object? sender, EventArgs e) {
+    if (running) return;
+
+    running = true;
+    testPluginsButton.Enabled = false;
+    resultsTree.Nodes.Clear();
+    progressBar.Value = 0;
+    progressBar.Style = ProgressBarStyle.Continuous;
+    UseWaitCursor = true;
+    stopwatch = Stopwatch.StartNew();
+
+    var pluginsDir = Path.Combine(AppContext.BaseDirectory, "plugins");
+    var wasmFiles = SysDirectory.Exists(pluginsDir)
+        ? SysDirectory.GetFiles(pluginsDir, "*.wasm")
+        : Array.Empty<string>();
+
+    try {
+      await Task.Run(() => {
+        var totalOps = wasmFiles.Length * PluginTests.All.Length;
+        var completedOps = 0;
+
+        foreach (var wasmPath in wasmFiles) {
+          var pluginName = Path.GetFileNameWithoutExtension(wasmPath);
+          var details = new List<(string name, bool passed, string error)>();
+
+          foreach (var test in PluginTests.All) {
+            try {
+              test.Test(wasmPath);
+            } catch (Exception ex) {
+              Assert.AddError(ex.Message);
+            }
+            var result = Assert.Result(test.Name);
+            details.Add((result.Name, result.Passed, result.Error));
+            completedOps++;
+            UpdateProgressAndEta(completedOps, totalOps, stopwatch);
+          }
+
+          bool groupPassed = details.All(d => d.passed);
+          Invoke(() => {
+            var groupNode = resultsTree.Nodes.Add($"{(groupPassed ? "PASS" : "FAIL")} {pluginName}");
+            groupNode.ForeColor = groupPassed ? DColor.DarkGreen : DColor.DarkRed;
+
+            foreach (var (name, passed, error) in details) {
+              var detailNode = groupNode.Nodes.Add($"{(passed ? "  OK" : "  FAIL")} {name}");
+              detailNode.ForeColor = passed ? DColor.DarkGreen : DColor.DarkRed;
+              if (!string.IsNullOrEmpty(error)) {
+                var errorNode = detailNode.Nodes.Add($"    Error: {error}");
+                errorNode.ForeColor = DColor.Red;
+              }
+            }
+          });
+        }
+
+        var totalElapsed = stopwatch.Elapsed;
+        UpdateStatus(wasmFiles.Length > 0
+            ? $"Tested {wasmFiles.Length} plugin(s)"
+            : "No plugins found");
+        UpdateTiming(FormatDuration(totalElapsed));
+      });
+    } catch (Exception ex) {
+      var rootNode = resultsTree.Nodes.Add($"Error: {ex.Message}");
+      rootNode.ForeColor = DColor.Red;
+      UpdateStatus("Error: See Results");
+    } finally {
+      running = false;
+      testPluginsButton.Enabled = true;
+      UseWaitCursor = false;
+    }
+  }
+
   private static IEnumerable<string> ReadRawStrings(byte[] data) {
     var result = new List<string>();
     var pos = 0;
