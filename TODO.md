@@ -18,13 +18,6 @@ Organized by [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap) phas
 - [x] Create data model for inspector items (`OpenRCT3/ViewModels/Inspector.cs:14`)
 - [ ] Handle OS-dependent and game-store-dependent game paths (`src/paths.d:34,49`)
 
-### OVL Viewer Plugins
-- [x] Integer viewer plugin (`plugins/int-viewer/`) — displays int32 values as decimal, hex, and binary
-- [x] Text viewer plugin (`plugins/txt-viewer/`) — decodes UTF-16LE and ASCII text with fallback hex view
-- [x] Splines viewer plugin (`plugins/spl-viewer/`) — displays Spline header metadata and hex view
-- [x] Sounds viewer plugin (`plugins/snd-viewer/`) — displays WAVEFORMATEX audio format metadata and duration
-- [x] Manifold meshes viewer plugin (`plugins/mam-viewer/`) — displays mesh vertex/face counts and bounding box
-
 ### Engine & Rendering
 - [ ] Update framebuffer on window resize/screen changes (`OpenRCT3/Platforms/macOS/GameViewController.cs:35`)
 - [ ] Tear down graphics and other unmanaged resources (`OpenRCT3/Platforms/macOS/AppDelegate.cs:24`)
