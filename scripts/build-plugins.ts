@@ -2,14 +2,19 @@ import * as fs from "@std/fs";
 import * as path from "@std/path";
 import asc from "assemblyscript/asc";
 
-const PLUGINS_DIR = path.resolve(Deno.cwd(), "plugins");
-const OUTPUT_DIR = path.resolve(Deno.cwd(), "bin", "plugins");
+import { setupFileLogger } from "../lib/log.ts";
 
+const verbose = Deno.args.includes("--verbose") || Deno.args.includes("-v");
 const denoDir = Deno.env.get("DENO_DIR")
   ?? (Deno.build.os === "windows"
     ? `${Deno.env.get("LOCALAPPDATA")}\\deno`
-    : `${Deno.env.get("HOME")}/.deno`);
+    : Deno.build.os === "darwin"
+    ? `${Deno.env.get("HOME")}/Library/Caches/deno`
+    : `${Deno.env.get("HOME")}/.cache/deno`);
 const npmCachePath = path.join(denoDir, "npm", "registry.npmjs.org");
+
+const PLUGINS_DIR = path.resolve(Deno.cwd(), "plugins");
+const OUTPUT_DIR = path.resolve(Deno.cwd(), "bin", "plugins");
 
 async function buildPlugin(pluginDir: string): Promise<void> {
   const pluginName = path.basename(pluginDir);
@@ -50,7 +55,7 @@ async function buildPlugin(pluginDir: string): Promise<void> {
       const filePath = path.isAbsolute(name)
         ? name
         : path.join(baseDir, name);
-      console.log("readFile:", filePath);
+      console.debug("readFile:", filePath);
       return Deno.readTextFile(filePath).catch(() => null);
     },
     writeFile: (name: string, data: string | Uint8Array, _baseDir: string) => {
@@ -114,9 +119,11 @@ async function main(): Promise<void> {
   console.log("Build complete!");
 }
 
+await setupFileLogger("build-plugins", verbose);
+
 const tempDir = await Deno.makeTempDir();
 const shimsDir = path.join(tempDir, "as-shims");
-console.log("shimsDir:", shimsDir);
+console.debug("Creating AssemblyScript shims:", shimsDir);
 
 async function ensureAscShims(): Promise<void> {
   const pdkSrc = path.join(npmCachePath, "@extism", "as-pdk", "1.0.0");
