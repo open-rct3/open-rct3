@@ -9,7 +9,6 @@ using System;
 using Foundation;
 using AppKit;
 using ObjCRuntime;
-using CoreAnimation;
 
 using OpenRCT3.ViewModels;
 
@@ -26,11 +25,22 @@ public partial class GameViewController(NativeHandle handle) : NSViewController(
 
     this.inspector.LoadRequest(new NSUrlRequest(new NSUrl("https://google.com")));
 
-    this.game.WantsLayer = true;
-    this.game.Layer = CAOpenGLLayer.Create();
+    var attrs = new[] {
+      NSOpenGLPixelFormatAttribute.Accelerated,
+      NSOpenGLPixelFormatAttribute.DoubleBuffer,
+      NSOpenGLPixelFormatAttribute.ColorSize, (NSOpenGLPixelFormatAttribute)24,
+      NSOpenGLPixelFormatAttribute.DepthSize, (NSOpenGLPixelFormatAttribute)24,
+      (NSOpenGLPixelFormatAttribute)0
+    };
+    var pixelFormat = new NSOpenGLPixelFormat(attrs);
+    var gameView = new GameView(this.game.Bounds, pixelFormat);
+    gameView.AutoresizingMask = NSViewResizingMask.WidthSizable | NSViewResizingMask.HeightSizable;
+    this.game.AddSubview(gameView);
 
-    var surface = new OpenGLSurface(this.game.Layer.Handle, true);
-    SurfaceChanged?.Invoke(surface);
+    if (gameView.OpenGLContext != null) {
+      var surface = new OpenGLSurface(gameView.OpenGLContext.CGLContext.Handle, true);
+      SurfaceChanged?.Invoke(surface);
+    }
 
     // TODO: Update framebuffer on WillResize/DidResize, DidChangeScreen, and DidChangeScreenProfile
     // See also DidEndLiveResize

@@ -455,9 +455,9 @@
                                         </wkWebViewConfiguration>
                                     </wkWebView>
                                     <containerView fixedFrame="YES" id="Kap-w6-2EH">
-                                        <rect key="frame" x="201" y="0.0" width="439" height="270"/>
-                                        <autoresizingMask key="autoresizingMask"/>
-                                    </containerView>
+                                         <rect key="frame" x="201" y="0.0" width="439" height="270"/>
+                                         <autoresizingMask key="autoresizingMask"/>
+                                     </containerView>
                                 </subviews>
                                 <holdingPriorities>
                                     <real value="250"/>
