@@ -50,4 +50,8 @@ test: test-plugins
 
 .PHONY: test-plugins
 test-plugins:
+# FIXME: This doesn't work on macOS
+ifeq ($(PLATFORM),Windows)
+	dotnet build OpenCobra/Tests/TestRunner/OvlTestBench.csproj /p:Profile=cli
 	dotnet run --project OpenCobra/Tests/TestRunner/OvlTestBench.csproj -- --plugins
+endif
