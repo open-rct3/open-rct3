@@ -39,10 +39,11 @@
     <DefineConstants></DefineConstants>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-
+  <!-- Project references -->
   <ItemGroup>
     <ProjectReference Include="..\OpenCobra\OVL\OVL.csproj" />
   </ItemGroup>
+  <!-- NuGet packages -->
   <ItemGroup>
     <PackageReference Include="Extism.runtime.all" Version="*" />
     <PackageReference Include="Extism.Sdk" Version="*" />
@@ -53,6 +54,7 @@
     <PackageReference Include="System.Reactive" Version="6.1.0" />
     <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
   </ItemGroup>
+  <!-- WinForms resources -->
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -65,8 +67,16 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Dumper.ico" />
   </ItemGroup>
+  <!-- Bundle built-in plugins -->
+  <ItemGroup>
+    <Content Include="$(SolutionDir)bin\plugins\*.wasm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>plugins\%(Filename).wasm</Link>
+    </Content>
+  </ItemGroup>
+  <Target Name="BuildPlugins" BeforeTargets="BeforeBuild">
+    <Exec Command="deno task build:plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
+  </Target>
 </Project>

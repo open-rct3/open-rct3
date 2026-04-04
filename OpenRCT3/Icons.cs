@@ -1,10 +1,8 @@
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace OpenRCT3;
 
@@ -29,7 +27,7 @@ internal static class Icons {
 
   public static int DefaultSize = 16;
 
-  public static Image ToImage(Icon icon, int? desiredSize) {
+  public static Image ToImage(Icon icon, int? desiredSize = null) {
     var size = desiredSize ?? DefaultSize;
 
     var bitmap = new Bitmap(size, size, PixelFormat.Format32bppArgb);

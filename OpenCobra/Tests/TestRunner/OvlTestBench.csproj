@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Integration\Integration.csproj" />
+    <ProjectReference Include="..\Integration\IntegrationTests.csproj" />
     <ProjectReference Include="..\..\OVL\OVL.csproj" />
   </ItemGroup>
 

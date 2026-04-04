@@ -28,6 +28,7 @@ public partial class OvlTestBenchForm {
 
     startStopButton.Image = RenderIcon(icons, "Play", successColor);
     diagButton.Image = RenderIcon(icons, "ClipboardCheck", infoColor);
+    // TODO: Fix this icon. It's blank on the button. This icon likely doesn't exist.
     testPluginsButton.Image = RenderIcon(icons, "Extension", infoColor);
   }
 
