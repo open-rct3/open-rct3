@@ -1,4 +1,6 @@
+/// <reference no-default-lib="true" />
 import { Host } from "@extism/as-pdk";
+import "../types.ts";
 
 export function name(): string { return "Sound Viewer"; }
 export function version(): string { return "0.1.0"; }

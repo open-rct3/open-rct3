@@ -8,7 +8,7 @@
     "build:desktop": "deno compile --env --no-prompt --unstable-ffi --allow-ffi --allow-read --allow-write --allow-env=DENO_AUTH_TOKENS,DENO_DIR,PLUGIN_URL,LOCALAPPDATA,RCT3_SERVER_URL --allow-run=cmd,tar --allow-net=github.com:443,objects.githubusercontent.com:443 --output bin/OpenRCT3 clients/desktop/main.ts",
     "build:website": "deno run --allow-env --allow-net --allow-sys --allow-read --allow-write=./clients/website/_site clients/website/build.ts",
     "build:plugins": "deno run --allow-env=CI,DENO_DIR,HOME,LOCALAPPDATA,USERPROFILE --allow-read --allow-write --allow-run scripts/build-plugins.ts",
-    "check:plugins": "deno check plugins/int-viewer/index.ts plugins/txt-viewer/index.ts"
+    "check:plugins": "deno check plugins/*/index.ts"
   },
   "imports": {
     "@extism/as-pdk": "npm:@extism/as-pdk@1.0.0",

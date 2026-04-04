@@ -1,4 +1,6 @@
+/// <reference no-default-lib="true" />
 import { Host, Config } from "@extism/as-pdk";
+import "../types.ts";
 
 export function name(): string { return "Integer Viewer"; }
 export function version(): string { return "0.1.0"; }
