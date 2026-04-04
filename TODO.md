@@ -4,6 +4,10 @@
 - [x] Bundle the app for all OSes (`Makefile:6`)
 - [ ] Add Zed agent rules to CLAUDE.md
 
+## 💾 Memory Leaks
+
+- [ ] OpenRCT3 in Windows launches and then immediately hangs with the wait cursor; there's likely a memory leak or OpenGL is not being used correctly.
+
 ---
 
 Organized by [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap) phases.

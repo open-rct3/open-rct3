@@ -1,68 +1,74 @@
-using OpenTK.Windowing.Common;
-using OpenTK.Windowing.Desktop;
-using OpenTK.Windowing.GraphicsLibraryFramework;
+using Silk.NET.Core.Loader;
+using Silk.NET.Core.Native;
 using Silk.NET.OpenGL;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using ContextFlags = OpenTK.Windowing.Common.ContextFlags;
-using GlNativeWindow = OpenTK.Windowing.Desktop.NativeWindow;
+using static OpenRCT3.Platforms.Windows.Win32;
 
 namespace OpenRCT3.Platforms.Windows;
 
-public class GLSurface : Control, IWindow {
-  private GlNativeWindow? _nativeWindow;
-  private GLSurfaceSettings _settings;
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+public class GLSurface : Control, IWindow, IGraphicsSurface {
+  private const string OpenGLCreateContextError = "Could not create an OpenGL context.";
+
+  private SurfaceSettings _settings;
+  private nint hdc = 0;
+  private nint ctx = 0;
+  private GL? gl;
   private readonly HashSet<IObserver<OpenGLSurface>> _observers = new();
-  private GL? _gl;
 
   public GLSurface() : this(null) { }
 
-  public GLSurface(GLSurfaceSettings? settings) {
+  public GLSurface(SurfaceSettings? settings) {
     SetStyle(ControlStyles.Opaque, true);
     SetStyle(ControlStyles.UserPaint, true);
     SetStyle(ControlStyles.AllPaintingInWmPaint, true);
     DoubleBuffered = false;
-    _settings = settings?.Clone() ?? new GLSurfaceSettings();
+
+    _settings = settings?.Clone() ?? new SurfaceSettings();
   }
 
   [Category("OpenGL")]
-  public ContextAPI API {
-    get => _nativeWindow?.API ?? _settings.API;
+  public GraphicsAPI API {
+    get => _settings.API;
     set => _settings.API = value;
   }
 
   [Category("OpenGL")]
-  public ContextProfile Profile {
-    get => _nativeWindow?.Profile ?? _settings.Profile;
+  public ContextProfileMask Profile {
+    get => _settings.Profile;
     set => _settings.Profile = value;
   }
 
   [Category("OpenGL")]
-  public ContextFlags Flags {
-    get => _nativeWindow?.Flags ?? _settings.Flags;
+  public ContextFlagMask Flags {
+    get => _settings.Flags;
     set => _settings.Flags = value;
   }
 
   [Category("OpenGL")]
   public Version APIVersion {
-    get => _nativeWindow?.APIVersion ?? _settings.APIVersion;
-    set => _settings.APIVersion = value;
+    get => _settings.Version;
+    set => _settings.Version = value;
   }
 
   [Browsable(false)]
-  public bool HasValidContext => _nativeWindow != null;
+  public SurfaceSettings Settings => _settings;
 
   [Browsable(false)]
-  public GL? GL => _gl;
+  public bool HasValidContext => IsHandleCreated && ctx != 0 && gl != null;
 
   [Browsable(false)]
-  public override string Text { get => base.Text; set => base.Text = value; }
+  public GL GL => gl ?? throw new Exception("Current OpenGL context is invalid!");
 
   // IWindow
-  public string Title { get => Text; set => Text = value; }
+  [Category("Behavior")]
+  public string Title { get => base.Text; set => Text = value; }
 
   public Dpi Dpi {
     get {
@@ -90,62 +96,65 @@ public class GLSurface : Control, IWindow {
   }
 
   public void MakeCurrent() {
-    if (DesignMode || _nativeWindow == null) return;
-    _nativeWindow.MakeCurrent();
+    if (DesignMode || !HasValidContext) return;
+    if (hdc == 0) throw new Exception("Could not make the GL context current.");
+    if (!wglMakeCurrent(hdc, ctx)) throw new Exception("Could not make the GL context current.");
   }
 
   public void SwapBuffers() {
-    if (DesignMode || _nativeWindow == null) return;
-    _nativeWindow.Context.SwapBuffers();
+    if (DesignMode || !HasValidContext) return;
+    if (hdc == 0) throw new Exception("Could not swap graphics buffers.");
+
+    Win32.SwapBuffers(hdc);
   }
 
   protected override void OnHandleCreated(EventArgs e) {
-    if (!DesignMode)
-      CreateNativeWindow();
+    if (DesignMode) return;
+
+    // Try to create an OpenGL context
+    hdc = GetDC(Handle);
+    var pfd = new PIXELFORMATDESCRIPTOR {
+      nSize = (ushort)Marshal.SizeOf<PIXELFORMATDESCRIPTOR>(),
+      nVersion = 1,
+      dwFlags = 0x00000004 | 0x00000020, // PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL
+      iPixelType = 0, // PFD_TYPE_RGBA
+      cColorBits = 32,
+      cDepthBits = 24,
+      cStencilBits = 8,
+      iLayerType = 0 // PFD_MAIN_PLANE
+    };
+    int pix = ChoosePixelFormat(hdc, ref pfd);
+    if (pix == 0) throw new Exception("Could not choose an appropriate pixel format for OpenGL.");
+    if (!SetPixelFormat(hdc, pix, ref pfd)) throw new Exception("Could not set the surface's pixel format.");
+    if (hdc == 0) throw new InvalidOperationException("Surface HDC context is invalid!");
+    ctx = wglCreateContext(hdc);
+    if (ctx == 0) throw new Exception(OpenGLCreateContextError);
+    MakeCurrent();
+
+    // Load Silk.NET OpenGL with the current context
+    var gl = GL.GetApi(proc => OpenGLProcResolver.GetProc(proc, _settings.Version)) ?? throw new Exception(OpenGLCreateContextError);
+
+    gl.ClearColor(Color.CornflowerBlue);
+    gl.Clear(ClearBufferMask.ColorBufferBit);
+
     base.OnHandleCreated(e);
   }
 
-  private void CreateNativeWindow() {
-    var nativeSettings = new NativeWindowSettings {
-      API = _settings.API,
-      Profile = _settings.Profile,
-      Flags = _settings.Flags,
-      APIVersion = _settings.APIVersion,
-      ClientSize = new OpenTK.Mathematics.Vector2i(Width, Height),
-      StartVisible = false,
-      AutoLoadBindings = false,
-    };
-
-    _nativeWindow = new GlNativeWindow(nativeSettings);
-
-    unsafe {
-      var hWnd = GLFW.GetWin32Window(_nativeWindow.WindowPtr);
-      var style = (IntPtr)(long)(Win32.WindowStyles.WS_CHILD
-        | Win32.WindowStyles.WS_DISABLED
-        | Win32.WindowStyles.WS_CLIPSIBLINGS
-        | Win32.WindowStyles.WS_CLIPCHILDREN);
-      Win32.SetWindowLongPtr(hWnd, Win32.WindowLongs.GWL_STYLE, style);
-
-      var exStyle = (IntPtr)(long)Win32.WindowStylesEx.WS_EX_NOACTIVATE;
-      Win32.SetWindowLongPtr(hWnd, Win32.WindowLongs.GWL_EXSTYLE, exStyle);
-
-      Win32.SetParent(hWnd, Handle);
+  protected override void OnHandleDestroyed(EventArgs e) {
+    base.OnHandleDestroyed(e);
+    GetDC(Handle);
+    if (HasValidContext) {
+      // TODO: Destroy the other OpenGL resources
+      gl?.Dispose();
+      gl = null;
+      if (hdc != 0) _ = ReleaseDC(Handle, hdc);
     }
-
-    ResizeNativeWindow();
-    _nativeWindow.IsVisible = true;
-
-    _nativeWindow.MakeCurrent();
-    _gl = new GL(new OpenRCT3.OpenGL.WindowsGLContext());
-  }
-
-  private void ResizeNativeWindow() {
-    if (_nativeWindow == null || DesignMode) return;
-    _nativeWindow.ClientRectangle = new OpenTK.Mathematics.Box2i(0, 0, Width, Height);
   }
 
   protected override void OnResize(EventArgs e) {
-    if (IsHandleCreated) ResizeNativeWindow();
+    if (IsHandleCreated) {
+      // TODO: Resize resolution-dependent graphics resources
+    }
     base.OnResize(e);
   }
 
@@ -159,16 +168,6 @@ public class GLSurface : Control, IWindow {
     base.OnPaint(e);
   }
 
-  protected override void OnHandleDestroyed(EventArgs e) {
-    base.OnHandleDestroyed(e);
-    _gl?.Dispose();
-    _gl = null;
-    if (_nativeWindow != null) {
-      _nativeWindow.Dispose();
-      _nativeWindow = null;
-    }
-  }
-
   private static readonly object EVENT_RENDERFRAME = new();
 
   [Category("OpenGL")]
@@ -178,15 +177,9 @@ public class GLSurface : Control, IWindow {
   }
 
   private void OnRenderFrame() {
+    if (!HasValidContext) return;
+
+    gl.Clear(ClearBufferMask.ColorBufferBit);
     ((EventHandler?)Events[EVENT_RENDERFRAME])?.Invoke(this, EventArgs.Empty);
   }
-}
-
-public class GLSurfaceSettings {
-  public ContextAPI API { get; set; } = ContextAPI.OpenGL;
-  public ContextProfile Profile { get; set; } = ContextProfile.Core;
-  public ContextFlags Flags { get; set; } = ContextFlags.ForwardCompatible;
-  public Version APIVersion { get; set; } = new(4, 0);
-
-  public GLSurfaceSettings Clone() => (GLSurfaceSettings)MemberwiseClone();
 }
