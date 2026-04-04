@@ -44,18 +44,6 @@
     <None Include="**\*.windows.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
   </ItemGroup>
 
-<!--  <ItemGroup>-->
-<!--    <Folder Include="Models\" />-->
-<!--    <Folder Include="Assets\" />-->
-<!--    <Folder Include="Views\" />-->
-<!--    <Folder Include="Platform\" />-->
-<!--  </ItemGroup>-->
-
-<!--  <ItemGroup>-->
-<!--    <None Remove="Assets\" />-->
-<!--    <None Remove="Views\" />-->
-<!--    <None Remove="Platform\" />-->
-<!--  </ItemGroup>-->
   <ItemGroup>
     <ProjectReference Include="../OpenCobra/OVL/OVL.csproj" />
   </ItemGroup>
