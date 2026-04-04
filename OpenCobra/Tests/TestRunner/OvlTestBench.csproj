@@ -1,36 +1,39 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>OvlTestBench</RootNamespace>
     <AssemblyName>OvlTestBench</AssemblyName>
   </PropertyGroup>
 
+  <PropertyGroup Condition="$(Profile) == 'cli'">
+    <OutputType>Exe</OutputType>
+    <UseWindowsForms>false</UseWindowsForms>
+  </PropertyGroup>
+
   <Choose>
-    <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
-      <PropertyGroup>
-        <OutputType>WinExe</OutputType>
-        <TargetFramework>net8.0-windows</TargetFramework>
-        <UseWindowsForms>true</UseWindowsForms>
-      </PropertyGroup>
-      <ItemGroup>
-        <Compile Remove="Program.cli.cs" />
-      </ItemGroup>
-    </When>
-    <Otherwise>
-      <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-      </PropertyGroup>
+    <When Condition="$(Profile) == 'cli'">
       <ItemGroup>
         <Compile Remove="Program.cs" />
         <Compile Remove="OvlTestBenchForm.cs" />
         <Compile Remove="OvlTestBenchForm.Designer.cs" />
         <Compile Remove="OvlTestBenchForm.Icons.cs" />
       </ItemGroup>
+    </When>
+    <When Condition="$(Profile) == 'all' Or $(Profile) == 'gui'">
+      <ItemGroup>
+        <Compile Remove="Program.cli.cs" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <Compile Remove="Program.cli.cs" />
+      </ItemGroup>
     </Otherwise>
   </Choose>
 
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows'))">
+  <ItemGroup Condition="$(Profile) != 'cli'">
     <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
   </ItemGroup>
 
