@@ -17,23 +17,22 @@
     <!-- Versions -->
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
-<!--    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'macos'">10.15</SupportedOSPlatformVersion>-->
-<!--    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>-->
-<!--    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>-->
   </PropertyGroup>
-
+  <!-- Configure debug and release modes -->
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <CreatePackage>false</CreatePackage>
+    <UseSGen>false</UseSGen>
+    <WarningLevel>1</WarningLevel>
+    <LinkMode>None</LinkMode>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <CreatePackage>false</CreatePackage>
+    <UseSGen>false</UseSGen>
+    <LinkMode>None</LinkMode>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <!-- TODO: <TrimMode>Link</TrimMode> to minimize bundle size -->
+  </PropertyGroup>
   <!-- Exclude platform-specific sources, per platform. -->
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <CreatePackage>false</CreatePackage>
-    <UseSGen>false</UseSGen>
-    <WarningLevel>4</WarningLevel>
-    <LinkMode>None</LinkMode>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <CreatePackage>false</CreatePackage>
-    <UseSGen>false</UseSGen>
-    <LinkMode>None</LinkMode>
-  </PropertyGroup>
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('macos')) != true">
     <Compile Remove="**\*.macOS.cs" />
     <None Include="**\*.macOS.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
