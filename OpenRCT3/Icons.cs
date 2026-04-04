@@ -29,7 +29,7 @@ internal static class Icons {
 
   public static int DefaultSize = 16;
 
-  public static Image ToImage(Icon icon, int? desiredSize) {
+  public static Image ToImage(Icon icon, int? desiredSize = null) {
     var size = desiredSize ?? DefaultSize;
 
     var bitmap = new Bitmap(size, size, PixelFormat.Format32bppArgb);
