@@ -1,9 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
+using Silk.NET.Core.Contexts;
 
 namespace OpenRCT3.OpenGL;
 
-public class MacOSGLContext : IPlatformGLContext {
+public class MacOSGLContext : IPlatformGLContext, INativeContext {
   private readonly nint _openglLib;
 
   public MacOSGLContext() {
@@ -12,6 +13,15 @@ public class MacOSGLContext : IPlatformGLContext {
 
   public nint GetProcAddress(string procName) {
     return dlsym(_openglLib, procName);
+  }
+
+  public nint GetProcAddress(string proc, int? slot = null) {
+    return dlsym(_openglLib, proc);
+  }
+
+  public bool TryGetProcAddress(string proc, out nint addr, int? slot = null) {
+    addr = dlsym(_openglLib, proc);
+    return addr != 0;
   }
 
   public void Dispose() {

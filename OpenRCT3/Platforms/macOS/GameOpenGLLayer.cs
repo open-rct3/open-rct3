@@ -3,6 +3,7 @@ using CoreAnimation;
 using CoreVideo;
 using OpenGL;
 
+using Silk.NET.Core.Contexts;
 using Silk.NET.OpenGL;
 
 using OpenRCT3;
@@ -13,13 +14,14 @@ namespace OpenRCT3.Platforms.macOS;
 public class GameOpenGLLayer : CAOpenGLLayer {
   private bool _initialized;
   private GL? _gl;
+  private MacOSGLContext? _glContext;
 
   public override void DrawInCGLContext(CGLContext glContext, CGLPixelFormat pixelFormat, double timeInterval, ref CVTimeStamp timeStamp) {
     if (!_initialized) {
       _initialized = true;
-      _gl = new GL(new MacOSGLContext());
-      var clearColor = Color.CornflowerBlue.ToGl();
-      _gl.ClearColor(clearColor.X, clearColor.Y, clearColor.Z, clearColor.W);
+      _glContext = new MacOSGLContext();
+      _gl = GL.GetApi(_glContext.GetProcAddress);
+      _gl.ClearColor(Color.CornflowerBlue);
     }
 
     _gl!.Clear(ClearBufferMask.ColorBufferBit);
