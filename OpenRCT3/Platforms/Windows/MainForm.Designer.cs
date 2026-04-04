@@ -18,13 +18,11 @@ namespace OpenRCT3.Platforms.Windows {
       // 
       // glSurface
       // 
-      glSurface.API = OpenTK.Windowing.Common.ContextAPI.OpenGL;
+      glSurface.API = GraphicsAPI.OpenGL;
       glSurface.APIVersion = new System.Version(4, 1, 0, 0);
       glSurface.Dock = System.Windows.Forms.DockStyle.Fill;
-      glSurface.Flags = OpenTK.Windowing.Common.ContextFlags.ForwardCompatible;
       glSurface.Location = new System.Drawing.Point(0, 0);
       glSurface.Name = "glSurface";
-      glSurface.Profile = OpenTK.Windowing.Common.ContextProfile.Core;
       glSurface.Size = new System.Drawing.Size(624, 381);
       glSurface.TabIndex = 0;
       // 
