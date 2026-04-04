@@ -1,6 +1,19 @@
 # Environment Variables
 .env
 
+# Tests
+nunit_random_seed.tmp
+TestResults/
+
+# Tests for Production OVLs
+OpenCobra/Tests/TestRunner/bin/**/ovl-tests.local.json
+OpenCobra/Tests/TestRunner/ovl-tests.local.json
+
+# DUB
+.dub
+docs.json
+__dummy.html
+
 # Artifacts
 obj/
 **/bin/Debug/**/*.app
@@ -28,19 +41,6 @@ bin/open-rct3-*
 *.lib
 *.exe
 *.pdb
-
-# Tests
-nunit_random_seed.tmp
-TestResults/
-
-# Tests for Production OVLs
-OpenCobra/Tests/TestRunner/bin/**/ovl-tests.local.json
-OpenCobra/Tests/TestRunner/ovl-tests.local.json
-
-# DUB
-.dub
-docs.json
-__dummy.html
 
 # Visual Studio
 .vs/CopilotSnapshots/
