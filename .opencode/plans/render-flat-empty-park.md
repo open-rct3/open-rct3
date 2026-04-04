@@ -2,6 +2,8 @@
 
 **Issue**: https://github.com/open-rct3/open-rct3/issues/4
 
+**Cost Estimate**: [.opencode/costs/flat-empty-park.md](../costs/flat-empty-park.md)
+
 ## Overview
 
 Implement rendering of a flat, empty park in the native C# OpenRCT3 client using the existing OpenGL foundation via Silk.NET. Work through three stages: solid color → nullbmp texture → actual grass from terrain OVLs.

@@ -26,6 +26,8 @@ This document estimates the development time for implementing the [Render Flat, 
 
 ## Totals
 
+> **⚠️ Warning**: Budget 30-50% extra time for review and correction cycles when using AI assistance. This estimate includes that overhead.
+
 | Approach | Estimated Time | Notes |
 |----------|----------------|-------|
 | **AI-assisted** (MiniMax 2.5 + Claude) | **7-11 hours** | Draft generation with human review cycles |
@@ -44,7 +46,7 @@ This document estimates the development time for implementing the [Render Flat, 
 
 ## AI Correction Overhead
 
-Based on historical data from [Porting libOVL to C#](../../docs/ai/Porting%20libOVL.md), AI-generated code requires manual correction for:
+Based on historical data from [Porting libOVL to C#](../../docs/ai/Porting%20libOVL.md), AI-generated code requires manual verification and correction, e.g.:
 
 | Issue Type | Example from libOVL |
 |------------|---------------------|
@@ -52,8 +54,6 @@ Based on historical data from [Porting libOVL to C#](../../docs/ai/Porting%20lib
 | Incorrect field mappings | `"bmptbl"` vs actual `"btbl"` tag |
 | Logic direction errors | Reverse mapping direction in tree-view grouping |
 | Missing assignments | `symbolCountOrder` never assigned |
-
-> **⚠️ Warning**: Budget 30-50% extra time for review and correction cycles when using AI assistance. This estimate includes that overhead.
 
 ---
 
