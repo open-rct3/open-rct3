@@ -4,7 +4,6 @@
 //  - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,7 +17,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Drawing;
 
-namespace OVL;
+namespace OpenCobra.OVL;
 
 /// <seealso href="https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/integral-numeric-types"/>
 /// <seealso href="https://stackoverflow.com/a/4159471/1363247"/>

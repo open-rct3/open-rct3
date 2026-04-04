@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using OpenCobra.OVL;
 using OvlTestBench.Tests;
 
 namespace OvlTestBench;
@@ -80,8 +81,8 @@ internal static class Program {
             pairs.Add(new OvlPair {
                 Name = prefix, CommonPath = c, UniquePath = u,
                 Files = [
-                    new OvlFile { Path = c, Type = OVL.OvlType.Common },
-                    new OvlFile { Path = u, Type = OVL.OvlType.Unique },
+                    new OvlFile { Path = c, Type = OvlType.Common },
+                    new OvlFile { Path = u, Type = OvlType.Unique },
                 ],
             });
         }

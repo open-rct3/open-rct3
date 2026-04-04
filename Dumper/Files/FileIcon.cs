@@ -4,7 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
-using OVL.Files;
+using OpenCobra.OVL.Files;
 
 namespace Dumper.Files;
 

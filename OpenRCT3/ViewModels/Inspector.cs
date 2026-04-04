@@ -6,7 +6,7 @@
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 using System;
 using System.Collections.Generic;
-using OVL.Files;
+using OpenCobra.OVL.Files;
 
 namespace OpenRCT3.ViewModels;
 

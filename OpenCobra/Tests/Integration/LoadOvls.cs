@@ -1,5 +1,5 @@
 using System;
-using OVL;
+using OpenCobra.OVL;
 
 namespace OvlTestBench.Tests;
 

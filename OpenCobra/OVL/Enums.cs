@@ -6,7 +6,7 @@
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 using System;
 
-namespace OVL;
+namespace OpenCobra.OVL;
 
 /// <summary>OVL archive format version.</summary>
 public enum Version : uint {

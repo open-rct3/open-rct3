@@ -4,7 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
-namespace OVL.Files;
+namespace OpenCobra.OVL.Files;
 
 /// <summary>
 /// Files known to Frontier Graphics Development Kit and RCT3, c. 2004.

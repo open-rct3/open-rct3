@@ -5,6 +5,7 @@
 //
 // Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.
 
+using OpenCobra.OVL;
 using System.Collections;
 using System.IO;
 using System.Linq;

@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationTests", "OpenCob
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OvlTestBench", "OpenCobra\Tests\TestRunner\OvlTestBench.csproj", "{B9316006-752D-47CF-A5A9-2285B867C2B2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GDK", "OpenCobra\GDK\GDK.csproj", "{3524E823-F26D-4817-B1AC-30EB17C7FCEB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,6 +49,10 @@ Global
 		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -56,6 +62,7 @@ Global
 		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
 		{A5E8F9D0-1234-5678-9ABC-DEF012345678} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
 		{B9316006-752D-47CF-A5A9-2285B867C2B2} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9F92069A-502C-435A-89FB-D1F30059ECBC}

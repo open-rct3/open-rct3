@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
-using OVL;
+using OpenCobra.OVL;
 
 namespace OVL.Tests;
 

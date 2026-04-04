@@ -2,8 +2,8 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Windows.Forms;
-using OVL;
-using OVL.Files;
+using OpenCobra.OVL;
+using OpenCobra.OVL.Files;
 
 namespace Dumper;
 

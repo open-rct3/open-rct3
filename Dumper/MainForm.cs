@@ -5,8 +5,8 @@
 //
 // Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
 using Dumper.Plugins;
-using OVL;
-using OVL.Files;
+using OpenCobra.OVL;
+using OpenCobra.OVL.Files;
 using Rop.Winforms8.DuotoneIcons;
 using Rop.Winforms8.DuotoneIcons.MaterialDesign;
 using System;
