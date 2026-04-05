@@ -13,10 +13,13 @@
     <ItemGroup>
         <Compile Remove="TestRunner\**" />
         <Compile Remove="Integration\**" />
+        <Compile Remove="GDK\**" />
         <EmbeddedResource Remove="TestRunner\**" />
         <EmbeddedResource Remove="Integration\**" />
+        <EmbeddedResource Remove="GDK\**" />
         <None Remove="TestRunner\**" />
         <None Remove="Integration\**" />
+        <None Remove="GDK\**" />
     </ItemGroup>
 
     <ItemGroup>

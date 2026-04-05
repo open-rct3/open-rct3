@@ -10,9 +10,9 @@ namespace OpenCobra.GDK.Shaders;
 
 public class ShaderProgram {
   [Category("Data")]
-  public string VertexSource { get; init; } = string.Empty;
+  public string VertexSource { get; set; } = string.Empty;
   [Category("Data")]
-  public string FragmentSource { get; init; } = string.Empty;
+  public string FragmentSource { get; set; } = string.Empty;
   [Category("Data")]
   public List<Uniform> Uniforms { get; init; } = [];
   [Category("Data")]
@@ -25,7 +25,7 @@ public class Uniform {
   [Category("Data")]
   public UniformType Type { get; init; }
   [Category("Data")]
-  public object? Value { get; set; }
+  public virtual object? Value { get; set; }
 }
 
 public enum UniformType {

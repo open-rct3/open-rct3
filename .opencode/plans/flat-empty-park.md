@@ -50,7 +50,7 @@ The `OpenGLRenderer` must dispose all created resources on shutdown to prevent G
 
 ---
 
-## Phase 3: Detect RCT3 Installation (Testing)
+## Phase 3: Detect RCT3 Installation (Done)
 
 Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate project):
 
@@ -76,30 +76,43 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
 
 ---
 
-## Phase 4: Render Solid Color Plane
+## Phase 4: Render Solid Color Plane (Testing)
 
 > **⚠️ This is a prototype.** The implementation is intentionally minimal to validate the rendering pipeline. Expect significant refactoring in future phases as more features are added. Do not invest in polished error handling or optimization here — those will be addressed as the prototype matures.
 
-### `OpenRCT3/Platforms/`
-
-1. **Add `IRenderer` interface** (following `IGraphicsSurface` pattern):
+1. **Add `Platform/IRenderer.cs` interface** (following `IGraphicsSurface` pattern):
    ```csharp
    public interface IRenderer {
      void Initialize(IGraphicsSurface surface);
-     void Render(Mesh mesh, Material material, ShaderProgram shader);
+     void Render(Scene scene);
      void SetViewport(int width, int height);
    }
    ```
 
 2. **Implement `Renderer`** in `OpenRCT3/OpenGL/`:
-   - Create `Mesh` for flat quad (2 triangles)
-   - Embed simple GLSL vertex/fragment shaders as static text in a `ShaderProgram` instance
-   - Using `System.Numerics`, set perspective projection matrix + view matrix (camera looking down at park)
+   - `class Renderer(Silk.Silk.NET.OpenGL.GL gl) : IRenderer`
    - Render quad in an implementation of `IRenderer`, named `OpenGL/Renderer.cs`
 
-3. **Update `GameOpenGLLayer.cs`**:
+3. **Implement `class Transform : Uniform`** in `GDK/Transform.cs`:
+   - `Matrix4x4 Matrix { get; set; }` from `System.Numerics`
+   - `public object? Value => this.Matrix;`
+
+4. **Implement `class Model`** in `GDK/Model.cs`:
+   - `Mesh Mesh { get; set; }`
+   - `Material Material { get; set; }`
+   - `Transform Transform { get; set; }`, and
+   - `ShaderProgram Shader { get; set; }`
+
+5. **Implement `Scene`** in `GDK/Scene.cs`:
+   - Add a `Model` instance:
+     - Set perspective projection matrix + view matrix (camera looking down at park)
+     - With `Mesh` for flat quad (2 triangles)
+     - Embed simple GLSL vertex/fragment shaders as static text in a `ShaderProgram` instance
+   - Add `public Scene Scene { get; init; }` in `Game.cs`
+
+6. **Integrate Renderer**:
    - Initialize `Renderer` with the GL context
-   - Call render each frame
+   - Call `IRenderer.Render` each frame in `MainForm.cs:RenderFrame` and `OpenGLLayer.cs:DrawInCGLContext`
 
 **Camera Setup**:
 - Position: Elevated, looking down at ~30-45° angle

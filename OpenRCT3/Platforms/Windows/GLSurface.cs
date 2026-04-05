@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using OpenRCT3.OpenGL;
 using static OpenRCT3.Platforms.Windows.Win32;
 
 namespace OpenRCT3.Platforms.Windows;
@@ -20,6 +21,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   private nint hdc = 0;
   private nint ctx = 0;
   private GL? gl;
+  private IRenderer? _renderer;
   private readonly HashSet<IObserver<OpenGLSurface>> _observers = new();
 
   public GLSurface() : this(null) { }
@@ -132,10 +134,9 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     MakeCurrent();
 
     // Load Silk.NET OpenGL with the current context
-    var gl = GL.GetApi(proc => OpenGLProcResolver.GetProc(proc, _settings.Version)) ?? throw new Exception(OpenGLCreateContextError);
-
-    gl.ClearColor(Color.CornflowerBlue);
-    gl.Clear(ClearBufferMask.ColorBufferBit);
+    gl = GL.GetApi(proc => OpenGLProcResolver.GetProc(proc, _settings.Version)) ?? throw new Exception(OpenGLCreateContextError);
+    _renderer = new Renderer(gl);
+    _renderer.Initialize(this);
 
     base.OnHandleCreated(e);
   }
@@ -144,7 +145,8 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     base.OnHandleDestroyed(e);
     GetDC(Handle);
     if (HasValidContext) {
-      // TODO: Destroy the other OpenGL resources
+      _renderer?.Dispose();
+      _renderer = null;
       gl?.Dispose();
       gl = null;
       if (hdc != 0) _ = ReleaseDC(Handle, hdc);
@@ -152,9 +154,14 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   }
 
   protected override void OnResize(EventArgs e) {
-    if (IsHandleCreated) {
-      // TODO: Resize resolution-dependent graphics resources
-    }
+    if (!HasValidContext) return;
+
+    MakeCurrent();
+    GL.Viewport(0, 0, (uint)ClientSize.Width, (uint)ClientSize.Height);
+    _renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
+    Game.Instance?.Scene.UpdateCamera((float)ClientSize.Width / ClientSize.Height);
+    Invalidate();
+
     base.OnResize(e);
   }
 
@@ -168,18 +175,13 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     base.OnPaint(e);
   }
 
-  private static readonly object EVENT_RENDERFRAME = new();
-
-  [Category("OpenGL")]
-  public event EventHandler? RenderFrame {
-    add => Events.AddHandler(EVENT_RENDERFRAME, value);
-    remove => Events.RemoveHandler(EVENT_RENDERFRAME, value);
-  }
-
   private void OnRenderFrame() {
     if (!HasValidContext) return;
 
-    gl.Clear(ClearBufferMask.ColorBufferBit);
-    ((EventHandler?)Events[EVENT_RENDERFRAME])?.Invoke(this, EventArgs.Empty);
+    MakeCurrent();
+    if (Game.Instance != null && _renderer != null) {
+      _renderer.Render(Game.Instance.Scene);
+    }
+    SwapBuffers();
   }
 }

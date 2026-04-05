@@ -10,7 +10,7 @@ using System;
 // ReSharper disable InconsistentNaming
 
 namespace OpenRCT3.Platforms {
-  internal interface IGraphicsSurface {
+  public interface IGraphicsSurface {
     SurfaceSettings Settings { get; }
   }
 

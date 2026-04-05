@@ -7,6 +7,7 @@
 
 using OpenRCT3.Simulation;
 using OpenRCT3.Platforms;
+using OpenCobra.GDK;
 
 namespace OpenRCT3;
 
@@ -17,11 +18,14 @@ namespace OpenRCT3;
 ///
 /// </remarks>
 public class Game {
+  public static Game? Instance { get; private set; }
   public AppConfig Config { get; }
   public World World { get; }
+  public Scene Scene { get; init; } = new();
 
   /// <param name="config">The loaded application configuration.</param>
   public Game(AppConfig config) {
+    Instance = this;
     Config = config;
     World = new World();
     // TODO: Log with the info severity: "Simulation features are unimplemented"
