@@ -7,12 +7,18 @@
 
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.macOS;
+using NLog;
 
 namespace OpenRCT3;
 
 internal static class Program {
+  private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
+
   [STAThread]
   public static void Main(string[] args) {
+    LogManager.Setup().LoadConfigurationFromFile("nlog.config");
+    Logger.Info("Starting OpenRCT3 on macOS...");
+
     var config = AppConfig.Load();
     if (string.IsNullOrEmpty(config.InstallPath)) {
       try {

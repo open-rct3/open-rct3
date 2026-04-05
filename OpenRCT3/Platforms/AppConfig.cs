@@ -13,6 +13,8 @@ using NLog;
 namespace OpenRCT3.Platforms;
 
 public record AppConfig {
+  private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
   /// <summary>
   /// Cached path to the user's RCT3 installation.
   /// </summary>
@@ -33,9 +35,8 @@ public record AppConfig {
     try {
       var json = File.ReadAllText(ConfigPath);
       return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
-    }
-    catch (Exception) {
-      // TODO: Log an error: "Could not load app config.json"
+    } catch (Exception e) {
+      Logger.Error(e, "Could not load app config.json");
       return new AppConfig();
     }
   }
