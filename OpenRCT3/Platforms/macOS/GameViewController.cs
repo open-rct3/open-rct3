@@ -3,7 +3,7 @@
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
 //
-// Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
+// Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.
 
 using System;
 using Foundation;
@@ -16,7 +16,7 @@ using OpenRCT3.ViewModels;
 namespace OpenRCT3.Platforms.macOS;
 
 // ReSharper disable once ClassNeverInstantiated.Global
-public partial class GameViewController(NativeHandle handle) : NSViewController(handle), IPlatformInspector {
+public partial class GameViewController(NativeHandle handle) : NSViewController(handle) {
   public event SurfaceChanged? SurfaceChanged;
 
   public NSView Game => this.game;
@@ -34,9 +34,5 @@ public partial class GameViewController(NativeHandle handle) : NSViewController(
 
     // TODO: Update framebuffer on WillResize/DidResize, DidChangeScreen, and DidChangeScreenProfile
     // See also DidEndLiveResize
-  }
-
-  public IDisposable Subscribe(IObserver<Inspector> observer) {
-    throw new NotImplementedException();
   }
 }

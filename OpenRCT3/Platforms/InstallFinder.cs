@@ -5,10 +5,6 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-
 namespace OpenRCT3.Platforms;
 
 public class InstallNotFoundException(string message) : Exception(message);
@@ -41,6 +37,7 @@ public static class InstallFinder {
 #elif OSX
       "/Applications/RollerCoaster Tycoon 3 Complete Edition.app/Contents/Assets",
       "/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets",
+      // TODO: Add GOG and Steam to macOS search paths
 #endif
     ]);
 
@@ -52,7 +49,6 @@ public static class InstallFinder {
         return path;
     }
 
-    // For now, simple throw, as fallback to picker is not implemented.
     throw new InstallNotFoundException("RCT3 installation not found.");
   }
 }
