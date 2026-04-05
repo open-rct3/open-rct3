@@ -10,7 +10,7 @@ Implement rendering of a flat, empty park in the native C# OpenRCT3 client using
 
 ---
 
-## Phase 1: Scaffold GDK Project
+## Phase 1: Scaffold GDK Project (Done)
 
 - **Purpose**: Game Data (GDK = "Game Development Kit" / "Graphics Development Kit")
 - **Path**: `OpenCobra/GDK/GDK.csproj`
@@ -21,7 +21,7 @@ Implement rendering of a flat, empty park in the native C# OpenRCT3 client using
 
 ---
 
-## Phase 2: GDK Primitives (Backend-Agnostic)
+## Phase 2: GDK Backend-Agnostic Primitives (Done)
 
 Create rendering-agnostic data structures in `OpenCobra/GDK/`:
 
@@ -267,8 +267,8 @@ Extend existing `IntegrationTests.csproj` in future work.
 
 Each phase is a separate task:
 
-1. [ ] **Scaffold GDK project** — Create `OpenCobra/GDK/`, Material, Mesh, ShaderProgram primitives
-2. [ ] **RCT3 installation detection** — Add Rct3InstallFinder, AppConfig to `OpenRCT3/Platforms/`
+1. [x] **Scaffold GDK project** — Create `OpenCobra/GDK/`, Material, Mesh, ShaderProgram primitives
+2. [x] **RCT3 installation detection** — Add Rct3InstallFinder, AppConfig to `OpenRCT3/Platforms/`
 3. [ ] **Render solid color plane** — Quad in perspective with solid color
 4. [ ] **Create ftx-viewer plugin** — Decode flexi-textures
 5. [ ] **Prototype palette conversion** — Test KGySoft vs manual lookup for OVL texture palettes

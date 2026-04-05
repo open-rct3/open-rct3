@@ -19,6 +19,25 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OvlTestBench", "OpenCobra\T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GDK", "OpenCobra\GDK\GDK.csproj", "{3524E823-F26D-4817-B1AC-30EB17C7FCEB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Coding Agents", "Coding Agents", "{73709F41-AC18-4460-B3CE-ED4EAFFE7403}"
+	ProjectSection(SolutionItems) = preProject
+		.opencode\plans\assemblyscript-plugins.md = .opencode\plans\assemblyscript-plugins.md
+		.opencode\plans\extism-plugin-viewers.md = .opencode\plans\extism-plugin-viewers.md
+		.opencode\plans\flat-empty-park.md = .opencode\plans\flat-empty-park.md
+		.opencode\plans\OVL Decoding\ovl-flexible-textures.md = .opencode\plans\OVL Decoding\ovl-flexible-textures.md
+		.opencode\plans\OVL Decoding\ovl-scenery-item-visuals.md = .opencode\plans\OVL Decoding\ovl-scenery-item-visuals.md
+		.opencode\plans\OVL Decoding\ovl-scenery-items.md = .opencode\plans\OVL Decoding\ovl-scenery-items.md
+		.opencode\plans\OVL Decoding\ovl-static-shapes.md = .opencode\plans\OVL Decoding\ovl-static-shapes.md
+		.opencode\plans\OVL Decoding\ovl-terrain-types.md = .opencode\plans\OVL Decoding\ovl-terrain-types.md
+		.opencode\plans\OVL Decoding\ovl-textures.md = .opencode\plans\OVL Decoding\ovl-textures.md
+		.opencode\plans\OVL Decoding\README.md = .opencode\plans\OVL Decoding\README.md
+		.opencode\plans\ovl-enum-verification.md = .opencode\plans\ovl-enum-verification.md
+		.opencode\plans\ovl-extra-files.md = .opencode\plans\ovl-extra-files.md
+		.opencode\plans\ovl-window-title.md = .opencode\plans\ovl-window-title.md
+		.opencode\plans\tree-sidebar-fit.md = .opencode\plans\tree-sidebar-fit.md
+		AGENTS.md = AGENTS.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -10,9 +10,19 @@
 
 - Keep your reply short and concise.
 - Do NOT pretend you can think.
-- Use as few em-dahses as possible.
+- Use as few em-dashes as possible.
 - Don't waste the user's time or credits.
-- If you get stuck or are spinning endlessley, halt and ask clarifying questions.
+- If you get stuck or are spinning endlessly, halt and ask clarifying questions.
+
+#### C#
+
+- Prefer `var` declarations over those with explicit types
+- Prefer single-line clauses with `foreach` and `if` statements, e.g. `if (!File.Exists(ConfigPath)) return new AppConfig();`
+  - If the line is longer than 90 characters, wrap simple clauses like this:
+    ```csharp
+    if (!File.Exists(ConfigPath))
+      return new AppConfig();
+    ```
 
 ## Tests
 

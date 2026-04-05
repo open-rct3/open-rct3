@@ -1,6 +1,4 @@
 # EditorConfig is awesome: https://EditorConfig.org
-
-# top-most EditorConfig file
 root = true
 
 # Unix-style newlines with a newline ending every file
@@ -12,7 +10,29 @@ end_of_line = lf
 trim_trailing_whitespace = true
 insert_final_newline = true
 
+# C# formatting rules
+# See https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions
+# See https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/code-style-rule-options
+[*.{cs,csx}]
+indent_size = 2
+indent_style = space
+csharp_new_line_before_open_brace = none
+csharp_style_var_for_built_in_types = true
+csharp_style_var_when_type_is_apparent = true
+csharp_style_var_elsewhere = true
+csharp_style_namespace_declarations = file_scoped
+
+# C# Expression-bodied members
+csharp_style_expression_bodied_methods = true:suggestion
+csharp_style_expression_bodied_constructors = true:suggestion
+csharp_style_expression_bodied_operators = true:suggestion
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_expression_bodied_indexers = true:suggestion
+csharp_style_expression_bodied_accessors = true:suggestion
+csharp_style_expression_bodied_lambdas = true:suggestion
+csharp_style_expression_bodied_local_functions = true:suggestion
+
 # Tab indentation (no size specified)
-[{Makefile,*.Makefile}]
+[Makefile]
 indent_style = tab
 indent_size = 4
