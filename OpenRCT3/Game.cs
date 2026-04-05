@@ -5,6 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using System;
 using OpenRCT3.Simulation;
 using OpenRCT3.Platforms;
 using OpenCobra.GDK;
