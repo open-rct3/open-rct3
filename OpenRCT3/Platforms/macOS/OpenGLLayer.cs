@@ -1,17 +1,14 @@
+using Silk.NET.OpenGL;
 using System.Drawing;
 using CoreAnimation;
 using CoreVideo;
 using OpenGL;
-
-using Silk.NET.Core.Contexts;
-using Silk.NET.OpenGL;
-
-using OpenRCT3;
 using OpenRCT3.OpenGL;
+// ReSharper disable InconsistentNaming
 
 namespace OpenRCT3.Platforms.macOS;
 
-public class OpenGlLayer : CAOpenGLLayer {
+public class OpenGLLayer : CAOpenGLLayer {
   private bool _initialized;
   private GL? _gl;
   private GLContext? _glContext;

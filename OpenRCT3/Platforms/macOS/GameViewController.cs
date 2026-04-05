@@ -27,7 +27,7 @@ public partial class GameViewController(NativeHandle handle) : NSViewController(
     this.inspector.LoadRequest(new NSUrlRequest(new NSUrl("https://google.com")));
 
     this.game.WantsLayer = true;
-    this.game.Layer = new OpenGlLayer();
+    this.game.Layer = new OpenGLLayer();
 
     var surface = new OpenGLSurface(this.game.Layer.Handle, true);
     SurfaceChanged?.Invoke(surface);
