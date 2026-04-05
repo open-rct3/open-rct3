@@ -13,7 +13,7 @@ using NLog;
 namespace OpenRCT3.Platforms;
 
 public record AppConfig {
-  private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+  private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
 
   /// <summary>
   /// Cached path to the user's RCT3 installation.

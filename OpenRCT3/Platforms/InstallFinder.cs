@@ -14,6 +14,7 @@ namespace OpenRCT3.Platforms;
 public class InstallNotFoundException(string message) : Exception(message);
 
 public static class InstallFinder {
+  // QUESTION: Are these _actually_ correct?
   private static class SteamIds {
     public const string Complete = "RollerCoaster Tycoon 3 Complete Edition";
     public const string Platinum = "RollerCoaster Tycoon 3";

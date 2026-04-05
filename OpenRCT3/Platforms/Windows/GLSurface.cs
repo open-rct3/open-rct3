@@ -171,7 +171,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
       using var brush = new SolidBrush(Color.FromArgb(200, 200, 200));
       using var font = new Font("Segoe UI", 9);
       e.Graphics.DrawString($"[{GetType().Name}]", font, brush, 8, 8);
-    } else this.OnRenderFrame();
+    } else OnRenderFrame();
     base.OnPaint(e);
   }
 

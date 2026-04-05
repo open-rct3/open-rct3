@@ -13,8 +13,8 @@ using NLog;
 
 namespace OpenRCT3;
 
-internal sealed class Program {
-  private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+internal static class Program {
+  private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
 
   private static AppConfig LoadConfigAndFindInstall() {
     var config = AppConfig.Load();
