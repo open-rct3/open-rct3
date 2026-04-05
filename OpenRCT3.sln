@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OvlTestBench", "OpenCobra\T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GDK", "OpenCobra\GDK\GDK.csproj", "{3524E823-F26D-4817-B1AC-30EB17C7FCEB}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Coding Agents", "Coding Agents", "{73709F41-AC18-4460-B3CE-ED4EAFFE7403}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plans", "Plans", "{73709F41-AC18-4460-B3CE-ED4EAFFE7403}"
 	ProjectSection(SolutionItems) = preProject
 		.opencode\plans\assemblyscript-plugins.md = .opencode\plans\assemblyscript-plugins.md
 		.opencode\plans\extism-plugin-viewers.md = .opencode\plans\extism-plugin-viewers.md

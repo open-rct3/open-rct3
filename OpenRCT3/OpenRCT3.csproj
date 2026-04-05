@@ -32,16 +32,6 @@
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <!-- TODO: <TrimMode>Link</TrimMode> to minimize bundle size -->
   </PropertyGroup>
-  <!-- Exclude platform-specific sources, per platform. -->
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('macos')) != true">
-    <Compile Remove="**\*.macOS.cs" />
-    <None Include="**\*.macOS.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
-  </ItemGroup>
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('windows')) != true">
-    <Compile Remove="**\*.windows.cs" />
-    <Compile Remove="Platforms\Windows\**\*.cs" />
-    <None Include="**\*.windows.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../OpenCobra/OVL/OVL.csproj" />
@@ -68,6 +58,7 @@
         <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
       </PropertyGroup>
       <ItemGroup>
+        <Compile Remove="OpenGL\GLContext.windows.cs" />
         <Compile Remove="Platforms\Windows\**\*.cs" />
         <Compile Update="Platforms\macOS\MainWindow.designer.cs">
           <DependentUpon>MainWindow.cs</DependentUpon>
@@ -75,6 +66,7 @@
         <Compile Update="Platforms\macOS\GameViewController.designer.cs">
           <DependentUpon>GameViewController.cs</DependentUpon>
         </Compile>
+        <Compile Remove="Program.windows.cs" />
       </ItemGroup>
     </When>
     <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
@@ -86,8 +78,9 @@
         <TargetPlatformVersion>8.0</TargetPlatformVersion>
       </PropertyGroup>
       <ItemGroup>
-        <Compile Remove="**\*.macOS.cs" />
+        <Compile Remove="OpenGL\GLContext.macOS.cs" />
         <Compile Remove="**\Platforms\macOS\**\*.cs" />
+        <Compile Remove="Program.macOS.cs" />
       </ItemGroup>
     </When>
   </Choose>

@@ -4,10 +4,10 @@ using Silk.NET.Core.Contexts;
 
 namespace OpenRCT3.OpenGL;
 
-public class MacOSGLContext : IPlatformGLContext, INativeContext {
+public class GLContext : IPlatformGLContext, INativeContext {
   private readonly nint _openglLib;
 
-  public MacOSGLContext() {
+  public GLContext() {
     _openglLib = dlopen("/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY);
   }
 

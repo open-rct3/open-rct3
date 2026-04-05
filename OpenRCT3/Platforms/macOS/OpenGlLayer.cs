@@ -11,15 +11,15 @@ using OpenRCT3.OpenGL;
 
 namespace OpenRCT3.Platforms.macOS;
 
-public class GameOpenGLLayer : CAOpenGLLayer {
+public class OpenGlLayer : CAOpenGLLayer {
   private bool _initialized;
   private GL? _gl;
-  private MacOSGLContext? _glContext;
+  private GLContext? _glContext;
 
   public override void DrawInCGLContext(CGLContext glContext, CGLPixelFormat pixelFormat, double timeInterval, ref CVTimeStamp timeStamp) {
     if (!_initialized) {
       _initialized = true;
-      _glContext = new MacOSGLContext();
+      _glContext = new GLContext();
       _gl = GL.GetApi(_glContext.GetProcAddress);
       _gl.ClearColor(Color.CornflowerBlue);
     }

@@ -3,10 +3,10 @@ using System.Runtime.InteropServices;
 
 namespace OpenRCT3.OpenGL;
 
-public class WindowsGLContext : IPlatformGLContext {
+public class GLContext : IPlatformGLContext {
   private readonly nint _openglLib;
 
-  public WindowsGLContext() {
+  public GLContext() {
     _openglLib = LoadLibrary("opengl32.dll");
   }
 
