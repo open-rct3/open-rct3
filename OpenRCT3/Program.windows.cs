@@ -16,22 +16,40 @@ namespace OpenRCT3;
 internal sealed class Program {
   private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+  private static AppConfig LoadConfigAndFindInstall() {
+    var config = AppConfig.Load();
+    if (!string.IsNullOrEmpty(config.InstallPath) && InstallFinder.Validate(config.InstallPath)) {
+      return config;
+    }
+
+    try {
+      var installPath = InstallFinder.Find(config.ExtraPaths);
+      config = config with { InstallPath = installPath };
+      config.Save();
+      return config;
+    }
+    catch (InstallNotFoundException) {
+      Application.EnableVisualStyles();
+      var picker = new FolderPicker();
+      var selectedPath = picker.PickFolder("Select your RCT3 installation folder");
+
+      if (!string.IsNullOrEmpty(selectedPath) && InstallFinder.Validate(selectedPath)) {
+        config = config with { InstallPath = selectedPath };
+        config.Save();
+        return config;
+      }
+
+      Environment.Exit(1);
+      return config;
+    }
+  }
+
   [STAThread]
   public static void Main(string[] args) {
     LogManager.Setup().LoadConfigurationFromFile("nlog.config");
     Logger.Info("Starting OpenRCT3 on Windows...");
 
-    var config = AppConfig.Load();
-    if (string.IsNullOrEmpty(config.InstallPath)) {
-      try {
-        var installPath = InstallFinder.Find(config.ExtraPaths);
-        config = config with { InstallPath = installPath };
-        config.Save();
-      }
-      catch (InstallNotFoundException) {
-        // TODO: Fallback to folder picker dialog
-      }
-    }
+    _ = LoadConfigAndFindInstall();
 
     Application.EnableVisualStyles();
     Application.SetCompatibleTextRenderingDefault(false);

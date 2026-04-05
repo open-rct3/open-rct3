@@ -19,6 +19,10 @@ public static class InstallFinder {
     public const string Platinum = "RollerCoaster Tycoon 3";
   }
 
+  public static bool Validate(string path) {
+    return Directory.Exists(path) && File.Exists(Path.Combine(path, "terrain", "RCT3", "Terrain_RCT3.common.ovl"));
+  }
+
   public static string Find(string[]? extraPaths = null) {
     var potentialPaths = new List<string>();
     potentialPaths.AddRange([
@@ -44,7 +48,7 @@ public static class InstallFinder {
     if (extraPaths != null) potentialPaths.AddRange(extraPaths);
 
     foreach (var path in potentialPaths) {
-      if (Directory.Exists(path) && File.Exists(Path.Combine(path, "terrain", "RCT3", "Terrain_RCT3.common.ovl")))
+      if (Validate(path))
         return path;
     }
 
