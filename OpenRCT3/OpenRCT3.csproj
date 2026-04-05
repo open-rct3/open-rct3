@@ -51,6 +51,7 @@
     <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
       <PropertyGroup>
         <ProfileName>macOS</ProfileName>
+        <DefineConstants>$(DefineConstants);MACOS;OSX</DefineConstants>
         <!-- See https://github.com/xamarin/xamarin-macios -->
         <TargetFramework>net8.0-macos</TargetFramework>
         <ImplicitUsings>true</ImplicitUsings>
