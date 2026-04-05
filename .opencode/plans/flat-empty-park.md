@@ -50,23 +50,23 @@ The `OpenGLRenderer` must dispose all created resources on shutdown to prevent G
 
 ---
 
-## Phase 3: Detect RCT3 Installation
+## Phase 3: Detect RCT3 Installation (Testing)
 
 Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate project):
 
 | Primitive | Description |
 |-----------|-------------|
-| **Rct3InstallFinder** | Platform-specific RCT3 install path discovery |
+| **InstallFinder** | Platform-specific RCT3 install path discovery |
 | **AppConfig** | JSON config storage (install path, user preferences) |
 
 ### Implementation
 
-1. **Path Discovery** (`Rct3InstallFinder.cs`):
+1. **Path Discovery** (`InstallFinder.cs`):
    - Follow platform-specific paths from `src/paths.d`:
      - **macOS**: `/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets`
      - **Windows**: `C:\Program Files\RollerCoaster Tycoon 3 Platinum` + variants (Steam, GOG, Platinum)
    - Validate by checking for required files (e.g., `terrain/RCT3/Terrain_RCT3.common.ovl`)
-   - **Error handling**: Throw `Rct3InstallNotFoundException` with user-friendly message; fallback to folder picker dialog if validation fails
+   - **Error handling**: Throw `InstallNotFoundException` with user-friendly message; fallback to folder picker dialog if validation fails
 
 2. **Configuration Storage** (`AppConfig.cs`):
    - Save discovered path to `config.json` in app data directory
@@ -76,9 +76,9 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
 
 ---
 
-## Phase 4: Render Solid Color Plane (Prototype)
+## Phase 4: Render Solid Color Plane
 
-> **⚠️ This is a prototype.** The implementation is intentionally minimal to validate the rendering pipeline. Expect significant refactoring in future phases as more features are added. Do not invest in polished error handling, testing, or optimization here — those will be addressed as the prototype matures.
+> **⚠️ This is a prototype.** The implementation is intentionally minimal to validate the rendering pipeline. Expect significant refactoring in future phases as more features are added. Do not invest in polished error handling or optimization here — those will be addressed as the prototype matures.
 
 ### `OpenRCT3/Platforms/`
 
@@ -91,14 +91,14 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
    }
    ```
 
-2. **Implement `OpenGLRenderer`** in `OpenRCT3/OpenGL/`:
-   - Create vertex buffer for flat quad (2 triangles)
-   - Embed simple GLSL vertex/fragment shaders in C#
-   - Set perspective projection matrix + view matrix (camera looking down at park)
-   - Render quad in `DrawInCGLContext`
+2. **Implement `Renderer`** in `OpenRCT3/OpenGL/`:
+   - Create `Mesh` for flat quad (2 triangles)
+   - Embed simple GLSL vertex/fragment shaders as static text in a `ShaderProgram` instance
+   - Using `System.Numerics`, set perspective projection matrix + view matrix (camera looking down at park)
+   - Render quad in an implementation of `IRenderer`, named `OpenGL/Renderer.cs`
 
 3. **Update `GameOpenGLLayer.cs`**:
-   - Initialize `OpenGLRenderer` with the GL context
+   - Initialize `Renderer` with the GL context
    - Call render each frame
 
 **Camera Setup**:
@@ -110,7 +110,7 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
 
 ---
 
-## Phase 5: Render Textured Plane with nullbmp
+## Phase 5: Render Textured Plane with `nullbmp`
 
 ### `OpenCobra/GDK/`
 
@@ -146,7 +146,9 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
 
 ---
 
-## Phase 5b: Prototype Palette Conversion (Decision Prototype)
+## Phase 5b: Prototype Palette Conversion
+
+> **ℹ️️ Dependent on decisions made in Phase 5.**
 
 Before full nullbmp/grass rendering, prototype palette handling:
 
