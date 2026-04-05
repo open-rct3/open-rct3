@@ -1,10 +1,10 @@
 # Cost Estimate: Render Flat, Empty Park
 
-**Referenced Plan**: [.opencode/plans/render-flat-empty-park.md](../plans/render-flat-empty-park.md)
+**Referenced Plan**: [.opencode/plans/flat-empty-park.md](../plans/flat-empty-park.md)
 
 ## Overview
 
-This document estimates the development time for implementing the [Render Flat, Empty Park plan](../plans/render-flat-empty-park.md), which implements rendering of a flat, empty park in the native C# OpenRCT3 client using Silk.NET.
+This document estimates the development time for implementing the [Render Flat, Empty Park plan](../plans/flat-empty-park.md), which implements rendering of a flat, empty park in the native C# OpenRCT3 client using Silk.NET.
 
 ---
 
@@ -12,15 +12,15 @@ This document estimates the development time for implementing the [Render Flat, 
 
 | # | Task | Plan Phase | AI (MiniMax 2.5 / Claude) | Human (Experienced) |
 |---|------|------------|---------------------------|---------------------|
-| 1 | Scaffold GDK project | [Phase 1: Scaffold GDK Project](../plans/render-flat-empty-park.md#phase-1-scaffold-gdk-project) | 15-30 min | 30-60 min |
-| 2 | GDK primitives (Material, Mesh, ShaderProgram) | [Phase 2: GDK Primitives](../plans/render-flat-empty-park.md#phase-2-gdk-primitives-backend-agnostic) | 30-60 min | 1-2 hrs |
-| 3 | RCT3 install detection (Rct3InstallFinder, AppConfig) | [Phase 3: Detect RCT3 Installation](../plans/render-flat-empty-park.md#phase-3-detect-rct3-installation) | 30-45 min | 1 hr |
-| 4 | Render solid color plane (Phase 4 prototype) | [Phase 4: Render Solid Color Plane (Prototype)](../plans/render-flat-empty-park.md#phase-4-render-solid-color-plane-prototype) | 1-2 hrs | 2-4 hrs |
-| 5 | ftx-viewer plugin (flexi-texture decoder) | [Phase 5: Render Textured Plane with nullbmp](../plans/render-flat-empty-park.md#phase-5-render-textured-plane-with-nullbmp) | 1-2 hrs | 3-5 hrs |
-| 6 | Prototype palette conversion | [Phase 5b: Prototype Palette Conversion](../plans/render-flat-empty-park.md#phase-5b-prototype-palette-conversion-decision-prototype) | 1-2 hrs | 2-3 hrs |
-| 7 | Render nullbmp texture | [Phase 5: Render Textured Plane with nullbmp](../plans/render-flat-empty-park.md#phase-5-render-textured-plane-with-nullbmp) | 1-2 hrs | 2-3 hrs |
-| 8 | Render grass from terrain OVL | [Phase 6: Render Grass from Terrain OVL](../plans/render-flat-empty-park.md#phase-6-render-grass-from-terrain-ovl) | 1-2 hrs | 2-4 hrs |
-| 9 | NUnit tests for GDK primitives | [Testing](../plans/render-flat-empty-park.md#testing) | 30-60 min | 1-2 hrs |
+| 1 | Scaffold GDK project | [Phase 1: Scaffold GDK Project](../plans/flat-empty-park.md#phase-1-scaffold-gdk-project) | 15-30 min | 30-60 min |
+| 2 | GDK primitives (Material, Mesh, ShaderProgram) | [Phase 2: GDK Primitives](../plans/flat-empty-park.md#phase-2-gdk-primitives-backend-agnostic) | 30-60 min | 1-2 hrs |
+| 3 | RCT3 install detection (Rct3InstallFinder, AppConfig) | [Phase 3: Detect RCT3 Installation](../plans/flat-empty-park.md#phase-3-detect-rct3-installation) | 30-45 min | 1 hr |
+| 4 | Render solid color plane (Phase 4 prototype) | [Phase 4: Render Solid Color Plane (Prototype)](../plans/flat-empty-park.md#phase-4-render-solid-color-plane-prototype) | 1-2 hrs | 2-4 hrs |
+| 5 | ftx-viewer plugin (flexi-texture decoder) | [Phase 5: Render Textured Plane with nullbmp](../plans/flat-empty-park.md#phase-5-render-textured-plane-with-nullbmp) | 1-2 hrs | 3-5 hrs |
+| 6 | Prototype palette conversion | [Phase 5b: Prototype Palette Conversion](../plans/flat-empty-park.md#phase-5b-prototype-palette-conversion-decision-prototype) | 1-2 hrs | 2-3 hrs |
+| 7 | Render nullbmp texture | [Phase 5: Render Textured Plane with nullbmp](../plans/flat-empty-park.md#phase-5-render-textured-plane-with-nullbmp) | 1-2 hrs | 2-3 hrs |
+| 8 | Render grass from terrain OVL | [Phase 6: Render Grass from Terrain OVL](../plans/flat-empty-park.md#phase-6-render-grass-from-terrain-ovl) | 1-2 hrs | 2-4 hrs |
+| 9 | NUnit tests for GDK primitives | [Testing](../plans/flat-empty-park.md#testing) | 30-60 min | 1-2 hrs |
 
 ---
 
@@ -59,7 +59,7 @@ Based on historical data from [Porting libOVL to C#](../../docs/ai/Porting%20lib
 
 ## References
 
-- **Plan**: [.opencode/plans/render-flat-empty-park.md](../plans/render-flat-empty-park.md)
+- **Plan**: [.opencode/plans/flat-empty-park.md](../plans/flat-empty-park.md)
 - **AI Usage Reference**: [Porting libOVL to C#](../../docs/ai/Porting%20libOVL.md) — Documents AI tools used (Claude, OpenCode/MiniMax) and limitations encountered
 - **Existing Codebase**:
   - [OpenRCT3/Platforms/IGraphicsSurface.cs](../../OpenRCT3/Platforms/IGraphicsSurface.cs)
