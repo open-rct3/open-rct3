@@ -51,7 +51,8 @@ internal static class Program {
     // Required to show UI before launching
     NSApplication.Init();
 
-    _ = LoadConfigAndFindInstall();
+    var config = LoadConfigAndFindInstall();
+    var game = new Game(config);
 
     NSApplication.SharedApplication.Delegate = new AppDelegate();
     NSApplication.Main(args);

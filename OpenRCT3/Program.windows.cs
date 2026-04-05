@@ -49,7 +49,8 @@ internal sealed class Program {
     LogManager.Setup().LoadConfigurationFromFile("nlog.config");
     Logger.Info("Starting OpenRCT3 on Windows...");
 
-    _ = LoadConfigAndFindInstall();
+    var config = LoadConfigAndFindInstall();
+    var game = new Game(config);
 
     Application.EnableVisualStyles();
     Application.SetCompatibleTextRenderingDefault(false);
