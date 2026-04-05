@@ -8,11 +8,19 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using NLog;
 
 namespace OpenRCT3.Platforms;
 
-public class AppConfig {
-  public string? Rct3InstallPath { get; init; }
+public record AppConfig {
+  /// <summary>
+  /// Cached path to the user's RCT3 installation.
+  /// </summary>
+  public string? InstallPath { get; init; }
+  /// <summary>
+  /// Extra paths from which to search for an installation of RCT3.
+  /// </summary>
+  public string[]? ExtraPaths { get; init; }
 
   private static string ConfigPath => Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
