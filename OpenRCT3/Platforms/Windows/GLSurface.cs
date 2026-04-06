@@ -117,6 +117,12 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   protected override void OnHandleCreated(EventArgs e) {
     if (DesignMode) return;
 
+    // Apply necessary window clipping styles for OpenGL rendering
+    // See https://learn.microsoft.com/en-us/windows/win32/winmsg/window-styles
+    var styles = (WindowStyles) Convert.ToUInt32(GetWindowLongPtr(Handle, WindowLongs.GWL_STYLE));
+    styles |= WindowStyles.WS_CLIPSIBLINGS | WindowStyles.WS_CLIPCHILDREN;
+    SetWindowLongPtr(Handle, WindowLongs.GWL_STYLE, (IntPtr)styles);
+
     // Try to create an OpenGL context
     hdc = GetDC(Handle);
     var pfd = new PIXELFORMATDESCRIPTOR {
@@ -146,10 +152,17 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     _ = new Game(new WeakReference<IRenderer>(_renderer));
 
     base.OnHandleCreated(e);
+
+    MakeCurrent();
+    GL.Viewport(0, 0, (uint)ClientSize.Width, (uint)ClientSize.Height);
+    _renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
+    Invalidate();
   }
 
   protected override void OnHandleDestroyed(EventArgs e) {
     base.OnHandleDestroyed(e);
+    if (DesignMode) return;
+
     GetDC(Handle);
     if (HasValidContext) {
       Game.Instance?.Dispose();
@@ -162,7 +175,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   }
 
   protected override void OnResize(EventArgs e) {
-    if (!HasValidContext) return;
+    if (DesignMode || !HasValidContext) return;
 
     MakeCurrent();
     GL.Viewport(0, 0, (uint)ClientSize.Width, (uint)ClientSize.Height);
@@ -179,7 +192,10 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
       using var brush = new SolidBrush(Color.FromArgb(200, 200, 200));
       using var font = new Font("Segoe UI", 9);
       e.Graphics.DrawString($"[{GetType().Name}]", font, brush, 8, 8);
-    } else OnRenderFrame();
+    } else {
+      OnRenderFrame();
+    }
+
     base.OnPaint(e);
   }
 

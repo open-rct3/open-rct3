@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace OpenRCT3.Platforms.Windows;
 
-internal static class Win32 {
+internal static partial class Win32 {
   public readonly struct HWND(IntPtr value) {
     public readonly IntPtr Value = value;
 
@@ -52,23 +52,27 @@ internal static class Win32 {
     public uint dwDamageMask;
   }
 
-  [DllImport(GDI32, SetLastError = true)]
-  public static extern int ChoosePixelFormat(IntPtr hdc, ref PIXELFORMATDESCRIPTOR pfd);
+  [LibraryImport(GDI32, SetLastError = true)]
+  public static partial int ChoosePixelFormat(IntPtr hdc, ref PIXELFORMATDESCRIPTOR pfd);
 
-  [DllImport(GDI32, SetLastError = true)]
-  public static extern bool SetPixelFormat(IntPtr hdc, int format, ref PIXELFORMATDESCRIPTOR pfd);
+  [LibraryImport(GDI32, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool SetPixelFormat(IntPtr hdc, int format, ref PIXELFORMATDESCRIPTOR pfd);
 
-  [DllImport(OPENGL32, SetLastError = true)]
-  public static extern IntPtr wglCreateContext(IntPtr hdc);
+  [LibraryImport(OPENGL32, SetLastError = true)]
+  public static partial IntPtr wglCreateContext(IntPtr hdc);
 
-  [DllImport(OPENGL32, SetLastError = true)]
-  public static extern bool wglMakeCurrent(IntPtr hdc, IntPtr hglrc);
+  [LibraryImport(OPENGL32, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool wglMakeCurrent(IntPtr hdc, IntPtr hglrc);
 
-  [DllImport(OPENGL32, SetLastError = true)]
-  public static extern bool wglDeleteContext(IntPtr hglrc);
+  [LibraryImport(OPENGL32, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool wglDeleteContext(IntPtr hglrc);
 
-  [DllImport("gdi32.dll", SetLastError = true)]
-  public static extern bool SwapBuffers(IntPtr hdc);
+  [LibraryImport("gdi32.dll", SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool SwapBuffers(IntPtr hdc);
 
   public enum WindowLongs : int {
     GWL_STYLE = -16,
@@ -89,8 +93,8 @@ internal static class Win32 {
     WS_EX_NOACTIVATE = 0x08000000,
   }
 
-  [DllImport("user32.dll", SetLastError = true)]
-  public static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+  [LibraryImport("user32.dll", SetLastError = true)]
+  public static partial IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 
   public static IntPtr GetWindowLongPtr(IntPtr hWnd, WindowLongs nIndex)
     => GetWindowLongPtr(hWnd, (int)nIndex);
@@ -100,11 +104,11 @@ internal static class Win32 {
       ? GetWindowLongPtr64(hWnd, nIndex)
       : GetWindowLongPtr32(hWnd, nIndex);
 
-  [DllImport("user32.dll", EntryPoint = "GetWindowLong", SetLastError = true)]
-  private static extern IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
+  [LibraryImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
+  private static partial IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
 
-  [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr", SetLastError = true)]
-  private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+  [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+  private static partial IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
 
   public static IntPtr SetWindowLongPtr(IntPtr hWnd, WindowLongs nIndex, IntPtr dwNewLong)
     => SetWindowLongPtr(hWnd, (int)nIndex, dwNewLong);
@@ -114,9 +118,9 @@ internal static class Win32 {
       ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong)
       : new IntPtr(SetWindowLong32(hWnd, nIndex, dwNewLong.ToInt32()));
 
-  [DllImport("user32.dll", EntryPoint = "SetWindowLong", SetLastError = true)]
-  private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+  [LibraryImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+  private static partial int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
 
-  [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr", SetLastError = true)]
-  private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+  [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+  private static partial IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 }
