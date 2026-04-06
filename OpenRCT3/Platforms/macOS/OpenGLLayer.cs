@@ -11,19 +11,26 @@ namespace OpenRCT3.Platforms.macOS;
 
 public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
   private bool _initialized;
+  private SurfaceSettings _settings;
   private GL? _gl;
   private GLContext? _glContext;
-  private IRenderer? _renderer;
+  private Renderer? _renderer;
 
-  public SurfaceSettings Settings => new SurfaceSettings();
+  [Browsable(false)]
+  public IRenderer Renderer => _renderer
+    ?? throw new InvalidOperationException("Renderer has not been initialized.");
+
+  [Browsable(false)]
+  public SurfaceSettings Settings => _settings;
 
   public override void DrawInCGLContext(CGLContext glContext, CGLPixelFormat pixelFormat, double timeInterval, ref CVTimeStamp timeStamp) {
     if (!_initialized) {
-      _initialized = true;
+      _settings = new SurfaceSettings();
       _glContext = new GLContext();
       _gl = GL.GetApi(_glContext.GetProcAddress);
       _renderer = new Renderer(_gl);
       _renderer.Initialize(this);
+      _initialized = true;
     }
 
     if (_renderer != null) {

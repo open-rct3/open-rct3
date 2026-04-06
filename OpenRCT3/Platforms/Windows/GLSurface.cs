@@ -17,11 +17,11 @@ namespace OpenRCT3.Platforms.Windows;
 public class GLSurface : Control, IWindow, IGraphicsSurface {
   private const string OpenGLCreateContextError = "Could not create an OpenGL context.";
 
-  private SurfaceSettings _settings;
+  private readonly SurfaceSettings _settings;
   private nint hdc = 0;
   private nint ctx = 0;
   private GL? gl;
-  private IRenderer? _renderer;
+  private Renderer? _renderer;
   private readonly HashSet<IObserver<OpenGLSurface>> _observers = new();
 
   public GLSurface() : this(null) { }
@@ -58,6 +58,10 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     get => _settings.Version;
     set => _settings.Version = value;
   }
+
+  [Browsable(false)]
+  public IRenderer Renderer => _renderer
+    ?? throw new InvalidOperationException("Renderer has not been initialized.");
 
   [Browsable(false)]
   public SurfaceSettings Settings => _settings;
@@ -178,8 +182,10 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   private void OnRenderFrame() {
     if (!HasValidContext) return;
 
+    // TODO: Extract the rest of this method to prevent duplication between macOS and Windows
     MakeCurrent();
     if (Game.Instance != null && _renderer != null) {
+      Game.Instance.Scene.UpdateCamera(ClientSize.Width * 1f / ClientSize.Height);
       _renderer.Render(Game.Instance.Scene);
     }
     SwapBuffers();

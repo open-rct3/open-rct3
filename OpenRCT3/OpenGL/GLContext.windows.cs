@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace OpenRCT3.OpenGL;
 
-public class GLContext : IPlatformGLContext {
+public class GLContext : IGLContext {
   private readonly nint _openglLib;
 
   public GLContext() {

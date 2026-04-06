@@ -54,6 +54,10 @@ void main() {
     UpdateCamera(1.0f);
   }
 
+  /// <summary>
+  /// Updates the camera view and projection matrices.
+  /// </summary>
+  /// <param name="aspectRatio">The aspect ratio of the viewport.</param>
   public void UpdateCamera(float aspectRatio) {
     var view = Matrix4x4.CreateLookAt(new Vector3(0, 15, 20), new Vector3(0, 0, 0), Vector3.UnitY);
     var projection = Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 3f, aspectRatio, 0.1f, 1000f);

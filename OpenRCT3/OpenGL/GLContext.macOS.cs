@@ -4,7 +4,7 @@ using Silk.NET.Core.Contexts;
 
 namespace OpenRCT3.OpenGL;
 
-public class GLContext : IPlatformGLContext, INativeContext {
+public class GLContext : IGLContext, INativeContext {
   private readonly nint _openglLib;
 
   public GLContext() {

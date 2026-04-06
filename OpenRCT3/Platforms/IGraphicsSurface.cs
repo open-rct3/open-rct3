@@ -11,6 +11,7 @@ using System;
 
 namespace OpenRCT3.Platforms {
   public interface IGraphicsSurface {
+    IRenderer Renderer { get; }
     SurfaceSettings Settings { get; }
   }
 

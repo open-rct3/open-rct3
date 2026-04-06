@@ -12,6 +12,7 @@ using OpenRCT3.Platforms;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Shaders;
 using NLog;
+using System.Drawing;
 
 namespace OpenRCT3.OpenGL;
 
@@ -26,6 +27,8 @@ public class Renderer(GL gl) : IRenderer {
   private bool _initialized;
   private bool _disposed;
 
+  public Color ClearColor { get; set; } = Color.FromArgb(51, 76, 76);
+
   public void Initialize(IGraphicsSurface surface) {
     _gl.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     _gl.Enable(EnableCap.DepthTest);
@@ -33,7 +36,7 @@ public class Renderer(GL gl) : IRenderer {
 
   public void Dispose() {
     if (_disposed) return;
-    _disposed = true;
+    GC.SuppressFinalize(this);
 
     if (_initialized) {
       _gl.DeleteProgram(_program);
@@ -41,6 +44,7 @@ public class Renderer(GL gl) : IRenderer {
       _gl.DeleteBuffer(_vbo);
       _gl.DeleteBuffer(_ebo);
     }
+    _disposed = true;
   }
 
   private void SetupResources(Scene scene) {
