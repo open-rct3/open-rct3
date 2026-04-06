@@ -27,9 +27,14 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
     if (!_initialized) {
       _settings = new SurfaceSettings();
       _glContext = new GLContext();
+      // Load Silk.NET OpenGL with the current context
       _gl = GL.GetApi(_glContext.GetProcAddress);
+
+      // Start the game
       _renderer = new Renderer(_gl);
       _renderer.Initialize(this);
+      _ = new Game(new WeakReference<IRenderer>(_renderer));
+
       _initialized = true;
     }
 
@@ -46,6 +51,7 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
 
   protected override void Dispose(bool disposing) {
     if (disposing) {
+      Game.Instance?.Dispose();
       _renderer?.Dispose();
       _gl?.Dispose();
     }

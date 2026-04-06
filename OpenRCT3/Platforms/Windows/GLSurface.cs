@@ -139,8 +139,11 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
 
     // Load Silk.NET OpenGL with the current context
     gl = GL.GetApi(proc => OpenGLProcResolver.GetProc(proc, _settings.Version)) ?? throw new Exception(OpenGLCreateContextError);
+
+    // Start the game
     _renderer = new Renderer(gl);
     _renderer.Initialize(this);
+    _ = new Game(new WeakReference<IRenderer>(_renderer));
 
     base.OnHandleCreated(e);
   }
@@ -149,6 +152,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     base.OnHandleDestroyed(e);
     GetDC(Handle);
     if (HasValidContext) {
+      Game.Instance?.Dispose();
       _renderer?.Dispose();
       _renderer = null;
       gl?.Dispose();

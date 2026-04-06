@@ -13,6 +13,10 @@ using NLog;
 namespace OpenRCT3.Platforms;
 
 public record AppConfig {
+  public static AppConfig Instance => _instance
+    ?? throw new InvalidOperationException("App configuration is not initialized");
+  private static AppConfig? _instance = null;
+
   private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
 
   /// <summary>
@@ -31,13 +35,13 @@ public record AppConfig {
   );
 
   public static AppConfig Load() {
-    if (!File.Exists(ConfigPath)) return new AppConfig();
+    if (!File.Exists(ConfigPath)) return _instance = new AppConfig();
     try {
       var json = File.ReadAllText(ConfigPath);
-      return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+      return _instance = JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
     } catch (Exception e) {
       Logger.Error(e, "Could not load app config.json");
-      return new AppConfig();
+      return _instance = new AppConfig();
     }
   }
 

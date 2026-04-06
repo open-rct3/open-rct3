@@ -48,12 +48,11 @@ internal static class Program {
     LogManager.Setup().LoadConfigurationFromFile("nlog.config");
     Logger.Info("Starting OpenRCT3 on macOS...");
 
-    // Required to show UI before launching
+    // ‼ This order matters!
+    // NSApplication.Init() must be called before any UI elements are created.
+    // LoadConfigAndFindInstall may show a dialog to the user.
     NSApplication.Init();
-
-    var config = LoadConfigAndFindInstall();
-    var game = new Game(config);
-
+    AppConfig.LoadConfigAndFindInstall();
     NSApplication.SharedApplication.Delegate = new AppDelegate();
     NSApplication.Main(args);
   }

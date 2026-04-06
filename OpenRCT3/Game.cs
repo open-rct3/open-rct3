@@ -15,16 +15,18 @@ namespace OpenRCT3;
 /// <summary>
 /// The game world.
 /// </summary>
-public class Game {
+public class Game : IDisposable {
   public static Game? Instance { get; private set; }
-  public AppConfig Config { get; }
+
+  public AppConfig Config { get; } = AppConfig.Instance;
+  public WeakReference<IRenderer> Renderer { get; }
   public World World { get; }
   public Scene Scene { get; } = new();
 
-  /// <param name="config">The loaded application configuration.</param>
-  public Game(AppConfig config) {
+  /// <param name="renderer">The game renderer.</param>
+  public Game(WeakReference<IRenderer> renderer) {
     Instance = this;
-    Config = config;
+    Renderer = renderer;
     World = new World();
     // TODO: Log with the info severity: "Simulation features are unimplemented"
   }
@@ -35,5 +37,11 @@ public class Game {
   /// <param name="timeSpan">The time between ticks.</param>
   public void Tick(TimeSpan timeSpan) {
     // TODO: Advance the simulation given the time since the last tick
+  }
+
+  public void Dispose() {
+    // TODO: World.Dispose();
+    GC.SuppressFinalize(this);
+    Instance = null;
   }
 }

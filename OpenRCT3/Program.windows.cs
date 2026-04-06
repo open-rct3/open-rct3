@@ -49,12 +49,12 @@ internal static class Program {
     LogManager.Setup().LoadConfigurationFromFile("nlog.config");
     Logger.Info("Starting OpenRCT3 on Windows...");
 
+    // ‼ This order matters!
+    // SetCompatibleTextRenderingDefault() must be called before any UI elements are created.
+    // LoadConfigAndFindInstall may show a dialog to the user.
     Application.EnableVisualStyles();
     Application.SetCompatibleTextRenderingDefault(false);
-
-    var config = LoadConfigAndFindInstall();
-    var game = new Game(config);
-
+    LoadConfigAndFindInstall();
     Application.Run(new MainForm());
   }
 }
