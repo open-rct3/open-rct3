@@ -16,6 +16,17 @@ namespace OpenRCT3;
 internal static class Program {
   private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
 
+  private static void HandleException(Exception? e) {
+    if (e == null) return;
+    Logger.Fatal(e, "An unhandled exception occurred.");
+    MessageBox.Show(
+      $"An unhandled exception occurred: {e.Message}",
+      "OpenRCT3 Error",
+      MessageBoxButtons.OK,
+      MessageBoxIcon.Error
+    );
+  }
+
   private static AppConfig LoadConfigAndFindInstall() {
     var config = AppConfig.Load();
     if (!string.IsNullOrEmpty(config.InstallPath) && InstallFinder.Validate(config.InstallPath)) {
@@ -46,6 +57,10 @@ internal static class Program {
 
   [STAThread]
   public static void Main(string[] args) {
+    AppDomain.CurrentDomain.UnhandledException += (sender, e) => HandleException(e.ExceptionObject as Exception);
+    Application.ThreadException += (sender, e) => HandleException(e.Exception);
+    Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+
     LogManager.Setup().LoadConfigurationFromFile("nlog.config");
     Logger.Info("Starting OpenRCT3 on Windows...");
 

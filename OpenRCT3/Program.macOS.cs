@@ -8,11 +8,24 @@
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.macOS;
 using NLog;
+using AppKit;
+using System;
 
 namespace OpenRCT3;
 
 internal static class Program {
   private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
+
+  private static void HandleException(Exception? e) {
+    if (e == null) return;
+    Logger.Fatal(e, "An unhandled exception occurred.");
+    using var alert = new NSAlert {
+      MessageText = "OpenRCT3 Error",
+      InformativeText = $"An unhandled exception occurred: {e.Message}",
+      AlertStyle = NSAlertStyle.Critical
+    };
+    alert.RunModal();
+  }
 
   private static AppConfig LoadConfigAndFindInstall() {
     var config = AppConfig.Load();
@@ -45,6 +58,8 @@ internal static class Program {
 
   [STAThread]
   public static void Main(string[] args) {
+    AppDomain.CurrentDomain.UnhandledException += (sender, e) => HandleException(e.ExceptionObject as Exception);
+
     LogManager.Setup().LoadConfigurationFromFile("nlog.config");
     Logger.Info("Starting OpenRCT3 on macOS...");
 
