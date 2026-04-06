@@ -6,6 +6,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System;
+using System.Diagnostics;
 using OpenCobra.GDK;
 using OpenRCT3.Simulation;
 using OpenRCT3.Platforms;
@@ -17,27 +18,81 @@ namespace OpenRCT3;
 /// </summary>
 public class Game : IDisposable {
   public static Game? Instance { get; private set; }
+  public static bool IsRunning => Instance != null;
+  /// <summary>
+  /// Default frame rate of the game loop, in frames per second.
+  /// </summary>
+  public static readonly int DefaultFrameRate = 60;
 
   public AppConfig Config { get; } = AppConfig.Instance;
+  /// <summary>
+  /// Target frame rate of the game loop, in frames per second.
+  /// </summary>
+  public int TargetFrameRate {
+    get => Convert.ToInt32(1.0 / TargetFrameTime.TotalSeconds);
+    set => TargetFrameTime = TimeSpan.FromSeconds(1.0 / value);
+  }
+  /// <summary>
+  /// Target frame time of the game loop.
+  /// </summary>
+  public TimeSpan TargetFrameTime { get; private set; } = TimeSpan.FromSeconds(1.0 / 60.0);
   [Unowned("The renderer is owned by the platform abstraction layer.")]
   public WeakReference<IRenderer> Renderer { get; }
   public World World { get; }
   public Scene Scene { get; } = new();
+
+  private readonly Stopwatch _stopwatch = new();
 
   /// <param name="renderer">The game renderer.</param>
   public Game(WeakReference<IRenderer> renderer) {
     Instance = this;
     Renderer = renderer;
     World = new World();
+    _stopwatch.Start();
     // TODO: Log with the info severity: "Simulation features are unimplemented"
+  }
+
+  /// <summary>
+  /// Starts the game loop.
+  /// </summary>
+  /// <seealso cref="TargetFrameRate"/>
+  /// <seealso cref="TargetFrameTime"/>
+  /// <see href="https://gameprogrammingpatterns.com/game-loop.html"/>
+  public void Run() {
+    var previousTime = _stopwatch.Elapsed;
+    var lag = TimeSpan.Zero;
+    var msPerUpdate = TargetFrameTime;
+
+    while (IsRunning) {
+      var currentTime = _stopwatch.Elapsed;
+      var elapsed = currentTime - previousTime;
+      previousTime = currentTime;
+      lag += elapsed;
+
+      while (lag >= msPerUpdate) {
+        Tick(msPerUpdate);
+        lag -= msPerUpdate;
+      }
+
+      Render((float)(lag.TotalMilliseconds / msPerUpdate.TotalMilliseconds));
+    }
   }
 
   /// <summary>
   /// Advances the simulation.
   /// </summary>
-  /// <param name="timeSpan">The time between ticks.</param>
-  public void Tick(TimeSpan timeSpan) {
-    // TODO: Advance the simulation given the time since the last tick
+  /// <param name="delta">The time between ticks.</param>
+  private void Tick(TimeSpan delta) {
+    // TODO: Advance the simulation logic by a fixed time step
+  }
+
+  /// <summary>
+  /// Renders the scene.
+  /// </summary>
+  /// <param name="interpolation">The interpolation fraction.</param>
+  private void Render(float interpolation) {
+    if (Renderer.TryGetTarget(out var renderer))
+      renderer.Render(Scene);
   }
 
   public void Dispose() {
