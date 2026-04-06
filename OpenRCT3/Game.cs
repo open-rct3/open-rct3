@@ -6,9 +6,9 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System;
+using OpenCobra.GDK;
 using OpenRCT3.Simulation;
 using OpenRCT3.Platforms;
-using OpenCobra.GDK;
 
 namespace OpenRCT3;
 
@@ -19,6 +19,7 @@ public class Game : IDisposable {
   public static Game? Instance { get; private set; }
 
   public AppConfig Config { get; } = AppConfig.Instance;
+  [Unowned("The renderer is owned by the platform abstraction layer.")]
   public WeakReference<IRenderer> Renderer { get; }
   public World World { get; }
   public Scene Scene { get; } = new();

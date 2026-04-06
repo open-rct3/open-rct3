@@ -38,6 +38,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plans", "Plans", "{73709F41
 		AGENTS.md = AGENTS.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Analyzers", "OpenCobra\Analyzers\Analyzers.csproj", "{C5F59A76-83C1-40BC-A676-8D6F23A65E70}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -72,6 +74,10 @@ Global
 		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -82,6 +88,7 @@ Global
 		{A5E8F9D0-1234-5678-9ABC-DEF012345678} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
 		{B9316006-752D-47CF-A5A9-2285B867C2B2} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
 		{3524E823-F26D-4817-B1AC-30EB17C7FCEB} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9F92069A-502C-435A-89FB-D1F30059ECBC}
