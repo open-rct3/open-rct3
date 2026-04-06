@@ -55,6 +55,9 @@ public class Game : IDisposable {
   /// <summary>
   /// Starts the game loop.
   /// </summary>
+  /// <remarks>
+  /// The game loop runs at a fixed frame rate, sleeping when ahead of schedule to reduce CPU usage.
+  /// </remarks>
   /// <seealso cref="TargetFrameRate"/>
   /// <seealso cref="TargetFrameTime"/>
   /// <see href="https://gameprogrammingpatterns.com/game-loop.html"/>
@@ -70,11 +73,20 @@ public class Game : IDisposable {
       lag += elapsed;
 
       while (lag >= msPerUpdate) {
+        // FIXME: Shouldn't the amount of time Tick takes affect the lag calculation?
         Tick(msPerUpdate);
         lag -= msPerUpdate;
       }
 
       Render((float)(lag.TotalMilliseconds / msPerUpdate.TotalMilliseconds));
+
+      // Reduce CPU usage by sleeping when ahead of schedule
+      var remaining = msPerUpdate - lag;
+      if (remaining > TimeSpan.Zero) {
+        var sleepMs = (int)(remaining.TotalMilliseconds / 2.0);
+        if (sleepMs > 0)
+          System.Threading.Thread.Sleep(sleepMs);
+      }
     }
   }
 
