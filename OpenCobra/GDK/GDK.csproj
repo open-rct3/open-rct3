@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OVL\OVL.csproj" />
+    <ProjectReference Include="..\Textures\Textures.csproj" />
   </ItemGroup>
 
   <ItemGroup>

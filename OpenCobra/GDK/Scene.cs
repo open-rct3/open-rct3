@@ -6,9 +6,11 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System;
+using System.IO;
 using System.Numerics;
 using OpenCobra.GDK.Meshes;
 using OpenCobra.GDK.Shaders;
+using OpenCobra.GDK.Assets;
 
 namespace OpenCobra.GDK;
 
@@ -18,33 +20,39 @@ public class Scene {
   public Scene() {
     // Create a flat quad
     Model.Mesh.Vertices.AddRange([
-      new Vertex { Position = new Vector3(-10, 0, -10), Color = new Vector4(0, 0.5f, 0, 1) },
-      new Vertex { Position = new Vector3( 10, 0, -10), Color = new Vector4(0, 0.5f, 0, 1) },
-      new Vertex { Position = new Vector3( 10, 0,  10), Color = new Vector4(0, 0.5f, 0, 1) },
-      new Vertex { Position = new Vector3(-10, 0,  10), Color = new Vector4(0, 0.5f, 0, 1) }
+      new Vertex { Position = new Vector3(-10, 0, -10), TexCoord = new Vector2(0, 0), Color = new Vector4(1, 1, 1, 1) },
+      new Vertex { Position = new Vector3( 10, 0, -10), TexCoord = new Vector2(1, 0), Color = new Vector4(1, 1, 1, 1) },
+      new Vertex { Position = new Vector3( 10, 0,  10), TexCoord = new Vector2(1, 1), Color = new Vector4(1, 1, 1, 1) },
+      new Vertex { Position = new Vector3(-10, 0,  10), TexCoord = new Vector2(0, 1), Color = new Vector4(1, 1, 1, 1) }
     ]);
     Model.Mesh.Indices.AddRange([0, 1, 2, 0, 2, 3]);
     Model.Mesh.ComputeBoundingBox();
 
     Model.Shader.VertexSource = @"#version 120
 attribute vec3 a_Position;
+attribute vec2 a_TexCoord;
 attribute vec4 a_Color;
 
 uniform mat4 u_Model;
 uniform mat4 u_View;
 uniform mat4 u_Projection;
 
+varying vec2 v_TexCoord;
 varying vec4 v_Color;
 
 void main() {
     gl_Position = u_Projection * u_View * u_Model * vec4(a_Position, 1.0);
+    v_TexCoord = a_TexCoord;
     v_Color = a_Color;
 }";
     Model.Shader.FragmentSource = @"#version 120
+uniform sampler2D u_Texture;
+varying vec2 v_TexCoord;
 varying vec4 v_Color;
 
 void main() {
-    gl_FragColor = v_Color;
+    vec4 texColor = texture2D(u_Texture, v_TexCoord);
+    gl_FragColor = texColor * v_Color;
 }";
 
     Model.Shader.Uniforms.Add(Model.Transform);
@@ -52,6 +60,12 @@ void main() {
     Model.Shader.Uniforms.Add(new Uniform { Name = "u_Projection", Type = UniformType.Mat4, Value = Matrix4x4.Identity });
 
     UpdateCamera(1.0f);
+  }
+
+  public void LoadTexture(string path) {
+    if (File.Exists(path)) {
+      Model.Material.AlbedoTexture = TextureLoader.LoadFlexiTexture(path);
+    }
   }
 
   /// <summary>

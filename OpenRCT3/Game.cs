@@ -53,6 +53,12 @@ public class Game : IDisposable {
     Instance = this;
     Renderer = renderer;
     World = new World();
+
+    if (!string.IsNullOrEmpty(Config.InstallPath)) {
+      var nullbmpPath = System.IO.Path.Combine(Config.InstallPath, "nullbmp.common.ovl");
+      Scene.LoadTexture(nullbmpPath);
+    }
+
     _stopwatch.Start();
     // TODO: Log with the info severity: "Simulation features are unimplemented"
   }

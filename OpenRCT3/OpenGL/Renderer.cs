@@ -24,6 +24,7 @@ public class Renderer(GL gl) : IRenderer {
   private uint _vao;
   private uint _vbo;
   private uint _ebo;
+  private uint _texture;
   private bool _initialized;
   private bool _disposed;
 
@@ -51,6 +52,25 @@ public class Renderer(GL gl) : IRenderer {
 
   private void SetupResources(Scene scene) {
     if (_initialized) return;
+
+    // Texture
+    if (scene.Model.Material.AlbedoTexture != null) {
+      _texture = _gl.GenTexture();
+      _gl.BindTexture(TextureTarget.Texture2D, _texture);
+
+      var texture = scene.Model.Material.AlbedoTexture;
+      unsafe {
+        fixed (void* p = &texture.Pixels[0]) {
+          _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)texture.Width, (uint)texture.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, p);
+        }
+      }
+
+      _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+      _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+      _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+      _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+      _gl.BindTexture(TextureTarget.Texture2D, 0);
+    }
 
     // Shader
     var vertexShader = _gl.CreateShader(ShaderType.VertexShader);
@@ -136,6 +156,13 @@ public class Renderer(GL gl) : IRenderer {
 
     _gl.UseProgram(_program);
     _gl.BindVertexArray(_vao);
+
+    if (scene.Model.Material.AlbedoTexture != null) {
+      _gl.ActiveTexture(TextureUnit.Texture0);
+      _gl.BindTexture(TextureTarget.Texture2D, _texture);
+      int texLoc = _gl.GetUniformLocation(_program, "u_Texture");
+      if (texLoc != -1) _gl.Uniform1(texLoc, 0);
+    }
 
     foreach (var uniform in scene.Model.Shader.Uniforms) {
       int location = _gl.GetUniformLocation(_program, uniform.Name);

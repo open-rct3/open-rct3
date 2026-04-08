@@ -10,7 +10,7 @@ Implement rendering of a flat, empty park in the native C# OpenRCT3 client using
 
 ---
 
-## Phase 1: Scaffold GDK Project (Done)
+## ~~Phase 1: Scaffold GDK Project~~ (Done)
 
 - **Purpose**: Game Data (GDK = "Game Development Kit" / "Graphics Development Kit")
 - **Path**: `OpenCobra/GDK/GDK.csproj`
@@ -21,7 +21,7 @@ Implement rendering of a flat, empty park in the native C# OpenRCT3 client using
 
 ---
 
-## Phase 2: GDK Backend-Agnostic Primitives (Done)
+## ~~Phase 2: GDK Backend-Agnostic Primitives~~ (Done)
 
 Create rendering-agnostic data structures in `OpenCobra/GDK/`:
 
@@ -50,7 +50,7 @@ The `OpenGLRenderer` must dispose all created resources on shutdown to prevent G
 
 ---
 
-## Phase 3: Detect RCT3 Installation (Done)
+## ~~Phase 3: Detect RCT3 Installation~~ (Done)
 
 Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate project):
 
@@ -76,7 +76,7 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
 
 ---
 
-## Phase 4: Render Solid Color Plane (Testing)
+## ~~Phase 4: Render Solid Color Plane~~ (Done)
 
 > **⚠️ This is a prototype.** The implementation is intentionally minimal to validate the rendering pipeline. Expect significant refactoring in future phases as more features are added. Do not invest in polished error handling or optimization here — those will be addressed as the prototype matures.
 
@@ -284,8 +284,8 @@ Each phase is a separate task:
 
 1. [x] **Scaffold GDK project** — Create `OpenCobra/GDK/`, Material, Mesh, ShaderProgram primitives
 2. [x] **RCT3 installation detection** — Add Rct3InstallFinder, AppConfig to `OpenRCT3/Platforms/`
-3. [ ] **Render solid color plane** — Quad in perspective with solid color
-4. [ ] **Create ftx-viewer plugin** — Decode flexi-textures
+3. [x] **Render solid color plane** — Quad in perspective with solid color
+4. [x] **Create ftx-viewer plugin** — Decode flexi-textures
 5. [ ] **Prototype palette conversion** — Test KGySoft vs manual lookup for OVL texture palettes
 6. [ ] **Render nullbmp texture** — Plane with nullbmp texture
 7. [ ] **Render grass texture** — Plane with grass from terrain OVL
