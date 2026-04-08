@@ -28,6 +28,8 @@ public class Renderer(GL gl) : IRenderer {
   private bool _disposed;
 
   public Color ClearColor { get; set; } = Color.FromArgb(51, 76, 76);
+  public event EventHandler? ContextRequested;
+  public event EventHandler? Rendered;
 
   public void Initialize(IGraphicsSurface surface) {
     _gl.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -126,6 +128,8 @@ public class Renderer(GL gl) : IRenderer {
   }
 
   public void Render(Scene scene) {
+    ContextRequested?.Invoke(this, EventArgs.Empty);
+
     _gl.Clear((uint)(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit));
 
     SetupResources(scene);
@@ -150,11 +154,11 @@ public class Renderer(GL gl) : IRenderer {
 
     _gl.BindVertexArray(0);
     _gl.UseProgram(0);
+
+    Rendered?.Invoke(this, EventArgs.Empty);
   }
 
-  public void SetViewport(int width, int height) {
-    _gl.Viewport(0, 0, (uint)width, (uint)height);
-  }
+  public void SetViewport(int width, int height) => _gl.Viewport(0, 0, (uint)width, (uint)height);
 
   private void CheckShaderError(uint shader) {
     string infoLog = _gl.GetShaderInfoLog(shader);
