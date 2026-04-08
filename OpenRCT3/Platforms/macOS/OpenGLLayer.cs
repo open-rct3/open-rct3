@@ -1,10 +1,9 @@
+using System.ComponentModel;
 using Silk.NET.OpenGL;
-using System.Drawing;
 using CoreAnimation;
 using CoreVideo;
 using OpenGL;
 using OpenRCT3.OpenGL;
-using OpenRCT3.Platforms;
 // ReSharper disable InconsistentNaming
 
 namespace OpenRCT3.Platforms.macOS;

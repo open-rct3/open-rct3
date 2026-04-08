@@ -10,7 +10,11 @@ using System.Diagnostics;
 using OpenCobra.GDK;
 using OpenRCT3.Simulation;
 using OpenRCT3.Platforms;
+#if WINDOWS
 using System.Windows.Forms;
+#elif OSX
+using AppKit;
+#endif
 
 namespace OpenRCT3;
 
@@ -73,8 +77,14 @@ public class Game : IDisposable {
       previousTime = currentTime;
       lag += elapsed;
 
-      // Process any pending Windows messages (e.g. input events)
+      // Process any pending window events (e.g. input events)
+#if WINDOWS
       Application.DoEvents();
+#elif OSX
+      // FIXME: Pump macOS windowing events
+      // See https://duckduckgo.com/?q=osx+how+to+pump+windowing+events+in+a+game+loop&ia=web
+      NSApplication.EnsureUIThread();
+#endif
 
       while (lag >= msPerUpdate) {
         // FIXME: Shouldn't the amount of time Tick takes affect the lag calculation?

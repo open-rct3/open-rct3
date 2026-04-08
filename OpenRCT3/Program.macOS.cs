@@ -19,11 +19,11 @@ internal static class Program {
   private static void HandleException(Exception? e) {
     if (e == null) return;
     Logger.Fatal(e, "An unhandled exception occurred.");
-    using var alert = new NSAlert {
-      MessageText = "OpenRCT3 Error",
-      InformativeText = $"An unhandled exception occurred: {e.Message}",
-      AlertStyle = NSAlertStyle.Critical
-    };
+    // See https://www.jetbrains.com/help/rider/UsingStatementResourceInitialization.html
+    using var alert = new NSAlert();
+    alert.MessageText = "OpenRCT3 Error";
+    alert.InformativeText = $"An unhandled exception occurred: {e.Message}";
+    alert.AlertStyle = NSAlertStyle.Critical;
     alert.RunModal();
   }
 
@@ -67,7 +67,9 @@ internal static class Program {
     // NSApplication.Init() must be called before any UI elements are created.
     // LoadConfigAndFindInstall may show a dialog to the user.
     NSApplication.Init();
-    AppConfig.LoadConfigAndFindInstall();
+    // FIXME: Use LoadConfigAndFindInstall instead
+    AppConfig.Load();
+    InstallFinder.Find(AppConfig.Instance.ExtraPaths);
     NSApplication.SharedApplication.Delegate = new AppDelegate();
     NSApplication.Main(args);
   }
