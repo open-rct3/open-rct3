@@ -88,8 +88,8 @@ public class Game : IDisposable {
       var remaining = msPerUpdate - lag;
       if (remaining > TimeSpan.Zero) {
         var sleepMs = (int)(remaining.TotalMilliseconds / 2.0);
-        if (sleepMs > 0)
-          System.Threading.Thread.Sleep(sleepMs);
+        if (sleepMs > 2)
+          System.Threading.Thread.Sleep(sleepMs / 2);
       }
     }
   }
