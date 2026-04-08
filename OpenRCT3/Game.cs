@@ -10,6 +10,7 @@ using System.Diagnostics;
 using OpenCobra.GDK;
 using OpenRCT3.Simulation;
 using OpenRCT3.Platforms;
+using System.Windows.Forms;
 
 namespace OpenRCT3;
 
@@ -71,6 +72,9 @@ public class Game : IDisposable {
       var elapsed = currentTime - previousTime;
       previousTime = currentTime;
       lag += elapsed;
+
+      // Process any pending Windows messages (e.g. input events)
+      Application.DoEvents();
 
       while (lag >= msPerUpdate) {
         // FIXME: Shouldn't the amount of time Tick takes affect the lag calculation?
