@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace Dumper.Plugins;
@@ -9,10 +10,10 @@ namespace Dumper.Plugins;
 /// A custom Label control that intelligently truncates long text in the middle,
 /// preserving the beginning and end portions. Ideal for file paths and URLs.
 ///
-/// When text doesn't fit, it displays: "C:\OpenRCT3\...\ftx-viewer.wasm"
+/// When text doesn't fit, it displays: "C:\OpenRCT3\…\ftx-viewer.wasm"
 /// </summary>
 public class TruncatedLabel : Label {
-  private const string ELLIPSIS = "...";
+  private const string ELLIPSIS = "…";
 
   private string originalText = string.Empty;
   private readonly ToolTip toolTip = new() { AutomaticDelay = 500 };
@@ -62,7 +63,7 @@ public class TruncatedLabel : Label {
   }
 
   /// <summary>
-  /// Custom ellipsis. Default is "..." but can be customized (e.g., "…")
+  /// Custom ellipsis. Default is "…" but can be customized (e.g., "...")
   /// </summary>
   [Category("Appearance")]
   [Description("Custom ellipsis, e.g. \"…\".")]
@@ -94,29 +95,17 @@ public class TruncatedLabel : Label {
   /// Recalculates the display text based on available space.
   /// </summary>
   private void UpdateDisplayText() {
-    if (string.IsNullOrEmpty(originalText)) {
-      base.Text = originalText;
-      return;
-    }
-
-    // Use base.Text to bypass our custom Text property
-    string displayText = originalText;
-
-    // Check if text fits in the current bounds
-    if (!TextFits(originalText))
-      displayText = TruncateMiddle(originalText);
-
-    base.Text = displayText;
-    // For accessibility
-    toolTip.SetToolTip(this, originalText);
+    var textFits = TextFits(originalText);
+    base.Text = !textFits ? TruncateMiddle(originalText) : originalText;
+    // Set tooltip for accessibility
+    toolTip.SetToolTip(this, textFits ? null : originalText);
   }
 
   /// <summary>
   /// Checks if the text fits within the label's current width.
   /// </summary>
   private bool TextFits(string text) {
-    if (Width <= 0 || Height <= 0)
-      return true;
+    if (string.IsNullOrWhiteSpace(text) || Width <= 0) return true;
 
     using var g = this.CreateGraphics();
     SizeF size = g.MeasureString(text, Font);
@@ -132,69 +121,56 @@ public class TruncatedLabel : Label {
   /// Attempts to break at path separators when SmartBreak is enabled.
   /// </remarks>
   private string TruncateMiddle(string text) {
-    if (text.Length <= ellipsis.Length)
-      return text;
+    if (text.Length <= ellipsis.Length) return text;
+
+    // Try to break the string inbetween path separators
+    if (smartBreak && text.Contains(Path.DirectorySeparatorChar)) {
+      int lastSeparatorStart = text.LastIndexOf(Path.DirectorySeparatorChar);
+      string startPart = text[..lastSeparatorStart];
+      if (startPart.Contains(Path.DirectorySeparatorChar))
+        startPart = startPart[..(startPart.LastIndexOf(Path.DirectorySeparatorChar))];
+
+      return FindFittingTruncation(startPart, text[lastSeparatorStart..]);
+    }
 
     // Calculate how many characters we can keep from start and end
     int preserveLength = Math.Max(1, (int)(text.Length * preserveRatio));
 
     // Adjust if the preserved portions + ellipsis exceed the original length
-    if ((preserveLength * 2) + ellipsis.Length >= text.Length) {
+    if ((preserveLength * 2) + ellipsis.Length >= text.Length)
       preserveLength = Math.Max(1, (text.Length - ellipsis.Length) / 2);
-    }
 
-    string startPart = text[..preserveLength];
-    string endPart = text[^preserveLength..];
-
-    // Try to end at a path separator on the start part
-    if (smartBreak) {
-      int lastSeparatorStart = Math.Max(startPart.LastIndexOf('\\'), startPart.LastIndexOf('/'));
-
-      if (lastSeparatorStart > 0 && lastSeparatorStart < startPart.Length - 1) {
-        startPart = startPart[..(lastSeparatorStart + 1)];
-      }
-
-      // Try to start at a path separator on the end part
-      int backslashPos = endPart.IndexOf('\\');
-      int slashPos = endPart.IndexOf('/');
-
-      int firstSeparatorEnd = -1;
-      if (backslashPos >= 0 && slashPos >= 0)
-        firstSeparatorEnd = Math.Min(backslashPos, slashPos);
-      else if (backslashPos >= 0)
-        firstSeparatorEnd = backslashPos;
-      else if (slashPos >= 0)
-        firstSeparatorEnd = slashPos;
-
-      // Try to start at a path separator on the end part
-      if (firstSeparatorEnd > 0)
-        endPart = endPart[firstSeparatorEnd..];
-    }
-
-    // Binary search for the longest text that fits
-    return FindFittingTruncation(startPart, endPart);
+    return FindFittingTruncation(text[..preserveLength], text[^preserveLength..]);
   }
 
   /// <summary>
   /// Uses binary search to find the longest possible start/end combination that fits.
   /// </summary>
   private string FindFittingTruncation(string startPart, string endPart) {
-    int startLen = startPart.Length;
-    int endLen = endPart.Length;
+    var startLen = startPart.Length;
+    var endLen = endPart.Length;
+    var start = startPart[..startLen];
+    var end = endPart[^endLen..];
 
     // Try progressively shorter combinations until it fits
-    while (!TextFits(startPart[..startLen] + ellipsis + endPart[^endLen..])) {
+    // FIXME: I think this will truncate paths weirdly if `start` doesn't fit as-is
+    // When `smartBreak` is true:
+    // - The first part in `start` shall not be "...", e.g. "C:\Users\...\foo" is acceptable, "...\foo" is not
+    // - The last part in `start` shall be a full file name, e.g. "/usr/bin/.../foo"
+    while (!TextFits($"{start}{ellipsis}{end}")) {
+      // Reduce the longer part
       if (startLen > 0 && endLen > 0) {
-        // Reduce the longer part
         if (startLen >= endLen) startLen--;
         else endLen--;
       }
       else if (startLen > 0) startLen--;
       else if (endLen > 0) endLen--;
-        // Can't fit anything meaningful
-      else return ellipsis;
+      // Can't fit anything meaningful
+      else return smartBreak ? $"{ellipsis}{endPart}" : ellipsis;
     }
 
-    return startPart[..startLen] + ellipsis + endPart[^endLen..];
+    start = startPart[..startLen] + (smartBreak ? Path.DirectorySeparatorChar : string.Empty);
+    end = endPart[^endLen..];
+    return $"{start}{ellipsis}{end}";
   }
 }
