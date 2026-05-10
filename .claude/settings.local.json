@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:extism.github.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:dylibso.com)",
+      "WebFetch(domain:docs.wasmtime.dev)"
     ]
   }
 }

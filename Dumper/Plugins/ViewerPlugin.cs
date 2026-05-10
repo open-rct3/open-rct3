@@ -5,7 +5,6 @@ using System.Text;
 using System.Text.Json;
 using Extism.Sdk;
 using ExtismValType = Extism.Sdk.Native.ExtismValType;
-using ExtismVal = Extism.Sdk.Native.ExtismVal;
 
 namespace Dumper.Plugins;
 
@@ -14,28 +13,41 @@ sealed class ViewerPlugin : IViewerPlugin {
   private static readonly TimeSpan ScriptTimeout = TimeSpan.FromMilliseconds(500);
   private const int MaxPages = 16;
   private const int MaxHttpPayload = 5120; // 5MB
-  private const long FuelLimit = 50;
+  // TODO: Profile existing plugins to determine fuel limit
+  private const long FuelLimit = 5_000;
 
   private readonly CompiledPlugin plugin;
   private Plugin instance;
 
   public bool Enabled { get; set; } = true;
-  public required string Name { get; init; }
-  public required string Version { get; init; }
-  public required IReadOnlyList<string> FileTypes { get; init; }
-  public required string SourcePath { get; init; }
+  public string Name { get; init; }
+  public string Version { get; init; }
+  public IReadOnlyList<string> FileTypes { get; init; }
+  public string SourcePath { get; init; }
 
   public IReadOnlyList<string> SupportedFileTypes => FileTypes;
 
-  private ViewerPlugin(CompiledPlugin compiled, Plugin instance) {
+  private ViewerPlugin(string filePath, CompiledPlugin compiled, Plugin instance) {
     plugin = compiled;
     this.instance = instance;
+
+    // Read plugin metadata from the WASM module
+    // FIXME: These calls are returning zero bytes
+    Name = SafeCall("name") ?? Path.GetFileNameWithoutExtension(filePath);
+    Version = SafeCall("version") ?? "Unknown";
+    try {
+      var json = SafeCall("file_types") ?? "[]";
+      FileTypes = JsonSerializer.Deserialize<List<string>>(json) ?? [];
+    } catch (JsonException) {
+      FileTypes = [];
+    }
+    SourcePath = filePath;
   }
 
   /// <summary>Load a viewer plugin from a file path.</summary>
   public static ViewerPlugin Load(string filePath) {
-    var fullPath = Path.GetFullPath(filePath);
-    var manifest = new Manifest(new PathWasmSource(fullPath)) {
+    var modulePath = Path.GetFullPath(filePath);
+    var manifest = new Manifest(new PathWasmSource(modulePath)) {
       AllowedHosts = ["OpenRCT3:Dumper"],
       Timeout = ScriptTimeout,
       MemoryOptions = new MemoryOptions() {
@@ -51,24 +63,7 @@ sealed class ViewerPlugin : IViewerPlugin {
     var compiled = new CompiledPlugin(manifest, CreateHostFunctions(filePath), options);
     var instance = compiled.Instantiate();
 
-    // Read plugin metadata from WASM exports
-    var name = SafeCall(instance, "name") ?? Path.GetFileNameWithoutExtension(fullPath);
-    var version = SafeCall(instance, "version") ?? "0.0.0";
-    var fileTypesJson = SafeCall(instance, "file_types") ?? "[]";
-
-    List<string> fileTypes;
-    try {
-      fileTypes = JsonSerializer.Deserialize<List<string>>(fileTypesJson) ?? [];
-    } catch (JsonException) {
-      fileTypes = [];
-    }
-
-    return new ViewerPlugin(compiled, instance) {
-      Name = name,
-      Version = version,
-      FileTypes = fileTypes,
-      SourcePath = fullPath,
-    };
+    return new ViewerPlugin(modulePath, compiled, instance);
   }
 
   /// <summary>Render raw resource bytes as HTML.</summary>
@@ -89,10 +84,15 @@ sealed class ViewerPlugin : IViewerPlugin {
     }
   }
 
-  private static string? SafeCall(Plugin plugin, string export) {
+  private string? SafeCall(string export) {
     try {
-      return Encoding.UTF8.GetString(plugin.Call(export, []));
-    } catch {
+      var result = instance.Call(export, []);
+      if (result.Length == 0) return null;
+      return Encoding.UTF8.GetString(result);
+    } catch (Exception ex) {
+      if (ex is ExtismException error && error.Message.Contains("fuel", StringComparison.InvariantCultureIgnoreCase))
+        throw new PluginError(this, "Plugin ran out of fuel.", error) { Code = ErrorCode.OutOfFuel };
+
       return null;
     }
   }
