@@ -20,20 +20,7 @@ sealed partial class PluginsDialog : Form {
   public PluginsDialog(IReadOnlyList<IViewerPlugin> plugins) {
     this.plugins = plugins;
     InitializeComponent();
-
-    IEmbeddedIcons icons = IconRepository.GetEmbeddedIcons<MaterialDesignIcons>();
-    var color = new DuoToneColor(Color.FromArgb(64, 64, 64), Color.FromArgb(185, 185, 185));
-    var disabledColor = new DuoToneColor(Color.FromArgb(180, 180, 180), Color.FromArgb(210, 210, 210));
-    var removeColor = new DuoToneColor(Color.FromArgb(211, 47, 47), Color.Transparent);
-
-    var puzzleBmp = MainForm.RenderIcon(icons, "PuzzleOutline", color);
-    if (puzzleBmp != null) Icon = Icon.FromHandle(puzzleBmp.GetHicon());
-
-    enableIcon = MainForm.RenderIcon(icons, "Puzzle", color)!;
-    disableIcon = MainForm.RenderIcon(icons, "PuzzleMinusOutline", disabledColor)!;
-
-    install.Image = MainForm.RenderIcon(icons, "PuzzleOutline", color);
-    uninstall.Image = MainForm.RenderIcon(icons, "TrashCan", removeColor);
+    InitializeComponentIcons();
   }
 
   private void UpdatePluginList() {
@@ -53,10 +40,20 @@ sealed partial class PluginsDialog : Form {
 
     emptyLabel.Visible = isEmpty;
     metadata.Visible = !isEmpty;
+  }
 
-    // Update toolbar state
-    toggleActive.Image = isEnabled ? disableIcon : enableIcon;
-    toggleActive.ToolTipText = isEnabled ? "Disable this plugin" : "Enable this plugin";
+  private void InitializeComponentIcons() {
+    IEmbeddedIcons icons = IconRepository.GetEmbeddedIcons<MaterialDesignIcons>();
+    var color = new DuoToneColor(Color.FromArgb(64, 64, 64), Color.FromArgb(185, 185, 185));
+    var removeColor = new DuoToneColor(Color.FromArgb(211, 47, 47), Color.Transparent);
+
+    var puzzleBmp = Icons.Render(icons, "PuzzleOutline", color);
+    if (puzzleBmp != null) Icon = Icon.FromHandle(puzzleBmp.GetHicon());
+
+    install.Image = Icons.Render(icons, "PuzzlePlusOutline", color);
+    installFromCatalog.Image = Icons.Render(icons, "PuzzlePlusOutline", color);
+    uninstall.Image = Icons.Render(icons, "TrashCan", removeColor);
+  }
 
     // Update metadata
     if (selectedPlugin == null) return;

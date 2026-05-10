@@ -314,16 +314,16 @@ public partial class MainForm : Form {
     var folderColor = new DuoToneColor(
       System.Drawing.Color.FromArgb(0xC8, 0xA2, 0x17), System.Drawing.Color.FromArgb(0xC8, 0xA2, 0x17));
 
-    var imageList = new ImageList { ImageSize = new Size(IconSize, IconSize) };
+    var imageList = new ImageList { ImageSize = IconSize };
 
     // Add folder icon for file group nodes
-    imageList.Images.Add("FolderOpen", RenderIcon(icons, "FolderOpen", folderColor)!);
+    imageList.Images.Add("FolderOpen", Icons.Render(icons, "FolderOpen", folderColor)!);
 
     // Add icons for each file type, skipping unknown icon names
     foreach (var fileType in Enum.GetValues<FileType>()) {
       var iconName = fileType.ToIconName();
       if (!imageList.Images.ContainsKey(iconName)) {
-        var bmp = RenderIcon(icons, iconName, color);
+        var bmp = Icons.Render(icons, iconName, color);
         if (bmp != null)
           imageList.Images.Add(iconName, bmp);
       }
