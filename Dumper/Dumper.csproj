@@ -83,11 +83,11 @@
   <ItemGroup>
     <Folder Include="Plugins\Artifacts\" />
   </ItemGroup>
-  <!-- TODO: Make sure these show up in Plugins/Artifacts in the solution explorer -->
   <ItemGroup>
     <Content Include="$(SolutionDir)bin\plugins\*.wasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>plugins\%(Filename).wasm</Link>
+      <Link>Plugins\Artifacts\%(Filename).wasm</Link>
+      <TargetPath>plugins\%(Filename).wasm</TargetPath>
     </Content>
   </ItemGroup>
 </Project>
