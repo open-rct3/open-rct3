@@ -91,4 +91,7 @@ sealed partial class PluginsDialog : Form {
 
   private void Uninstall_Click(object? sender, EventArgs e) =>
     throw new NotImplementedException("Uninstall is not yet implemented.");
+
+  private void InstallSplitBtn_DropDownOpening(object sender, EventArgs e) => toolStrip.ShowItemToolTips = false;
+  private void InstallSplitBtn_DropDownClosed(object sender, EventArgs e) => toolStrip.ShowItemToolTips = true;
 }
