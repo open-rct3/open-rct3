@@ -1,10 +1,16 @@
 /// <reference no-default-lib="true" />
-import { Host, Config } from "@extism/as-pdk";
+import { Config, Host } from "@extism/as-pdk";
 import "../types.ts";
 
-export function name(): string { return "Integer Viewer"; }
-export function version(): string { return "0.1.0"; }
-export function file_types(): string { return '["int"]'; }
+export function name(): string {
+  return "Integer Viewer";
+}
+export function version(): string {
+  return "0.1.0";
+}
+export function file_types(): string {
+  return '["int"]';
+}
 
 function toHex(value: u32, width: i32 = 8): string {
   let hex = value.toString(16).toUpperCase();
@@ -41,7 +47,7 @@ function renderHexView(data: Uint8Array): string {
       let idx = offset + i;
       if (idx < data.length) {
         let byte = data[idx];
-        html += "<td>" + byte.toString(16).toUpperCase().padStart(2, '0') + "</td>";
+        html += "<td>" + byte.toString(16).toUpperCase().padStart(2, "0") + "</td>";
         if (byte >= 32 && byte < 127) {
           ascii += String.fromCharCode(byte);
         } else {
@@ -60,7 +66,8 @@ function renderHexView(data: Uint8Array): string {
 }
 
 function readU32LE(data: Uint8Array, offset: i32): u32 {
-  return (u32(data[offset]) | (u32(data[offset + 1]) << 8) | (u32(data[offset + 2]) << 16) | (u32(data[offset + 3]) << 24));
+  return (u32(data[offset]) | (u32(data[offset + 1]) << 8) | (u32(data[offset + 2]) << 16) |
+    (u32(data[offset + 3]) << 24));
 }
 
 function renderIntTable(data: Uint8Array, signed: bool): string {
@@ -70,10 +77,12 @@ function renderIntTable(data: Uint8Array, signed: bool): string {
 
   let count = data.length / 4;
   if (count == 0 || data.length % 4 != 0) {
-    return "<p class='error'>Data length is not a multiple of 4 bytes. Showing hex view instead.</p>" + renderHexView(data);
+    return "<p class='error'>Data length is not a multiple of 4 bytes. Showing hex view instead.</p>" +
+      renderHexView(data);
   }
 
-  let html = "<div class='int-table-wrapper'><table class='int-table'><thead><tr><th>#</th><th>Decimal</th><th>Hex</th><th>Binary</th></tr></thead><tbody>";
+  let html =
+    "<div class='int-table-wrapper'><table class='int-table'><thead><tr><th>#</th><th>Decimal</th><th>Hex</th><th>Binary</th></tr></thead><tbody>";
 
   for (let i = 0; i < count; i++) {
     let offset = i * 4;
@@ -86,7 +95,8 @@ function renderIntTable(data: Uint8Array, signed: bool): string {
     }
     let displayVal = signed ? signedVal.toString() : value.toString();
 
-    html += "<tr><td>" + i.toString() + "</td><td>" + displayVal + "</td><td>" + toHex(value) + "</td><td class='binary'>" + toBinary(value) + "</td></tr>";
+    html += "<tr><td>" + i.toString() + "</td><td>" + displayVal + "</td><td>" + toHex(value) +
+      "</td><td class='binary'>" + toBinary(value) + "</td></tr>";
   }
 
   html += "</tbody></table></div>";

@@ -1,7 +1,11 @@
 # Plan: Double-click tree divider to fit sidebar to content
 
 ## Context
-The Dumper app has a tree sidebar (left panel) and content area (right panel) separated by a splitter/divider. The sidebar width is hardcoded at 175px (Windows) or 190px (macOS). Users want to double-click the divider to auto-resize the sidebar to fit the widest tree node text, expanding all nodes temporarily for measurement only (without changing the user's visible expansion state).
+
+The Dumper app has a tree sidebar (left panel) and content area (right panel) separated by a splitter/divider. The
+sidebar width is hardcoded at 175px (Windows) or 190px (macOS). Users want to double-click the divider to auto-resize
+the sidebar to fit the widest tree node text, expanding all nodes temporarily for measurement only (without changing the
+user's visible expansion state).
 
 Both Windows (WinForms `SplitContainer`) and macOS (AppKit `NSSplitView`) need support.
 
@@ -9,12 +13,16 @@ Both Windows (WinForms `SplitContainer`) and macOS (AppKit `NSSplitView`) need s
 
 ### 1. `Dumper/MainForm.cs` (Windows)
 
-Add a method to compute the ideal sidebar width and wire it to the splitter's `SplitterMoved` event (WinForms `SplitContainer` lacks a native double-click event on the splitter, so we detect a double-click manually).
+Add a method to compute the ideal sidebar width and wire it to the splitter's `SplitterMoved` event (WinForms
+`SplitContainer` lacks a native double-click event on the splitter, so we detect a double-click manually).
 
-**Approach**: Add a `MouseDoubleClick` handler on the `SplitContainer` that detects clicks near the splitter bar. On double-click, measure the tree width by:
+**Approach**: Add a `MouseDoubleClick` handler on the `SplitContainer` that detects clicks near the splitter bar. On
+double-click, measure the tree width by:
+
 1. Saving each root node's collapsed state (`TreeNode.IsExpanded`).
 2. Calling `treeView.ExpandAll()` to expose every node.
-3. Iterating all nodes with `TreeNode.Bounds` to find the maximum right edge, accounting for indent depth and icon width.
+3. Iterating all nodes with `TreeNode.Bounds` to find the maximum right edge, accounting for indent depth and icon
+   width.
 4. Restoring the saved expansion state.
 5. Setting `splitView.SplitterDistance` to `maxWidth + padding` (clamped to form bounds).
 
@@ -75,23 +83,32 @@ private static int MeasureNodeWidth(TreeNode node, int depth) {
 }
 ```
 
-**Note**: `TreeNode.Bounds` is only valid when the node is visible and the tree is laid out. Since we call `ExpandAll()` first, all nodes will be visible. However, `Bounds.X` for root nodes includes the tree view's internal offset — so `Bounds.Right` already accounts for indentation. The recursive `depth` parameter may not be needed if `Bounds` already reflects the full indent. This needs to be verified at implementation time; if `Bounds` already includes indent, use `node.Bounds.Right` directly.
+**Note**: `TreeNode.Bounds` is only valid when the node is visible and the tree is laid out. Since we call `ExpandAll()`
+first, all nodes will be visible. However, `Bounds.X` for root nodes includes the tree view's internal offset — so
+`Bounds.Right` already accounts for indentation. The recursive `depth` parameter may not be needed if `Bounds` already
+reflects the full indent. This needs to be verified at implementation time; if `Bounds` already includes indent, use
+`node.Bounds.Right` directly.
 
 ### 2. `Dumper/Documents/OvlViewController.cs` (macOS)
 
-The macOS side uses `NSOutlineView` inside an `NSSplitView` managed by a storyboard. The storyboard references `EditorSplitView` as a custom `NSSplitViewController` class, but no such class exists yet.
+The macOS side uses `NSOutlineView` inside an `NSSplitView` managed by a storyboard. The storyboard references
+`EditorSplitView` as a custom `NSSplitViewController` class, but no such class exists yet.
 
 **Changes**:
 
 #### a. Create `Dumper/EditorSplitView.cs`
 
-Create a new `NSSplitViewController` subclass that overrides `SplitViewDidResizeSubviews` or implements `NSSplitViewDelegate` to detect double-clicks on the divider.
+Create a new `NSSplitViewController` subclass that overrides `SplitViewDidResizeSubviews` or implements
+`NSSplitViewDelegate` to detect double-clicks on the divider.
 
-On macOS, `NSSplitView` doesn't have a built-in double-click event. The standard approach is to override `mouseDown:` or add a click gesture recognizer on the split view itself. However, the cleanest approach is:
+On macOS, `NSSplitView` doesn't have a built-in double-click event. The standard approach is to override `mouseDown:` or
+add a click gesture recognizer on the split view itself. However, the cleanest approach is:
 
-1. In `ViewDidLoad` of the split view controller, add a `NSClickGestureRecognizer` with `NumberOfClicksRequired = 2` to the `SplitView`.
+1. In `ViewDidLoad` of the split view controller, add a `NSClickGestureRecognizer` with `NumberOfClicksRequired = 2` to
+   the `SplitView`.
 2. In the gesture handler, check the click location is on the divider (not inside a subview).
-3. Measure the outline view's content width by temporarily expanding all items and using `NSOutlineView.RectOfColumn(0)` or iterating rows via `NSOutlineView.RowAtPoint`.
+3. Measure the outline view's content width by temporarily expanding all items and using `NSOutlineView.RectOfColumn(0)`
+   or iterating rows via `NSOutlineView.RowAtPoint`.
 
 ```csharp
 using AppKit;
@@ -166,9 +183,13 @@ public class EditorSplitView : NSSplitViewController {
 }
 ```
 
-**Important caveat**: The expansion state saved by row index may shift after expanding all items, since collapsing one item changes subsequent row indices. A more robust approach saves expansion state by item identity (e.g., `NSOutlineView.IsItemExpanded(item)`) and restores by iterating items from the data source directly rather than by row index.
+**Important caveat**: The expansion state saved by row index may shift after expanding all items, since collapsing one
+item changes subsequent row indices. A more robust approach saves expansion state by item identity (e.g.,
+`NSOutlineView.IsItemExpanded(item)`) and restores by iterating items from the data source directly rather than by row
+index.
 
 ## Verification
+
 - Build the solution and confirm no compiler errors.
 - Open a `.common.ovl` or `.unique.ovl` file.
 - Manually collapse some tree nodes.

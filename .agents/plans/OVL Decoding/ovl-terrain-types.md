@@ -2,11 +2,14 @@
 
 ## Problem
 
-TER entries define terrain types with color parameters, texture references, and display metadata. Each terrain type has a description name, icon, texture reference, and rendering parameters. The dumper should display terrain metadata and optionally preview the terrain appearance.
+TER entries define terrain types with color parameters, texture references, and display metadata. Each terrain type has
+a description name, icon, texture reference, and rendering parameters. The dumper should display terrain metadata and
+optionally preview the terrain appearance.
 
 ## Background Research
 
 **TER Manager** (`ManagerTER.h/cpp`):
+
 - Tag: `"ter"`, Name: `"TerrainType"`, stored in **unique OVL only**
 - Each terrain = `TerrainType` struct with:
   - `name` — terrain name (symbol reference)
@@ -29,6 +32,7 @@ TER entries define terrain types with color parameters, texture references, and 
     - `unk15` — unknown (default 0.5)
 
 **Data Layout**:
+
 - Unique block: `TerrainType` struct with symbol references
 - Symbol references to: TXT (description), GSI (icon), TEX (texture)
 - String table entries for name, description, icon, texture
@@ -81,6 +85,7 @@ public static class TerrainTypes {
 ### Files to Create/Modify
 
 **Create:**
+
 - `OpenCobra/OVL/Files/TerrainTypes.cs`
 
 ### Dependencies
@@ -143,6 +148,7 @@ Add to `LoadOvls.All` array or create as separate test file following the existi
 > **Status**: Not yet identified
 
 Production OVL archives containing terrain type entries (tag: `"ter"`) have not yet been catalogued. To identify:
+
 1. Scan production OVLs for loader entries with `Tag == "ter"` (unique OVL only)
 2. Document common vs unique archive distribution
 3. Note sample symbol names for verification

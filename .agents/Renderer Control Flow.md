@@ -1,6 +1,7 @@
 # Renderer Control Flow
 
-In the OpenRCT3 project, the `Renderer.Render` method is called during the application's paint/render loop, managed by platform-specific UI components.
+In the OpenRCT3 project, the `Renderer.Render` method is called during the application's paint/render loop, managed by
+platform-specific UI components.
 
 ## Windows Control Flow
 
@@ -18,12 +19,14 @@ In the OpenRCT3 project, the `Renderer.Render` method is called during the appli
 ## macOS Control Flow
 
 1. **Rendering**: `OpenGLLayer.cs`
-   - The `OpenGLLayer.DrawInContext` method (or similar Core Animation / AppKit event) calls `_renderer.Render(Game.Instance.Scene)`.
+   - The `OpenGLLayer.DrawInContext` method (or similar Core Animation / AppKit event) calls
+     `_renderer.Render(Game.Instance.Scene)`.
    - It also ensures the camera is updated before rendering: `Game.Instance.Scene.UpdateCamera(...)`.
 
 ## Call Hierarchy Summary
 
 ### Windows
+
 ```text
 Program.Main()
 └── MainForm (WinForms)
@@ -33,6 +36,7 @@ Program.Main()
 ```
 
 ### macOS
+
 ```text
 GameViewController
 └── OpenGLLayer.DrawInContext() (or similar)

@@ -1,9 +1,13 @@
 # Plan: Add OVL document name to window title
 
 ## Context
-The Dumper app opens OVL archives (`.common.ovl` / `.unique.ovl`). The user wants the extracted document name (e.g. "Water" from "Water.common.ovl") shown in the window title/subtitle. The `OvlWindowController` is currently a thin shell with no title logic.
 
-On macOS, the document name serves as the project name displayed in the window subtitle. On Windows, the document name is appended as a hyphenated suffix to the main window title.
+The Dumper app opens OVL archives (`.common.ovl` / `.unique.ovl`). The user wants the extracted document name (e.g.
+"Water" from "Water.common.ovl") shown in the window title/subtitle. The `OvlWindowController` is currently a thin shell
+with no title logic.
+
+On macOS, the document name serves as the project name displayed in the window subtitle. On Windows, the document name
+is appended as a hyphenated suffix to the main window title.
 
 ## Files to modify
 
@@ -11,8 +15,10 @@ On macOS, the document name serves as the project name displayed in the window s
 
 Add three members:
 
-- **`FilePath` property** (`string?`) — tracks the file path the user chose. Set by `OvlDocument` when creating the controller.
-- **`DocumentName` computed property** (`string`) — derives the display name by stripping `.common.ovl` / `.unique.ovl` (case-insensitive) from the filename, falling back to plain `.ovl`, then to `Ovl.UnnamedOvl`.
+- **`FilePath` property** (`string?`) — tracks the file path the user chose. Set by `OvlDocument` when creating the
+  controller.
+- **`DocumentName` computed property** (`string`) — derives the display name by stripping `.common.ovl` / `.unique.ovl`
+  (case-insensitive) from the filename, falling back to plain `.ovl`, then to `Ovl.UnnamedOvl`.
 - **`WindowTitle` override** (`string`) — returns `DocumentName`, wiring the derived name into the window chrome.
 
 ```csharp
@@ -58,7 +64,8 @@ public override void MakeWindowControllers() {
 
 ### 3. `Dumper/MainForm.cs` (Windows)
 
-Update the window title when an OVL is loaded by appending the document name as a hyphenated suffix (e.g. "OVL Dumper — Water"):
+Update the window title when an OVL is loaded by appending the document name as a hyphenated suffix (e.g. "OVL Dumper —
+Water"):
 
 ```csharp
 private void LoadOvl(Ovl ovl) {
@@ -81,6 +88,7 @@ private void LoadOvl(Ovl ovl) {
 ```
 
 ## Verification
+
 - Build the solution and confirm no compiler errors.
 - Open a `.common.ovl` or `.unique.ovl` file and verify:
   - **macOS**: The window subtitle shows the extracted name (e.g. "Water" for "Water.common.ovl").

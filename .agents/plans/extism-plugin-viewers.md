@@ -2,7 +2,9 @@
 
 ## Context
 
-Dumper currently only displays the OVL resource tree in the left panel. The right content panel is empty. This plan adds an Extism-powered plugin system so that `.wasm` plugins can render OVL file resources in the content panel when a tree node is selected.
+Dumper currently only displays the OVL resource tree in the left panel. The right content panel is empty. This plan adds
+an Extism-powered plugin system so that `.wasm` plugins can render OVL file resources in the content panel when a tree
+node is selected.
 
 ## Plugin Discovery
 
@@ -17,7 +19,9 @@ Plugins are `.wasm` files discovered at startup from these locations (in order):
 - **Windows:** `%APPDATA%/OpenRCT3/Plugins/*.wasm` then `%USERDOCUMENTS%/OpenRCT3/Plugins/*.wasm`
 - **macOS:** `~/Library/Application Support/OpenRCT3/Plugins/*.wasm` then `~/Documents/OpenRCT3/Plugins/*.wasm`
 
-Each `.wasm` file is loaded via `CompiledPlugin` (pre-compiled for performance). A `PluginManager` builds a dictionary mapping `FileType` tag → ordered list of `IViewerPlugin` instances. The first plugin for each type is the default viewer.
+Each `.wasm` file is loaded via `CompiledPlugin` (pre-compiled for performance). A `PluginManager` builds a dictionary
+mapping `FileType` tag → ordered list of `IViewerPlugin` instances. The first plugin for each type is the default
+viewer.
 
 ## WASM Plugin Contract
 
@@ -60,7 +64,8 @@ interface IViewerPlugin : IDisposable {
 
 ### `ViewerPlugin`
 
-Wraps an Extism `Plugin` instance. On construction, calls `name`, `version`, `file_types` exports. The `Render` method calls the `render` export with `FuelLimit = 50`.
+Wraps an Extism `Plugin` instance. On construction, calls `name`, `version`, `file_types` exports. The `Render` method
+calls the `render` export with `FuelLimit = 50`.
 
 ### `PluginManager`
 
@@ -100,7 +105,8 @@ Integrates into the existing `EditorController` / `EditorContainer`:
 
 ## OVL Data Access — Required Changes to OpenCobra/OVL
 
-Add `InternalsVisibleTo` for Dumper in `OVL.csproj` so Dumper can access `CommonData`, `UniqueData`, `OvlFileData`, and `FileBlockEntry` to resolve virtual addresses to raw byte slices.
+Add `InternalsVisibleTo` for Dumper in `OVL.csproj` so Dumper can access `CommonData`, `UniqueData`, `OvlFileData`, and
+`FileBlockEntry` to resolve virtual addresses to raw byte slices.
 
 ## Tree View Integration (MainForm.cs)
 
@@ -117,24 +123,26 @@ Add `treeView.AfterSelect` handler that:
 On leaf tree nodes, assign a context menu with these items:
 
 - "Open With" item:
-  
+
   - Sub-menu listing all matching `FileType` viewer plugins
-    
+
     - Default viewer is bolded
-    
+
     - Divider at the end of the list, followed by
-    
-    - "Choose a default viewer..." that opens a `Plugins/DefaultViewerChooser.cs` dialog that responds with a DialogResult of the selected `FileType`. The form contains a dropdown of file types and these buttons:
-      
+
+    - "Choose a default viewer..." that opens a `Plugins/DefaultViewerChooser.cs` dialog that responds with a
+      DialogResult of the selected `FileType`. The form contains a dropdown of file types and these buttons:
+
       - "Set Default": The dialog's default action, i.e. keyboard accessible in the normal WinForms way
-      
+
       - Cancel: Cancels the dialog
 
 - Export: Throws `NotImplementedException`
 
 - Divider
 
-- Properties: Opens a simple dialog detailing the file type, relocation info, compressed and/or uncompressed size, and whether a matching viewer exists
+- Properties: Opens a simple dialog detailing the file type, relocation info, compressed and/or uncompressed size, and
+  whether a matching viewer exists
 
 ## Dependencies
 
@@ -154,5 +162,3 @@ On leaf tree nodes, assign a context menu with these items:
 6. Wire `MainForm.cs` — add `AfterSelect`, populate content panel
 7. Add right-click context menu on tree nodes for viewer selection
 8. macOS: modify `EditorController` — add WKWebView + header bar
-
-

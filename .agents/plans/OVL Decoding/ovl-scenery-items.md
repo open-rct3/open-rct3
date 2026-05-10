@@ -2,11 +2,14 @@
 
 ## Problem
 
-SID entries are the most complex OVL file type — they define all placeable scenery objects (rides, stalls, decorations, etc.) with UI metadata, positioning rules, colors, sounds, and references to visual definitions (SVD). The dumper should display comprehensive scenery item metadata.
+SID entries are the most complex OVL file type — they define all placeable scenery objects (rides, stalls, decorations,
+etc.) with UI metadata, positioning rules, colors, sounds, and references to visual definitions (SVD). The dumper should
+display comprehensive scenery item metadata.
 
 ## Background Research
 
 **SID Manager** (`ManagerSID.h/cpp`):
+
 - Tag: `"sid"`, Name: `"SceneryItem"`, stored in **unique OVL only**
 - Each SID = `cSid` with extensive metadata:
   - **UI**: name, icon, group, groupicon, type, cost, removal_cost
@@ -23,11 +26,13 @@ SID entries are the most complex OVL file type — they define all placeable sce
 - Symbol references to: TXT (names), GSI (icons), SVD (visuals), SND (sounds)
 
 **Data Layout**:
+
 - Unique block: main `SceneryItem` struct → SVD pointer array → sound array
 - Common block: `SceneryItemData[]` → height bitmaps → `SceneryParams[]` → sound script data → animation name pointers
 - Extra data for v1/v2: `SceneryExtraSound[]`
 
 **Complexity Notes**:
+
 - 563 lines in ManagerSID.cpp — most complex manager
 - Multiple unknown fields (40+ across all structs)
 - Conditional size calculations based on version, addon pack, tile count
@@ -109,6 +114,7 @@ public static class SceneryItems {
 ### Files to Create/Modify
 
 **Create:**
+
 - `OpenCobra/OVL/Files/SceneryItems.cs`
 
 ### Dependencies
@@ -172,6 +178,7 @@ Add to `LoadOvls.All` array or create as separate test file following the existi
 > **Status**: Not yet identified
 
 Production OVL archives containing scenery item entries (tag: `"sid"`) have not yet been catalogued. To identify:
+
 1. Scan production OVLs for loader entries with `Tag == "sid"` (unique OVL only)
 2. Document common vs unique archive distribution
 3. Note sample symbol names for verification

@@ -15,6 +15,8 @@ A plugin must export exactly **4 functions**:
 
 Use [XTP Schema](https://docs.xtp.dylibso.com/docs/concepts/xtp-schema)s to declare complex interfaces.
 
-> XTP Bindgen is a system which takes an [XTP Schema](https://docs.xtp.dylibso.com/docs/concepts/xtp-schema) (a minimal, wasm-focused extension to the OpenAPI format) and generates plug-in bindings for any [...] Extism supported PDK [language]. The binding generators themselves are open source and it's easy to modify them or write your own.
+> XTP Bindgen is a system which takes an [XTP Schema](https://docs.xtp.dylibso.com/docs/concepts/xtp-schema) (a minimal,
+> wasm-focused extension to the OpenAPI format) and generates plug-in bindings for any [...] Extism supported PDK
+> [language]. The binding generators themselves are open source and it's easy to modify them or write your own.
 
 [Announcing XTP Bindgen](https://extism.org/blog/announcing-xtp-bindgen) (2024) Accessed April 3, 2026

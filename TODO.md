@@ -4,9 +4,12 @@
 
 ### OVL Decoding
 
-- [ ] Confirm LODs relation in OVL enums (`OpenCobra/OVL/Enums.cs:36`) — see [.opencode/plans/ovl-enum-verification.md](.opencode/plans/ovl-enum-verification.md)
-- [ ] Verify NoShadow duplicate value (`OpenCobra/OVL/Enums.cs:49`) — see [.opencode/plans/ovl-enum-verification.md](.opencode/plans/ovl-enum-verification.md)
-- [ ] Implement tracked rides support (`OpenCobra/OVL/Enums.cs:235`) — **deferred**; will implement after OVL decoder is ready
+- [ ] Confirm LODs relation in OVL enums (`OpenCobra/OVL/Enums.cs:36`) — see
+      [.opencode/plans/ovl-enum-verification.md](.opencode/plans/ovl-enum-verification.md)
+- [ ] Verify NoShadow duplicate value (`OpenCobra/OVL/Enums.cs:49`) — see
+      [.opencode/plans/ovl-enum-verification.md](.opencode/plans/ovl-enum-verification.md)
+- [ ] Implement tracked rides support (`OpenCobra/OVL/Enums.cs:235`) — **deferred**; will implement after OVL decoder is
+      ready
 - [x] Create data model for inspector items (`OpenRCT3/ViewModels/Inspector.cs:14`)
 - [ ] Handle OS-dependent and game-store-dependent game paths (`src/paths.d:34,49`)
 
@@ -27,7 +30,8 @@ See the [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap#phase-2-ga
 
 ## 💾 Memory Leaks
 
-- [ ] OpenRCT3 in Windows launches and then immediately hangs with the wait cursor; there's likely a memory leak or OpenGL is not being used correctly.
+- [ ] OpenRCT3 in Windows launches and then immediately hangs with the wait cursor; there's likely a memory leak or
+      OpenGL is not being used correctly.
 
 ## 📋 Documentation & Tooling
 
@@ -54,7 +58,8 @@ See the [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap#phase-2-ga
 
 The idea here is to support online play, i.e. play the game from your browser.
 
-Somehow, an end-user will run the server on their machine, it will ingest OVLs from their local installation, run the OpenCobra engine, and stream the game world's scene to the web client.
+Somehow, an end-user will run the server on their machine, it will ingest OVLs from their local installation, run the
+OpenCobra engine, and stream the game world's scene to the web client.
 
 - [ ] Write spec for game's WebSocket protocol (`src/server/routes.d:101`)
 - [ ] Switch from binary to JSON messages (`src/server/routes.d:102`)

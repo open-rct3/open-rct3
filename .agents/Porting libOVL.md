@@ -1,27 +1,36 @@
 # Porting libOVL to C\#
 
-This document summarizes the effort to port [libOVL](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLng), the C++ OVL archive parsing library from [rct3-importer](https://github.com/chances/rct3-importer), to C# in the [OpenCobra/OVL](../OpenCobra/OVL/) library.
+This document summarizes the effort to port
+[libOVL](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLng), the C++ OVL archive parsing
+library from [rct3-importer](https://github.com/chances/rct3-importer), to C# in the [OpenCobra/OVL](../OpenCobra/OVL/)
+library.
 
 ## Background
 
-The OVL binary format is Frontier's resource archive used by RollerCoaster Tycoon 3. Archives come in pairs: a **common** file (shared resources) and a **unique** file (archive-specific resources). The binary format contains:
+The OVL binary format is Frontier's resource archive used by RollerCoaster Tycoon 3. Archives come in pairs: a
+**common** file (shared resources) and a **unique** file (archive-specific resources). The binary format contains:
 
 1. **Header** — magic (`FGRK`), version (1, 4, or 5), reference count
-2. **Loader headers** — resource type descriptors with a `loader` class, `name`, `type` index, and `tag` (e.g. `"tex"`, `"sid"`)
+2. **Loader headers** — resource type descriptors with a `loader` class, `name`, `type` index, and `tag` (e.g. `"tex"`,
+   `"sid"`)
 3. **File blocks** — 9 blocks of binary data forming a virtual address space
-4. **Relocations** — cross-reference pointers resolving virtual addresses between blocks and across the common/unique pair
+4. **Relocations** — cross-reference pointers resolving virtual addresses between blocks and across the common/unique
+   pair
 5. **Post-relocation data** — version-specific trailing metadata
 
 ## Changes
 
 > [!NOTE]
-> **AI-Assisted Porting:** Significant portions of the analysis, design, and implementation described in this document were produced with the assistance of AI tools. All AI-generated code was reviewed, tested, and validated against the original C++ reference. See the [AI Usage](#ai-usage) section for details on providers and models used.
+> **AI-Assisted Porting:** Significant portions of the analysis, design, and implementation described in this document
+> were produced with the assistance of AI tools. All AI-generated code was reviewed, tested, and validated against the
+> original C++ reference. See the [AI Usage](#ai-usage) section for details on providers and models used.
 
 ### OVL Binary Reading (`OpenCobra/OVL/OVL.cs`)
 
 #### Bug Fixes
 
-The initial prototype code had several bugs relative to the [C++ reference](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLDump/OVLDump.cpp):
+The initial prototype code had several bugs relative to the
+[C++ reference](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLDump/OVLDump.cpp):
 
 | Bug                                                        | Fix                                                                                                                                    |
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
@@ -37,12 +46,15 @@ The initial prototype code had several bugs relative to the [C++ reference](http
 #### Refactoring
 
 - Added `Debug.Assert` assertions at key parsing boundaries matching libOVL's invariants, especially:
-  - Assert stream position before each string read, matching the `c_data < m_data[type] + m_size[type]` invariant from the [C++ reference](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLDump/OVLDump.cpp#L116)
+  - Assert stream position before each string read, matching the `c_data < m_data[type] + m_size[type]` invariant from
+    the
+    [C++ reference](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLDump/OVLDump.cpp#L116)
 - Removed unused `FileBlock` internal struct, instance `file`/`fileSize`/`reader` fields, and dead constructors
 
 #### Paired Archive Loading (`Ovl.Load`)
 
-Implemented a `Load(string commonPath)` method that mirrors [`cOVLDump::Load`](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLDump/OVLDump.cpp#L42):
+Implemented a `Load(string commonPath)` method that mirrors
+[`cOVLDump::Load`](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLDump/OVLDump.cpp#L42):
 
 1. Read both common and unique files via `Read()`
 2. Resolve relocations across the combined virtual address space
@@ -52,7 +64,9 @@ Implemented a `Load(string commonPath)` method that mirrors [`cOVLDump::Load`](h
 
 #### On-Disk Struct Definitions
 
-Added 32-bit struct equivalents for the C++ types in [ovlstructs.h](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/include/ovlstructs.h), using `uint` instead of pointer types to remain safe on 64-bit hosts:
+Added 32-bit struct equivalents for the C++ types in
+[ovlstructs.h](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/include/ovlstructs.h), using `uint`
+instead of pointer types to remain safe on 64-bit hosts:
 
 - `SymbolStruct` / `SymbolStruct2` — symbol table entries (v1 / v4/v5)
 - `LoaderStruct` — loader table entries
@@ -60,9 +74,13 @@ Added 32-bit struct equivalents for the C++ types in [ovlstructs.h](https://gith
 
 ### File Type Enumeration (`OpenCobra/OVL/Files/FileTypes.cs`)
 
-Expanded `FileType` from 8 to 29 members, covering all loader tags from [libOVLng's Manager classes](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLng). Each tag maps to a `FileType` via `ToFileType()` and a human-readable display name via `ToDisplayName()`.
+Expanded `FileType` from 8 to 29 members, covering all loader tags from
+[libOVLng's Manager classes](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLng). Each tag
+maps to a `FileType` via `ToFileType()` and a human-readable display name via `ToDisplayName()`.
 
-Key correction: the Flexi-Texture tag is `"ftx"` (per [`ManagerFTX.h`](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLng/ManagerFTX.h)), not `"flt"`. The `"flt"` tag is retained as a backwards-compat alias.
+Key correction: the Flexi-Texture tag is `"ftx"` (per
+[`ManagerFTX.h`](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLng/ManagerFTX.h)), not
+`"flt"`. The `"flt"` tag is retained as a backwards-compat alias.
 
 | Tag    | FileType          | Display Name        |
 | ------ | ----------------- | ------------------- |
@@ -108,7 +126,8 @@ Replaced the stub `LoadOvl()` with tree-view population that:
 
 #### macOS (`OvlViewController.cs`)
 
-Added `NSOutlineViewDataSource` implementation with the same grouping logic, backed by `OvlTreeItem` / `OvlTreeItemNode` wrapper types.
+Added `NSOutlineViewDataSource` implementation with the same grouping logic, backed by `OvlTreeItem` / `OvlTreeItemNode`
+wrapper types.
 
 ## Testing
 
@@ -127,8 +146,11 @@ This porting effort made extensive use of AI tools for code analysis, design, an
 
 ### Providers and Models
 
-- **[Claude](https://www.anthropic.com/claude)** — "Sonnet 4.6" model. Used for initial analysis of the C++ reference implementation, architectural design of the C# adaptation, and generating the first drafts of struct definitions and post-processing methods.
-- **[OpenCode](https://opencode.ai)** — "MiMo V2 Pro Free" and "MiMo V2 Omni Free" models. Used for implementing code changes, running builds and tests, iterating on bug fixes, and validating the implementation against the test suite.
+- **[Claude](https://www.anthropic.com/claude)** — "Sonnet 4.6" model. Used for initial analysis of the C++ reference
+  implementation, architectural design of the C# adaptation, and generating the first drafts of struct definitions and
+  post-processing methods.
+- **[OpenCode](https://opencode.ai)** — "MiMo V2 Pro Free" and "MiMo V2 Omni Free" models. Used for implementing code
+  changes, running builds and tests, iterating on bug fixes, and validating the implementation against the test suite.
 
 ### Limitations
 
@@ -139,12 +161,18 @@ AI-generated code required manual review and correction for:
 - Tree-view grouping logic (reverse mapping direction)
 - Missing field assignments (`symbolCountOrder`)
 
-All changes were validated against embedded test OVL archives (`style.common.ovl`, `style.unique.ovl`) via the NUnit test suite.
+All changes were validated against embedded test OVL archives (`style.common.ovl`, `style.unique.ovl`) via the NUnit
+test suite.
 
 ## References
 
-- [rct3-importer](https://github.com/chances/rct3-importer) — RCT3 custom scenery importer, original libOVL by [belgabor](https://github.com/Belgabor)
-- [libOVLng source](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLng) — Manager classes defining all loader tags
-- [libOVLDump source](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLDump) — Archive reading and dumping implementation
-- [ovlstructs.h](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/include/ovlstructs.h) — On-disk struct definitions
-- [ovldumperstructs.h](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLDump/ovldumperstructs.h) — In-memory parsed structure types
+- [rct3-importer](https://github.com/chances/rct3-importer) — RCT3 custom scenery importer, original libOVL by
+  [belgabor](https://github.com/Belgabor)
+- [libOVLng source](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLng) — Manager classes
+  defining all loader tags
+- [libOVLDump source](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLDump) — Archive
+  reading and dumping implementation
+- [ovlstructs.h](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/include/ovlstructs.h) — On-disk
+  struct definitions
+- [ovldumperstructs.h](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/src/libOVLDump/ovldumperstructs.h)
+  — In-memory parsed structure types

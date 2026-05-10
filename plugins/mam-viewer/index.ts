@@ -2,9 +2,15 @@
 import { Host } from "@extism/as-pdk";
 import "../types.ts";
 
-export function name(): string { return "Manifold Mesh Viewer"; }
-export function version(): string { return "0.1.0"; }
-export function file_types(): string { return '["mam"]'; }
+export function name(): string {
+  return "Manifold Mesh Viewer";
+}
+export function version(): string {
+  return "0.1.0";
+}
+export function file_types(): string {
+  return '["mam"]';
+}
 
 function toHex(value: u32, width: i32 = 8): string {
   let hex = value.toString(16).toUpperCase();
@@ -22,7 +28,8 @@ function toHexByte(value: u32): string {
 }
 
 function readU32LE(data: Uint8Array, offset: i32): u32 {
-  return (u32(data[offset]) | (u32(data[offset + 1]) << 8) | (u32(data[offset + 2]) << 16) | (u32(data[offset + 3]) << 24));
+  return (u32(data[offset]) | (u32(data[offset + 1]) << 8) | (u32(data[offset + 2]) << 16) |
+    (u32(data[offset + 3]) << 24));
 }
 
 function readF32LE(data: Uint8Array, offset: i32): f32 {
@@ -42,7 +49,7 @@ function renderHexView(data: Uint8Array, startOffset: i32 = 0): string {
   html += "<th>ASCII</th></tr></thead><tbody>";
 
   let rowCount = data.length / 16;
-  if (rowCount > 32) rowCount = 32;  // Limit to 32 rows for performance
+  if (rowCount > 32) rowCount = 32; // Limit to 32 rows for performance
 
   for (let r = 0; r < rowCount; r++) {
     let offset = r * 16;
@@ -68,7 +75,8 @@ function renderHexView(data: Uint8Array, startOffset: i32 = 0): string {
   }
 
   if (rowCount * 16 < data.length) {
-    html += "<tr><td colspan='18' class='truncated'>... data truncated (" + data.length.toString() + " bytes total)</td></tr>";
+    html += "<tr><td colspan='18' class='truncated'>... data truncated (" + data.length.toString() +
+      " bytes total)</td></tr>";
   }
 
   html += "</tbody></table></div>";
@@ -86,7 +94,8 @@ function renderMesh(data: Uint8Array): string {
   // Total header: 12+4+12+4+4+4 = 40 bytes minimum
 
   if (data.length < 40) {
-    return "<p class='error'>Data too short to contain manifold mesh header (minimum 40 bytes required).</p>" + renderHexView(data);
+    return "<p class='error'>Data too short to contain manifold mesh header (minimum 40 bytes required).</p>" +
+      renderHexView(data);
   }
 
   let bbox_min_x = readF32LE(data, 0);
@@ -125,12 +134,13 @@ function renderMesh(data: Uint8Array): string {
   html += "<tr><td>Triangle Count</td><td>" + triangle_count.toString() + "</td></tr>";
 
   // Estimate data layout (vertices are typically 12 or 16 bytes each, indices are 2 bytes)
-  let vertex_size_estimate = 12;  // 3 floats minimum
-  let indices_size_estimate = manifoldface_count * 3 * 2;  // 3 indices per triangle, 2 bytes each
+  let vertex_size_estimate = 12; // 3 floats minimum
+  let indices_size_estimate = manifoldface_count * 3 * 2; // 3 indices per triangle, 2 bytes each
   let estimated_vertex_data = vertex_count * vertex_size_estimate;
   let estimated_total = 40 + estimated_vertex_data + indices_size_estimate;
 
-  html += "<tr><td>Estimated Data Size</td><td>" + estimated_total.toString() + " bytes (actual: " + data.length.toString() + ")</td></tr>";
+  html += "<tr><td>Estimated Data Size</td><td>" + estimated_total.toString() + " bytes (actual: " +
+    data.length.toString() + ")</td></tr>";
 
   html += "</tbody></table>";
   html += "</div>";

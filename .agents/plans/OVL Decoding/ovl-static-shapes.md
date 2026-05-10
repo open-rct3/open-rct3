@@ -2,11 +2,14 @@
 
 ## Problem
 
-SHS entries store static 3D shapes with multiple meshes, vertices, indices, texture references, and effect positions. These are complex geometry structures with symbol references to FTX (FlexiTexture) and TXS (Texture Style). The dumper should display shape metadata and mesh information.
+SHS entries store static 3D shapes with multiple meshes, vertices, indices, texture references, and effect positions.
+These are complex geometry structures with symbol references to FTX (FlexiTexture) and TXS (Texture Style). The dumper
+should display shape metadata and mesh information.
 
 ## Background Research
 
 **SHS Manager** (`ManagerSHS.h/cpp`):
+
 - Tag: `"shs"`, Name: `"StaticShape"`, Type: 4 (block 4)
 - Each shape = `StaticShape` (level 1) containing:
   - `bounding_box_min`, `bounding_box_max`
@@ -25,11 +28,14 @@ SHS entries store static 3D shapes with multiple meshes, vertices, indices, text
 - **Unique OVL only** (not common)
 
 **Data Layout**:
+
 - Unique block: `StaticShape` struct → `StaticShapeMesh*[]` → each mesh struct
-- Common block (per model): vertex arrays → index arrays → effect name pointers → effect name strings → effect position matrices
+- Common block (per model): vertex arrays → index arrays → effect name pointers → effect name strings → effect position
+  matrices
 - Triangle sorting algorithms for placement texturing (x, y, z axes)
 
 **VERTEX Structure**:
+
 - `position` (x, y, z floats)
 - `normal` (x, y, z floats)
 - `texcoord` (u, v floats)
@@ -86,6 +92,7 @@ public static class StaticShapes {
 ### Files to Create/Modify
 
 **Create:**
+
 - `OpenCobra/OVL/Files/StaticShapes.cs`
 
 ### Dependencies
@@ -148,6 +155,7 @@ Add to `LoadOvls.All` array or create as separate test file following the existi
 > **Status**: Not yet identified
 
 Production OVL archives containing static shape entries (tag: `"shs"`) have not yet been catalogued. To identify:
+
 1. Scan production OVLs for loader entries with `Tag == "shs"` (unique OVL only)
 2. Document common vs unique archive distribution
 3. Note sample symbol names for verification

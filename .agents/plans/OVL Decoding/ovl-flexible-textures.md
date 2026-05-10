@@ -2,11 +2,14 @@
 
 ## Problem
 
-FTX entries store palette-based animated textures with optional alpha channels. Each FTX contains one or more frames, each with a 256-entry color palette, pixel index data, and optional alpha data. The dumper needs to display these as images.
+FTX entries store palette-based animated textures with optional alpha channels. Each FTX contains one or more frames,
+each with a 256-entry color palette, pixel index data, and optional alpha data. The dumper needs to display these as
+images.
 
 ## Background Research
 
 **FTX Manager** (`ManagerFTX.h/cpp`):
+
 - Tag: `"ftx"`, Loader: `"FGDK"`, Name: `"FlexiTexture"`
 - Each FTX = `FlexiTextureInfoStruct` with animation offsets + frame array
 - Each frame = `FlexiTextureStruct` with:
@@ -20,11 +23,13 @@ FTX entries store palette-based animated textures with optional alpha channels. 
 - Multiple texture/alpha blobs per frame, stored in separate memory blobs
 
 **Struct Sizes**:
+
 - `FlexiTextureInfoStruct`: variable (header + animation offsets + frame count + frames)
 - `FlexiTextureStruct`: 256 * sizeof(COLOURQUAD) + dimension*dimension (texture) + optional dimension*dimension (alpha)
 - `COLOURQUAD`: 4 bytes (RGBA)
 
 **Data Layout**:
+
 - Main data: `FlexiTextureInfoStruct` with relocated `offset1` and `fts2` pointers
 - Per-frame palette: separate blob, relocated
 - Per-frame texture: separate blob in block 0, relocated
@@ -75,6 +80,7 @@ public static class FlexibleTextures {
 ### Files to Create/Modify
 
 **Create:**
+
 - `OpenCobra/OVL/Files/FlexibleTextures.cs`
 
 ### Dependencies
@@ -139,6 +145,7 @@ Add to `LoadOvls.All` array or create as separate test file following the existi
 > **Status**: Not yet identified
 
 Production OVL archives containing flexible texture entries (tag: `"ftx"`) have not yet been catalogued. To identify:
+
 1. Scan production OVLs for loader entries with `Tag == "ftx"`
 2. Document common vs unique archive distribution
 3. Note sample symbol names for verification

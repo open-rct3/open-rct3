@@ -6,7 +6,8 @@
 
 ## Overview
 
-Implement rendering of a flat, empty park in the native C# OpenRCT3 client using the existing OpenGL foundation via Silk.NET. Work through three stages: solid color → nullbmp texture → actual grass from terrain OVLs.
+Implement rendering of a flat, empty park in the native C# OpenRCT3 client using the existing OpenGL foundation via
+Silk.NET. Work through three stages: solid color → nullbmp texture → actual grass from terrain OVLs.
 
 ---
 
@@ -17,7 +18,8 @@ Implement rendering of a flat, empty park in the native C# OpenRCT3 client using
 - **Dependencies**: `OpenCobra/OVL/`
 - **Target**: net8.0
 
-**Design Pattern**: Follow the existing `IGraphicsSurface` abstraction pattern — GDK primitives are pure C# data structures without rendering backend dependencies. The `OpenRCT3/OpenGL` layer provides the translation to Silk.NET.
+**Design Pattern**: Follow the existing `IGraphicsSurface` abstraction pattern — GDK primitives are pure C# data
+structures without rendering backend dependencies. The `OpenRCT3/OpenGL` layer provides the translation to Silk.NET.
 
 ---
 
@@ -25,11 +27,11 @@ Implement rendering of a flat, empty park in the native C# OpenRCT3 client using
 
 Create rendering-agnostic data structures in `OpenCobra/GDK/`:
 
-| Primitive | Description |
-|-----------|-------------|
-| **Material** | Rendering properties — albedo texture, normal map, specular, emissive, transparency flags |
-| **Mesh** | Geometry — vertex buffer (positions, normals, UVs, colors), index buffer, bounding box |
-| **ShaderProgram** | Vertex + fragment source code, uniform/attribute definitions, parameter bindings |
+| Primitive         | Description                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| **Material**      | Rendering properties — albedo texture, normal map, specular, emissive, transparency flags |
+| **Mesh**          | Geometry — vertex buffer (positions, normals, UVs, colors), index buffer, bounding box    |
+| **ShaderProgram** | Vertex + fragment source code, uniform/attribute definitions, parameter bindings          |
 
 ### Resource Disposal Pattern
 
@@ -54,10 +56,10 @@ The `OpenGLRenderer` must dispose all created resources on shutdown to prevent G
 
 Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate project):
 
-| Primitive | Description |
-|-----------|-------------|
-| **InstallFinder** | Platform-specific RCT3 install path discovery |
-| **AppConfig** | JSON config storage (install path, user preferences) |
+| Primitive         | Description                                          |
+| ----------------- | ---------------------------------------------------- |
+| **InstallFinder** | Platform-specific RCT3 install path discovery        |
+| **AppConfig**     | JSON config storage (install path, user preferences) |
 
 ### Implementation
 
@@ -66,7 +68,8 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
      - **macOS**: `/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets`
      - **Windows**: `C:\Program Files\RollerCoaster Tycoon 3 Platinum` + variants (Steam, GOG, Platinum)
    - Validate by checking for required files (e.g., `terrain/RCT3/Terrain_RCT3.common.ovl`)
-   - **Error handling**: Throw `InstallNotFoundException` with user-friendly message; fallback to folder picker dialog if validation fails
+   - **Error handling**: Throw `InstallNotFoundException` with user-friendly message; fallback to folder picker dialog
+     if validation fails
 
 2. **Configuration Storage** (`AppConfig.cs`):
    - Save discovered path to `config.json` in app data directory
@@ -78,7 +81,9 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
 
 ## ~~Phase 4: Render Solid Color Plane~~ (Done)
 
-> **⚠️ This is a prototype.** The implementation is intentionally minimal to validate the rendering pipeline. Expect significant refactoring in future phases as more features are added. Do not invest in polished error handling or optimization here — those will be addressed as the prototype matures.
+> **⚠️ This is a prototype.** The implementation is intentionally minimal to validate the rendering pipeline. Expect
+> significant refactoring in future phases as more features are added. Do not invest in polished error handling or
+> optimization here — those will be addressed as the prototype matures.
 
 1. **Add `Platform/IRenderer.cs` interface** (following `IGraphicsSurface` pattern):
    ```csharp
@@ -115,6 +120,7 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
    - Call `IRenderer.Render` each frame in `MainForm.cs:RenderFrame` and `OpenGLLayer.cs:DrawInCGLContext`
 
 **Camera Setup**:
+
 - Position: Elevated, looking down at ~30-45° angle
 - Field of view: ~60°
 - Near: 0.1, Far: 1000
@@ -139,7 +145,8 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
    - Convert flexi-texture to GDK `Material` with albedo texture
    - Handle palette indexing (indexed color → RGBA)
    - **Decision needed**: Evaluate palette conversion approaches:
-     - **Option A**: **KGy SOFT Drawing Libraries** (NuGet: `KGySoft.Drawing`) — provides `Palette` class and `ConvertPixelFormat` method; verify it handles custom palettes (not just system defaults)
+     - **Option A**: **KGy SOFT Drawing Libraries** (NuGet: `KGySoft.Drawing`) — provides `Palette` class and
+       `ConvertPixelFormat` method; verify it handles custom palettes (not just system defaults)
      - **Option B**: Manual lookup using `FlexiTextureData.palette` — no extra deps, full control, requires more code
      - **Option C**: **ImageSharp** — modern, but requires quantization (designed for RGBA→indexed, not reverse)
    - **Recommendation**: Prototype both KGySoft and manual lookup; choose based on code complexity and maintainability
@@ -152,6 +159,7 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
    - Render quad with texture coordinates
 
 **Assets**:
+
 - Path: `/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets/nullbmp.common.ovl`
 - Size: 6,081 bytes
 
@@ -166,7 +174,8 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
 Before full nullbmp/grass rendering, prototype palette handling:
 
 1. **Load `nullbmp.common.ovl`** and extract `FlexiTextureData` (palette + pixel data)
-2. **Test KGySoft approach**: Use `KGySoft.Drawing.Palette` with custom palette bytes; verify `ConvertPixelFormat` produces correct RGBA
+2. **Test KGySoft approach**: Use `KGySoft.Drawing.Palette` with custom palette bytes; verify `ConvertPixelFormat`
+   produces correct RGBA
 3. **Test manual approach**: Write simple index→palette lookup; compare output to KGySoft
 4. **Decision**: Select approach based on code clarity and correctness
 5. **Document findings** in code comments for future maintainers
@@ -192,6 +201,7 @@ Before full nullbmp/grass rendering, prototype palette handling:
    - Replace nullbmp with grass texture
 
 **Assets**:
+
 - Path: `/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets/terrain/RCT3/Terrain_RCT3.common.ovl`
 - Paired with: `Terrain_RCT3.unique.ovl` (31,037 bytes)
 
@@ -249,6 +259,7 @@ Add GDK primitive tests to `OpenCobra/Tests/`:
 4. **TextureLoader Tests**: Test palette loading from `FlexiTextureData`
 
 Example NUnit test pattern (see `ListResources.cs`):
+
 ```csharp
 using NUnit.Framework;
 using OpenCobra.GDK.Materials;

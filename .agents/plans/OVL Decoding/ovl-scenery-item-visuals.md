@@ -2,11 +2,14 @@
 
 ## Problem
 
-SVD entries define the visual representation of scenery items with multiple LOD (Level of Detail) models. Each SVD references StaticShape, BoneShape, or Billboard meshes with distance-based LOD switching and animation references. The dumper should display visual metadata and LOD structure.
+SVD entries define the visual representation of scenery items with multiple LOD (Level of Detail) models. Each SVD
+references StaticShape, BoneShape, or Billboard meshes with distance-based LOD switching and animation references. The
+dumper should display visual metadata and LOD structure.
 
 ## Background Research
 
 **SVD Manager** (`ManagerSVD.h/cpp`):
+
 - Tag: `"svd"`, Name: `"SceneryItemVisual"`, stored in **unique OVL only**
 - Each SVD = `SceneryItemVisual` with:
   - `sivflags` — visual flags (bitfield):
@@ -33,9 +36,11 @@ SVD entries define the visual representation of scenery items with multiple LOD 
   - Various unknown floats (unk7-unk14)
 
 **Data Layout**:
+
 - Unique block: `SceneryItemVisual` struct → LOD pointer array → LOD structs
 - Common block: animation name arrays → LOD model references
-- Symbol references to: SHS (StaticShape), BSH (BoneShape), FTX (FlexiTexture), TXS (Texture Style), BAN (BoneAnim), MAM (ManifoldMesh)
+- Symbol references to: SHS (StaticShape), BSH (BoneShape), FTX (FlexiTexture), TXS (Texture Style), BAN (BoneAnim), MAM
+  (ManifoldMesh)
 
 ## Solution Architecture
 
@@ -89,6 +94,7 @@ public static class SceneryItemVisuals {
 ### Files to Create/Modify
 
 **Create:**
+
 - `OpenCobra/OVL/Files/SceneryItemVisuals.cs`
 
 ### Dependencies
@@ -152,6 +158,7 @@ Add to `LoadOvls.All` array or create as separate test file following the existi
 > **Status**: Not yet identified
 
 Production OVL archives containing scenery item visual entries (tag: `"svd"`) have not yet been catalogued. To identify:
+
 1. Scan production OVLs for loader entries with `Tag == "svd"` (unique OVL only)
 2. Document common vs unique archive distribution
 3. Note sample symbol names for verification

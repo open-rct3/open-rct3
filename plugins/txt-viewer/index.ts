@@ -2,9 +2,15 @@
 import { Host } from "@extism/as-pdk";
 import "../types.ts";
 
-export function name(): string { return "Text Viewer"; }
-export function version(): string { return "0.1.0"; }
-export function file_types(): string { return '["txt"]'; }
+export function name(): string {
+  return "Text Viewer";
+}
+export function version(): string {
+  return "0.1.0";
+}
+export function file_types(): string {
+  return '["txt"]';
+}
 
 function renderHexView(data: Uint8Array): string {
   let html = "<div class='hex-view'><table><thead><tr><th>Offset</th>";
@@ -16,14 +22,14 @@ function renderHexView(data: Uint8Array): string {
   let rowCount = data.length / 16;
   for (let r = 0; r < rowCount; r++) {
     let offset = r * 16;
-    html += "<tr><td>" + offset.toString(16).toUpperCase().padStart(4, '0') + "</td>";
+    html += "<tr><td>" + offset.toString(16).toUpperCase().padStart(4, "0") + "</td>";
 
     let ascii = "";
     for (let i = 0; i < 16; i++) {
       let idx = offset + i;
       if (idx < data.length) {
         let byte = data[idx];
-        html += "<td>" + byte.toString(16).toUpperCase().padStart(2, '0') + "</td>";
+        html += "<td>" + byte.toString(16).toUpperCase().padStart(2, "0") + "</td>";
         if (byte >= 32 && byte < 127) {
           ascii += String.fromCharCode(byte);
         } else {
@@ -56,7 +62,7 @@ function decodeText(data: Uint8Array, encoding: string): string {
       } else if (char < 0x800) {
         result += String.fromCharCode(
           0xC0 | (char >> 6),
-          0x80 | (char & 0x3F)
+          0x80 | (char & 0x3F),
         );
       } else {
         result += String.fromCharCode(0xE0 | (char >> 12));

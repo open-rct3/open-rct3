@@ -4,7 +4,8 @@ import * as path from "@std/path";
 export async function setupFileLogger(name: string, verbose: boolean): Promise<void> {
   const logDir = path.join(
     Deno.env.get("HOME") ?? Deno.env.get("USERPROFILE") ?? ".",
-    ".logs", "OpenRCT3",
+    ".logs",
+    "OpenRCT3",
   );
   await Deno.mkdir(logDir, { recursive: true });
   setup({

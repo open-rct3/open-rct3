@@ -2,9 +2,15 @@
 import { Host } from "@extism/as-pdk";
 import "../types.ts";
 
-export function name(): string { return "Sound Viewer"; }
-export function version(): string { return "0.1.0"; }
-export function file_types(): string { return '["snd"]'; }
+export function name(): string {
+  return "Sound Viewer";
+}
+export function version(): string {
+  return "0.1.0";
+}
+export function file_types(): string {
+  return '["snd"]';
+}
 
 function toHex(value: u32, width: i32 = 8): string {
   let hex = value.toString(16).toUpperCase();
@@ -26,7 +32,8 @@ function readU16LE(data: Uint8Array, offset: i32): u16 {
 }
 
 function readU32LE(data: Uint8Array, offset: i32): u32 {
-  return (u32(data[offset]) | (u32(data[offset + 1]) << 8) | (u32(data[offset + 2]) << 16) | (u32(data[offset + 3]) << 24));
+  return (u32(data[offset]) | (u32(data[offset + 1]) << 8) | (u32(data[offset + 2]) << 16) |
+    (u32(data[offset + 3]) << 24));
 }
 
 function renderHexView(data: Uint8Array, startOffset: i32 = 0): string {
@@ -73,7 +80,8 @@ function getFormatName(formatTag: u16): string {
 
 function renderSound(data: Uint8Array): string {
   if (data.length < 18) {
-    return "<p class='error'>Data too short to contain WAVEFORMATEX header (minimum 18 bytes required).</p>" + renderHexView(data);
+    return "<p class='error'>Data too short to contain WAVEFORMATEX header (minimum 18 bytes required).</p>" +
+      renderHexView(data);
   }
 
   // Parse WAVEFORMATEX header (18 bytes)
@@ -89,7 +97,8 @@ function renderSound(data: Uint8Array): string {
   html += "<h3>Audio Format (WAVEFORMATEX)</h3>";
   html += "<table class='sound-format'><tbody>";
   html += "<tr><td>Format Tag</td><td>" + getFormatName(formatTag) + " (" + formatTag.toString() + ")</td></tr>";
-  html += "<tr><td>Channels</td><td>" + channels.toString() + (channels == 1 ? " (Mono)" : channels == 2 ? " (Stereo)" : "") + "</td></tr>";
+  html += "<tr><td>Channels</td><td>" + channels.toString() +
+    (channels == 1 ? " (Mono)" : channels == 2 ? " (Stereo)" : "") + "</td></tr>";
   html += "<tr><td>Sample Rate</td><td>" + sampleRate.toString() + " Hz</td></tr>";
   html += "<tr><td>Avg Bytes per Second</td><td>" + avgBytesPerSec.toString() + "</td></tr>";
   html += "<tr><td>Block Align</td><td>" + blockAlign.toString() + "</td></tr>";

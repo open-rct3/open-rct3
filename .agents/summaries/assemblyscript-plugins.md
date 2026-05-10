@@ -3,12 +3,14 @@
 ## Summary
 
 Created two AssemblyScript-based viewer plugins for the OVL Dumper:
+
 1. **int-viewer** - Renders integer data as table with hex dump
 2. **txt-viewer** - Renders text data with auto-detected encoding and hex dump
 
 ## Files Created
 
 ### Plugin Sources
+
 ```
 plugins/
 ├── int-viewer/
@@ -22,11 +24,13 @@ plugins/
 ```
 
 ### Build System
+
 ```
 scripts/build-plugins.ts       # Build script using asc compiler
 ```
 
 ### Plan Document
+
 ```
 .opencode/plans/assemblyscript-plugins.md
 ```
@@ -34,6 +38,7 @@ scripts/build-plugins.ts       # Build script using asc compiler
 ## Implementation Details
 
 ### int-viewer
+
 - Reads input bytes via `Host.input()`
 - Parses as little-endian u32 array
 - Renders table: Index | Decimal | Hex | Binary
@@ -41,12 +46,14 @@ scripts/build-plugins.ts       # Build script using asc compiler
 - Signed/unsigned toggle via Extism config
 
 ### txt-viewer
+
 - Auto-detects ASCII vs UTF-16LE encoding
 - Renders text in `<pre>` block
 - Hex dump view always included
 - Troubleshooting hint links to GitHub issues
 
 ### Build Script
+
 - Installs `assemblyscript` via npm if needed
 - Compiles each plugin directory using `asc`
 - Outputs to `bin/plugins/*.wasm`

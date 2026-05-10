@@ -1,5 +1,7 @@
 # Open RCT3
-An open source re-implementation of [RollerCoaster Tycoon 3](https://www.frontier.co.uk/our-games/our-gameography/#rollercoastertycoon3).
+
+An open source re-implementation of
+[RollerCoaster Tycoon 3](https://www.frontier.co.uk/our-games/our-gameography/#rollercoastertycoon3).
 
 ## Roadmap
 
@@ -35,7 +37,7 @@ Our rough plan is:
 
 Players won't require an existing copy of RCT3.
 
-----
+---
 
 See the full [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap) on our wiki for more details.
 
@@ -43,13 +45,13 @@ See the full [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap) on o
 
 1. Install [D](https://dlang.org/install) and [Deno](https://docs.deno.com/runtime/#install-deno).
 2. Build OpenRCT3:
-    ```shell
-    dub build
-    ```
+   ```shell
+   dub build
+   ```
 3. Run the development server:
-    ```shell
+   ```shell
    make debug
-    ```
+   ```
 
 ## Disclaimer of Warranty
 

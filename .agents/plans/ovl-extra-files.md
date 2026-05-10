@@ -1,9 +1,13 @@
 # Plan: Allow Extra OVL Files for Local Testing
 
 ## Problem
-The OVL unit tests currently embed OVL files as embedded resources in the test assembly. Users need to test against additional OVL files from their local RCT3 installation without committing them to source control. CI should not use these extra OVLs.
 
-Also: Remove `Water.common.ovl` from source control (it was likely extracted from RCT3) and reference it from local config instead.
+The OVL unit tests currently embed OVL files as embedded resources in the test assembly. Users need to test against
+additional OVL files from their local RCT3 installation without committing them to source control. CI should not use
+these extra OVLs.
+
+Also: Remove `Water.common.ovl` from source control (it was likely extracted from RCT3) and reference it from local
+config instead.
 
 ## Solution: Dual-Mode Test Fixture
 
@@ -54,6 +58,7 @@ Also: Remove `Water.common.ovl` from source control (it was likely extracted fro
 6. Document usage in the example config file
 
 ### Files to Modify
+
 - Git: Remove Water.common.ovl from history and working directory
 - `OpenCobra/OVL Tests/OVL Tests.csproj` - remove Water.common.ovl entry
 - `.gitignore` - add `ovl-tests.local.json`
@@ -62,6 +67,7 @@ Also: Remove `Water.common.ovl` from source control (it was likely extracted fro
 - Possibly create new helper class for loading
 
 ### Alternative Approaches Considered
+
 - Environment variable-based paths (less explicit)
 - Command-line arguments (requires CI changes)
 - External folder scanning (more complex)

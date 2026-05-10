@@ -2,11 +2,13 @@
 
 ## Context
 
-Following the implementation of the Extism plugin system for OVL resource viewers (see `extism-plugin-viewers.md`), this plan outlines creating AssemblyScript-based viewer plugins for integer (int) and text (txt) file types.
+Following the implementation of the Extism plugin system for OVL resource viewers (see `extism-plugin-viewers.md`), this
+plan outlines creating AssemblyScript-based viewer plugins for integer (int) and text (txt) file types.
 
 ## Goals
 
 Create Dumper plugins that:
+
 1. Render integer data as a table (decimal, hex, binary) with hex view
 2. Render text data with ASCII/UTF-16LE auto-detection and hex view
 3. Follow the Extism WASM plugin contract from the parent plan
@@ -15,12 +17,12 @@ Create Dumper plugins that:
 
 Every viewer plugin must export:
 
-| Export       | Signature          | Purpose                               |
-| ------------ | ------------------ | ------------------------------------- |
-| `name`       | `() → string`      | Display name, e.g. `"Integer Viewer"` |
-| `version`    | `() → string`      | Semantic version                      |
-| `file_types` | `() → string`      | JSON array: `["int"]` or `["txt"]`    |
-| `render`     | `() → i32`         | Reads input via Host, outputs HTML    |
+| Export       | Signature     | Purpose                               |
+| ------------ | ------------- | ------------------------------------- |
+| `name`       | `() → string` | Display name, e.g. `"Integer Viewer"` |
+| `version`    | `() → string` | Semantic version                      |
+| `file_types` | `() → string` | JSON array: `["int"]` or `["txt"]`    |
+| `render`     | `() → i32`    | Reads input via Host, outputs HTML    |
 
 ## Plugin Structure
 

@@ -2,9 +2,15 @@
 import { Host } from "@extism/as-pdk";
 import "../types.ts";
 
-export function name(): string { return "Spline Viewer"; }
-export function version(): string { return "0.1.0"; }
-export function file_types(): string { return '["spl"]'; }
+export function name(): string {
+  return "Spline Viewer";
+}
+export function version(): string {
+  return "0.1.0";
+}
+export function file_types(): string {
+  return '["spl"]';
+}
 
 function toHex(value: u32, width: i32 = 8): string {
   let hex = value.toString(16).toUpperCase();
@@ -22,7 +28,8 @@ function toHexByte(value: u32): string {
 }
 
 function readU32LE(data: Uint8Array, offset: i32): u32 {
-  return (u32(data[offset]) | (u32(data[offset + 1]) << 8) | (u32(data[offset + 2]) << 16) | (u32(data[offset + 3]) << 24));
+  return (u32(data[offset]) | (u32(data[offset + 1]) << 8) | (u32(data[offset + 2]) << 16) |
+    (u32(data[offset + 3]) << 24));
 }
 
 function readF32LE(data: Uint8Array, offset: i32): f32 {
@@ -67,7 +74,8 @@ function renderHexView(data: Uint8Array): string {
 
 function renderSpline(data: Uint8Array): string {
   if (data.length < 20) {
-    return "<p class='error'>Data too short to contain spline header (minimum 20 bytes required).</p>" + renderHexView(data);
+    return "<p class='error'>Data too short to contain spline header (minimum 20 bytes required).</p>" +
+      renderHexView(data);
   }
 
   let nodecount = readU32LE(data, 0);
