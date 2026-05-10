@@ -69,22 +69,25 @@
     </EmbeddedResource>
     <Content Include="Dumper.ico" />
   </ItemGroup>
+  <!-- Ignore other project, Dumper.Tests -->
+  <ItemGroup>
+    <Compile Remove="Dumper.Tests\**" />
+    <EmbeddedResource Remove="Dumper.Tests\**" />
+    <None Remove="Dumper.Tests\**" />
+  </ItemGroup>
   <!-- Bundle built-in plugins -->
+  <Target Name="BuildPlugins" BeforeTargets="BeforeBuild">
+    <!-- FIXME: Why can't we use $(SolutionDir) here? -->
+    <Exec Command="deno task build:plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
+  </Target>
+  <ItemGroup>
+    <Folder Include="Plugins\Artifacts\" />
+  </ItemGroup>
+  <!-- TODO: Make sure these show up in Plugins/Artifacts in the solution explorer -->
   <ItemGroup>
     <Content Include="$(SolutionDir)bin\plugins\*.wasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>plugins\%(Filename).wasm</Link>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Compile Remove="Dumper.Tests\**" />
-    <EmbeddedResource Remove="Dumper.Tests\**" />
-    <None Remove="Dumper.Tests\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Plugins\Artifacts\" />
-  </ItemGroup>
-  <Target Name="BuildPlugins" AfterTargets="AfterBuild">
-    <Exec Command="deno task build:plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
-  </Target>
 </Project>
