@@ -14,8 +14,6 @@ namespace Dumper.Plugins;
 /// <summary>Dialog that lists all loaded viewer plugins and shows their metadata.</summary>
 sealed partial class PluginsDialog : Form {
   private readonly IReadOnlyList<IViewerPlugin> plugins;
-  private readonly Image enableIcon;
-  private readonly Image disableIcon;
 
   public PluginsDialog(IReadOnlyList<IViewerPlugin> plugins) {
     this.plugins = plugins;
@@ -31,13 +29,8 @@ sealed partial class PluginsDialog : Form {
     pluginList.SelectedIndex = pluginList.SelectedIndex > -1 ? pluginList.SelectedIndex : 0;
   }
 
-  private void PluginsDialog_Load(object sender, EventArgs e) => UpdatePluginList();
-
-  private void PluginListBox_SelectedIndexChanged(object? sender, EventArgs e) {
-    var selectedPlugin = pluginList.SelectedItem as IViewerPlugin;
-    var isEnabled = selectedPlugin?.Enabled ?? false;
+  private void UpdateEmptyState() {
     var isEmpty = plugins.Count == 0;
-
     emptyLabel.Visible = isEmpty;
     metadata.Visible = !isEmpty;
   }
@@ -55,6 +48,15 @@ sealed partial class PluginsDialog : Form {
     uninstall.Image = Icons.Render(icons, "TrashCan", removeColor);
   }
 
+  private void PluginsDialog_Load(object sender, EventArgs e) {
+    UpdatePluginList();
+    UpdateEmptyState();
+  }
+
+  private void PluginListBox_SelectedIndexChanged(object? sender, EventArgs e) {
+    var selectedPlugin = pluginList.SelectedItem as IViewerPlugin;
+    var isEnabled = selectedPlugin?.Enabled ?? false;
+
     // Update metadata
     if (selectedPlugin == null) return;
     var info = selectedPlugin.Info;
@@ -64,6 +66,7 @@ sealed partial class PluginsDialog : Form {
       ? string.Join(", ", info.FileTypes.Select(type => $".{type}"))
       : "None";
     locationValue.Text = info.SourcePath;
+    toolTip.SetToolTip(enabled, isEnabled ? "Disable this plugin" : "Enable this plugin");
   }
 
   private void InstallFromCatalog_Click(object? sender, EventArgs e) =>
