@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GDK", "OpenCobra\GDK\GDK.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Analyzers", "OpenCobra\Analyzers\Analyzers.csproj", "{C5F59A76-83C1-40BC-A676-8D6F23A65E70}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dumper.Tests", "Dumper\Dumper.Tests\Dumper.Tests.csproj", "{4C2EF325-273A-4FD4-837D-390032B99197}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,10 @@ Global
 		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C2EF325-273A-4FD4-837D-390032B99197}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C2EF325-273A-4FD4-837D-390032B99197}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C2EF325-273A-4FD4-837D-390032B99197}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C2EF325-273A-4FD4-837D-390032B99197}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

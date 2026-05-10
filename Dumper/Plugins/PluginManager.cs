@@ -13,7 +13,7 @@ sealed class PluginManager : IDisposable {
   private readonly Dictionary<string, List<IViewerPlugin>> _registry = new(StringComparer.OrdinalIgnoreCase);
 
   /// <summary>All loaded plugins, keyed by their source path.</summary>
-  public IReadOnlyList<IViewerPlugin> AllPlugins { get; private set; } = Array.Empty<IViewerPlugin>();
+  public IReadOnlyList<IViewerPlugin> AllPlugins { get; private set; } = [];
 
   /// <summary>Discover and load all .wasm plugins from standard search paths.</summary>
   public void LoadAll() {
@@ -52,7 +52,7 @@ sealed class PluginManager : IDisposable {
   public IReadOnlyList<IViewerPlugin> GetViewers(string fileTypeTag) {
     if (_registry.TryGetValue(fileTypeTag, out var list))
       return list;
-    return Array.Empty<IViewerPlugin>();
+    return [];
   }
 
   /// <summary>Get the default (first) viewer plugin for the given file type tag.</summary>
@@ -71,9 +71,8 @@ sealed class PluginManager : IDisposable {
   }
 
   /// <summary>Get a snapshot of the registry for use in UI (e.g. default viewer chooser).</summary>
-  internal Dictionary<string, List<IViewerPlugin>> GetRegistrySnapshot() {
-    return new Dictionary<string, List<IViewerPlugin>>(_registry, StringComparer.OrdinalIgnoreCase);
-  }
+  internal Dictionary<string, List<IViewerPlugin>> GetRegistrySnapshot() =>
+    new(_registry, StringComparer.OrdinalIgnoreCase);
 
   public void Dispose() {
     foreach (var plugin in AllPlugins)

@@ -360,6 +360,11 @@ public partial class MainForm : Form {
     Application.Exit();
   }
 
+  private void pluginsToolStripMenuItem_Click(object sender, EventArgs e) {
+    using var dlg = new PluginsDialog(_pluginManager.AllPlugins);
+    dlg.ShowDialog(this);
+  }
+
   private void TreeView_AfterSelect(object? sender, TreeViewEventArgs e) {
     if (e.Node == null || _currentOvl == null) {
       contentPanel.ShowEmpty(_currentOvl != null);

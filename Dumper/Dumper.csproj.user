@@ -17,6 +17,12 @@
     <Compile Update="Plugins\DefaultViewerChooser.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Plugins\PluginsDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Plugins\TruncatedLabel.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Update="ResourceProperties.cs">
       <SubType>Form</SubType>
     </Compile>

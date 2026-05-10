@@ -76,7 +76,15 @@
       <Link>plugins\%(Filename).wasm</Link>
     </Content>
   </ItemGroup>
-  <Target Name="BuildPlugins" BeforeTargets="BeforeBuild">
+  <ItemGroup>
+    <Compile Remove="Dumper.Tests\**" />
+    <EmbeddedResource Remove="Dumper.Tests\**" />
+    <None Remove="Dumper.Tests\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Plugins\Artifacts\" />
+  </ItemGroup>
+  <Target Name="BuildPlugins" AfterTargets="AfterBuild">
     <Exec Command="deno task build:plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
   </Target>
 </Project>

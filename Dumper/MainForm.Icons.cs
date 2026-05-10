@@ -40,6 +40,7 @@ public partial class MainForm {
     selectAllToolStripMenuItem.Image = RenderIcon(icons, "SelectAll", defaultColor);
 
     // Tools
+    pluginsToolStripMenuItem.Image = RenderIcon(icons, "Puzzle", defaultColor);
     optionsToolStripMenuItem.Image = RenderIcon(icons, "Cog", defaultColor);
 
     // Toolbar
@@ -47,7 +48,7 @@ public partial class MainForm {
     helpToolStripButton.Image = RenderIcon(icons, "HelpCircle", helpColor);
   }
 
-  private static Bitmap? RenderIcon(IEmbeddedIcons icons, string name, DuoToneColor color) {
+  internal static Bitmap? RenderIcon(IEmbeddedIcons icons, string name, DuoToneColor color) {
     var icon = icons.GetIcon(name);
     if (icon == null) return null;
     var bmp = new Bitmap(IconSize, IconSize);
