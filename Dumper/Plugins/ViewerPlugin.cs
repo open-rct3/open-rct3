@@ -14,7 +14,7 @@ sealed class ViewerPlugin : IViewerPlugin {
   private const int MaxPages = 16;
   private const int MaxHttpPayload = 5120; // 5MB
   // TODO: Profile existing plugins to determine fuel limit
-  private const long FuelLimit = 5_000;
+  private const long FuelLimit = 1_000_000;
 
   private readonly CompiledPlugin plugin;
   private Plugin instance;
@@ -48,7 +48,6 @@ sealed class ViewerPlugin : IViewerPlugin {
   public static ViewerPlugin Load(string filePath) {
     var modulePath = Path.GetFullPath(filePath);
     var manifest = new Manifest(new PathWasmSource(modulePath)) {
-      AllowedHosts = ["OpenRCT3:Dumper"],
       Timeout = ScriptTimeout,
       MemoryOptions = new MemoryOptions() {
         MaxPages = MaxPages,

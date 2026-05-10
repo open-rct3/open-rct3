@@ -1,15 +1,18 @@
 /// <reference no-default-lib="true" />
+/// <reference types="assemblyscript/types" />
 import { Config, Host } from "@extism/as-pdk";
-import "../types.ts";
 
-export function name(): string {
-  return "Integer Viewer";
+export function name(): i32 {
+  Host.outputString("Integer Viewer");
+  return 0;
 }
-export function version(): string {
-  return "0.1.0";
+export function version(): i32 {
+  Host.outputString("0.1.0");
+  return 0;
 }
-export function file_types(): string {
-  return '["int"]';
+export function file_types(): i32 {
+  Host.outputString('["int"]');
+  return 0;
 }
 
 function toHex(value: u32, width: i32 = 8): string {

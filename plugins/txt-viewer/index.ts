@@ -1,15 +1,18 @@
 /// <reference no-default-lib="true" />
+/// <reference types="assemblyscript/types" />
 import { Host } from "@extism/as-pdk";
-import "../types.ts";
 
-export function name(): string {
-  return "Text Viewer";
+export function name(): i32 {
+  Host.outputString("Text Viewer");
+  return 0;
 }
-export function version(): string {
-  return "0.1.0";
+export function version(): i32 {
+  Host.outputString("0.1.0");
+  return 0;
 }
-export function file_types(): string {
-  return '["txt"]';
+export function file_types(): i32 {
+  Host.outputString('["txt"]');
+  return 0;
 }
 
 function renderHexView(data: Uint8Array): string {

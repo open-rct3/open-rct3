@@ -22,18 +22,13 @@ sealed partial class PluginsDialog : Form {
   }
 
   private void UpdatePluginList() {
-    var selectedIndex = pluginList.SelectedIndex;
-
-    // FIXME: emptyLabel.Image = Icons.Spinner (a GIF, maybe there's something that came with Windows Vista?);
-    emptyLabel.Visible = true;
-    metadata.Visible = false;
-
     if (pluginList.Items.Count > 0) pluginList.Items.Clear();
     foreach (var plugin in plugins)
       pluginList.Items.Add(plugin);
 
+    // Try to restore plugin selection
     if (plugins.Count > 0)
-      pluginList.SelectedIndex = selectedIndex < plugins.Count ? selectedIndex : 0;
+      pluginList.SelectedIndex = pluginList.SelectedItem is IPlugin selectedPlugin ? pluginList.Items.IndexOf(selectedPlugin) : 0;
   }
 
   private void UpdateEmptyState() {
@@ -65,6 +60,7 @@ sealed partial class PluginsDialog : Form {
     // Update metadata
     if (selectedPlugin == null) return;
     nameValue.Text = selectedPlugin.Name;
+    enabled.Checked = isEnabled;
     versionValue.Text = selectedPlugin.Version;
     fileTypesValue.Text = selectedPlugin.FileTypes.Count > 0
       ? string.Join(", ", selectedPlugin.FileTypes.Select(type => $".{type}"))

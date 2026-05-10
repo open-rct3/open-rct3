@@ -3,14 +3,17 @@ import { Host } from "@extism/as-pdk";
 import "../types.ts";
 import { convertIndexedToRgba } from "../palette-converter.ts";
 
-export function name(): string {
-  return "Flexi-Texture Viewer";
+export function name(): i32 {
+  Host.outputString("Flexi-Texture Viewer");
+  return 0;
 }
-export function version(): string {
-  return "0.1.0";
+export function version(): i32 {
+  Host.outputString("0.1.0");
+  return 0;
 }
-export function file_types(): string {
-  return '["ftx", "flt"]';
+export function file_types(): i32 {
+  Host.outputString('["ftx", "flt"]');
+  return 0;
 }
 
 function decodeU32(data: Uint8Array, offset: i32): u32 {

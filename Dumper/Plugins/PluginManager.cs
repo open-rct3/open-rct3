@@ -4,16 +4,18 @@
 namespace Dumper.Plugins;
 
 /// <summary>Discovers, loads, and routes Extism viewer plugins by OVL file type tag.</summary>
+#pragma warning disable IDE0305 // Simplify collection initialization
 sealed class PluginManager : IDisposable {
   private readonly Dictionary<string, List<IViewerPlugin>> registry = new(StringComparer.OrdinalIgnoreCase);
 
   /// <summary>All loaded plugins, keyed by their source path.</summary>
-  public IReadOnlyList<IViewerPlugin> AllPlugins { get; private set; } = [];
+  public IReadOnlyList<IViewerPlugin> AllPlugins { get; private set; }
 
-  public PluginManager() => Load();
+  public PluginManager() =>
+    AllPlugins = Load().Cast<IViewerPlugin>().ToList();
 
   /// <summary>Discover and load all plugins from standard search paths.</summary>
-  public void Load() {
+  public IEnumerable<IPlugin> Load() {
     var wasmFiles = new List<string>();
 
     foreach (var dir in GetSearchPaths()) {
@@ -25,7 +27,7 @@ sealed class PluginManager : IDisposable {
       }
     }
 
-    AllPlugins = [.. wasmFiles.Select(wasmPath => {
+    return wasmFiles.Select(wasmPath => {
       try {
         var plugin = ViewerPlugin.Load(wasmPath);
 
@@ -41,11 +43,11 @@ sealed class PluginManager : IDisposable {
         return plugin;
       } catch (Exception ex) {
         Debug.WriteLine($"Failed to load plugin '{wasmPath}': {ex.Message}");
+        return null;
       }
-
-      return null;
-    }).Where(plugin => plugin != null) as IEnumerable<IViewerPlugin>];
+    }).Where(plugin => plugin != null).Cast<IPlugin>();
   }
+#pragma warning restore IDE0305 // Simplify collection initialization
 
   /// <summary>Get all viewer plugins that support the given file type tag.</summary>
   public IReadOnlyList<IViewerPlugin> GetViewers(string fileTypeTag) {
