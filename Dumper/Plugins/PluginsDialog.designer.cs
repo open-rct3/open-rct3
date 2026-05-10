@@ -28,9 +28,7 @@ namespace Dumper.Plugins {
       versionValue = new Label();
       fileTypes = new Label();
       fileTypesValue = new Label();
-      location = new Label();
-      closeButton = new Button();
-      locationValue = new TruncatedLabel();
+      close = new Button();
       openFolder = new Button();
       emptyLabel = new Label();
       toolTip = new ToolTip(components);
@@ -118,7 +116,7 @@ namespace Dumper.Plugins {
       // 
       pluginList.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
       pluginList.BorderStyle = BorderStyle.None;
-      pluginList.DisplayMember = "PluginInfo.Name";
+      pluginList.DisplayMember = "Name";
       pluginList.FormattingEnabled = true;
       pluginList.IntegralHeight = false;
       pluginList.ItemHeight = 15;
@@ -141,10 +139,8 @@ namespace Dumper.Plugins {
       metadata.Controls.Add(versionValue, 1, 1);
       metadata.Controls.Add(fileTypes, 0, 2);
       metadata.Controls.Add(fileTypesValue, 1, 2);
-      metadata.Controls.Add(location, 0, 3);
-      metadata.Controls.Add(closeButton, 2, 5);
-      metadata.Controls.Add(locationValue, 1, 3);
-      metadata.Controls.Add(openFolder, 2, 3);
+      metadata.Controls.Add(close, 2, 5);
+      metadata.Controls.Add(openFolder, 0, 5);
       metadata.Dock = DockStyle.Fill;
       metadata.Location = new Point(0, 0);
       metadata.Name = "metadata";
@@ -177,7 +173,7 @@ namespace Dumper.Plugins {
       nameValue.Name = "nameValue";
       nameValue.Size = new Size(230, 24);
       nameValue.TabIndex = 1;
-      nameValue.Text = "Flex-Texture Viewer";
+      nameValue.Text = "Flexi-Texture Viewer";
       // 
       // enabled
       // 
@@ -231,53 +227,32 @@ namespace Dumper.Plugins {
       fileTypesValue.TabIndex = 5;
       fileTypesValue.Text = "*.ftx";
       // 
-      // location
+      // close
       // 
-      location.AutoSize = true;
-      location.ForeColor = SystemColors.GrayText;
-      location.Location = new Point(15, 80);
-      location.Name = "location";
-      location.Size = new Size(34, 15);
-      location.TabIndex = 6;
-      location.Text = "Path:";
-      // 
-      // closeButton
-      // 
-      closeButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-      closeButton.DialogResult = DialogResult.Cancel;
-      closeButton.FlatStyle = FlatStyle.System;
-      closeButton.Location = new Point(316, 307);
-      closeButton.Name = "closeButton";
-      closeButton.Size = new Size(75, 23);
-      closeButton.TabIndex = 1;
-      closeButton.Text = "Close";
-      closeButton.UseVisualStyleBackColor = true;
-      // 
-      // locationValue
-      // 
-      locationValue.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-      locationValue.Ellipsis = "...";
-      locationValue.Location = new Point(80, 80);
-      locationValue.Name = "locationValue";
-      locationValue.PreserveRatio = 0.3F;
-      locationValue.Size = new Size(230, 24);
-      locationValue.SmartBreak = true;
-      locationValue.TabIndex = 7;
-      locationValue.Text = "C:\\OpenRCT3\\Plugins\\Dumper\\ftx-viewer.wasm";
+      close.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+      close.DialogResult = DialogResult.Cancel;
+      close.FlatStyle = FlatStyle.System;
+      close.Location = new Point(316, 307);
+      close.Name = "close";
+      close.Size = new Size(75, 23);
+      close.TabIndex = 1;
+      close.Text = "Close";
+      close.UseVisualStyleBackColor = true;
+      close.Click += Close_Click;
       // 
       // openFolder
       // 
-      openFolder.Anchor = AnchorStyles.Top | AnchorStyles.Right;
       openFolder.AutoSize = true;
+      metadata.SetColumnSpan(openFolder, 2);
       openFolder.FlatStyle = FlatStyle.System;
-      openFolder.Location = new Point(361, 80);
-      openFolder.Margin = new Padding(3, 0, 3, 0);
+      openFolder.Location = new Point(15, 306);
       openFolder.Name = "openFolder";
-      openFolder.Size = new Size(30, 24);
+      openFolder.Size = new Size(135, 24);
       openFolder.TabIndex = 8;
-      openFolder.Text = "…";
+      openFolder.Text = "Reveal in File Explorer";
       toolTip.SetToolTip(openFolder, "Open the folder containing  this plugin");
       openFolder.UseVisualStyleBackColor = true;
+      openFolder.Click += OpenFolder_Click;
       // 
       // emptyLabel
       // 
@@ -292,10 +267,10 @@ namespace Dumper.Plugins {
       // 
       // PluginsDialog
       // 
-      AcceptButton = closeButton;
+      AcceptButton = close;
       AutoScaleDimensions = new SizeF(7F, 15F);
       AutoScaleMode = AutoScaleMode.Font;
-      CancelButton = closeButton;
+      CancelButton = close;
       ClientSize = new Size(559, 341);
       Controls.Add(splitView);
       MaximizeBox = false;
@@ -304,7 +279,7 @@ namespace Dumper.Plugins {
       Name = "PluginsDialog";
       ShowInTaskbar = false;
       StartPosition = FormStartPosition.CenterParent;
-      Text = "Plugins";
+      Text = "Manage Plugins";
       Load += PluginsDialog_Load;
       splitView.Panel1.ResumeLayout(false);
       splitView.Panel1.PerformLayout();
@@ -329,10 +304,8 @@ namespace Dumper.Plugins {
     private System.Windows.Forms.Label versionValue;
     private System.Windows.Forms.Label fileTypes;
     private System.Windows.Forms.Label fileTypesValue;
-    private System.Windows.Forms.Label location;
-    private TruncatedLabel locationValue;
     private System.Windows.Forms.Label emptyLabel;
-    private System.Windows.Forms.Button closeButton;
+    private System.Windows.Forms.Button close;
     private System.Windows.Forms.ToolStrip toolStrip;
     private System.Windows.Forms.ToolStripSplitButton install;
     private System.Windows.Forms.ToolStripMenuItem installFromCatalog;

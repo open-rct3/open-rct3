@@ -16,13 +16,15 @@ sealed partial class PluginsDialog : Form {
 
     InitializeComponent();
     InitializeComponentIcons();
+
+    emptyLabel.Text = NoPluginsText;
+    DialogResult = DialogResult.None;
   }
 
   private void UpdatePluginList() {
     var selectedIndex = pluginList.SelectedIndex;
 
     // FIXME: emptyLabel.Image = Icons.Spinner (a GIF, maybe there's something that came with Windows Vista?);
-    emptyLabel.Text = "Loading plugins…";
     emptyLabel.Visible = true;
     metadata.Visible = false;
 
@@ -36,7 +38,6 @@ sealed partial class PluginsDialog : Form {
 
   private void UpdateEmptyState() {
     var isEmpty = plugins.Count == 0;
-    if (isEmpty) emptyLabel.Text = NoPluginsText;
     emptyLabel.Visible = isEmpty;
     metadata.Visible = !isEmpty;
   }
@@ -63,13 +64,11 @@ sealed partial class PluginsDialog : Form {
 
     // Update metadata
     if (selectedPlugin == null) return;
-    var info = selectedPlugin.Info;
-    nameValue.Text = info.Name;
-    versionValue.Text = info.Version;
-    fileTypesValue.Text = info.FileTypes.Count > 0
-      ? string.Join(", ", info.FileTypes.Select(type => $".{type}"))
+    nameValue.Text = selectedPlugin.Name;
+    versionValue.Text = selectedPlugin.Version;
+    fileTypesValue.Text = selectedPlugin.FileTypes.Count > 0
+      ? string.Join(", ", selectedPlugin.FileTypes.Select(type => $".{type}"))
       : "None";
-    locationValue.Text = info.SourcePath;
     toolTip.SetToolTip(enabled, isEnabled ? "Disable this plugin" : "Enable this plugin");
   }
 
@@ -89,4 +88,9 @@ sealed partial class PluginsDialog : Form {
 
   private void InstallSplitBtn_DropDownOpening(object sender, EventArgs e) => toolStrip.ShowItemToolTips = false;
   private void InstallSplitBtn_DropDownClosed(object sender, EventArgs e) => toolStrip.ShowItemToolTips = true;
+
+  private void OpenFolder_Click(object sender, EventArgs e) =>
+    throw new NotImplementedException("Reveal in file explorer is not yet implemented");
+
+  private void Close_Click(object sender, EventArgs e) => Close();
 }

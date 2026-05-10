@@ -428,7 +428,7 @@ public partial class MainForm : Form {
     if (viewers.Count > 0) {
       var defaultViewer = pluginManager.GetDefaultViewer(tag);
       foreach (var viewer in viewers) {
-        var viewerItem = new ToolStripMenuItem($"{viewer.Info.Name} v{viewer.Info.Version}") {
+        var viewerItem = new ToolStripMenuItem($"{viewer.Name}  v {viewer.Version}") {
           Tag = viewer,
           Font = viewer == defaultViewer
             ? new Font(menu.Font, FontStyle.Bold)

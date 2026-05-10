@@ -28,7 +28,7 @@ sealed partial class ContentPanelHeader : TableLayoutPanel {
   public void SetViewers(IViewerPlugin active, IEnumerable<IViewerPlugin> allViewers) {
     viewerCombo.SelectedIndexChanged -= ViewerCombo_SelectedIndexChanged;
 
-    nameLabel.Text = $"{active.Info.Name} v{active.Info.Version}";
+    nameLabel.Text = $"{active.Name} v{active.Version}";
     viewerCombo.Items.Clear();
 
     foreach (var viewer in allViewers) {
@@ -56,6 +56,6 @@ sealed partial class ContentPanelHeader : TableLayoutPanel {
   private sealed class ViewerComboItem {
     public IViewerPlugin Plugin { get; }
     public ViewerComboItem(IViewerPlugin plugin) => Plugin = plugin;
-    public override string ToString() => $"{Plugin.Info.Name} v{Plugin.Info.Version}";
+    public override string ToString() => $"{Plugin.Name} v{Plugin.Version}";
   }
 }

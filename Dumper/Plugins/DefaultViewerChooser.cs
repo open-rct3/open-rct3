@@ -56,7 +56,7 @@ sealed partial class DefaultViewerChooser : Form {
 
     var defaultViewer = item.Viewers.Count > 0 ? item.Viewers[0] : null;
     currentDefaultLabel.Text = defaultViewer != null
-      ? $"Current default: {defaultViewer.Info.Name} v{defaultViewer.Info.Version}"
+      ? $"Current default: {defaultViewer.Name} v{defaultViewer.Version}"
       : "No viewer available";
   }
 
