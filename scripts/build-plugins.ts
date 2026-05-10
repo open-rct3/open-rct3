@@ -6,8 +6,8 @@ import asc from "assemblyscript/asc";
 import { setupFileLogger } from "../lib/log.ts";
 
 const verbose = Deno.args.includes("--verbose") || Deno.args.includes("-v");
-const denoDir = Deno.env.get("DENO_DIR")
-  ?? (Deno.build.os === "windows"
+const denoDir = Deno.env.get("DENO_DIR") ??
+  (Deno.build.os === "windows"
     ? `${Deno.env.get("LOCALAPPDATA")}\\deno`
     : Deno.build.os === "darwin"
     ? `${Deno.env.get("HOME")}/Library/Caches/deno`
@@ -50,27 +50,32 @@ async function buildPlugin(pluginDir: string): Promise<BuildResult> {
   await ensureDir(OUTPUT_DIR);
 
   const tempConfigFile = path.join(tempDir, `${pluginName}.asconfig.json`);
-  await Deno.writeTextFile(tempConfigFile, JSON.stringify({
-    extends: configFile,
-    options: {
-      path: [shimsDir],
-    },
-  }));
+  await Deno.writeTextFile(
+    tempConfigFile,
+    JSON.stringify({
+      extends: configFile,
+      options: {
+        path: [shimsDir],
+      },
+    }),
+  );
 
   const args = [
     sourceFile,
-    "--outFile", outputFile,
+    "--outFile",
+    outputFile,
     "--noAssert",
-    "--path", shimsDir,
-    "--config", tempConfigFile,
-    "--target", "release",
+    "--path",
+    shimsDir,
+    "--config",
+    tempConfigFile,
+    "--target",
+    "release",
   ];
 
   const { error, stderr } = await asc.main(args, {
     readFile: (name: string, baseDir: string) => {
-      const filePath = path.isAbsolute(name)
-        ? name
-        : path.join(baseDir, name);
+      const filePath = path.isAbsolute(name) ? name : path.join(baseDir, name);
       console.debug("readFile:", filePath);
       return Deno.readTextFile(filePath).catch(() => null);
     },
@@ -87,52 +92,6 @@ async function buildPlugin(pluginDir: string): Promise<BuildResult> {
 
   const stats = await Deno.stat(outputFile);
   return { name: pluginName, size: stats.size, ms: performance.now() - start };
-}
-
-async function buildSharedTextures(): Promise<BuildResult> {
-  const start = performance.now();
-  const projectFile = path.resolve(Deno.cwd(), "OpenCobra", "Textures", "Textures.csproj");
-  const outputWasm = path.resolve(OUTPUT_DIR, "OpenCobra.Textures.wasm");
-
-  try {
-    const process = new Deno.Command("dotnet", {
-      args: [
-        "publish",
-        projectFile,
-        "-c", "Release",
-        "-f", "net8.0",
-        "-r", "browser-wasm",
-        "/p:NativeLib=Static",
-        "-o", path.dirname(outputWasm)
-      ],
-      stdout: "piped",
-      stderr: "piped",
-    });
-
-    const { success, stdout, stderr } = await process.output();
-
-    if (!success) {
-      return {
-        name: "OpenCobra.Textures",
-        error: "dotnet publish failed",
-        stderr: new TextDecoder().decode(stderr)
-      };
-    }
-
-    // Move the resulting wasm to the expected location if it's named differently
-    // ILCompiler usually produces a .wasm file
-    const builtWasm = path.join(path.dirname(outputWasm), "dotnet.native.wasm");
-    try {
-        await Deno.rename(builtWasm, outputWasm);
-    } catch {
-        // Might already be named correctly or produced elsewhere
-    }
-
-    const stats = await Deno.stat(outputWasm);
-    return { name: "OpenCobra.Textures", size: stats.size, ms: performance.now() - start };
-  } catch (e) {
-    return { name: "OpenCobra.Textures", error: e.message };
-  }
 }
 
 // TODO: Replace with fs.mkdirp, or equivalent
@@ -171,15 +130,6 @@ async function main(): Promise<void> {
   const spinnerMsg = (n: number) => `Compiling ${total} plugin${total !== 1 ? "s" : ""}... (${n}/${total})`;
   const spinner = useSpinner ? new Spinner({ message: spinnerMsg(0), color: "yellow" }) : null;
   spinner?.start();
-
-  const sharedResult = await buildSharedTextures();
-  if (sharedResult.error) {
-    spinner?.stop();
-    console.error(`✗ Failed to build shared textures: ${sharedResult.error}`);
-    if (sharedResult.stderr) console.error(sharedResult.stderr);
-    Deno.exit(1);
-  }
-  console.log(`✅ Built shared textures (${sharedResult.size} bytes, ${formatDuration(sharedResult.ms!)})`);
 
   let completed = 0;
   const results = await Promise.all(pluginDirs.map(async (pluginDir) => {
@@ -223,11 +173,14 @@ async function ensureAscShims(): Promise<void> {
   const pdkSrc = path.join(npmCachePath, "@extism", "as-pdk", "1.0.0");
   const shimDir = path.join(shimsDir, "@extism", "as-pdk");
   await fs.copy(pdkSrc, shimDir, { overwrite: true });
-  await Deno.writeTextFile(path.join(shimDir, "package.json"), JSON.stringify({
-    name: "@extism/as-pdk",
-    version: "1.0.0",
-    ascMain: "index.ts",
-  }));
+  await Deno.writeTextFile(
+    path.join(shimDir, "package.json"),
+    JSON.stringify({
+      name: "@extism/as-pdk",
+      version: "1.0.0",
+      ascMain: "index.ts",
+    }),
+  );
 }
 
 if (import.meta.main) main();

@@ -4,16 +4,5 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>OpenCobra.Textures</RootNamespace>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PublishTrimmed Condition="'$(TargetFramework)' != 'netstandard2.1'">true</PublishTrimmed>
-  </PropertyGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="8.0.0" />
-  </ItemGroup>
-
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'browser-wasm' Or '$(RuntimeIdentifier)' == 'wasi-wasm'">
-    <NativeLib>Static</NativeLib>
-    <CustomNativeMain>true</CustomNativeMain>
   </PropertyGroup>
 </Project>
