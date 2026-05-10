@@ -37,15 +37,13 @@ sealed partial class PluginsDialog : Form {
 
   private void InitializeComponentIcons() {
     IEmbeddedIcons icons = IconRepository.GetEmbeddedIcons<MaterialDesignIcons>();
-    var color = new DuoToneColor(Color.FromArgb(64, 64, 64), Color.FromArgb(185, 185, 185));
-    var removeColor = new DuoToneColor(Color.FromArgb(211, 47, 47), Color.Transparent);
 
-    var puzzleBmp = Icons.Render(icons, "PuzzleOutline", color);
-    if (puzzleBmp != null) Icon = Icon.FromHandle(puzzleBmp.GetHicon());
+    Icon = Icons.Render(icons, "PuzzleOutline")?.ToIcon() ?? Icons.DefaultWindowIcon;
 
-    install.Image = Icons.Render(icons, "PuzzlePlusOutline", color);
-    installFromCatalog.Image = Icons.Render(icons, "PuzzlePlusOutline", color);
-    uninstall.Image = Icons.Render(icons, "TrashCan", removeColor);
+    install.Image = Icons.Render(icons, "PuzzlePlusOutline");
+    installFromCatalog.Image = Icons.Render(icons, "Web");
+    installFromDisk.Image = Icons.Render(icons, "Harddisk");
+    uninstall.Image = Icons.Render(icons, "TrashCan", Icons.DangerMonotoneColor);
   }
 
   private void PluginsDialog_Load(object sender, EventArgs e) {

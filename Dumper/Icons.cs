@@ -8,8 +8,18 @@ namespace Dumper;
 
 internal class Icons {
   public const int DefaultSize = 16;
+  public static readonly Icon DefaultWindowIcon = SystemIcons.Application;
 
-  internal static Bitmap? Render(IEmbeddedIcons icons, string name, DuoToneColor color, int size = DefaultSize) {
+  public static readonly DuoToneColor DefaultColor = new(
+    Color.FromArgb(64, 64, 64),
+    Color.FromArgb(185, 185, 185)
+  );
+  public static readonly DuoToneColor DangerMonotoneColor = new(
+    Color.FromArgb(211, 47, 47),
+    Color.Transparent
+  );
+
+  internal static Bitmap? Render(IEmbeddedIcons icons, string name, DuoToneColor? color = null, int size = DefaultSize) {
     var icon = icons.GetIcon(name);
     if (icon == null) return null;
 
@@ -19,7 +29,12 @@ internal class Icons {
     g.InterpolationMode = InterpolationMode.HighQualityBicubic;
     g.PixelOffsetMode = PixelOffsetMode.HighQuality;
     g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-    icon.DrawIcon(g, color, 0, 0, size);
+    icon.DrawIcon(g, color ?? DefaultColor, 0, 0, size);
     return bmp;
   }
+}
+
+internal static class BitmapExtensions {
+  // FIXME: Actually render an icon properly, i.e. with these icon sizes: 256, 128, 96, 64, 48, 32, 16
+  public static Icon ToIcon(this Bitmap bmp) => Icon.FromHandle(bmp.GetHicon());
 }
