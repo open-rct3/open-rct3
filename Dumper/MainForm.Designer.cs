@@ -310,6 +310,7 @@ namespace Dumper
       // 
       // toolStrip
       // 
+      toolStrip.CanOverflow = false;
       toolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
       toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { helpToolStripButton, openArchiveToolStripButton });
       toolStrip.Location = new System.Drawing.Point(0, 0);
