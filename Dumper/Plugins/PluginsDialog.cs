@@ -52,9 +52,9 @@ sealed partial class PluginsDialog : Form {
     Icon = Icons.Render(icons, "PuzzleOutline")?.ToIcon() ?? Icons.DefaultWindowIcon;
 
     install.Image = Icons.Render(icons, "PuzzlePlusOutline");
-    installFromCatalog.Image = Icons.Render(icons, "Web");
+    installFromCatalog.Image = Icons.Render(icons, "Web", Icons.Blue);
     installFromDisk.Image = Icons.Render(icons, "Harddisk");
-    uninstall.Image = Icons.Render(icons, "TrashCan", Icons.DangerMonotoneColor);
+    uninstall.Image = Icons.Render(icons, "TrashCan", Icons.Danger);
   }
 
   private void PluginsDialog_Load(object sender, EventArgs e) {

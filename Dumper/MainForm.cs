@@ -312,7 +312,7 @@ public partial class MainForm : Form {
     var color = new DuoToneColor(
       System.Drawing.Color.FromArgb(64, 64, 64), System.Drawing.Color.FromArgb(185, 185, 185));
     var folderColor = new DuoToneColor(
-      System.Drawing.Color.FromArgb(0xC8, 0xA2, 0x17), System.Drawing.Color.FromArgb(0xC8, 0xA2, 0x17));
+      System.Drawing.Color.FromArgb(200, 162, 23), System.Drawing.Color.FromArgb(200, 162, 23));
 
     var imageList = new ImageList { ImageSize = IconSize };
 

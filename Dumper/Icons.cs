@@ -14,12 +14,22 @@ internal class Icons {
     Color.FromArgb(64, 64, 64),
     Color.FromArgb(185, 185, 185)
   );
-  public static readonly DuoToneColor DangerMonotoneColor = new(
+  public static readonly DuoToneColor Blue = new(
+    Color.FromArgb(25, 118, 210),
+    Color.White
+  );
+  public static readonly DuoToneColor Folder = new(
+    Color.FromArgb(200, 162, 23),
+    Color.FromArgb(200, 162, 23)
+  );
+  public static readonly DuoToneColor Danger = new(
     Color.FromArgb(211, 47, 47),
     Color.Transparent
   );
 
-  internal static Bitmap? Render(IEmbeddedIcons icons, string name, DuoToneColor? color = null, int size = DefaultSize) {
+  internal static Bitmap? Render(
+    IEmbeddedIcons icons, string name, DuoToneColor? color = null, int size = DefaultSize
+  ) {
     var icon = icons.GetIcon(name);
     if (icon == null) return null;
 

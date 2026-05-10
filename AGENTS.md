@@ -27,6 +27,7 @@
     if (!File.Exists(ConfigPath))
       return new AppConfig();
     ```
+- Do NOT use hex literals in `Color.FromArgb`; use whole ints, e.g. `Color.FromArgb(25, 118, 210)`.
 
 ## Tests
 
