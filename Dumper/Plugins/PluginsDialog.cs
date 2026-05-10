@@ -1,10 +1,6 @@
 // PluginsDialog
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows.Forms;
 using Rop.Winforms8.DuotoneIcons;
 using Rop.Winforms8.DuotoneIcons.MaterialDesign;
 

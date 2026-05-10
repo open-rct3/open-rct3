@@ -1,9 +1,6 @@
 // ContentPanel
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using System;
-using System.Collections.Generic;
-using System.Windows.Forms;
 using Dumper.Plugins;
 using OpenCobra.OVL.Files;
 
@@ -12,10 +9,10 @@ namespace Dumper;
 /// <summary>WinForms content panel that renders plugin output via WebView2.</summary>
 sealed partial class ContentPanel : UserControl {
 
-  private byte[]? _currentData;
-  private IReadOnlyList<IViewerPlugin>? _currentViewers;
-  private IViewerPlugin? _activePlugin;
-  private bool _webViewReady;
+  private byte[]? currentData;
+  private List<IViewerPlugin> currentViewers = [];
+  private IViewerPlugin? activePlugin;
+  private bool webViewReady;
 
   /// <summary>Fired when the user picks a different file viewer.</summary>
   public event EventHandler<IViewerPlugin?>? ActiveViewerChanged;
@@ -26,10 +23,10 @@ sealed partial class ContentPanel : UserControl {
   }
 
   /// <summary>Initialize the WebView2 runtime. Call once after the control is added to a form.</summary>
-  public async System.Threading.Tasks.Task InitializeAsync() {
+  public async Task InitializeAsync() {
     try {
       await webView.EnsureCoreWebView2Async();
-      _webViewReady = true;
+      webViewReady = true;
       ShowEmpty();
     } catch {
       // WebView2 runtime not available
@@ -37,12 +34,13 @@ sealed partial class ContentPanel : UserControl {
   }
 
   /// <summary>Show rendered content from a plugin.</summary>
-  public void ShowContent(IReadOnlyList<IViewerPlugin> viewers, byte[] data) {
-    _currentViewers = viewers;
-    _currentData = data;
-    _activePlugin = viewers[0];
+  public void ShowContent(IEnumerable<IViewerPlugin> viewers, byte[] data) {
+    currentViewers.Clear();
+    currentViewers.AddRange(viewers);
+    currentData = data;
+    activePlugin = currentViewers[0];
 
-    header.SetViewers(_activePlugin, viewers);
+    header.SetViewers(activePlugin, viewers);
     RenderCurrent();
   }
 
@@ -54,34 +52,34 @@ sealed partial class ContentPanel : UserControl {
   }
 
   /// <summary>Clear the content panel to its empty state.</summary>
-  public void ShowEmpty(bool isOvlopened = false) {
+  public void ShowEmpty(bool isOvlOpened = false) {
     Reset();
     header.SetMessage("");
-    Navigate(EmptyView.Render(isOvlopened ? "Select a file to view." : "Open an OVL archive."));
+    Navigate(EmptyView.Render(isOvlOpened ? "Select a file to view." : "Open an OVL archive."));
   }
 
   private void Reset() {
-    _currentData = null;
-    _currentViewers = null;
-    _activePlugin = null;
+    currentData = null;
+    currentViewers.Clear();
+    activePlugin = null;
   }
 
   private void OnViewerChanged(object? sender, IViewerPlugin? plugin) {
-    if (plugin == null || _currentData == null) return;
-    _activePlugin = plugin;
+    if (plugin == null || currentData == null) return;
+    activePlugin = plugin;
     RenderCurrent();
     ActiveViewerChanged?.Invoke(this, plugin);
   }
 
   private void RenderCurrent() {
-    if (_activePlugin == null || _currentData == null) return;
+    if (activePlugin == null || currentData == null) return;
 
-    var html = _activePlugin.Render(_currentData);
+    var html = activePlugin.Render(currentData);
     Navigate(EmptyView.WrapInShell(html));
   }
 
   private void Navigate(string html) {
-    if (_webViewReady && webView.CoreWebView2 != null)
+    if (webViewReady && webView.CoreWebView2 != null)
       webView.CoreWebView2.NavigateToString(html);
   }
 }

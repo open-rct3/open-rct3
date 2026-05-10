@@ -2,6 +2,8 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Forms;
 using Dumper.Plugins;
 
@@ -23,7 +25,7 @@ sealed partial class ContentPanelHeader : TableLayoutPanel {
   }
 
   /// <summary>Set the header to show the given viewer's name and populate the dropdown.</summary>
-  public void SetViewers(IViewerPlugin active, System.Collections.Generic.IReadOnlyList<IViewerPlugin> allViewers) {
+  public void SetViewers(IViewerPlugin active, IEnumerable<IViewerPlugin> allViewers) {
     viewerCombo.SelectedIndexChanged -= ViewerCombo_SelectedIndexChanged;
 
     nameLabel.Text = $"{active.Info.Name} v{active.Info.Version}";
@@ -35,7 +37,7 @@ sealed partial class ContentPanelHeader : TableLayoutPanel {
         viewerCombo.SelectedIndex = idx;
     }
 
-    viewerCombo.Enabled = allViewers.Count > 1;
+    viewerCombo.Enabled = allViewers.Count() > 1;
     viewerCombo.SelectedIndexChanged += ViewerCombo_SelectedIndexChanged;
   }
 

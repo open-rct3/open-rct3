@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Globals" />
   <PropertyGroup>
     <ProjectGuid>{9281AEA1-C96C-4881-B00F-2D4D6521B081}</ProjectGuid>
     <ProjectTypeGuids>{A3F8F2AB-B479-4A4A-A458-A89E7DC349F1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -24,6 +25,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <StartupObject>Dumper.Program</StartupObject>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>full</DebugType>
@@ -89,5 +92,8 @@
       <Link>Plugins\Artifacts\%(Filename).wasm</Link>
       <TargetPath>plugins\%(Filename).wasm</TargetPath>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="System.Diagnostics" />
   </ItemGroup>
 </Project>

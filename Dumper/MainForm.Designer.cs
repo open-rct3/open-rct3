@@ -98,7 +98,7 @@ namespace Dumper
       openToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O;
       openToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
       openToolStripMenuItem.Text = "&Open…";
-      openToolStripMenuItem.Click += openToolStripMenuItem_Click;
+      openToolStripMenuItem.Click += OpenMenuItem_Click;
       // 
       // toolStripSeparator
       // 
@@ -122,7 +122,7 @@ namespace Dumper
       exitToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4;
       exitToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
       exitToolStripMenuItem.Text = "E&xit";
-      exitToolStripMenuItem.Click += exitToolStripMenuItem_Click;
+      exitToolStripMenuItem.Click += ExitMenuItem_Click;
       // 
       // editToolStripMenuItem
       // 
@@ -201,7 +201,7 @@ namespace Dumper
       pluginsToolStripMenuItem.Name = "pluginsToolStripMenuItem";
       pluginsToolStripMenuItem.Size = new System.Drawing.Size(125, 22);
       pluginsToolStripMenuItem.Text = "&Plugins…";
-      pluginsToolStripMenuItem.Click += pluginsToolStripMenuItem_Click;
+      pluginsToolStripMenuItem.Click += PluginsMenuItem_Click;
       // 
       // optionsToolStripMenuItem
       // 
@@ -294,6 +294,10 @@ namespace Dumper
       splitView.Dock = System.Windows.Forms.DockStyle.Fill;
       splitView.Location = new System.Drawing.Point(0, 24);
       splitView.Name = "splitView";
+      splitView.FixedPanel = FixedPanel.Panel1;
+      splitView.MouseDoubleClick += Splitter_MouseDoubleClick;
+      splitView.SplitterMoved += SplitView_SplitterMoved;
+      splitView.SizeChanged += SplitView_SizeChanged;
       // 
       // splitView.Panel1
       // 
@@ -337,7 +341,7 @@ namespace Dumper
       openArchiveToolStripButton.Name = "openArchiveToolStripButton";
       openArchiveToolStripButton.Size = new System.Drawing.Size(23, 22);
       openArchiveToolStripButton.Text = "&Open";
-      openArchiveToolStripButton.Click += openArchiveToolStripButton_Click;
+      openArchiveToolStripButton.Click += OpenArchive_Click;
       // 
       // treeView
       // 
@@ -347,6 +351,8 @@ namespace Dumper
       treeView.ShowNodeToolTips = true;
       treeView.Size = new System.Drawing.Size(175, 287);
       treeView.TabIndex = 0;
+      treeView.AfterSelect += OvlTree_AfterSelect;
+      treeView.NodeMouseClick += OvlTree_NodeMouseClick;
       // 
       // contentPanel
       // 
@@ -370,7 +376,6 @@ namespace Dumper
       Name = "MainForm";
       StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
       Text = "OVL Dumper";
-      Load += MainForm_Load;
       menuStrip.ResumeLayout(false);
       menuStrip.PerformLayout();
       statusStrip.ResumeLayout(false);

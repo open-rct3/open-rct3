@@ -1,8 +1,6 @@
 // PluginInfo
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using System.Collections.Generic;
-
 namespace Dumper.Plugins;
 
 /// <summary>Metadata describing an Extism viewer plugin.</summary>

@@ -1,56 +1,55 @@
 // PluginManager
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-
 namespace Dumper.Plugins;
 
 /// <summary>Discovers, loads, and routes Extism viewer plugins by OVL file type tag.</summary>
 sealed class PluginManager : IDisposable {
-  private readonly Dictionary<string, List<IViewerPlugin>> _registry = new(StringComparer.OrdinalIgnoreCase);
+  private readonly Dictionary<string, List<IViewerPlugin>> registry = new(StringComparer.OrdinalIgnoreCase);
 
   /// <summary>All loaded plugins, keyed by their source path.</summary>
   public IReadOnlyList<IViewerPlugin> AllPlugins { get; private set; } = [];
 
-  /// <summary>Discover and load all .wasm plugins from standard search paths.</summary>
-  public void LoadAll() {
-    var searchPaths = GetSearchPaths();
+  public PluginManager() => Load();
+
+  /// <summary>Discover and load all plugins from standard search paths.</summary>
+  public void Load() {
     var wasmFiles = new List<string>();
 
-    foreach (var dir in searchPaths) {
+    foreach (var dir in GetSearchPaths()) {
       if (!Directory.Exists(dir)) continue;
       try {
         wasmFiles.AddRange(Directory.EnumerateFiles(dir, "*.wasm", SearchOption.TopDirectoryOnly));
-      } catch (UnauthorizedAccessException) { }
-    }
-
-    var plugins = new List<IViewerPlugin>();
-    foreach (var path in wasmFiles) {
-      try {
-        var plugin = ViewerPlugin.Load(path);
-        plugins.Add(plugin);
-
-        foreach (var tag in plugin.SupportedFileTypes) {
-          if (!_registry.TryGetValue(tag, out var list)) {
-            list = new List<IViewerPlugin>();
-            _registry[tag] = list;
-          }
-          list.Add(plugin);
-        }
-      } catch (Exception ex) {
-        System.Diagnostics.Debug.WriteLine($"Failed to load plugin '{path}': {ex.Message}");
+      } catch (DirectoryNotFoundException) {
+        // Silently ignore this, the user may have deleted or misconfigured something
       }
     }
 
-    AllPlugins = plugins;
+    AllPlugins = [.. wasmFiles.Select(wasmPath => {
+      try {
+        var plugin = ViewerPlugin.Load(wasmPath);
+
+        // Add plugin to dictionary of OVL file plugins
+        foreach (var tag in plugin.SupportedFileTypes) {
+          if (!registry.TryGetValue(tag, out var list)) {
+            list = [];
+            registry[tag] = list;
+          }
+          list.Add(plugin);
+        }
+
+        return plugin;
+      } catch (Exception ex) {
+        Debug.WriteLine($"Failed to load plugin '{wasmPath}': {ex.Message}");
+      }
+
+      return null;
+    }).Where(plugin => plugin != null) as IEnumerable<IViewerPlugin>];
   }
 
   /// <summary>Get all viewer plugins that support the given file type tag.</summary>
   public IReadOnlyList<IViewerPlugin> GetViewers(string fileTypeTag) {
-    if (_registry.TryGetValue(fileTypeTag, out var list))
+    if (registry.TryGetValue(fileTypeTag, out var list))
       return list;
     return [];
   }
@@ -63,7 +62,7 @@ sealed class PluginManager : IDisposable {
 
   /// <summary>Set the default viewer for a file type tag by promoting it to the front of the list.</summary>
   public void SetDefaultViewer(string fileTypeTag, IViewerPlugin plugin) {
-    if (!_registry.TryGetValue(fileTypeTag, out var list)) return;
+    if (!registry.TryGetValue(fileTypeTag, out var list)) return;
     var idx = list.IndexOf(plugin);
     if (idx <= 0) return;
     list.RemoveAt(idx);
@@ -72,12 +71,12 @@ sealed class PluginManager : IDisposable {
 
   /// <summary>Get a snapshot of the registry for use in UI (e.g. default viewer chooser).</summary>
   internal Dictionary<string, List<IViewerPlugin>> GetRegistrySnapshot() =>
-    new(_registry, StringComparer.OrdinalIgnoreCase);
+    new(registry, StringComparer.OrdinalIgnoreCase);
 
   public void Dispose() {
     foreach (var plugin in AllPlugins)
       plugin.Dispose();
-    _registry.Clear();
+    registry.Clear();
   }
 
   /// <summary>Enumerate standard plugin search paths.</summary>

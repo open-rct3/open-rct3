@@ -1,9 +1,6 @@
 // ViewerPlugin
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Text;
 using System.Text.Json;
 using Extism.Sdk;
@@ -28,9 +25,9 @@ sealed class ViewerPlugin : IViewerPlugin {
     Info = info;
   }
 
-  /// <summary>Load a viewer plugin from a .wasm file path.</summary>
-  public static ViewerPlugin Load(string wasmPath) {
-    var fullPath = Path.GetFullPath(wasmPath);
+  /// <summary>Load a viewer plugin from a file path.</summary>
+  public static ViewerPlugin Load(string filePath) {
+    var fullPath = Path.GetFullPath(filePath);
     var manifest = new Manifest(new PathWasmSource(fullPath)) {
       // Host functions: none needed for viewers
     };
@@ -40,7 +37,8 @@ sealed class ViewerPlugin : IViewerPlugin {
       WithWasi = true,
     };
 
-    var compiled = new CompiledPlugin(manifest, Array.Empty<HostFunction>(), options);
+    var options = new PluginIntializationOptions { FuelLimit = DefaultFuelLimit };
+    var compiled = new CompiledPlugin(manifest, [], options);
     var instance = compiled.Instantiate();
 
     // Read plugin metadata from WASM exports
@@ -50,9 +48,9 @@ sealed class ViewerPlugin : IViewerPlugin {
 
     List<string> fileTypes;
     try {
-      fileTypes = JsonSerializer.Deserialize<List<string>>(fileTypesJson) ?? new List<string>();
+      fileTypes = JsonSerializer.Deserialize<List<string>>(fileTypesJson) ?? [];
     } catch (JsonException) {
-      fileTypes = new List<string>();
+      fileTypes = [];
     }
 
     var info = new PluginInfo {
@@ -85,7 +83,7 @@ sealed class ViewerPlugin : IViewerPlugin {
 
   private static string? SafeCall(Plugin plugin, string export) {
     try {
-      return Encoding.UTF8.GetString(plugin.Call(export, Array.Empty<byte>()));
+      return Encoding.UTF8.GetString(plugin.Call(export, []));
     } catch {
       return null;
     }

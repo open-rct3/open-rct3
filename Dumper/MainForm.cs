@@ -9,14 +9,7 @@ using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 using Rop.Winforms8.DuotoneIcons;
 using Rop.Winforms8.DuotoneIcons.MaterialDesign;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Security;
 
 namespace Dumper;
 
@@ -26,32 +19,28 @@ public partial class MainForm : Form {
   static readonly string resourcesFmt = "{0} Resources";
   static readonly string ovlFmt = "{0} OVLs";
 
-  private readonly PluginManager _pluginManager = new();
-  private Ovl? _currentOvl;
-  private readonly Dictionary<TreeNode, OvlLoaderEntry> _nodeEntries = new();
-  private bool _suppressSplitterMoved;
+  private readonly PluginManager pluginManager = new();
+  private Ovl? currentOvl;
+  private readonly Dictionary<TreeNode, OvlLoaderEntry> _nodeEntries = [];
+  private bool suppressSplitterMoved = false;
 
   public MainForm() {
     InitializeComponent();
     InitializeComponentIcons();
-    splitView.FixedPanel = FixedPanel.Panel1;
-    splitView.MouseDoubleClick += Splitter_MouseDoubleClick;
-    splitView.SplitterMoved += SplitView_SplitterMoved;
-    splitView.SizeChanged += SplitView_SizeChanged;
 
-    // Wire tree selection to content panel
-    treeView.AfterSelect += TreeView_AfterSelect;
-    treeView.NodeMouseClick += TreeView_NodeMouseClick;
+    TryLoadPlugins();
   }
 
   protected override void OnShown(EventArgs e) {
     base.OnShown(e);
-    // Initialize WebView2 after the form is shown (requires message loop)
+
+    // Initialize web view after the form is shown (requires message loop)
     _ = contentPanel.InitializeAsync();
   }
 
   protected override void OnFormClosed(FormClosedEventArgs e) {
-    _pluginManager.Dispose();
+    pluginManager.Dispose();
+
     base.OnFormClosed(e);
   }
 
@@ -66,7 +55,7 @@ public partial class MainForm : Form {
   }
 
   private void LoadOvl(Ovl ovl) {
-    _currentOvl = ovl;
+    currentOvl = ovl;
     _nodeEntries.Clear();
     contentPanel.ShowEmpty(true);
 
@@ -332,12 +321,16 @@ public partial class MainForm : Form {
     treeView.ImageList = imageList;
   }
 
-  private void MainForm_Load(object sender, EventArgs e) {
+  private void TryLoadPlugins() {
     // Load plugins
     try {
-      _pluginManager.LoadAll();
+      pluginManager.Load();
     } catch (Exception ex) {
       Debug.WriteLine($"Plugin loading failed: {ex.Message}");
+
+      if (ex is UnauthorizedAccessException || ex is SecurityException) {
+        // TODO: Detect if this is a user-land problem and message the user
+      }
 
       // Show a retry offer to the user
       var result = MessageBox.Show(
@@ -347,14 +340,14 @@ public partial class MainForm : Form {
         MessageBoxIcon.Error
       );
 
-      if (result == DialogResult.TryAgain) MainForm_Load(sender, e);
+      if (result == DialogResult.TryAgain) TryLoadPlugins();
       // User cancelled the operation, confirm app exit
       else if (result == DialogResult.Cancel && TryExit() == DialogResult.Yes)
         Application.Exit();
     }
   }
 
-  private DialogResult TryExit() => MessageBox.Show(
+  private static DialogResult TryExit() => MessageBox.Show(
     "Are you sure you want to exit?",
     "Exit Dumper?",
     MessageBoxButtons.YesNo,
@@ -362,7 +355,7 @@ public partial class MainForm : Form {
     MessageBoxDefaultButton.Button2
   );
 
-  private async void openToolStripMenuItem_Click(object sender, EventArgs e) {
+  private async void OpenMenuItem_Click(object sender, EventArgs e) {
     statusLabel.Text = openingArchive;
     progressBar.Visible = true;
     ClearStatusBarCounts();
@@ -371,7 +364,7 @@ public partial class MainForm : Form {
     progressBar.Visible = false;
   }
 
-  private async void openArchiveToolStripButton_Click(object sender, EventArgs e) {
+  private async void OpenArchive_Click(object sender, EventArgs e) {
     statusLabel.Text = openingArchive;
     progressBar.Visible = true;
     ClearStatusBarCounts();
@@ -380,18 +373,16 @@ public partial class MainForm : Form {
     progressBar.Visible = false;
   }
 
-  private void exitToolStripMenuItem_Click(object sender, EventArgs e) {
-    Application.Exit();
+  private void ExitMenuItem_Click(object sender, EventArgs e) {
+    if (TryExit() == DialogResult.Yes) Application.Exit();
   }
 
-  private void pluginsToolStripMenuItem_Click(object sender, EventArgs e) {
-    using var dlg = new PluginsDialog(_pluginManager.AllPlugins);
-    dlg.ShowDialog(this);
-  }
+  private void PluginsMenuItem_Click(object sender, EventArgs e) =>
+    new PluginsDialog(pluginManager.AllPlugins).ShowDialog(this);
 
-  private void TreeView_AfterSelect(object? sender, TreeViewEventArgs e) {
-    if (e.Node == null || _currentOvl == null) {
-      contentPanel.ShowEmpty(_currentOvl != null);
+  private void OvlTree_AfterSelect(object? sender, TreeViewEventArgs e) {
+    if (e.Node == null || currentOvl == null) {
+      contentPanel.ShowEmpty(currentOvl != null);
       return;
     }
 
@@ -400,27 +391,27 @@ public partial class MainForm : Form {
     // If this node has a loader entry, show it via the plugin viewer
     if (_nodeEntries.TryGetValue(e.Node, out var entry) && fileType != null && fileType != FileType.Unknown) {
       var tag = fileType.Value.ToTagString();
-      var viewers = _pluginManager.GetViewers(tag);
+      var viewers = pluginManager.GetViewers(tag);
       if (viewers.Count == 0) {
         contentPanel.ShowNoViewer(fileType.Value);
         return;
       }
 
-      var data = _currentOvl.GetResourceBytes(entry);
+      var data = currentOvl.GetResourceBytes(entry);
       if (data == null) {
-        contentPanel.ShowEmpty(_currentOvl != null);
+        contentPanel.ShowEmpty(currentOvl != null);
         MessageBox.Show("Failed to load selected resource.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         return;
       }
 
       contentPanel.ShowContent(viewers, data);
     } else {
-      // Group node or no entry — show empty
-      contentPanel.ShowEmpty(_currentOvl != null);
+      // Group node or no entry, show empty
+      contentPanel.ShowEmpty(currentOvl != null);
     }
   }
 
-  private void TreeView_NodeMouseClick(object? sender, TreeNodeMouseClickEventArgs e) {
+  private void OvlTree_NodeMouseClick(object? sender, TreeNodeMouseClickEventArgs e) {
     if (e.Button != MouseButtons.Right || e.Node == null) return;
 
     // Only show context menu on leaf nodes with a known file type and loader entry
@@ -428,14 +419,14 @@ public partial class MainForm : Form {
     if (fileType == null || fileType == FileType.Unknown || !_nodeEntries.ContainsKey(e.Node)) return;
 
     var tag = fileType.Value.ToTagString();
-    var viewers = _pluginManager.GetViewers(tag);
+    var viewers = pluginManager.GetViewers(tag);
 
     var menu = new ContextMenuStrip();
 
     // --- Open With submenu ---
     var openWith = new ToolStripMenuItem("Open With");
     if (viewers.Count > 0) {
-      var defaultViewer = _pluginManager.GetDefaultViewer(tag);
+      var defaultViewer = pluginManager.GetDefaultViewer(tag);
       foreach (var viewer in viewers) {
         var viewerItem = new ToolStripMenuItem($"{viewer.Info.Name} v{viewer.Info.Version}") {
           Tag = viewer,
@@ -444,8 +435,8 @@ public partial class MainForm : Form {
             : menu.Font,
         };
         viewerItem.Click += (_, _) => {
-          if (_currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
-          var data = _currentOvl.GetResourceBytes(entry);
+          if (currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
+          var data = currentOvl.GetResourceBytes(entry);
           if (data == null) return;
           contentPanel.ShowContent(viewers, data);
         };
@@ -455,12 +446,12 @@ public partial class MainForm : Form {
     }
     var chooseDefault = new ToolStripMenuItem("Choose a default viewer\u2026");
     chooseDefault.Click += (_, _) => {
-      using var chooser = new DefaultViewerChooser(_pluginManager.GetRegistrySnapshot());
+      using var chooser = new DefaultViewerChooser(pluginManager.GetRegistrySnapshot());
       if (chooser.ShowDialog(this) == DialogResult.OK && !string.IsNullOrEmpty(chooser.SelectedFileTypeTag)) {
-        _pluginManager.SetDefaultViewer(chooser.SelectedFileTypeTag, chooser.SelectedDefaultPlugin!);
+        pluginManager.SetDefaultViewer(chooser.SelectedFileTypeTag, chooser.SelectedDefaultPlugin!);
         // Re-render if this node's type was changed
         if (tag == chooser.SelectedFileTypeTag)
-          TreeView_AfterSelect(sender, new TreeViewEventArgs(e.Node));
+          OvlTree_AfterSelect(sender, new TreeViewEventArgs(e.Node));
       }
     };
     openWith.DropDownItems.Add(chooseDefault);
@@ -476,7 +467,7 @@ public partial class MainForm : Form {
     // --- Properties ---
     var properties = new ToolStripMenuItem("Properties");
     properties.Click += (_, _) => {
-      if (_currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
+      if (currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
       var hasViewer = viewers.Count > 0;
       using var dialog = new ResourceProperties(entry, fileType.Value, hasViewer);
       dialog.ShowDialog(this);
@@ -491,25 +482,20 @@ public partial class MainForm : Form {
     FitSidebarToContent(ClientSize.Width / 2);
   }
 
-  private void SplitView_SplitterMoved(object? sender, SplitterEventArgs e) {
-    ClampSplitterDistance();
-  }
-
-  private void SplitView_SizeChanged(object? sender, EventArgs e) {
-    ClampSplitterDistance();
-  }
+  private void SplitView_SplitterMoved(object? sender, SplitterEventArgs e) => ClampSplitterDistance();
+  private void SplitView_SizeChanged(object? sender, EventArgs e) => ClampSplitterDistance();
 
   private void ClampSplitterDistance() {
-    if (_suppressSplitterMoved) return;
+    if (suppressSplitterMoved) return;
     // Prevent infinite loops when user's adjust the splitter distance
-    _suppressSplitterMoved = true;
+    suppressSplitterMoved = true;
     try {
       var maxAllowed = splitView.Width / 2;
       if (splitView.SplitterDistance > maxAllowed) {
         splitView.SplitterDistance = maxAllowed;
       }
     } finally {
-      _suppressSplitterMoved = false;
+      suppressSplitterMoved = false;
     }
   }
 
