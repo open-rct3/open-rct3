@@ -40,7 +40,7 @@ public partial class MainForm {
     selectAllToolStripMenuItem.Image = RenderIcon(icons, "SelectAll", defaultColor);
 
     // Tools
-    pluginsToolStripMenuItem.Image = RenderIcon(icons, "Puzzle", defaultColor);
+    pluginsToolStripMenuItem.Image = RenderIcon(icons, "PuzzleOutline", defaultColor);
     optionsToolStripMenuItem.Image = RenderIcon(icons, "Cog", defaultColor);
 
     // Toolbar

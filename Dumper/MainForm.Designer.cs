@@ -199,14 +199,14 @@ namespace Dumper
       // pluginsToolStripMenuItem
       // 
       pluginsToolStripMenuItem.Name = "pluginsToolStripMenuItem";
-      pluginsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+      pluginsToolStripMenuItem.Size = new System.Drawing.Size(125, 22);
       pluginsToolStripMenuItem.Text = "&Plugins…";
       pluginsToolStripMenuItem.Click += pluginsToolStripMenuItem_Click;
       // 
       // optionsToolStripMenuItem
       // 
       optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
-      optionsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+      optionsToolStripMenuItem.Size = new System.Drawing.Size(125, 22);
       optionsToolStripMenuItem.Text = "&Options…";
       // 
       // helpToolStripMenuItem
@@ -369,6 +369,7 @@ namespace Dumper
       Name = "MainForm";
       StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
       Text = "OVL Dumper";
+      Load += MainForm_Load;
       menuStrip.ResumeLayout(false);
       menuStrip.PerformLayout();
       statusStrip.ResumeLayout(false);

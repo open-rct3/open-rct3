@@ -7,6 +7,8 @@ namespace Dumper.Plugins;
 
 /// <summary>A viewer plugin that can render OVL resource data as HTML.</summary>
 public interface IViewerPlugin : IDisposable {
+  /// <summary>Whether this plugin is currently enabled.</summary>
+  bool Enabled { get; set; }
   /// <summary>Plugin metadata.</summary>
   PluginInfo Info { get; }
   /// <summary>OVL file type tags this plugin supports.</summary>

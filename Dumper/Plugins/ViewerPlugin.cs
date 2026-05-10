@@ -17,6 +17,7 @@ sealed class ViewerPlugin : IViewerPlugin {
   private readonly CompiledPlugin _compiled;
   private Plugin _instance;
 
+  public bool Enabled { get; set; } = true;
   public PluginInfo Info { get; }
 
   public IReadOnlyList<string> SupportedFileTypes => Info.FileTypes;

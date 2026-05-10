@@ -11,6 +11,7 @@ using Rop.Winforms8.DuotoneIcons;
 using Rop.Winforms8.DuotoneIcons.MaterialDesign;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -41,13 +42,6 @@ public partial class MainForm : Form {
     // Wire tree selection to content panel
     treeView.AfterSelect += TreeView_AfterSelect;
     treeView.NodeMouseClick += TreeView_NodeMouseClick;
-
-    // Load plugins at startup
-    try {
-      _pluginManager.LoadAll();
-    } catch (Exception ex) {
-      System.Diagnostics.Debug.WriteLine($"Plugin loading failed: {ex.Message}");
-    }
   }
 
   protected override void OnShown(EventArgs e) {
@@ -337,6 +331,36 @@ public partial class MainForm : Form {
 
     treeView.ImageList = imageList;
   }
+
+  private void MainForm_Load(object sender, EventArgs e) {
+    // Load plugins
+    try {
+      _pluginManager.LoadAll();
+    } catch (Exception ex) {
+      Debug.WriteLine($"Plugin loading failed: {ex.Message}");
+
+      // Show a retry offer to the user
+      var result = MessageBox.Show(
+        "Could not load plugins.\n\nTry again or continue anyway?",
+        "Error",
+        MessageBoxButtons.CancelTryContinue,
+        MessageBoxIcon.Error
+      );
+
+      if (result == DialogResult.TryAgain) MainForm_Load(sender, e);
+      // User cancelled the operation, confirm app exit
+      else if (result == DialogResult.Cancel && TryExit() == DialogResult.Yes)
+        Application.Exit();
+    }
+  }
+
+  private DialogResult TryExit() => MessageBox.Show(
+    "Are you sure you want to exit?",
+    "Exit Dumper?",
+    MessageBoxButtons.YesNo,
+    MessageBoxIcon.Question,
+    MessageBoxDefaultButton.Button2
+  );
 
   private async void openToolStripMenuItem_Click(object sender, EventArgs e) {
     statusLabel.Text = openingArchive;

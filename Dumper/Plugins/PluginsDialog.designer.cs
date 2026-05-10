@@ -15,7 +15,12 @@ namespace Dumper.Plugins {
       components = new System.ComponentModel.Container();
       splitView = new System.Windows.Forms.SplitContainer();
       toolStrip = new System.Windows.Forms.ToolStrip();
-      plugins = new System.Windows.Forms.ListBox();
+      install = new System.Windows.Forms.ToolStripSplitButton();
+      installFromCatalog = new System.Windows.Forms.ToolStripMenuItem();
+      installFromDisk = new System.Windows.Forms.ToolStripMenuItem();
+      toggleActive = new System.Windows.Forms.ToolStripButton();
+      uninstall = new System.Windows.Forms.ToolStripButton();
+      pluginList = new System.Windows.Forms.ListBox();
       metadata = new System.Windows.Forms.TableLayoutPanel();
       name = new System.Windows.Forms.Label();
       nameValue = new System.Windows.Forms.Label();
@@ -26,32 +31,33 @@ namespace Dumper.Plugins {
       location = new System.Windows.Forms.Label();
       locationValue = new TruncatedLabel();
       closeButton = new System.Windows.Forms.Button();
-      emptyLabel = new System.Windows.Forms.Label();
       openFolder = new System.Windows.Forms.Button();
+      emptyLabel = new System.Windows.Forms.Label();
       toolTip = new System.Windows.Forms.ToolTip(components);
       ((System.ComponentModel.ISupportInitialize)splitView).BeginInit();
       splitView.Panel1.SuspendLayout();
       splitView.Panel2.SuspendLayout();
       splitView.SuspendLayout();
+      toolStrip.SuspendLayout();
       metadata.SuspendLayout();
       SuspendLayout();
-      // 
+      //
       // splitView
-      // 
+      //
       splitView.Dock = System.Windows.Forms.DockStyle.Fill;
       splitView.FixedPanel = System.Windows.Forms.FixedPanel.Panel1;
       splitView.IsSplitterFixed = true;
       splitView.Location = new System.Drawing.Point(0, 0);
       splitView.Name = "splitView";
-      // 
+      //
       // splitView.Panel1
-      // 
+      //
       splitView.Panel1.Controls.Add(toolStrip);
-      splitView.Panel1.Controls.Add(plugins);
+      splitView.Panel1.Controls.Add(pluginList);
       splitView.Panel1MinSize = 150;
-      // 
+      //
       // splitView.Panel2
-      // 
+      //
       splitView.Panel2.Controls.Add(metadata);
       splitView.Panel2.Controls.Add(emptyLabel);
       splitView.Panel2MinSize = 200;
@@ -59,31 +65,75 @@ namespace Dumper.Plugins {
       splitView.SplitterDistance = 150;
       splitView.SplitterWidth = 3;
       splitView.TabIndex = 0;
-      // 
+      //
       // toolStrip
-      // 
+      //
+      toolStrip.CanOverflow = false;
       toolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
+      toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { install, toggleActive, uninstall });
+      toolStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.Flow;
       toolStrip.Location = new System.Drawing.Point(0, 0);
       toolStrip.Name = "toolStrip";
-      toolStrip.Size = new System.Drawing.Size(150, 25);
+      toolStrip.Size = new System.Drawing.Size(150, 19);
+      toolStrip.Stretch = true;
       toolStrip.TabIndex = 1;
       toolStrip.Text = "toolStrip1";
-      // 
+      //
+      // install
+      //
+      install.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { installFromCatalog, installFromDisk });
+      install.Name = "install";
+      install.Size = new System.Drawing.Size(16, 4);
+      install.ToolTipText = "Install a plugin…";
+      install.ButtonClick += InstallFromCatalog_Click;
+      //
+      // installFromCatalog
+      //
+      installFromCatalog.Name = "installFromCatalog";
+      installFromCatalog.Size = new System.Drawing.Size(187, 22);
+      installFromCatalog.Text = "Install from catalog…";
+      installFromCatalog.Click += InstallFromCatalog_Click;
+      //
+      // installFromDisk
+      //
+      installFromDisk.Name = "installFromDisk";
+      installFromDisk.Size = new System.Drawing.Size(187, 22);
+      installFromDisk.Text = "Install from disk…";
+      installFromDisk.Click += InstallFromDisk_Click;
+      //
+      // toggleActive
+      //
+      toggleActive.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+      toggleActive.Enabled = false;
+      toggleActive.Name = "toggleActive";
+      toggleActive.Size = new System.Drawing.Size(23, 4);
+      toggleActive.ToolTipText = "Disable this plugin";
+      toggleActive.Click += ToggleActive_Click;
+      //
+      // uninstall
+      //
+      uninstall.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+      uninstall.Enabled = false;
+      uninstall.Name = "uninstall";
+      uninstall.Size = new System.Drawing.Size(23, 4);
+      uninstall.ToolTipText = "Uninstall this plugin";
+      uninstall.Click += Uninstall_Click;
+      //
       // plugins
-      // 
-      plugins.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
-      plugins.BorderStyle = System.Windows.Forms.BorderStyle.None;
-      plugins.FormattingEnabled = true;
-      plugins.IntegralHeight = false;
-      plugins.ItemHeight = 15;
-      plugins.Location = new System.Drawing.Point(0, 28);
-      plugins.Name = "plugins";
-      plugins.Size = new System.Drawing.Size(150, 313);
-      plugins.TabIndex = 0;
-      plugins.SelectedIndexChanged += PluginListBox_SelectedIndexChanged;
-      // 
+      //
+      pluginList.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
+      pluginList.BorderStyle = System.Windows.Forms.BorderStyle.None;
+      pluginList.FormattingEnabled = true;
+      pluginList.IntegralHeight = false;
+      pluginList.ItemHeight = 15;
+      pluginList.Location = new System.Drawing.Point(0, 28);
+      pluginList.Name = "plugins";
+      pluginList.Size = new System.Drawing.Size(150, 313);
+      pluginList.TabIndex = 0;
+      pluginList.SelectedIndexChanged += PluginListBox_SelectedIndexChanged;
+      //
       // metadata
-      // 
+      //
       metadata.ColumnCount = 3;
       metadata.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
       metadata.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
@@ -113,9 +163,9 @@ namespace Dumper.Plugins {
       metadata.Size = new System.Drawing.Size(381, 341);
       metadata.TabIndex = 0;
       metadata.Visible = false;
-      // 
+      //
       // name
-      // 
+      //
       name.AutoSize = true;
       name.ForeColor = System.Drawing.SystemColors.GrayText;
       name.Location = new System.Drawing.Point(15, 8);
@@ -123,9 +173,9 @@ namespace Dumper.Plugins {
       name.Size = new System.Drawing.Size(42, 15);
       name.TabIndex = 0;
       name.Text = "Name:";
-      // 
+      //
       // nameValue
-      // 
+      //
       metadata.SetColumnSpan(nameValue, 2);
       nameValue.Dock = System.Windows.Forms.DockStyle.Fill;
       nameValue.Location = new System.Drawing.Point(80, 8);
@@ -133,9 +183,9 @@ namespace Dumper.Plugins {
       nameValue.Size = new System.Drawing.Size(286, 15);
       nameValue.TabIndex = 1;
       nameValue.Text = "Flex-Texture Viewer";
-      // 
+      //
       // version
-      // 
+      //
       version.AutoSize = true;
       version.ForeColor = System.Drawing.SystemColors.GrayText;
       version.Location = new System.Drawing.Point(15, 23);
@@ -143,9 +193,9 @@ namespace Dumper.Plugins {
       version.Size = new System.Drawing.Size(48, 15);
       version.TabIndex = 2;
       version.Text = "Version:";
-      // 
+      //
       // versionValue
-      // 
+      //
       metadata.SetColumnSpan(versionValue, 2);
       versionValue.Dock = System.Windows.Forms.DockStyle.Fill;
       versionValue.Location = new System.Drawing.Point(80, 23);
@@ -153,9 +203,9 @@ namespace Dumper.Plugins {
       versionValue.Size = new System.Drawing.Size(286, 15);
       versionValue.TabIndex = 3;
       versionValue.Text = "v0.1.0";
-      // 
+      //
       // fileTypes
-      // 
+      //
       fileTypes.AutoSize = true;
       fileTypes.ForeColor = System.Drawing.SystemColors.GrayText;
       fileTypes.Location = new System.Drawing.Point(15, 38);
@@ -163,9 +213,9 @@ namespace Dumper.Plugins {
       fileTypes.Size = new System.Drawing.Size(59, 15);
       fileTypes.TabIndex = 4;
       fileTypes.Text = "File types:";
-      // 
+      //
       // fileTypesValue
-      // 
+      //
       metadata.SetColumnSpan(fileTypesValue, 2);
       fileTypesValue.Dock = System.Windows.Forms.DockStyle.Fill;
       fileTypesValue.Location = new System.Drawing.Point(80, 38);
@@ -173,9 +223,9 @@ namespace Dumper.Plugins {
       fileTypesValue.Size = new System.Drawing.Size(286, 15);
       fileTypesValue.TabIndex = 5;
       fileTypesValue.Text = "*.ftx";
-      // 
+      //
       // location
-      // 
+      //
       location.AutoSize = true;
       location.ForeColor = System.Drawing.SystemColors.GrayText;
       location.Location = new System.Drawing.Point(15, 53);
@@ -183,20 +233,23 @@ namespace Dumper.Plugins {
       location.Size = new System.Drawing.Size(34, 15);
       location.TabIndex = 6;
       location.Text = "Path:";
-      // 
+      //
       // locationValue
-      // 
+      //
       metadata.SetColumnSpan(locationValue, 2);
       locationValue.Dock = System.Windows.Forms.DockStyle.Fill;
+      locationValue.Ellipsis = "...";
       locationValue.Location = new System.Drawing.Point(15, 68);
       locationValue.Name = "locationValue";
+      locationValue.PreserveRatio = 0.3F;
       locationValue.Size = new System.Drawing.Size(270, 31);
+      locationValue.SmartBreak = true;
       locationValue.TabIndex = 7;
       locationValue.Text = "C:\\OpenRCT3\\Plugins\\Dumper\\ftx-viewer.wasm";
       locationValue.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-      // 
+      //
       // closeButton
-      // 
+      //
       closeButton.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right;
       closeButton.DialogResult = System.Windows.Forms.DialogResult.Cancel;
       closeButton.Location = new System.Drawing.Point(291, 307);
@@ -205,21 +258,9 @@ namespace Dumper.Plugins {
       closeButton.TabIndex = 1;
       closeButton.Text = "Close";
       closeButton.UseVisualStyleBackColor = true;
-      // 
-      // emptyLabel
-      // 
-      emptyLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-      emptyLabel.ForeColor = System.Drawing.SystemColors.GrayText;
-      emptyLabel.Location = new System.Drawing.Point(0, 0);
-      emptyLabel.Name = "emptyLabel";
-      emptyLabel.Size = new System.Drawing.Size(381, 341);
-      emptyLabel.TabIndex = 1;
-      emptyLabel.Text = "No plugins installed.";
-      emptyLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-      emptyLabel.Visible = false;
-      // 
+      //
       // openFolder
-      // 
+      //
       openFolder.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
       openFolder.AutoSize = true;
       openFolder.Location = new System.Drawing.Point(340, 71);
@@ -229,9 +270,21 @@ namespace Dumper.Plugins {
       openFolder.Text = "…";
       toolTip.SetToolTip(openFolder, "Open the folder containing  this plugin");
       openFolder.UseVisualStyleBackColor = true;
-      // 
+      //
+      // emptyLabel
+      //
+      emptyLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+      emptyLabel.ForeColor = System.Drawing.SystemColors.GrayText;
+      emptyLabel.Location = new System.Drawing.Point(0, 0);
+      emptyLabel.Name = "emptyLabel";
+      emptyLabel.Size = new System.Drawing.Size(381, 341);
+      emptyLabel.TabIndex = 1;
+      emptyLabel.Text = "No plugins installed.";
+      emptyLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+      emptyLabel.Visible = false;
+      //
       // PluginsDialog
-      // 
+      //
       AcceptButton = closeButton;
       AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
       AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -250,6 +303,8 @@ namespace Dumper.Plugins {
       splitView.Panel2.ResumeLayout(false);
       ((System.ComponentModel.ISupportInitialize)splitView).EndInit();
       splitView.ResumeLayout(false);
+      toolStrip.ResumeLayout(false);
+      toolStrip.PerformLayout();
       metadata.ResumeLayout(false);
       metadata.PerformLayout();
       ResumeLayout(false);
@@ -258,7 +313,7 @@ namespace Dumper.Plugins {
     #endregion
 
     private System.Windows.Forms.SplitContainer splitView;
-    private System.Windows.Forms.ListBox plugins;
+    private System.Windows.Forms.ListBox pluginList;
     private System.Windows.Forms.TableLayoutPanel metadata;
     private System.Windows.Forms.Label name;
     private System.Windows.Forms.Label nameValue;
@@ -271,6 +326,11 @@ namespace Dumper.Plugins {
     private System.Windows.Forms.Label emptyLabel;
     private System.Windows.Forms.Button closeButton;
     private System.Windows.Forms.ToolStrip toolStrip;
+    private System.Windows.Forms.ToolStripSplitButton install;
+    private System.Windows.Forms.ToolStripMenuItem installFromCatalog;
+    private System.Windows.Forms.ToolStripMenuItem installFromDisk;
+    private System.Windows.Forms.ToolStripButton toggleActive;
+    private System.Windows.Forms.ToolStripButton uninstall;
     private System.Windows.Forms.Button openFolder;
     private System.Windows.Forms.ToolTip toolTip;
   }
