@@ -46,7 +46,7 @@ function base64Encode(data: Uint8Array): string {
 export function render(): i32 {
   const data = Host.input();
   if (data.length < 20) {
-    Host.outputString("<p class='error'>Invalid flexi-texture data: too short.</p>");
+    Host.outputString("<div class='ftx-viewer'><p class='empty'>No texture data.</p></div>");
     return 0;
   }
 
@@ -59,12 +59,12 @@ export function render(): i32 {
   let offset = 20;
   let palette = new Uint8Array(0);
   if (hasPalette) {
-    if (data.length < offset + 768) {
+    if (data.length < offset + 1024) {
       Host.outputString("<p class='error'>Invalid flexi-texture data: missing palette.</p>");
       return 0;
     }
-    palette = data.slice(offset, offset + 768);
-    offset += 768;
+    palette = data.slice(offset, offset + 1024);
+    offset += 1024;
   }
 
   const pixelCount = i32(width * height);

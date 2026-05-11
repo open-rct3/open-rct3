@@ -7,7 +7,8 @@
       "WebFetch(domain:dylibso.com)",
       "WebFetch(domain:docs.wasmtime.dev)",
       "Bash(dotnet build *)",
-      "Bash(dotnet clean *)"
+      "Bash(dotnet clean *)",
+      "Bash(deno test *)"
     ]
   }
 }
