@@ -12,14 +12,14 @@
     <AssemblyName>OVL Dumper</AssemblyName>
     <!-- Display name -->
     <ApplicationTitle>OVL Dumper</ApplicationTitle>
-    <Company>OpenRCT3 Contributors</Company>
-    <Copyright>Copyright © 2024 OpenRCT3 Contributors. All rights reserved.</Copyright>
+    <Company>OpenRCT3</Company>
+    <Copyright>Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.</Copyright>
     <!-- App ID -->
     <ApplicationId>me.chancesnow.rct3.dumper</ApplicationId>
     <ApplicationIdGuid>81da2b98-244c-454d-9a84-31541eff0ffd</ApplicationIdGuid>
     <!-- Versions -->
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
-    <ApplicationVersion>1</ApplicationVersion>
+    <Version>0.1.0</Version>
     <!-- Icon -->
     <ApplicationIcon>Dumper.ico</ApplicationIcon>
   </PropertyGroup>
@@ -64,6 +64,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
@@ -95,5 +100,11 @@
   </ItemGroup>
   <ItemGroup>
     <Using Include="System.Diagnostics" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
 </Project>

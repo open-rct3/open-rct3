@@ -283,7 +283,8 @@ namespace Dumper
       progressBar.Visible = false;
       // 
       // openDialog
-      // 
+      //
+      openDialog.AddToRecent = true;
       openDialog.Filter = "OVL Archives|*.ovl";
       openDialog.OkRequiresInteraction = true;
       openDialog.ShowHiddenFiles = true;

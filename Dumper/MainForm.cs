@@ -6,6 +6,7 @@
 // Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
 using System.Security;
 using Dumper.Plugins;
+using Dumper.Properties;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 using Rop.Winforms8.DuotoneIcons;
@@ -29,6 +30,9 @@ public partial class MainForm : Form {
     InitializeComponent();
     InitializeComponentIcons();
 
+    Settings.Default.Reload();
+    // TODO: Add user's RCT3 dir
+    // openDialog.CustomPlaces.Add(InstallFinder.Find());
     TryLoadPlugins();
   }
 
@@ -46,13 +50,17 @@ public partial class MainForm : Form {
   }
 
   private async Task OpenOvl() {
-    switch (openDialog.ShowDialog()) {
-      case DialogResult.OK:
-        this.Cursor = Cursors.WaitCursor;
-        LoadOvl(await Task.Run(() => Ovl.Open(openDialog.FileName)));
-        this.Cursor = Cursors.Default;
-        break;
-    }
+    openDialog.InitialDirectory = Settings.Default.LastOvlOpened != null
+      ? Directory.GetParent(Settings.Default.LastOvlOpened)?.FullName ?? ""
+      : "";
+    if (openDialog.ShowDialog() != DialogResult.OK) return;
+
+    this.Cursor = Cursors.WaitCursor;
+    LoadOvl(await Task.Run(() => Ovl.Open(openDialog.FileName)));
+    this.Cursor = Cursors.Default;
+
+    Settings.Default.LastOvlOpened = openDialog.FileName;
+    Settings.Default.Save();
   }
 
   private void LoadOvl(Ovl ovl) {
@@ -283,11 +291,11 @@ public partial class MainForm : Form {
   }
 
   private static string Pluralize(string word) {
-    if (word.EndsWith("y"))
-      return word[..^1] + "ies";
-    if (word.EndsWith("s") || word.EndsWith("x") || word.EndsWith("z") || word.EndsWith("ch") || word.EndsWith("sh"))
-      return word + "es";
-    return word + "s";
+    if (word.EndsWith('y'))
+      return $"{word[..^1]}ies";
+    if (word.EndsWith('s') || word.EndsWith('x') || word.EndsWith('z') || word.EndsWith("ch") || word.EndsWith("sh"))
+      return $"{word}es";
+    return $"{word}s";
   }
 
   private static bool IsDuplicateGroup(string text) {
@@ -299,21 +307,16 @@ public partial class MainForm : Form {
     if (treeView.ImageList != null) return;
 
     var icons = IconRepository.GetEmbeddedIcons<MaterialDesignIcons>();
-    var color = new DuoToneColor(
-      System.Drawing.Color.FromArgb(64, 64, 64), System.Drawing.Color.FromArgb(185, 185, 185));
-    var folderColor = new DuoToneColor(
-      System.Drawing.Color.FromArgb(200, 162, 23), System.Drawing.Color.FromArgb(200, 162, 23));
-
     var imageList = new ImageList { ImageSize = IconSize };
 
     // Add folder icon for file group nodes
-    imageList.Images.Add("FolderOpen", Icons.Render(icons, "FolderOpen", folderColor)!);
+    imageList.Images.Add("FolderOpen", Icons.Render(icons, "FolderOpen", Icons.Folder)!);
 
     // Add icons for each file type, skipping unknown icon names
     foreach (var fileType in Enum.GetValues<FileType>()) {
       var iconName = fileType.ToIconName();
       if (!imageList.Images.ContainsKey(iconName)) {
-        var bmp = Icons.Render(icons, iconName, color);
+        var bmp = Icons.Render(icons, iconName);
         if (bmp != null)
           imageList.Images.Add(iconName, bmp);
       }
@@ -490,17 +493,24 @@ public partial class MainForm : Form {
       return;
     }
 
+    var fileTypeName = fileType.Value.ToDisplayName();
     var ext = fileType.Value.ToTagString();
     using var saveDialog = new SaveFileDialog {
-      Title = "Export Resource",
+      Title = $"Export {fileTypeName}",
       FileName = $"{node.Text}.{ext}",
-      Filter = $"{fileType.Value.ToDisplayName()} (*.{ext})|*.{ext}|All Files (*.*)|*.*",
+      Filter = $"{fileTypeName} (*.{ext})|*.{ext}|All Files (*.*)|*.*",
       DefaultExt = ext,
     };
+    saveDialog.InitialDirectory = Settings.Default.LastDocumentExported != null
+      ? Directory.GetParent(Settings.Default.LastDocumentExported)?.FullName ?? ""
+      : "";
     if (saveDialog.ShowDialog(this) != DialogResult.OK) return;
 
     try {
       await File.WriteAllBytesAsync(saveDialog.FileName, data);
+
+      Settings.Default.LastDocumentExported = saveDialog.FileName;
+      Settings.Default.Save();
     } catch (Exception ex) {
       MessageBox.Show($"Failed to export file:\n{ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }

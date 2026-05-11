@@ -19,6 +19,7 @@ obj/
 **/bin/Debug/**/*.app
 **/bin/Debug/**/*.msCoverage*
 **/bin/Debug/**/Coverlet*
+**/bin/Debug/*/*.config
 **/bin/Debug/**/createdump
 **/bin/Debug/*/*.deps.json
 **/bin/Debug/*/*.runtimeconfig.json
