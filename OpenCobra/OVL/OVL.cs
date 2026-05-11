@@ -4,18 +4,12 @@
 //  - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Numerics;
-using System.IO;
 using System.Text;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Drawing;
 
 namespace OpenCobra.OVL;
 
@@ -329,12 +323,12 @@ public record struct OvlLoaderEntry {
 /// <remarks>Mirrors the per-type state in <c>cOVLDump</c> (<c>m_header</c>, <c>m_fileblocks</c>, <c>m_relocations</c>, etc.).</remarks>
 internal class OvlFileData {
   public OvlHeader Header;
-  public LoaderHeader[] LoaderHeaders = Array.Empty<LoaderHeader>();
+  public LoaderHeader[] LoaderHeaders = [];
   public FileBlockEntry[] FileBlocks = new FileBlockEntry[9];
   /// <summary>Raw data for each of the 9 blocks' sub-blocks [blockIndex][subBlockIndex].</summary>
   public byte[][][] FileBlockData = new byte[9][][];
-  public uint[] Relocations = Array.Empty<uint>();
-  public long ReloOffset;
+  public uint[] Relocations = [];
+  public long RelocationOffset;
   public string FilePath = string.Empty;
 }
 
@@ -363,20 +357,17 @@ public record struct LoaderHeader {
   public int symbolCountOrder;
 }
 
-public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyChanging {
+public class Ovl(string fileName) : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyChanging {
   public const string UnnamedOvl = "Unnamed OVL";
 
-  private string description;
-  private ObservableCollection<string> references = new();
-  private ObservableCollection<EffectPoint> effectPoints = new();
-  private ObservableCollection<Mesh> meshes = new();
-  private ObservableCollection<FlexiTextureInfo> flexiTextureItems = new();
+  private string description = Path.GetFileName(fileName);
+  private readonly ObservableCollection<string> references = [];
 
   /// <summary>The nine file blocks common to all OVL archives.</summary>
   public readonly File[] Files = new File[9];
 
   public event PropertyChangingEventHandler? PropertyChanging;
-  public string FileName { get; }
+  public string FileName { get; } = fileName;
   public string Description {
     get => description;
     set {
@@ -384,23 +375,21 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
       description = value;
     }
   }
-  public OvlType Type { get; }
+  public OvlType Type { get; } = Path.GetFileName(fileName)?.ToLower().EndsWith(".common.ovl") ?? true ? OvlType.Common : OvlType.Unique;
 
-  // --- Paired archive state (populated by Load) ---
+  // Paired archives
   private OvlFileData? commonData;
   private OvlFileData? uniqueData;
-  private long uniqueReloBase;
+  private long uniqueRelocationBase;
 
-  private readonly List<OvlRelocation> allRelocations = new();
-  private readonly List<string> allStrings = new();
-  private readonly List<OvlSymbol> allSymbols = new();
-  private readonly List<OvlLoaderEntry> allLoaderEntries = new();
+  private readonly List<OvlRelocation> allRelocations = [];
+  private readonly List<string> allStrings = [];
+  private readonly List<OvlSymbol> allSymbols = [];
+  private readonly List<OvlLoaderEntry> allLoaderEntries = [];
   private readonly Dictionary<string, Dictionary<string, uint>> structureMap = new(StringComparer.OrdinalIgnoreCase);
 
-  // --- Public properties ---
-
   /// <summary>Loader headers from the common file (or the single file for non-paired reads).</summary>
-  public LoaderHeader[] LoaderHeaders { get; private set; } = Array.Empty<LoaderHeader>();
+  public LoaderHeader[] LoaderHeaders { get; private set; } = [];
   /// <summary>OVL archive dependency references.</summary>
   public IReadOnlyList<string> References => references;
   /// <summary>Resolved relocation entries across both common and unique files.</summary>
@@ -424,7 +413,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
   public byte[]? GetResourceBytes(OvlLoaderEntry entry) {
     if (!ResolveAddress(entry.DataAddress, out _, out var fileIndex, out var subBlockIndex, out var offset))
       return null;
-    var data = entry.DataAddress >= uniqueReloBase && uniqueData != null ? uniqueData : commonData;
+    var data = entry.DataAddress >= uniqueRelocationBase && uniqueData != null ? uniqueData : commonData;
     if (data == null) return null;
     var subBlocks = data.FileBlockData[fileIndex];
     if (subBlockIndex >= subBlocks.Length) return null;
@@ -432,29 +421,19 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     return block.AsSpan((int) offset).ToArray();
   }
 
-  // --- Constructors ---
-
-  public Ovl(string fileName, OvlType type = OvlType.Common) {
-    FileName = fileName;
-    description = Path.GetFileName(fileName);
-    Type = Path.GetFileName(fileName)?.ToLower().EndsWith(".common.ovl") ?? true ? OvlType.Common : OvlType.Unique;
-  }
-
-  // --- Static API ---
-
   /// <summary>Open an OVL archive.</summary>
   /// <remarks>
   /// Automatically loads the paired archive when available. For <c>.unique.ovl</c> files,
   /// loads the paired <c>.common.ovl</c> if available. Single-file archives are read and
-  /// post-processed directly.
+  /// processed directly.
   /// </remarks>
   public static Ovl Open(string filePath) {
     if (filePath.ToLower().EndsWith(".common.ovl") && System.IO.File.Exists(filePath)) {
-      var uniquePath = filePath.Substring(0, filePath.Length - ".common.ovl".Length) + ".unique.ovl";
+      var uniquePath = filePath[..^".common.ovl".Length] + ".unique.ovl";
       if (System.IO.File.Exists(uniquePath))
         return Load(filePath);
     } else if (filePath.ToLower().EndsWith(".unique.ovl") && System.IO.File.Exists(filePath)) {
-      var commonPath = filePath.Substring(0, filePath.Length - ".unique.ovl".Length) + ".common.ovl";
+      var commonPath = filePath[..^".unique.ovl".Length] + ".common.ovl";
       if (System.IO.File.Exists(commonPath))
         return Load(commonPath);
     }
@@ -462,10 +441,10 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     return Read(System.IO.File.Open(filePath, FileMode.Open), filePath);
   }
 
-  /// <summary>Load a paired common/unique OVL archive with full post-processing.</summary>
+  /// <summary>Load a paired common/unique OVL archive.</summary>
   /// <remarks>Mirrors <c>cOVLDump::Load</c> in <c>OVLDump.cpp</c>.</remarks>
   public static Ovl Load(string commonPath) {
-    var uniquePath = commonPath.Substring(0, commonPath.Length - ".common.ovl".Length) + ".unique.ovl";
+    var uniquePath = commonPath[..^".common.ovl".Length] + ".unique.ovl";
     Debug.Assert(System.IO.File.Exists(commonPath), $"Common OVL not found: {commonPath}");
     Debug.Assert(System.IO.File.Exists(uniquePath), $"Paired unique OVL not found: {uniquePath}");
 
@@ -476,7 +455,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     var commonOvl = Read(System.IO.File.Open(commonPath, FileMode.Open, FileAccess.Read), commonPath);
     ovl.commonData = commonOvl.commonData;
 
-    ovl.uniqueReloBase = ovl.commonData!.ReloOffset;
+    ovl.uniqueRelocationBase = ovl.commonData!.RelocationOffset;
     var uniqueOvl = Read(System.IO.File.Open(uniquePath, FileMode.Open, FileAccess.Read), uniquePath);
     ovl.uniqueData = uniqueOvl.commonData;
 
@@ -529,7 +508,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     }
 
     var ovl = new Ovl(filePath);
-    var data = new OvlFileData { FilePath = filePath, ReloOffset = 0 };
+    var data = new OvlFileData { FilePath = filePath, RelocationOffset = 0 };
 
     // Header
     // Mirrors: m_header[type] = *reinterpret_cast<OvlHeader*>(c_data);
@@ -615,7 +594,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     for (var i = 0; i < 9; i++) {
       ref var block = ref fileBlocks[i];
       block.Count = reader.ReadUInt32();
-      block.SubBlockSizes = block.Count > 0 ? new uint[block.Count] : Array.Empty<uint>();
+      block.SubBlockSizes = block.Count > 0 ? new uint[block.Count] : [];
 
       if (data.Header.version > 1) {
         block.UnknownV45 = reader.ReadUInt32();
@@ -644,12 +623,12 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     // Read block data
     // Mirrors the "'Read' Data" loop in cOVLDump::ReadFile
     Debug.Assert(stream.Position <= fileSize, "Unexpected EOF before block data!");
-    var reloOffset = data.ReloOffset;
+    var reloOffset = data.RelocationOffset;
     for (var i = 0; i < 9; i++) {
       ref var block = ref fileBlocks[i];
       block.RelOffset = (uint) reloOffset;
 
-      var subBlockData = block.Count > 0 ? new byte[block.Count][] : Array.Empty<byte[]>();
+      var subBlockData = block.Count > 0 ? new byte[block.Count][] : [];
 
       for (var m = 0; m < block.Count; m++) {
         if (stream.Position >= fileSize)
@@ -662,13 +641,13 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
         }
 
         var size = block.SubBlockSizes[m];
-        subBlockData[m] = size > 0 ? reader.ReadBytes((int) size) : Array.Empty<byte>();
+        subBlockData[m] = size > 0 ? reader.ReadBytes((int) size) : [];
         reloOffset += size;
       }
 
       data.FileBlockData[i] = subBlockData;
     }
-    data.ReloOffset = reloOffset;
+    data.RelocationOffset = reloOffset;
     data.FileBlocks = fileBlocks;
 
     // Read relocations
@@ -736,7 +715,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
       entry.TargetAddress = targetAddr;
 
       // Resolve target
-      if (ResolveAddress(targetAddr, out var tgtFileType, out var tgtFile, out var tgtBlock, out var tgtOffset)) {
+      if (ResolveAddress(targetAddr, out var tgtFileType, out var tgtFile, out var tgtBlock, out var _)) {
         entry.TargetFileType = tgtFileType;
         entry.TargetFile = tgtFile;
         entry.TargetBlock = tgtBlock;
@@ -755,7 +734,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     offset = 0;
 
     // Determine file type (common or unique)
-    if (uniqueData != null && address >= uniqueReloBase)
+    if (uniqueData != null && address >= uniqueRelocationBase)
       fileType = OvlType.Unique;
 
     var data = fileType == OvlType.Common ? commonData : uniqueData;
@@ -801,14 +780,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
   private uint CalcVirtualAddress(OvlFileData data, int blockIndex, uint subBlockIndex, int byteOffset) {
     return data.FileBlocks[blockIndex].RelOffset +
       SumSizes(data.FileBlocks[blockIndex], subBlockIndex) +
-      (uint) byteOffset;
-  }
-
-  private static uint SumSizes(FileBlockEntry block, uint upToSubBlock) {
-    uint sum = 0;
-    for (uint i = 0; i < upToSubBlock && i < block.SubBlockSizes.Length; i++)
-      sum += block.SubBlockSizes[i];
-    return sum;
+      (uint)byteOffset;
   }
 
   /// <summary>Parse the string table from block 0, sub-block 0.</summary>
@@ -891,7 +863,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     // The string table entries are symbol names in "name:tag" format.
     // For v5, loader headers' symbolCount fields determine per-type counts.
     // For v4, strings are assigned sequentially to loader entries.
-    Dictionary<uint, Queue<string>> symbolNamesByType = new();
+    Dictionary<uint, Queue<string>> symbolNamesByType = [];
     if (data.Header.version >= 4) {
       var symNames = new List<string>();
       var block0Data = data.FileBlockData[0];
@@ -930,7 +902,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
         var entriesByType = new Dictionary<uint, List<int>>();
         for (var l = 0; l < lodCount; l++) {
           var lt = BitConverter.ToUInt32(loaderData, l * structSize);
-          if (!entriesByType.ContainsKey(lt)) entriesByType[lt] = new List<int>();
+          if (!entriesByType.ContainsKey(lt)) entriesByType[lt] = [];
           entriesByType[lt].Add(l);
         }
         // Match string counts to entry counts per type
@@ -1010,7 +982,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
   /// <remarks>
   /// The <c>symAddr</c> is the resolved target address of the <see cref="LoaderStruct.Sym"/> field,
   /// <summary>Resolve a virtual address to a null-terminated string in block 0, sub-block 0.</summary>
-  private string? ResolveStringFromAddress(OvlFileData data, uint address) {
+  private static string? ResolveStringFromAddress(OvlFileData data, uint address) {
     if (address == 0) return null;
 
     // The address points into block 0, sub-block 0 (string table)
@@ -1030,13 +1002,10 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     return Encoding.ASCII.GetString(strData, offset, end - offset);
   }
 
-  public void Dispose() {
-    // Stream lifecycle is managed by Read() which owns and closes streams.
-  }
+  // Stream lifecycle is managed by Read() which owns and closes streams.
+  public void Dispose() => GC.SuppressFinalize(this);
 
-  public override int GetHashCode() {
-    return Files.GetHashCode();
-  }
+  public override int GetHashCode() => Files.GetHashCode();
 
   public int CompareTo(Ovl? other) {
     if (other == null) return 1;
@@ -1044,9 +1013,7 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
     return GetHashCode().CompareTo(other.GetHashCode());
   }
 
-  public object Clone() {
-    throw new NotImplementedException();
-  }
+  public object Clone() => throw new NotImplementedException();
 }
 
 /// <summary>Extension methods for reading binary structures from streams.</summary>
