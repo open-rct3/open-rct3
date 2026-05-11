@@ -25,19 +25,25 @@ sealed partial class ContentPanelHeader : TableLayoutPanel {
   }
 
   /// <summary>Set the header to show the given viewer's name and populate the dropdown.</summary>
-  public void SetViewers(IViewerPlugin active, IEnumerable<IViewerPlugin> allViewers) {
+  public void SetViewers(IViewerPlugin plugin, IEnumerable<IViewerPlugin> allViewers) {
     viewerCombo.SelectedIndexChanged -= ViewerCombo_SelectedIndexChanged;
 
-    nameLabel.Text = $"{active.Name} v{active.Version}";
+    nameLabel.Text = plugin.Name;
     viewerCombo.Items.Clear();
 
     foreach (var viewer in allViewers) {
       var idx = viewerCombo.Items.Add(new ViewerComboItem(viewer));
-      if (viewer == active)
+      if (viewer == plugin)
         viewerCombo.SelectedIndex = idx;
     }
 
     viewerCombo.Enabled = allViewers.Count() > 1;
+    // Ensure combo box is wide enough for each viewer name
+    using var g = CreateGraphics();
+    viewerCombo.Width = allViewers.Aggregate(125, (acc, plugin) => {
+      var width = Math.Max(g.MeasureString(plugin.Name, DefaultFont).Width + 20, acc);
+      return Convert.ToInt32(Math.Round(width, MidpointRounding.AwayFromZero));
+    });
     viewerCombo.SelectedIndexChanged += ViewerCombo_SelectedIndexChanged;
   }
 
