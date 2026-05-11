@@ -4,12 +4,13 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
+using System.Security;
 using Dumper.Plugins;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 using Rop.Winforms8.DuotoneIcons;
 using Rop.Winforms8.DuotoneIcons.MaterialDesign;
-using System.Security;
+using File = System.IO.File;
 
 namespace Dumper;
 
@@ -459,7 +460,7 @@ public partial class MainForm : Form {
 
     // --- Export ---
     var export = new ToolStripMenuItem("Export");
-    export.Click += (_, _) => throw new NotImplementedException("Export is not yet implemented.");
+    export.Click += Export_Click;
     menu.Items.Add(export);
 
     menu.Items.Add(new ToolStripSeparator());
@@ -475,6 +476,34 @@ public partial class MainForm : Form {
     menu.Items.Add(properties);
 
     menu.Show(treeView, e.Location);
+  }
+
+  private async void Export_Click(object? sender, EventArgs e) {
+    var node = treeView.SelectedNode;
+    var fileType = node.Tag as FileType?;
+    if (node == null || fileType == null) return;
+    if (currentOvl == null || !_nodeEntries.TryGetValue(node, out var entry)) return;
+
+    var data = currentOvl.GetResourceBytes(entry);
+    if (data == null) {
+      MessageBox.Show("Failed to read resource data.", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      return;
+    }
+
+    var ext = fileType.Value.ToTagString();
+    using var saveDialog = new SaveFileDialog {
+      Title = "Export Resource",
+      FileName = $"{node.Text}.{ext}",
+      Filter = $"{fileType.Value.ToDisplayName()} (*.{ext})|*.{ext}|All Files (*.*)|*.*",
+      DefaultExt = ext,
+    };
+    if (saveDialog.ShowDialog(this) != DialogResult.OK) return;
+
+    try {
+      await File.WriteAllBytesAsync(saveDialog.FileName, data);
+    } catch (Exception ex) {
+      MessageBox.Show($"Failed to export file:\n{ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
   }
 
   private void Splitter_MouseDoubleClick(object? sender, MouseEventArgs e) {

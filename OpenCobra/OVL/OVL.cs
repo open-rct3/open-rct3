@@ -949,15 +949,9 @@ public class Ovl : IComparable<Ovl>, ICloneable, IDisposable, INotifyPropertyCha
       if (offset + structSize > loaderData.Length) break;
 
       var loaderType = BitConverter.ToUInt32(loaderData, offset);
-      // v5 has an extra 4-byte field at offset 4, shifting Data and Sym by 4 bytes
-      var dataOffset = data.Header.version == 5 ? 8 : 4;
-      var dataAddr = BitConverter.ToUInt32(loaderData, offset + dataOffset);
-      var hasExtraDataRaw = data.Header.version == 5
-        ? BitConverter.ToUInt32(loaderData, offset + 12)
-        : BitConverter.ToUInt32(loaderData, offset + 8);
-      var symbolsToResolve = data.Header.version == 5
-        ? 0u
-        : BitConverter.ToUInt32(loaderData, offset + 16);
+      var dataAddr = BitConverter.ToUInt32(loaderData, offset + 4);
+      var hasExtraDataRaw = BitConverter.ToUInt32(loaderData, offset + 8);
+      var symbolsToResolve = BitConverter.ToUInt32(loaderData, offset + 16);
 
       var loaderTypeName = loaderType < data.LoaderHeaders.Length
         ? data.LoaderHeaders[loaderType].name
