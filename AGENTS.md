@@ -17,9 +17,10 @@
 
   Don't investigate when the root cause is clear from the code and error message.
 
-#### C#
+### C#
 
 - Prefer `var` declarations over those with explicit types
+- Use `Convert.*` instead of raw number casts
 - Prefer single-line clauses with `foreach` and `if` statements, e.g.
   `if (!File.Exists(ConfigPath)) return new AppConfig();`
   - If the line is longer than 90 characters, wrap simple clauses like this:
