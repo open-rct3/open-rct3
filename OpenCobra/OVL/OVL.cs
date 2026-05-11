@@ -19,9 +19,6 @@ public record OvlFile(string Name, FileType Type) {
 /// <summary>Location and size of a resource within the OVL archive.</summary>
 public record OvlEntry(long Offset, uint Size);
 
-/// <summary>OVL file variant.</summary>
-public enum OvlType { Common, Unique }
-
 internal record LoaderHeader(string Loader, string Name, uint Type, string Tag, uint SymbolCount);
 
 internal class FileBlock {
