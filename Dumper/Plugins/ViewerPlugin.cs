@@ -77,8 +77,10 @@ sealed class ViewerPlugin : IViewerPlugin {
       try {
         return Encoding.UTF8.GetString(instance.Call("render", data));
       } catch (ExtismException ex) {
-        return $"<div style='color:#c00;font-family:sans-serif;padding:16px'>" +
-               $"<b>Plugin error:</b> {System.Net.WebUtility.HtmlEncode(ex.Message)}</div>";
+        var msg = ex.Message.Contains("fuel", StringComparison.InvariantCultureIgnoreCase)
+          ? "Plugin ran out of fuel."
+          : System.Net.WebUtility.HtmlEncode(ex.Message);
+        return $"<div style='color:#c00;font-family:sans-serif'><b>Plugin error:</b> {msg}</div>";
       }
     }
   }
