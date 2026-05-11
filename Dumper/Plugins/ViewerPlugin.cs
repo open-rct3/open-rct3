@@ -11,10 +11,10 @@ namespace Dumper.Plugins;
 /// <summary>An Extism WASM viewer plugin loaded from a .wasm file.</summary>
 sealed class ViewerPlugin : IViewerPlugin {
   private static readonly TimeSpan ScriptTimeout = TimeSpan.FromMilliseconds(500);
-  private const int MaxPages = 16;
+  private const int MaxPages = 64;
   private const int MaxHttpPayload = 5120; // 5MB
-  // TODO: Profile existing plugins to determine fuel limit
-  private const long FuelLimit = 1_000_000;
+  // Continually profile existing plugins to determine fuel limit
+  private const long FuelLimit = 100_000_000;
 
   private readonly CompiledPlugin plugin;
   private Plugin instance;
