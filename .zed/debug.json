@@ -14,6 +14,20 @@
     }
   },
   {
+    "label": "Debug Dumper",
+    "adapter": "netcoredbg",
+    "request": "launch",
+    "program": "$ZED_WORKTREE_ROOT/Dumper/bin/Debug/net8.0-windows/Dumper.exe",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "env": {
+      "ENVIRONMENT": "Development"
+    },
+    "build": {
+      "command": "dotnet",
+      "args": ["build", "$ZED_WORKTREE_ROOT/Dumper/Dumper.csproj"]
+    }
+  },
+  {
     "label": "Debug OVL Test Bench",
     "adapter": "netcoredbg",
     "request": "launch",
