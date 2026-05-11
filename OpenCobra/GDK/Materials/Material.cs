@@ -4,9 +4,12 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved
+using SixLabors.ImageSharp.PixelFormats;
 using System.ComponentModel;
 
 namespace OpenCobra.GDK.Materials;
+
+using Texture = Texture<Rgba32>;
 
 public class Material {
   [Category("Appearance")]

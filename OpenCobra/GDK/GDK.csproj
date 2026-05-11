@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -7,18 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Analyzers\Analyzers.csproj"
-        OutputItemType="Analyzer"
-        ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Analyzers\Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OVL\OVL.csproj" />
-    <ProjectReference Include="..\Textures\Textures.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Drawing.Common" Version="10.0.5" />
     <PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
   </ItemGroup>
 </Project>

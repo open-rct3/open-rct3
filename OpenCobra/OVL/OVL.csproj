@@ -17,6 +17,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.14" />
     <PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.10" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
 </Project>

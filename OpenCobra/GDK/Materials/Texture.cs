@@ -5,11 +5,12 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.ComponentModel;
-using System.Drawing.Imaging;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.GDK.Materials;
 
-public class Texture(string name, PixelFormat format) : IDisposable {
+public class Texture<PixelFormat>(string name) : IDisposable
+  where PixelFormat : struct, IPixel {
   private bool _disposed;
 
   [Category("Design")]
@@ -19,9 +20,7 @@ public class Texture(string name, PixelFormat format) : IDisposable {
   [Category("Appearance")]
   public int Height { get; init; }
   [Category("Appearance")]
-  public PixelFormat Format { get; private set; } = format;
-  [Category("Appearance")]
-  public byte[] Pixels { get; init; } = [];
+  public PixelFormat[] Pixels { get; init; } = [];
   [Category("Appearance")]
   public bool HasAlpha { get; init; }
 

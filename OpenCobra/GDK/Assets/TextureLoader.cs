@@ -7,9 +7,11 @@
 using OpenCobra.GDK.Materials;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
-using OpenCobra.Textures;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.GDK.Assets;
+
+using Texture = Texture<Rgba32>;
 
 public class TextureLoader {
   public static Texture? LoadTexture(string ovlPath, string? name = null) {
@@ -107,11 +109,11 @@ public class TextureLoader {
   private static Texture ConvertFlexiToGdkTexture(string name, FlexiTextureData flexi) {
     var width = (int)flexi.width;
     var height = (int)flexi.height;
-    var pixels = new byte[width * height * 4];
+    var pixels = new Rgba32[width * height * 4];
 
     PaletteConverter.ConvertIndexedToRgba(flexi.texture, width, height, flexi.palette, flexi.alpha, pixels);
 
-    return new Texture(name, System.Drawing.Imaging.PixelFormat.Format32bppArgb) {
+    return new(name) {
       Width = width,
       Height = height,
       Pixels = pixels,

@@ -77,12 +77,12 @@ public class TruncatedLabelTests {
     label.Text = original;
     string result2 = label.Text;
 
-    Assert.Multiple(() => {
+    using (Assert.EnterMultipleScope()) {
       Assert.That(result2, Is.Not.Null);
       Assert.That(result2, Has.Length.GreaterThanOrEqualTo(result1.Length), "Higher ratio should preserve more text");
       Assert.That(result1, Does.Contain("Button.tsx"), "Must preserve filename at 0.2 ratio");
       Assert.That(result2, Does.Contain("Button.tsx"), "Must preserve filename at 0.4 ratio");
-    });
+    }
   }
 
   [Test]
@@ -99,10 +99,10 @@ public class TruncatedLabelTests {
     label.Text = original;
     string resultDumb = label.Text;
 
-    Assert.Multiple(() => {
+    using (Assert.EnterMultipleScope()) {
       Assert.That(resultSmart, Does.Contain("app.exe"), "Smart break must preserve filename");
       Assert.That(resultDumb, Does.Contain("app.exe"), "Dumb break must still preserve filename");
-    });
+    }
   }
 
   [Test]
@@ -147,11 +147,11 @@ public class TruncatedLabelTests {
     label.Text = original;
     string result = label.Text;
 
-    Assert.Multiple(() => {
-      Assert.That(result, Does.Contain("poster-design-final-FINAL-v3-revised-2024-01-15.psd"), "Must preserve filename");
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(result, Does.EndWith("poster-design-final-FINAL-v3-revised-2024-01-15.psd"), "Must preserve filename");
       Assert.That(result, Does.Contain("..."), "Must contain ellipsis when truncated");
       Assert.That(result, Has.Length.LessThan(original.Length), "Result must be shorter than original");
-    });
+    }
   }
 
   [Test]
@@ -175,13 +175,13 @@ public class TruncatedLabelTests {
     label.Text = path;
     string result = label.Text;
 
-    Assert.Multiple(() => {
+    using (Assert.EnterMultipleScope()) {
       Assert.That(result, Is.Not.Empty, "Result should not be empty");
       Assert.That(result, Does.EndWith(path[(path.LastIndexOf('/') > path.LastIndexOf('\\')
           ? path.LastIndexOf('/') + 1
           : Math.Max(0, path.LastIndexOf('\\') + 1))..]).Or.Contain("..."),
           "Result should preserve the final component or contain ellipsis");
-    });
+    }
   }
 
   [Test]
@@ -203,7 +203,7 @@ public class TruncatedLabelTests {
     label.Width = 800;
     string resultLarge = label.Text;
 
-    Assert.That(resultLarge.Length, Is.GreaterThanOrEqualTo(resultSmall.Length),
+    Assert.That(resultLarge, Has.Length.GreaterThanOrEqualTo(resultSmall.Length),
         "Larger width should allow more text to display");
   }
 
