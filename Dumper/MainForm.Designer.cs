@@ -362,6 +362,7 @@ namespace Dumper
       contentPanel.Name = "contentPanel";
       contentPanel.Size = new System.Drawing.Size(405, 315);
       contentPanel.TabIndex = 1;
+      contentPanel.Visible = false;
       // 
       // MainForm
       // 

@@ -40,7 +40,9 @@ public partial class MainForm : Form {
     base.OnShown(e);
 
     // Initialize web view after the form is shown (requires message loop)
-    _ = contentPanel.InitializeAsync();
+    _ = contentPanel.InitializeAsync().ContinueWith(async (_) =>
+      Invoke(() => contentPanel.Visible = true)
+    );
   }
 
   protected override void OnFormClosed(FormClosedEventArgs e) {
