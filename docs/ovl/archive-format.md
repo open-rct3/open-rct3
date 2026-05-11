@@ -1,7 +1,6 @@
 # OVL Archive Format
 
-The OVL format is an archive used by the Cobra engine (RollerCoaster Tycoon 3, Elite Dangerous, etc.) to store game
-resources.
+The OVL format is an archive used by the Cobra engine to store game resources.
 
 OVL archives often come in **pairs**:
 
@@ -67,15 +66,17 @@ If version is 5, a table follows the loader headers mapping loaders to symbol co
 
 ### 4. Block Definitions
 
-OVL data is organized into up to 10 types of blocks (Type 0 to Type 9).
+OVL data is organized into up to 9 types of blocks.
 
-For each type (0-9):
+For each type (0-8):
 
 - `count` (u32): Number of blocks of this type.
 - If `version > 1`:
   - `unknown` (u32)
-  - If `version == 5` and `subVersionFlag != 0`: `extra` (u32)
+- If `version == 5` and `subVersionFlag != 0`: `extra` (u32)
   - `sizes` (count * u32): The size of each individual block.
+
+For v1, sizes are stored inline with the data section, not here.
 
 ### 5. Post-Block Metadata
 
@@ -100,15 +101,27 @@ The data for all blocks defined in section 4, stored sequentially.
 
 A list of addresses within the archive's relative offset space that contain pointers which must be patched/resolved.
 
-- `relocCount` (u32)
-- `offsets` (relocCount * u32): Relative offsets where 32-bit pointers are located.
+- `count` (u32)
+- `offsets` (count * u32): Relative offsets where 32-bit pointers are located.
 
 #### Relocation Resolution
 
-Crudially, a unified address space among the common and unique files is created. When a relocation address is processed,
-the system determines its origin file (common or unique) and the specific block within that file to correctly translate
-relative addresses. Data structures map these relative addresses to actual file offsets, effectively combining the data
-from both files into a single address space.
+Crucially, a unified address space among the common and unique files is created.
+
+When resolving a relocation address, the system first determines which file it belongs to by comparing it against the
+relative offset of the unique file's first block type: addresses below that threshold are in the common file, at or
+above are in the unique file. This threshold works because the common file is always loaded _first_ where the relative
+offset starts at zero, and the unique file's offset accumulate from where the common file left off. Once the file is
+determined, the address is resolved via a two-level search:
+
+1. The block type (0–8) is found by scanning block type relative offsets for the last one less-than-or-equal to the
+  address, then
+2. The specific block instance within that type is found by checking which instance's range
+  (`[relative offset, relative offset + size)`) contains the address.
+
+The final pointer is computed as `block.data + (relocation - block's relative offset)`.
+
+Source: [`cOVLDump::ResolveRelocation`](https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/src/libOVLDump/OVLDump.cpp#L484)
 
 ---
 
@@ -123,21 +136,20 @@ Each symbol is 12 bytes:
 | Offset | Type  | Description                                  |
 | :----- | :---- | :------------------------------------------- |
 | 0x00   | `u32` | `namePtr`: Relative offset to resource name. |
-| 0x04   | `u32` | `isPointer`: Flag.                           |
-| 0x08   | `u32` | `dataPtr`: Relative offset to data.          |
+| 0x04   | `u32` | `dataPtr`: Relative offset to data.          |
+| 0x08   | `u32` | `isPointer`: Flag.                           |
 
 ### Symbol Structure (v4/v5)
 
-Each symbol is 24 bytes:
+Each symbol is 16 bytes:
 
 | Offset | Type  | Description                                                                          |
 | :----- | :---- | :----------------------------------------------------------------------------------- |
 | 0x00   | `u32` | `namePtr`: Relative offset to resource name in Type 0 block                          |
-| 0x04   | `u32` | `loaderIdx`: Index into the [Loader Metadata](#loader-metadata-v4-and-v5-only) table |
-| 0x08   | `u32` | `dataPtr`: Relative offset to the actual resource data                               |
-| 0x0C   | `u32` | `isPointer`: Flag indicating if dataPtr is a pointer or immediate value              |
-| 0x10   | `u32` | `unknown`                                                                            |
-| 0x14   | `u32` | `hash` / `size`: Often contains a hash or the size of the resource                   |
+| 0x04   | `u32` | `dataPtr`: Relative offset to the actual resource data                               |
+| 0x08   | `u16` | `isPointer`: Flag indicating if dataPtr is a pointer or immediate value              |
+| 0xOA   | `u16` | `unknown`                                                                            |
+| 0x0C   | `u32` | `hash` / `size`: Often contains a hash or the size of the resource                   |
 
 ## Sources
 
