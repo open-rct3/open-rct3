@@ -51,7 +51,7 @@ static class EmptyView {
   }
 
   private static string CaptureSystemColors() {
-    var ci = CultureInfo.InvariantCulture;
+    var invariantCulture = CultureInfo.InvariantCulture;
 
     var window = ToCss(SystemColors.Window);
     var windowText = ToCss(SystemColors.WindowText);
@@ -76,16 +76,16 @@ static class EmptyView {
 
     var font = SystemFonts.DefaultFont;
     var fontName = font.FontFamily.Name;
-    var fontSizePt = font.SizeInPoints.ToString("0.#", ci);
-    var fontSizeDdu = (font.SizeInPoints / 72.0 * 96.0).ToString("0.#", ci);
+    var fontSizePt = font.SizeInPoints.ToString("0.#", invariantCulture);
+    var fontSizeDdu = (font.SizeInPoints / 72.0 * 96.0).ToString("0.#", invariantCulture);
 
     var labelFont = SystemFonts.DefaultFont;
-    var fontSizeMinDdu = (labelFont.SizeInPoints / 72.0 * 96.0).ToString("0.#", ci);
+    var fontSizeMinDdu = (labelFont.SizeInPoints / 72.0 * 96.0).ToString("0.#", invariantCulture);
 
     var dlu = font.SizeInPoints / 72.0 * 96.0 / 8.0 * 6.0;
-    var padOuter = (7 * dlu).ToString("0", ci);
-    var padInner = (4 * dlu).ToString("0", ci);
-    var padHalf = (2 * dlu).ToString("0", ci);
+    var padOuter = (0.5 * dlu).ToString("0", invariantCulture);
+    var padInner = (0.25 * dlu).ToString("0", invariantCulture);
+    var padHalf = (2 * dlu).ToString("0", invariantCulture);
 
     return $@":root {{
   --sys-window: {window};

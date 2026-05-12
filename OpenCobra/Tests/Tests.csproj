@@ -10,6 +10,14 @@
       <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 
+    <Choose>
+      <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
+        <PropertyGroup>
+          <DefineConstants>$(DefineConstants);MACOS;OSX</DefineConstants>
+        </PropertyGroup>
+      </When>
+    </Choose>
+
     <ItemGroup>
       <Compile Remove="TestRunner\**" />
       <Compile Remove="Integration\**" />

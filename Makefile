@@ -48,6 +48,10 @@ test: test-plugins
 	deno task check:plugins
 	dotnet test
 
+.PHONY: test-ovl
+test-ovl:
+	dotnet test OpenCobra/Tests/Tests.csproj /p:SolutionDir=$(CURDIR)/
+
 .PHONY: test-plugins
 test-plugins:
 # FIXME: This doesn't work on macOS

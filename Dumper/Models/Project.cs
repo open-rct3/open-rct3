@@ -5,12 +5,9 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
@@ -22,9 +19,9 @@ namespace Dumper.Models;
 public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChanged, INotifyPropertyChanging, IObservable<Ovl>, ISerializable {
   public const string UnnamedProject = "New Project";
   private string name = UnnamedProject;
-  private readonly ObservableCollection<Ovl> archives = new();
-  private readonly ObservableCollection<long> archiveHashes = new();
-  private readonly List<IDisposable> subscriptions = new();
+  private readonly ObservableCollection<Ovl> archives = [];
+  private readonly ObservableCollection<long> archiveHashes = [];
+  private readonly List<IDisposable> subscriptions = [];
 
   public event PropertyChangingEventHandler? PropertyChanging;
   public event PropertyChangedEventHandler? PropertyChanged;
@@ -41,13 +38,9 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
   }
   IReadOnlyCollection<Ovl> Archives => archives.AsReadOnly();
 
-  public Project() {
-    subscriptions.Add(
-      archives.ToObservable().Subscribe(ovl => {
-        archiveHashes[archives.IndexOf(ovl)] = ovl.GetHashCode();
-      })
-    );
-  }
+  public Project() => subscriptions.Add(
+    archives.ToObservable().Subscribe(ovl => archiveHashes[archives.IndexOf(ovl)] = ovl.GetHashCode())
+  );
 
   public void Dispose() {
     subscriptions.ForEach(x => x.Dispose());
@@ -57,20 +50,14 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
   /// <summary>
   /// Listen for changes to this project's collection of OVL archives.
   /// </summary>
-  public IDisposable Subscribe(IObserver<Ovl> observer) {
-    return archives.ToObservable()
-      .CombineLatest(archiveHashes.ToObservable(), (archive, hash) => archive)
-      .Subscribe(observer);
-  }
+  public IDisposable Subscribe(IObserver<Ovl> observer) => archives.ToObservable()
+    .CombineLatest(archiveHashes.ToObservable(), (archive, hash) => archive)
+    .Subscribe(observer);
 
-  #region ICollection<Ovl> Members
-  public IEnumerator<Ovl> GetEnumerator() {
-    return archives.GetEnumerator();
-  }
+  #region ICollection<Archive> Members
+  public IEnumerator<Ovl> GetEnumerator() => archives.GetEnumerator();
 
-  IEnumerator IEnumerable.GetEnumerator() {
-    return ((IEnumerable) archives).GetEnumerator();
-  }
+  IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)archives).GetEnumerator();
 
   public void Add(Ovl item) {
     OnPropertyChanging(nameof(Archives));
@@ -84,13 +71,9 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
     archiveHashes.Clear();
   }
 
-  public bool Contains(Ovl item) {
-    return archives.Contains(item);
-  }
+  public bool Contains(Ovl item) => archives.Contains(item);
 
-  public void CopyTo(Ovl[] array, int arrayIndex) {
-    archives.CopyTo(array, arrayIndex);
-  }
+  public void CopyTo(Ovl[] array, int arrayIndex) => archives.CopyTo(array, arrayIndex);
 
   public bool Remove(Ovl item) {
     OnPropertyChanging(nameof(Archives));
@@ -105,18 +88,16 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
   /// </summary>
   public int Count => archives.Count;
 
-  public bool IsReadOnly => ((ICollection<Ovl>) archives).IsReadOnly;
+  public bool IsReadOnly => (archives as ICollection<Ovl>)?.IsReadOnly ?? true;
   #endregion
 
   #region INotifyPropertyChanged Members
 
-  private void OnPropertyChanging([CallerMemberName] string? propertyName = null) {
+  private void OnPropertyChanging([CallerMemberName] string? propertyName = null) =>
     PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(propertyName));
-  }
 
-  private void OnPropertyChanged([CallerMemberName] string? propertyName = null) {
+  private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-  }
 
   private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null) {
     if (EqualityComparer<T>.Default.Equals(field, value)) return false;
@@ -128,6 +109,6 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
 
   public void GetObjectData(SerializationInfo info, StreamingContext context) {
     info.AddValue("name", Name);
-    info.AddValue("archives", Archives.Select(x => x.FileName));
+    info.AddValue("archives", Archives.Select(x => x.Keys));
   }
 }

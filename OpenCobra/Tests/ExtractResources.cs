@@ -6,7 +6,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using DotNetEnv;
 using OpenCobra.OVL;
-using File = System.IO.File;
+using OpenCobra.OVL.Files;
 
 namespace OVL.Tests;
 
@@ -21,36 +21,48 @@ public class ExtractResources {
   }
 
   [Test]
-  public void GetResourceBytes_NullbmpFtx_ReturnsBitmapData() {
+  public void Load_NullbmpFtx_ExtractsFlexibleTexture() {
     var rct3 = Rct3Path();
     if (rct3 == null)
-      Assert.Ignore("RCT3_PATH environment variable not set — skipping integration test");
+      Assert.Ignore("Cannot find RCT3. Skipping integration test.");
 
     var commonPath = Path.Combine(rct3, "nullbmp.common.ovl");
     Assert.That(File.Exists(commonPath), Is.True, $"nullbmp.common.ovl not found at: {commonPath}");
 
-    var ovl = Ovl.Load(commonPath);
+    var resources = Ovl.Load(commonPath);
+    Assert.That(resources, Is.Not.Empty, "No resources found in nullbmp.common.ovl");
 
-    var entry = ovl.LoaderEntries.FirstOrDefault(e => e.Tag == "ftx");
-    Assert.That(entry, Is.Not.Default, "No ftx loader entry found in nullbmp.common.ovl");
+    var ftxEntry = resources.FirstOrDefault(e => e.Key.Type == FileType.FlexibleTexture);
+    Assert.That(ftxEntry, Is.Not.Default, "No FlexibleTexture (ftx) resource found");
 
-    var bytes = ovl.GetResourceBytes(entry);
-    Assert.That(bytes, Is.Not.Null, "GetResourceBytes returned null");
-
+    var bytes = Ovl.ReadResource(resources, ftxEntry.Key);
     var asString = Encoding.ASCII.GetString(bytes, 0, Math.Min(bytes.Length, 16));
     using (Assert.EnterMultipleScope()) {
-      // Must NOT be the symbol name string "nullbmp:ftx"
-      Assert.That(asString, Does.Not.Contain("nullbmp:ftx"),
-          "GetResourceBytes returned the symbol name string instead of bitmap data");
+      // Must NOT be the symbol name string
+      Assert.That(asString, Does.Not.Contain("nullbmp:"),
+          "Load returned the symbol name string instead of texture data");
 
       // FlexiTextureInfoStruct: scale(u32), width(u32), height(u32), ...
       // Valid FTX textures are square powers of two (width == height, both power-of-two)
-      Assert.That(bytes!, Has.Length.GreaterThanOrEqualTo(12), "Too short to contain FTX width/height");
+      Assert.That(bytes, Has.Length.GreaterThanOrEqualTo(12), "Too short to contain FTX width/height");
       var width  = BitConverter.ToUInt32(bytes, 4);
       var height = BitConverter.ToUInt32(bytes, 8);
       Assert.That(width, Is.EqualTo(height), "FTX width and height must be equal (square texture)");
       Assert.That(width == 0 || (width & (width - 1)) == 0,
         $"FTX width {width} is not a power of two");
     }
+  }
+
+  [Test]
+  public void Load_ShapesCommon_HasResources() {
+    var rct3 = Rct3Path();
+    if (rct3 == null)
+      Assert.Ignore("Cannot find RCT3. Skipping integration test.");
+
+    var shapesPath = Path.Combine(rct3, "test", "Shapes.common.ovl");
+    Assert.That(File.Exists(shapesPath), Is.True, $"Shapes.common.ovl not found at: {shapesPath}");
+
+    var resources = Ovl.Load(shapesPath);
+    Assert.That(resources, Is.Not.Empty, "No resources found in Shapes.common.ovl");
   }
 }

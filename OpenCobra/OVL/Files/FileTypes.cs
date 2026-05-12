@@ -74,191 +74,178 @@ public enum FileType : ushort {
 /// <summary>Extension methods for working with <see cref="FileType"/>.</summary>
 public static class FileTypeExtensions {
   /// <summary>Convert an OVL file type tag string (e.g. <c>"tex"</c>) to the corresponding <see cref="FileType"/>.</summary>
-  public static FileType ToFileType(this string extension) {
-    switch (extension) {
-      case "txt": return FileType.Text;
-      case "int": return FileType.Integer;
-      case "tex": return FileType.Texture;
-      case "flic": return FileType.Flic;
-      case "ftx": return FileType.FlexibleTexture;
-      case "flt": return FileType.FlexibleTexture;
-      case "gsi": return FileType.GuiSkinItem;
-      case "sid": return FileType.SceneryItem;
-      case "btbl": return FileType.BitmapTable;
-      case "anr": return FileType.AnimatedRide;
-      case "ban": return FileType.BoneAnim;
-      case "bsh": return FileType.BoneShape;
-      case "ced": return FileType.CarriedItemExtra;
-      case "chg": return FileType.ChangingRoom;
-      case "cid": return FileType.CarriedItem;
-      case "mam": return FileType.ManifoldMesh;
-      case "ptd": return FileType.PathType;
-      case "qtd": return FileType.QueueType;
-      case "ric": return FileType.RideCar;
-      case "rit": return FileType.RideTrain;
-      case "sat": return FileType.SpecialAttraction;
-      case "shs": return FileType.StaticShape;
-      case "snd": return FileType.Sound;
-      case "spl": return FileType.Spline;
-      case "sta": return FileType.Stall;
-      case "svd": return FileType.SceneryItemVisual;
-      case "ter": return FileType.TerrainType;
-      case "tks": return FileType.TrackSection;
-      case "trr": return FileType.TrackedRide;
-      case "wai": return FileType.WildAnimalItem;
-      default: return FileType.Unknown;
-    }
-  }
+  public static FileType ToFileType(this string extension) => extension switch {
+    "txt" => FileType.Text,
+    "int" => FileType.Integer,
+    "tex" => FileType.Texture,
+    "flic" => FileType.Flic,
+    "ftx" => FileType.FlexibleTexture,
+    "flt" => FileType.FlexibleTexture,
+    "gsi" => FileType.GuiSkinItem,
+    "sid" => FileType.SceneryItem,
+    "btbl" => FileType.BitmapTable,
+    "anr" => FileType.AnimatedRide,
+    "ban" => FileType.BoneAnim,
+    "bsh" => FileType.BoneShape,
+    "ced" => FileType.CarriedItemExtra,
+    "chg" => FileType.ChangingRoom,
+    "cid" => FileType.CarriedItem,
+    "mam" => FileType.ManifoldMesh,
+    "ptd" => FileType.PathType,
+    "qtd" => FileType.QueueType,
+    "ric" => FileType.RideCar,
+    "rit" => FileType.RideTrain,
+    "sat" => FileType.SpecialAttraction,
+    "shs" => FileType.StaticShape,
+    "snd" => FileType.Sound,
+    "spl" => FileType.Spline,
+    "sta" => FileType.Stall,
+    "svd" => FileType.SceneryItemVisual,
+    "ter" => FileType.TerrainType,
+    "tks" => FileType.TrackSection,
+    "trr" => FileType.TrackedRide,
+    "wai" => FileType.WildAnimalItem,
+    _ => FileType.Unknown,
+  };
 
-  public static string ToString(this FileType type) {
-    return $"{type.ToDisplayName()} ({type.ToTagString()})";
-  }
+  public static string ToString(this FileType type) =>
+    $"{type.ToDisplayName()} ({type.ToTagString()})";
 
   /// <summary>Convert a <see cref="FileType"/> to its OVL file type tag string (e.g. <see cref="FileType.Texture"/> → <c>"tex"</c>).</summary>
-  public static string ToTagString(this FileType type)
+  public static string ToTagString(this FileType type, bool asExtension = false)
   {
-    switch (type)
-    {
-      case FileType.Text: return "txt";
-      case FileType.Integer: return "int";
-      case FileType.Texture: return "tex";
-      case FileType.Flic: return "flic";
-      case FileType.FlexibleTexture: return "ftx";
-      case FileType.GuiSkinItem: return "gsi";
-      case FileType.SceneryItem: return "sid";
-      case FileType.BitmapTable: return "btbl";
-      case FileType.AnimatedRide: return "anr";
-      case FileType.BoneAnim: return "ban";
-      case FileType.BoneShape: return "bsh";
-      case FileType.CarriedItemExtra: return "ced";
-      case FileType.ChangingRoom: return "chg";
-      case FileType.CarriedItem: return "cid";
-      case FileType.ManifoldMesh: return "mam";
-      case FileType.PathType: return "ptd";
-      case FileType.QueueType: return "qtd";
-      case FileType.RideCar: return "ric";
-      case FileType.RideTrain: return "rit";
-      case FileType.SpecialAttraction: return "sat";
-      case FileType.StaticShape: return "shs";
-      case FileType.Sound: return "snd";
-      case FileType.Spline: return "spl";
-      case FileType.Stall: return "sta";
-      case FileType.SceneryItemVisual: return "svd";
-      case FileType.TerrainType: return "ter";
-      case FileType.TrackSection: return "tks";
-      case FileType.TrackedRide: return "trr";
-      case FileType.WildAnimalItem: return "wai";
-      default: return "";
-    }
+    var tag = type switch {
+      FileType.Text => "txt",
+      FileType.Integer => "int",
+      FileType.Texture => "tex",
+      FileType.Flic => "flic",
+      FileType.FlexibleTexture => "ftx",
+      FileType.GuiSkinItem => "gsi",
+      FileType.SceneryItem => "sid",
+      FileType.BitmapTable => "btbl",
+      FileType.AnimatedRide => "anr",
+      FileType.BoneAnim => "ban",
+      FileType.BoneShape => "bsh",
+      FileType.CarriedItemExtra => "ced",
+      FileType.ChangingRoom => "chg",
+      FileType.CarriedItem => "cid",
+      FileType.ManifoldMesh => "mam",
+      FileType.PathType => "ptd",
+      FileType.QueueType => "qtd",
+      FileType.RideCar => "ric",
+      FileType.RideTrain => "rit",
+      FileType.SpecialAttraction => "sat",
+      FileType.StaticShape => "shs",
+      FileType.Sound => "snd",
+      FileType.Spline => "spl",
+      FileType.Stall => "sta",
+      FileType.SceneryItemVisual => "svd",
+      FileType.TerrainType => "ter",
+      FileType.TrackSection => "tks",
+      FileType.TrackedRide => "trr",
+      FileType.WildAnimalItem => "wai",
+      _ => "",
+    };
+
+    return asExtension
+      ? new string([.. tag.Prepend('.')]) ?? tag
+      : tag;
   }
 
   /// <summary>Returns a human-readable display name for the given <see cref="FileType"/>.</summary>
-  public static string ToDisplayName(this FileType type) {
-    switch (type) {
-      case FileType.Unknown: return "Unknown";
-      case FileType.Text: return "Text";
-      case FileType.Integer: return "Integer Number";
-      case FileType.Texture: return "2D Texture";
-      case FileType.Flic: return "Compressed 2D Image";
-      case FileType.FlexibleTexture: return "Flexi-Texture";
-      case FileType.GuiSkinItem: return "GUI Skin Item";
-      case FileType.SceneryItem: return "Scenery Item";
-      case FileType.BitmapTable: return "Bitmap Table";
-      case FileType.AnimatedRide: return "Animated Ride";
-      case FileType.BoneAnim: return "Bone Animation";
-      case FileType.BoneShape: return "Bone Shape";
-      case FileType.CarriedItemExtra: return "Carried Item Extra";
-      case FileType.ChangingRoom: return "Changing Room";
-      case FileType.CarriedItem: return "Carried Item";
-      case FileType.ManifoldMesh: return "Manifold Mesh";
-      case FileType.PathType: return "Path Type";
-      case FileType.QueueType: return "Queue Type";
-      case FileType.RideCar: return "Ride Car";
-      case FileType.RideTrain: return "Ride Train";
-      case FileType.SpecialAttraction: return "Special Attraction";
-      case FileType.StaticShape: return "Static Shape";
-      case FileType.Sound: return "Sound";
-      case FileType.Spline: return "Spline";
-      case FileType.Stall: return "Stall";
-      case FileType.SceneryItemVisual: return "Scenery Item Visual";
-      case FileType.TerrainType: return "Terrain Type";
-      case FileType.TrackSection: return "Track Section";
-      case FileType.TrackedRide: return "Tracked Ride";
-      case FileType.WildAnimalItem: return "Wild Animal Item";
-      default: return "Unknown";
-    }
-  }
+  public static string ToDisplayName(this FileType type) => type switch {
+    FileType.Unknown => "Unknown",
+    FileType.Text => "Text",
+    FileType.Integer => "Integer Number",
+    FileType.Texture => "2D Texture",
+    FileType.Flic => "Compressed 2D Image",
+    FileType.FlexibleTexture => "Flexi-Texture",
+    FileType.GuiSkinItem => "GUI Skin Item",
+    FileType.SceneryItem => "Scenery Item",
+    FileType.BitmapTable => "Bitmap Table",
+    FileType.AnimatedRide => "Animated Ride",
+    FileType.BoneAnim => "Bone Animation",
+    FileType.BoneShape => "Bone Shape",
+    FileType.CarriedItemExtra => "Carried Item Extra",
+    FileType.ChangingRoom => "Changing Room",
+    FileType.CarriedItem => "Carried Item",
+    FileType.ManifoldMesh => "Manifold Mesh",
+    FileType.PathType => "Path Type",
+    FileType.QueueType => "Queue Type",
+    FileType.RideCar => "Ride Car",
+    FileType.RideTrain => "Ride Train",
+    FileType.SpecialAttraction => "Special Attraction",
+    FileType.StaticShape => "Static Shape",
+    FileType.Sound => "Sound",
+    FileType.Spline => "Spline",
+    FileType.Stall => "Stall",
+    FileType.SceneryItemVisual => "Scenery Item Visual",
+    FileType.TerrainType => "Terrain Type",
+    FileType.TrackSection => "Track Section",
+    FileType.TrackedRide => "Tracked Ride",
+    FileType.WildAnimalItem => "Wild Animal Item",
+    _ => "Unknown",
+  };
 
   /// <summary>Returns a Material Design icon name for the given <see cref="FileType"/>.</summary>
-  public static string ToIconName(this FileType type) {
-    switch (type) {
-      case FileType.Unknown: return "FileQuestion";
-      case FileType.Text: return "TextBoxOutline";
-      case FileType.Integer: return "Numeric";
-      case FileType.Texture: return "Image";
-      case FileType.Flic: return "Filmstrip";
-      case FileType.FlexibleTexture: return "Panorama";
-      case FileType.GuiSkinItem: return "PaletteOutline";
-      case FileType.SceneryItem: return "Tree";
-      case FileType.BitmapTable: return "ImageMultiple";
-      case FileType.AnimatedRide: return "HorseVariant";
-      case FileType.BoneAnim: return "Bone";
-      case FileType.BoneShape: return "Bone";
-      case FileType.CarriedItemExtra: return "BagPersonalOutline";
-      case FileType.ChangingRoom: return "Door";
-      case FileType.CarriedItem: return "BagPersonalOutline";
-      case FileType.ManifoldMesh: return "CubeOutline";
-      case FileType.PathType: return "Routes";
-      case FileType.QueueType: return "Routes";
-      case FileType.RideCar: return "CarSide";
-      case FileType.RideTrain: return "Train";
-      case FileType.SpecialAttraction: return "FerrisWheel";
-      case FileType.StaticShape: return "ShapeOutline";
-      case FileType.Sound: return "VolumeHigh";
-      case FileType.Spline: return "VectorPolyline";
-      case FileType.Stall: return "StorefrontOutline";
-      case FileType.SceneryItemVisual: return "Tree";
-      case FileType.TerrainType: return "TextureBox";
-      case FileType.TrackSection: return "Train";
-      case FileType.TrackedRide: return "Train";
-      case FileType.WildAnimalItem: return "Paw";
-      default: return "FileQuestion";
-    }
-  }
+  public static string ToIconName(this FileType type) => type switch {
+    FileType.Unknown => "FileQuestion",
+    FileType.Text => "TextBoxOutline",
+    FileType.Integer => "Numeric",
+    FileType.Texture => "Image",
+    FileType.Flic => "Filmstrip",
+    FileType.FlexibleTexture => "Panorama",
+    FileType.GuiSkinItem => "PaletteOutline",
+    FileType.SceneryItem => "Tree",
+    FileType.BitmapTable => "ImageMultiple",
+    FileType.AnimatedRide => "HorseVariant",
+    FileType.BoneAnim => "Bone",
+    FileType.BoneShape => "Bone",
+    FileType.CarriedItemExtra => "BagPersonalOutline",
+    FileType.ChangingRoom => "Door",
+    FileType.CarriedItem => "BagPersonalOutline",
+    FileType.ManifoldMesh => "CubeOutline",
+    FileType.PathType => "Routes",
+    FileType.QueueType => "Routes",
+    FileType.RideCar => "CarSide",
+    FileType.RideTrain => "Train",
+    FileType.SpecialAttraction => "FerrisWheel",
+    FileType.StaticShape => "ShapeOutline",
+    FileType.Sound => "VolumeHigh",
+    FileType.Spline => "VectorPolyline",
+    FileType.Stall => "StorefrontOutline",
+    FileType.SceneryItemVisual => "Tree",
+    FileType.TerrainType => "TextureBox",
+    FileType.TrackSection => "Train",
+    FileType.TrackedRide => "Train",
+    FileType.WildAnimalItem => "Paw",
+    _ => "FileQuestion",
+  };
 
   /// <summary>Returns a Material Design icon name suitable for a group of the given <see cref="FileType"/>.</summary>
-  public static string ToGroupIconName(this FileType type) {
-    switch (type) {
-      case FileType.Texture: return "ImageMultiple";
-      case FileType.Flic: return "VideoMultiple";
-      case FileType.Text: return "TextBoxMultipleOutline";
-      case FileType.SceneryItem:
-      case FileType.SceneryItemVisual: return "ForestOutline";
-      case FileType.ManifoldMesh:
-      case FileType.StaticShape: return "ViewGridOutline";
-      case FileType.Sound: return "SpeakerMultiple";
-      case FileType.CarriedItem:
-      case FileType.CarriedItemExtra: return "BagPersonalMultipleOutline";
-      case FileType.BoneAnim:
-      case FileType.BoneShape: return "Bone";
-      case FileType.RideCar:
-      case FileType.RideTrain:
-      case FileType.TrackedRide: return "TrainCar";
-      case FileType.AnimatedRide: return "HorseVariant";
-      case FileType.BitmapTable: return "ImageMultiple";
-      case FileType.FlexibleTexture: return "Panorama";
-      case FileType.GuiSkinItem: return "PaletteMultiple";
-      case FileType.PathType:
-      case FileType.QueueType: return "SignDirectionMultiple";
-      case FileType.Spline: return "VectorPolyline";
-      case FileType.TerrainType: return "TextureBox";
-      case FileType.TrackSection: return "TrainCar";
-      case FileType.SpecialAttraction: return "FerrisWheel";
-      case FileType.Stall: return "StorefrontMultiple";
-      case FileType.WildAnimalItem: return "Paw";
-      case FileType.ChangingRoom: return "Door";
-      case FileType.Integer: return "Numeric";
-      default: return "FileMultipleOutline";
-    }
-  }
+  public static string ToGroupIconName(this FileType type) => type switch {
+    FileType.Texture => "ImageMultiple",
+    FileType.Flic => "VideoMultiple",
+    FileType.Text => "TextBoxMultipleOutline",
+    FileType.SceneryItem or FileType.SceneryItemVisual => "ForestOutline",
+    FileType.ManifoldMesh or FileType.StaticShape => "ViewGridOutline",
+    FileType.Sound => "SpeakerMultiple",
+    FileType.CarriedItem or FileType.CarriedItemExtra => "BagPersonalMultipleOutline",
+    FileType.BoneAnim or FileType.BoneShape => "Bone",
+    FileType.RideCar or FileType.RideTrain or FileType.TrackedRide => "TrainCar",
+    FileType.AnimatedRide => "HorseVariant",
+    FileType.BitmapTable => "ImageMultiple",
+    FileType.FlexibleTexture => "Panorama",
+    FileType.GuiSkinItem => "PaletteMultiple",
+    FileType.PathType or FileType.QueueType => "SignDirectionMultiple",
+    FileType.Spline => "VectorPolyline",
+    FileType.TerrainType => "TextureBox",
+    FileType.TrackSection => "TrainCar",
+    FileType.SpecialAttraction => "FerrisWheel",
+    FileType.Stall => "StorefrontMultiple",
+    FileType.WildAnimalItem => "Paw",
+    FileType.ChangingRoom => "Door",
+    FileType.Integer => "Numeric",
+    _ => "FileMultipleOutline",
+  };
 }

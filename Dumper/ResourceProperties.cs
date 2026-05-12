@@ -10,15 +10,15 @@ namespace Dumper;
 /// <summary>A simple dialog showing properties of an OVL resource entry.</summary>
 sealed partial class ResourceProperties : Form {
 
-  public ResourceProperties(OvlLoaderEntry entry, FileType fileType, bool hasViewer) {
+  public ResourceProperties(OvlFile file, OvlEntry entry, bool hasViewer) {
     InitializeComponent();
 
-    Text = $"{entry.SymbolName} Properties";
-    symbolValue.Text = entry.SymbolName;
-    fileTypeValue.Text = fileType.ToDisplayName();
-    loaderValue.Text = entry.Name;
-    dataAddressValue.Text = $"0x{entry.DataAddress:X8}";
-    sourceFileValue.Text = entry.SourceFile;
+    Text = $@"{file.Name} Properties";
+    symbolValue.Text = file.Name;
+    fileTypeValue.Text = file.Type.ToDisplayName();
+    loaderValue.Text = file.Type.ToTagString();
+    dataAddressValue.Text = $@"0x{entry.Offset:X8}";
+    sourceFileValue.Text = file.Path;
     viewerValue.Text = hasViewer ? "Yes" : "No";
 
     // Position okButton within buttonPanel

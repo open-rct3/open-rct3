@@ -34,13 +34,13 @@ sealed partial class ContentPanel : UserControl {
   }
 
   /// <summary>Show rendered content from a plugin.</summary>
-  public void ShowContent(IEnumerable<IViewerPlugin> viewers, byte[] data) {
+  public void ShowContent(string fileName, IEnumerable<IViewerPlugin> viewers, byte[] data) {
     currentViewers.Clear();
     currentViewers.AddRange(viewers);
     currentData = data;
     activePlugin = currentViewers[0];
 
-    header.SetViewers(activePlugin, viewers);
+    header.SetViewers(fileName, activePlugin, viewers);
     RenderCurrent();
   }
 

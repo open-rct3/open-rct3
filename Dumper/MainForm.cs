@@ -11,19 +11,18 @@ using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 using Rop.Winforms8.DuotoneIcons;
 using Rop.Winforms8.DuotoneIcons.MaterialDesign;
-using File = System.IO.File;
 
 namespace Dumper;
 
 public partial class MainForm : Form {
-  static readonly string ready = "Ready";
-  static readonly string openingArchive = "Opening archive…";
-  static readonly string resourcesFmt = "{0} Resources";
-  static readonly string ovlFmt = "{0} OVLs";
+  readonly static string ready = "Ready";
+  readonly static string openingArchive = "Opening archive…";
+  readonly static string resourcesFmt = "{0} Resources";
+  readonly static string ovlFmt = "{0} OVLs";
 
   private readonly PluginManager pluginManager = new();
   private Ovl? currentOvl;
-  private readonly Dictionary<TreeNode, OvlLoaderEntry> _nodeEntries = [];
+  private readonly Dictionary<TreeNode, OvlFile> _nodeEntries = [];
   private bool suppressSplitterMoved = false;
 
   public MainForm() {
@@ -40,8 +39,13 @@ public partial class MainForm : Form {
     base.OnShown(e);
 
     // Initialize web view after the form is shown (requires message loop)
-    _ = contentPanel.InitializeAsync().ContinueWith(async (_) =>
-      Invoke(() => contentPanel.Visible = true)
+    _ = contentPanel.InitializeAsync().ContinueWith(_ => {
+        try {
+          return Task.FromResult(Invoke(() => contentPanel.Visible = true));
+        } catch (Exception exception)  {
+          return Task.FromException<bool>(exception);
+        }
+      }
     );
   }
 
@@ -52,13 +56,15 @@ public partial class MainForm : Form {
   }
 
   private async Task OpenOvl() {
-    openDialog.InitialDirectory = Settings.Default.LastOvlOpened != null
-      ? Directory.GetParent(Settings.Default.LastOvlOpened)?.FullName ?? ""
+    var lastOvlOpened = Settings.Default.LastOvlOpened;
+    openDialog.InitialDirectory = lastOvlOpened != null
+      ? Directory.GetParent(lastOvlOpened)?.FullName ?? ""
       : "";
+    openDialog.FileName = Path.GetFileName(lastOvlOpened);
     if (openDialog.ShowDialog() != DialogResult.OK) return;
 
     this.Cursor = Cursors.WaitCursor;
-    LoadOvl(await Task.Run(() => Ovl.Open(openDialog.FileName)));
+    LoadOvl(await Task.Run(() => Ovl.Load(openDialog.FileName)));
     this.Cursor = Cursors.Default;
 
     Settings.Default.LastOvlOpened = openDialog.FileName;
@@ -71,7 +77,7 @@ public partial class MainForm : Form {
     contentPanel.ShowEmpty(true);
 
     // Update window title with document name
-    var docName = Path.GetFileName(ovl.FileName);
+    var docName = Path.GetFileName(ovl.Keys.First().Path);
     var lower = docName.ToLower();
     if (lower.EndsWith(".common.ovl"))
       docName = docName[..^".common.ovl".Length];
@@ -81,17 +87,17 @@ public partial class MainForm : Form {
       docName = docName[..^".ovl".Length];
     else
       docName = Ovl.UnnamedOvl;
-    Text = $"OVL Dumper \u2014 {docName}";
+    Text = $@"OVL Dumper — {docName}";
 
     treeView.BeginUpdate();
     treeView.Nodes.Clear();
 
-    if (ovl.LoaderEntries.Count > 0) {
+    if (ovl.Keys.Count > 0) {
       EnsureTreeImageList();
 
       // Group entries by source file, preserving common/unique order
-      var entriesByFile = ovl.LoaderEntries
-        .GroupBy(e => e.SourceFile)
+      var entriesByFile = ovl.Keys
+        .GroupBy(e => e.Path)
         .ToDictionary(g => g.Key, g => g.ToList());
 
       // Determine file order: common first, then unique
@@ -101,10 +107,10 @@ public partial class MainForm : Form {
 
       // For unpaired archives, fall back to the Ovl.FileName
       if (fileNames.Count == 0)
-        fileNames.Add(Path.GetFileName(ovl.FileName));
+        fileNames.Add(Path.GetFileName(ovl.Keys.First().Path));
 
       foreach (var fileName in fileNames) {
-        var fileNode = treeView.Nodes.Add(fileName, fileName);
+        var fileNode = treeView.Nodes.Add(fileName, Path.GetFileName(fileName));
         fileNode.ImageKey = "FolderOpen";
         fileNode.SelectedImageKey = "FolderOpen";
 
@@ -112,25 +118,24 @@ public partial class MainForm : Form {
 
         // Resolve display names and types for all entries
         var resolved = entries.Select(entry => {
-          var loaderFileType = entry.Tag.ToFileType();
           string displayName;
           FileType symbolFileType;
-          var colonIdx = entry.SymbolName.LastIndexOf(':');
+          var colonIdx = entry.Name.LastIndexOf(':');
           if (colonIdx >= 0) {
-            displayName = entry.SymbolName[..colonIdx];
-            symbolFileType = entry.SymbolName[(colonIdx + 1)..].ToFileType();
+            displayName = entry.Name[..colonIdx];
+            symbolFileType = entry.Name[(colonIdx + 1)..].ToFileType();
           } else {
             displayName = entry.Name;
-            symbolFileType = loaderFileType;
+            symbolFileType = entry.Type;
           }
-          return (entry, displayName, loaderFileType, symbolFileType);
+          return (entry, displayName, symbolFileType);
         }).ToList();
 
         // Group numbered animation frames by their base name (strip trailing digits).
         // Groups with multiple entries are animated textures: parent = base name, children = suffixes.
         // Only apply this nesting for textures.
         var frameGroups = resolved
-          .Where(r => (r.loaderFileType == FileType.Texture || r.loaderFileType == FileType.Flic) && EndsWithDigit(r.displayName))
+          .Where(r => (r.symbolFileType == FileType.Texture || r.symbolFileType == FileType.Flic) && EndsWithDigit(r.displayName))
           .GroupBy(r => StripTrailingDigits(r.displayName))
           .Where(g => g.Count() > 1)
           .ToDictionary(g => g.Key, g => g.OrderBy(r => r.displayName).ToList());
@@ -150,24 +155,23 @@ public partial class MainForm : Form {
         var duplicateNames = new HashSet<string>(duplicateGroups.Keys);
 
         // Add animated texture groups
-        foreach (var (entry, displayName, loaderFileType, symbolFileType) in resolved) {
+        foreach (var (entry, displayName, symbolFileType) in resolved) {
           if (groupedNames.Contains(displayName)) {
             var baseName = StripTrailingDigits(displayName);
-            if (!frameGroups.ContainsKey(baseName)) continue;
+            if (!frameGroups.TryGetValue(baseName, out var group)) continue;
 
-            var group = frameGroups[baseName];
             var parentNode = fileNode.Nodes.Add(baseName);
             parentNode.ImageKey = FileType.Flic.ToIconName();
             parentNode.SelectedImageKey = FileType.Flic.ToIconName();
             parentNode.Tag = FileType.Flic;
-            parentNode.ToolTipText = $"Animated texture ({group.Count} frames) \u00b7 Loader: {loaderFileType.ToDisplayName()}";
+            parentNode.ToolTipText = $"Animated texture ({group.Count} frames) \u00b7 Loader: {symbolFileType.ToDisplayName()}";
 
             foreach (var frame in group) {
               var suffix = frame.displayName[baseName.Length..];
               var childNode = parentNode.Nodes.Add(suffix);
               childNode.ImageKey = FileType.Texture.ToIconName();
               childNode.SelectedImageKey = FileType.Texture.ToIconName();
-              childNode.ToolTipText = BuildEntryTooltip(frame.symbolFileType, frame.loaderFileType);
+              childNode.ToolTipText = frame.symbolFileType.ToDisplayName();
               _nodeEntries[childNode] = frame.entry;
             }
 
@@ -178,8 +182,8 @@ public partial class MainForm : Form {
 
         // Add duplicate name groups
         foreach (var (name, group) in duplicateGroups) {
-          var commonType = group.Select(r => r.loaderFileType).Distinct().Count() == 1
-            ? group.First().loaderFileType
+          var commonType = group.Select(r => r.symbolFileType).Distinct().Count() == 1
+            ? group.First().symbolFileType
             : FileType.Unknown;
           var iconKey = commonType == FileType.Unknown
             ? "FileMultipleOutline"
@@ -191,32 +195,32 @@ public partial class MainForm : Form {
           parentNode.Tag = commonType;
           parentNode.ToolTipText = $"{group.Count} entries named \"{name}\"";
 
-          foreach (var (entry, _, loaderFileType, symbolFileType) in group) {
-            var childIconKey = loaderFileType == FileType.Flic
+          foreach (var (entry, _, symbolFileType) in group) {
+            var childIconKey = symbolFileType == FileType.Flic
               ? FileType.Texture.ToIconName()
-              : loaderFileType.ToIconName();
+              : symbolFileType.ToIconName();
             var childNode = parentNode.Nodes.Add(name);
             childNode.ImageKey = childIconKey;
             childNode.SelectedImageKey = childIconKey;
-            childNode.Tag = loaderFileType;
-            childNode.ToolTipText = BuildEntryTooltip(symbolFileType, loaderFileType);
+            childNode.Tag = symbolFileType;
+            childNode.ToolTipText = symbolFileType.ToDisplayName();
             _nodeEntries[childNode] = entry;
           }
         }
 
         // Add non-duplicate, non-animated entries
-        foreach (var (entry, displayName, loaderFileType, symbolFileType) in remainingEntries) {
+        foreach (var (entry, displayName, symbolFileType) in remainingEntries) {
           if (duplicateNames.Contains(displayName)) continue;
 
-          var iconKey = loaderFileType == FileType.Flic
+          var iconKey = symbolFileType == FileType.Flic
             ? FileType.Texture.ToIconName()
-            : loaderFileType.ToIconName();
-          var tooltip = BuildEntryTooltip(symbolFileType, loaderFileType);
+            : symbolFileType.ToIconName();
+          var tooltip = symbolFileType.ToDisplayName();
 
           var node = fileNode.Nodes.Add(displayName);
           node.ImageKey = iconKey;
           node.SelectedImageKey = iconKey;
-          node.Tag = loaderFileType;
+          node.Tag = symbolFileType;
           node.ToolTipText = tooltip;
           _nodeEntries[node] = entry;
         }
@@ -224,12 +228,13 @@ public partial class MainForm : Form {
     } else {
       // Fallback: single root node with loader type descriptors
       EnsureTreeImageList();
-      var root = treeView.Nodes.Add(Path.GetFileName(ovl.FileName), Path.GetFileName(ovl.FileName));
+      var fileName = Path.GetFileName(ovl.Keys.First().Path);
+      var root = treeView.Nodes.Add(fileName, fileName);
       root.ImageKey = "FolderOpen";
       root.SelectedImageKey = "FolderOpen";
-      foreach (var header in ovl.LoaderHeaders) {
-        var fileType = header.tag.ToFileType();
-        var node = root.Nodes.Add(header.name);
+      foreach (var header in ovl.Keys) {
+        var fileType = header.Type;
+        var node = root.Nodes.Add(header.Name);
         node.ImageKey = fileType.ToIconName();
         node.SelectedImageKey = fileType.ToIconName();
         node.Tag = fileType;
@@ -274,14 +279,6 @@ public partial class MainForm : Form {
   private void ClearStatusBarCounts() {
     ovlCountLabel.Text = "";
     resourceCountLabel.Text = "";
-  }
-
-  private static string BuildEntryTooltip(FileType symbolType, FileType loaderType) {
-    if (symbolType == loaderType)
-      return symbolType.ToDisplayName();
-    if (symbolType == FileType.Unknown)
-      return loaderType.ToDisplayName();
-    return $"{symbolType.ToDisplayName()} \u00b7 Loader: {loaderType.ToDisplayName()}";
   }
 
   private static bool EndsWithDigit(string name) => name.Length > 0 && char.IsDigit(name[^1]);
@@ -340,8 +337,10 @@ public partial class MainForm : Form {
 
       // Show a retry offer to the user
       var result = MessageBox.Show(
-        "Could not load plugins.\n\nTry again or continue anyway?",
-        "Error",
+        @"Could not load plugins.
+
+Try again or continue anyway?",
+        @"Error",
         MessageBoxButtons.CancelTryContinue,
         MessageBoxIcon.Error
       );
@@ -395,22 +394,25 @@ public partial class MainForm : Form {
     var fileType = e.Node.Tag as FileType?;
 
     // If this node has a loader entry, show it via the plugin viewer
-    if (_nodeEntries.TryGetValue(e.Node, out var entry) && fileType != null && fileType != FileType.Unknown) {
+    if (_nodeEntries.TryGetValue(e.Node, out var entry) && fileType.HasValue && fileType != FileType.Unknown) {
+      Debug.Assert(fileType.HasValue);
+      var fileName = $"{e.Node.Text}{fileType.Value.ToTagString(asExtension: true)}";
       var tag = fileType.Value.ToTagString();
+
       var viewers = pluginManager.GetViewers(tag);
       if (viewers.Count == 0) {
         contentPanel.ShowNoViewer(fileType.Value);
         return;
       }
 
-      var data = currentOvl.GetResourceBytes(entry);
+      var data = currentOvl.ReadResource(entry);
       if (data == null) {
         contentPanel.ShowEmpty(currentOvl != null);
-        MessageBox.Show("Failed to load selected resource.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBox.Show(@"Failed to load selected resource.", @"Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         return;
       }
 
-      contentPanel.ShowContent(viewers, data);
+      contentPanel.ShowContent(fileName, viewers, data);
     } else {
       // Group node or no entry, show empty
       contentPanel.ShowEmpty(currentOvl != null);
@@ -418,15 +420,18 @@ public partial class MainForm : Form {
   }
 
   private void OvlTree_NodeMouseClick(object? sender, TreeNodeMouseClickEventArgs e) {
-    if (e.Button != MouseButtons.Right || e.Node == null) return;
+    if (e.Button != MouseButtons.Right) return;
 
     // Only show context menu on leaf nodes with a known file type and loader entry
     var fileType = e.Node.Tag as FileType?;
     if (fileType == null || fileType == FileType.Unknown || !_nodeEntries.ContainsKey(e.Node)) return;
+    Debug.Assert(fileType.HasValue);
 
+    var fileName = $"{e.Node.Text}{fileType.Value.ToTagString(asExtension: true)}";
     var tag = fileType.Value.ToTagString();
     var viewers = pluginManager.GetViewers(tag);
 
+    // TODO: Extract this to the designer
     var menu = new ContextMenuStrip();
 
     // --- Open With submenu ---
@@ -442,9 +447,9 @@ public partial class MainForm : Form {
         };
         viewerItem.Click += (_, _) => {
           if (currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
-          var data = currentOvl.GetResourceBytes(entry);
+          var data = currentOvl.ReadResource(entry);
           if (data == null) return;
-          contentPanel.ShowContent(viewers, data);
+          contentPanel.ShowContent(fileName, viewers, data);
         };
         openWith.DropDownItems.Add(viewerItem);
       }
@@ -473,9 +478,9 @@ public partial class MainForm : Form {
     // --- Properties ---
     var properties = new ToolStripMenuItem("Properties");
     properties.Click += (_, _) => {
-      if (currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
+      if (currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var file)) return;
       var hasViewer = viewers.Count > 0;
-      using var dialog = new ResourceProperties(entry, fileType.Value, hasViewer);
+      using var dialog = new ResourceProperties(file, currentOvl[file], hasViewer);
       dialog.ShowDialog(this);
     };
     menu.Items.Add(properties);
@@ -483,38 +488,46 @@ public partial class MainForm : Form {
     menu.Show(treeView, e.Location);
   }
 
-  private async void Export_Click(object? sender, EventArgs e) {
+  private void Export_Click(object? sender, EventArgs e) {
     var node = treeView.SelectedNode;
-    var fileType = node.Tag as FileType?;
-    if (node == null || fileType == null) return;
+    if (node is not { Tag: FileType fileType }) return;
     if (currentOvl == null || !_nodeEntries.TryGetValue(node, out var entry)) return;
 
-    var data = currentOvl.GetResourceBytes(entry);
+    var data = currentOvl.ReadResource(entry);
     if (data == null) {
-      MessageBox.Show("Failed to read resource data.", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      MessageBox.Show(@"Failed to read resource data.", @"Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
       return;
     }
 
-    var fileTypeName = fileType.Value.ToDisplayName();
-    var ext = fileType.Value.ToTagString();
-    using var saveDialog = new SaveFileDialog {
-      Title = $"Export {fileTypeName}",
-      FileName = $"{node.Text}.{ext}",
-      Filter = $"{fileTypeName} (*.{ext})|*.{ext}|All Files (*.*)|*.*",
-      DefaultExt = ext,
-    };
+    var fileTypeName = fileType.ToDisplayName();
+    var ext = fileType.ToTagString();
+    using var saveDialog = new SaveFileDialog();
+    saveDialog.Title = $@"Export {fileTypeName}";
+    saveDialog.FileName = $"{node.Text}.{ext}";
+    saveDialog.Filter = $@"RCT3 {fileTypeName} (*.{ext})|*.{ext}|All Files (*.*)|*.*";
+    saveDialog.DefaultExt = ext;
     saveDialog.InitialDirectory = Settings.Default.LastDocumentExported != null
       ? Directory.GetParent(Settings.Default.LastDocumentExported)?.FullName ?? ""
       : "";
     if (saveDialog.ShowDialog(this) != DialogResult.OK) return;
 
     try {
-      await File.WriteAllBytesAsync(saveDialog.FileName, data);
-
-      Settings.Default.LastDocumentExported = saveDialog.FileName;
-      Settings.Default.Save();
+      var fileName = saveDialog.FileName;
+      File.WriteAllBytesAsync(fileName, data).ContinueWith(_ => {
+          Settings.Default.LastDocumentExported = fileName;
+          Settings.Default.Save();
+        }
+      );
     } catch (Exception ex) {
-      MessageBox.Show($"Failed to export file:\n{ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      MessageBox.Show(
+        $"""
+         Failed to export file:
+         {ex.Message}
+         """,
+        @"Export Error",
+        MessageBoxButtons.OK,
+        MessageBoxIcon.Error
+      );
     }
   }
 

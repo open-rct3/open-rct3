@@ -17,9 +17,10 @@
 
   Don't investigate when the root cause is clear from the code and error message.
 
-#### C#
+### C#
 
 - Prefer `var` declarations over those with explicit types
+- Use `Convert.*` instead of raw number casts
 - Prefer single-line clauses with `foreach` and `if` statements, e.g.
   `if (!File.Exists(ConfigPath)) return new AppConfig();`
   - If the line is longer than 90 characters, wrap simple clauses like this:
@@ -27,6 +28,8 @@
     if (!File.Exists(ConfigPath))
       return new AppConfig();
     ```
+- In `OpenCobra/OVL/OVL.cs`, do not use potentially unbounded `while` loops or plain `for` loops; prefer `foreach`, LINQ, or bounded helper methods.
+- In `OpenCobra/OVL/OVL.cs`, do not rewind `BaseStream.Position`; parse forward only.
 - Do NOT use hex literals in `Color.FromArgb`; use whole ints, e.g. `Color.FromArgb(25, 118, 210)`.
 
 ## Tests

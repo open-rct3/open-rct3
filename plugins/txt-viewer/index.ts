@@ -112,9 +112,8 @@ function renderText(data: Uint8Array, encoding: string): string {
     return "<p class='error'>Could not decode as " + encoding + ". Showing hex view instead.</p>" + renderHexView(data);
   }
 
-  let html = "<div class='text-viewer'><pre>" + escaped + "</pre></div>";
-  html += "<p class='encoding'>Decoded as " + encoding.toUpperCase() + "</p>";
-  html += renderHexView(data);
+  let html = `<div class='text-viewer'><pre>${escaped}</pre></div>`;
+  html += `<p class='encoding'>Decoded as ${encoding.toUpperCase()}</p>`;
 
   return html;
 }
@@ -123,7 +122,7 @@ export function render(): i32 {
   let data = Host.input();
 
   let html = renderText(data, "ascii");
-  let asciiText = decodeText(data, "ascii");
+  const asciiText = decodeText(data, "ascii");
 
   if (asciiText.length == 0 || asciiText.indexOf("�") != -1) {
     html = renderText(data, "utf-16le");
