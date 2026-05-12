@@ -18,15 +18,21 @@ public static class PaletteConverter {
   ) {
     int pixelCount = width * height;
     bool hasAlpha = alphaPixels.Length > 0;
+    bool hasPalette = palette.Length > 0;
+    int stride = palette.Length >= 1024 ? 4 : 3;
+
     for (int i = 0; i < pixelCount; i++) {
       byte index = indexedPixels[i];
-      int dst = i * 4;
-      outputRgba[dst + 0] = new Rgba32(
-        r: palette[index * 3 + 0],
-        g: palette[index * 3 + 1],
-        b: palette[index * 3 + 2],
-        a: hasAlpha ? alphaPixels[i] : (byte)255
-      );
+      if (hasPalette) {
+        outputRgba[i] = new Rgba32(
+          r: palette[index * stride + 0],
+          g: palette[index * stride + 1],
+          b: palette[index * stride + 2],
+          a: hasAlpha ? alphaPixels[i] : (stride == 4 ? palette[index * stride + 3] : Convert.ToByte(255))
+        );
+      } else {
+        outputRgba[i] = new Rgba32(0, 0, 0, hasAlpha ? alphaPixels[i] : Convert.ToByte(255));
+      }
     }
   }
 }

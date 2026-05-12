@@ -144,12 +144,7 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
 3. **Texture Conversion**:
    - Convert flexi-texture to GDK `Material` with albedo texture
    - Handle palette indexing (indexed color → RGBA)
-   - **Decision needed**: Evaluate palette conversion approaches:
-     - **Option A**: **KGy SOFT Drawing Libraries** (NuGet: `KGySoft.Drawing`) — provides `Palette` class and
-       `ConvertPixelFormat` method; verify it handles custom palettes (not just system defaults)
-     - **Option B**: Manual lookup using `FlexiTextureData.palette` — no extra deps, full control, requires more code
-     - **Option C**: **ImageSharp** — modern, but requires quantization (designed for RGBA→indexed, not reverse)
-   - **Recommendation**: Prototype both KGySoft and manual lookup; choose based on code complexity and maintainability
+   - Manual lookup using `FlexiTextureData.palette` — no extra deps, full control, requires more code
 
 ### `OpenRCT3/OpenGL/`
 
@@ -158,27 +153,11 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
    - Enable texturing in shader
    - Render quad with texture coordinates
 
-**Assets**:
+### Assets
 
-- Path: `/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets/nullbmp.common.ovl`
-- Size: 6,081 bytes
+Path: `$RCT3_PATH/nullbmp.common.ovl`
 
 **Milestone**: Plane textured with nullbmp (placeholder/blank texture)
-
----
-
-## Phase 5b: Prototype Palette Conversion
-
-> **ℹ️️ Dependent on decisions made in Phase 5.**
-
-Before full nullbmp/grass rendering, prototype palette handling:
-
-1. **Load `nullbmp.common.ovl`** and extract `FlexiTextureData` (palette + pixel data)
-2. **Test KGySoft approach**: Use `KGySoft.Drawing.Palette` with custom palette bytes; verify `ConvertPixelFormat`
-   produces correct RGBA
-3. **Test manual approach**: Write simple index→palette lookup; compare output to KGySoft
-4. **Decision**: Select approach based on code clarity and correctness
-5. **Document findings** in code comments for future maintainers
 
 ---
 
@@ -202,7 +181,7 @@ Before full nullbmp/grass rendering, prototype palette handling:
 
 **Assets**:
 
-- Path: `/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets/terrain/RCT3/Terrain_RCT3.common.ovl`
+- Path: `$RCT3_PATH/terrain/RCT3/Terrain_RCT3.common.ovl`
 - Paired with: `Terrain_RCT3.unique.ovl` (31,037 bytes)
 
 **Milestone**: Flat plane textured with RCT3's default grass
