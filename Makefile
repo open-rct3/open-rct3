@@ -9,10 +9,17 @@ all: gui
 	dotnet build OpenRCT3/OpenRCT3.csproj
 
 .PHONY: install
-install: release
 ifeq ($(PLATFORM),Darwin)
+install: bin/OpenRCT3.app
+else ifeq ($(PLATFORM),Windows)
+install: bin/OpenRCT3.exe
+endif
+
+ifeq ($(PLATFORM),Darwin)
+bin/OpenRCT3.app: release
 	@cp -R OpenRCT3/bin/Release/net8.0-macos/osx-x64/OpenRCT3.app bin/OpenRCT3.app
 else ifeq ($(PLATFORM),Windows)
+bin/OpenRCT3.exe: release
 	@cp OpenRCT3/bin/Release/net8.0-windows/OpenRCT3.exe bin/OpenRCT3.exe
 endif
 
@@ -29,7 +36,7 @@ website: ovl
 	deno task build:website
 
 .PHONY: debug
-debug: ovl
+debug:
 	deno task build:plugins
 	deno task build:desktop
 	dotnet run --project OpenRCT3/OpenRCT3.csproj

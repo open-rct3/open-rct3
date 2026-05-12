@@ -43,12 +43,9 @@ See the full [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap) on o
 
 ## Development
 
-1. Install [D](https://dlang.org/install) and [Deno](https://docs.deno.com/runtime/#install-deno).
-2. Build OpenRCT3:
-   ```shell
-   dub build
-   ```
-3. Run the development server:
+1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download),
+   [Make](https://www.gnu.org/software/make/#download), and [Deno](https://docs.deno.com/runtime/#install-deno).
+2. Build and run the OpenRCT3:
    ```shell
    make debug
    ```
