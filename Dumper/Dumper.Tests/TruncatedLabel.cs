@@ -7,6 +7,7 @@ namespace Dumper.Tests;
 /// Run via NUnit test runner to verify truncation behavior across various scenarios.
 /// </summary>
 [TestFixture]
+[Platform(Include = PlatformNames.Win32, Reason = "This fixture requires WinForms.")]
 public class TruncatedLabelTests {
   private TruncatedLabel label;
   private Form testForm;
@@ -211,7 +212,7 @@ public class TruncatedLabelTests {
   [Test]
   public void TestNullText_HandledGracefully() {
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-    Assert.DoesNotThrow(() => label.Text = null);
+    Assert.That(() => label.Text = null, Throws.Nothing);
     Assert.That(label.Text, Is.EqualTo(string.Empty), "Null text should be converted to empty string");
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
   }
