@@ -56,9 +56,11 @@ public partial class MainForm : Form {
   }
 
   private async Task OpenOvl() {
-    openDialog.InitialDirectory = Settings.Default.LastOvlOpened != null
-      ? Directory.GetParent(Settings.Default.LastOvlOpened)?.FullName ?? ""
+    var lastOvlOpened = Settings.Default.LastOvlOpened;
+    openDialog.InitialDirectory = lastOvlOpened != null
+      ? Directory.GetParent(lastOvlOpened)?.FullName ?? ""
       : "";
+    openDialog.FileName = Path.GetFileName(lastOvlOpened);
     if (openDialog.ShowDialog() != DialogResult.OK) return;
 
     this.Cursor = Cursors.WaitCursor;
@@ -502,7 +504,7 @@ Try again or continue anyway?",
     using var saveDialog = new SaveFileDialog();
     saveDialog.Title = $@"Export {fileTypeName}";
     saveDialog.FileName = $"{node.Text}.{ext}";
-    saveDialog.Filter = $@"{fileTypeName} (*.{ext})|*.{ext}|All Files (*.*)|*.*";
+    saveDialog.Filter = $@"RCT3 {fileTypeName} (*.{ext})|*.{ext}|All Files (*.*)|*.*";
     saveDialog.DefaultExt = ext;
     saveDialog.InitialDirectory = Settings.Default.LastDocumentExported != null
       ? Directory.GetParent(Settings.Default.LastDocumentExported)?.FullName ?? ""
