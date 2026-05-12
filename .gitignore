@@ -74,6 +74,7 @@ bin/open-rct3-*
 .vs/OpenRCT3/DesignTimeBuild/*
 .vs/OpenRCT3/CopilotIndices/*
 .vs/ProjectEvaluation/*
+.vs/slnx.sqlite
 **/FileContentIndex/*.vsidx
 *.sln.DotSettings.user
 
