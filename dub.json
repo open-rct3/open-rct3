@@ -9,9 +9,27 @@
   "targetPath": "bin",
   "targetType": "executable",
   "dependencies": {
-    "ovl": {
-      "path": "./lib/ovl"
+    "dotenv": "~>0.1.1",
+    "observable": "~>1.5.0",
+    "vibe-d": "~>0.10.0",
+    "vibe-stream:tls": "~>1.1.0"
+  },
+  "subConfigurations": {
+    "vibe-stream:tls": "openssl-static"
+  },
+  "configurations": [{
+      "name": "application",
+      "postBuildCommands": [
+        "deno task -c clients/website/deno.json build"
+      ],
+      "targetName": "OpenRCT3 Server",
+      "libs-osx": [],
+      "libs-linux": [],
+      "libs-windows": []
     },
-    "vibe-serialization": "~>1.0.4"
-  }
+    {
+      "name": "unittest",
+      "targetName": "open-rct3-unittest"
+    }
+  ]
 }

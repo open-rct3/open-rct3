@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Deno: Run Desktop" type="DenoConfigurationType" inputPath="$PROJECT_DIR$/clients/desktop/main.ts" programParameters="run">
+    <method v="2" />
+  </configuration>
+</component>

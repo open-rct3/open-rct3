@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Globals" />
+  <PropertyGroup>
+    <ProjectGuid>{9281AEA1-C96C-4881-B00F-2D4D6521B081}</ProjectGuid>
+    <ProjectTypeGuids>{A3F8F2AB-B479-4A4A-A458-A89E7DC349F1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Dumper</RootNamespace>
+    <AssemblyName>OVL Dumper</AssemblyName>
+    <!-- Display name -->
+    <ApplicationTitle>OVL Dumper</ApplicationTitle>
+    <Company>OpenRCT3</Company>
+    <Copyright>Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.</Copyright>
+    <!-- App ID -->
+    <ApplicationId>me.chancesnow.rct3.dumper</ApplicationId>
+    <ApplicationIdGuid>81da2b98-244c-454d-9a84-31541eff0ffd</ApplicationIdGuid>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+    <Version>0.1.0</Version>
+    <!-- Icon -->
+    <ApplicationIcon>Dumper.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <StartupObject>Dumper.Program</StartupObject>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <DefineConstants></DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <!-- Project references -->
+  <ItemGroup>
+    <ProjectReference Include="..\OpenCobra\OVL\OVL.csproj" />
+  </ItemGroup>
+  <!-- NuGet packages -->
+  <ItemGroup>
+    <PackageReference Include="Extism.runtime.all" Version="*" />
+    <PackageReference Include="Extism.Sdk" Version="*" />
+    <PackageReference Include="HtmlTags" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="*" />
+    <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
+    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
+    <PackageReference Include="System.Reactive" Version="6.1.0" />
+    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
+  </ItemGroup>
+  <!-- WinForms resources -->
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <Content Include="Dumper.ico" />
+  </ItemGroup>
+  <!-- Ignore other project, Dumper.Tests -->
+  <ItemGroup>
+    <Compile Remove="Dumper.Tests\**" />
+    <EmbeddedResource Remove="Dumper.Tests\**" />
+    <None Remove="Dumper.Tests\**" />
+  </ItemGroup>
+  <!-- Bundle built-in plugins -->
+  <Target Name="BuildPlugins" BeforeTargets="BeforeBuild">
+    <!-- FIXME: Why can't we use $(SolutionDir) here? -->
+    <Exec Command="deno task build:plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
+  </Target>
+  <ItemGroup>
+    <Folder Include="Plugins\Artifacts\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(SolutionDir)bin\plugins\*.wasm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Plugins\Artifacts\%(Filename).wasm</Link>
+      <TargetPath>plugins\%(Filename).wasm</TargetPath>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="System.Diagnostics" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+</Project>

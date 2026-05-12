@@ -1,0 +1,26 @@
+[
+  {
+    "label": "Build",
+    "command": "dotnet",
+    "args": ["build"],
+    "cwd": "$ZED_WORKTREE_ROOT"
+  },
+  {
+    "label": "Run OpenRCT3",
+    "command": "dotnet",
+    "args": ["run", "--project", "$ZED_WORKTREE_ROOT/OpenRCT3/OpenRCT3.csproj"],
+    "cwd": "$ZED_WORKTREE_ROOT"
+  },
+  {
+    "label": "Run Dumper",
+    "command": "dotnet",
+    "args": ["run", "--project", "$ZED_WORKTREE_ROOT/Dumper/Dumper.csproj"],
+    "cwd": "$ZED_WORKTREE_ROOT"
+  },
+  {
+    "label": "Run OVL Test Bench",
+    "command": "dotnet",
+    "args": ["run", "--project", "$ZED_WORKTREE_ROOT/OpenCobra/Tests/TestRunner/OvlTestBench.csproj"],
+    "cwd": "$ZED_WORKTREE_ROOT"
+  }
+]

@@ -1,0 +1,111 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11605.240
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRCT3", "OpenRCT3\OpenRCT3.csproj", "{CB37964D-A090-4A9C-AEF8-E44EDEBA8CDF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dumper", "Dumper\Dumper.csproj", "{9281AEA1-C96C-4881-B00F-2D4D6521B081}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "OpenCobra", "OpenCobra", "{25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OVL", "OpenCobra\OVL\OVL.csproj", "{F21234FF-2EDB-400F-AB57-2CECB17CBD86}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "OpenCobra\Tests\Tests.csproj", "{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationTests", "OpenCobra\Tests\Integration\IntegrationTests.csproj", "{A5E8F9D0-1234-5678-9ABC-DEF012345678}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OvlTestBench", "OpenCobra\Tests\TestRunner\OvlTestBench.csproj", "{B9316006-752D-47CF-A5A9-2285B867C2B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GDK", "OpenCobra\GDK\GDK.csproj", "{3524E823-F26D-4817-B1AC-30EB17C7FCEB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Analyzers", "OpenCobra\Analyzers\Analyzers.csproj", "{C5F59A76-83C1-40BC-A676-8D6F23A65E70}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dumper.Tests", "Dumper\Dumper.Tests\Dumper.Tests.csproj", "{4C2EF325-273A-4FD4-837D-390032B99197}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CB37964D-A090-4A9C-AEF8-E44EDEBA8CDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB37964D-A090-4A9C-AEF8-E44EDEBA8CDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB37964D-A090-4A9C-AEF8-E44EDEBA8CDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB37964D-A090-4A9C-AEF8-E44EDEBA8CDF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9281AEA1-C96C-4881-B00F-2D4D6521B081}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9281AEA1-C96C-4881-B00F-2D4D6521B081}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9281AEA1-C96C-4881-B00F-2D4D6521B081}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9281AEA1-C96C-4881-B00F-2D4D6521B081}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F21234FF-2EDB-400F-AB57-2CECB17CBD86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F21234FF-2EDB-400F-AB57-2CECB17CBD86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F21234FF-2EDB-400F-AB57-2CECB17CBD86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F21234FF-2EDB-400F-AB57-2CECB17CBD86}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5E8F9D0-1234-5678-9ABC-DEF012345678}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5E8F9D0-1234-5678-9ABC-DEF012345678}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5E8F9D0-1234-5678-9ABC-DEF012345678}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5E8F9D0-1234-5678-9ABC-DEF012345678}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9316006-752D-47CF-A5A9-2285B867C2B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C2EF325-273A-4FD4-837D-390032B99197}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C2EF325-273A-4FD4-837D-390032B99197}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C2EF325-273A-4FD4-837D-390032B99197}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C2EF325-273A-4FD4-837D-390032B99197}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F21234FF-2EDB-400F-AB57-2CECB17CBD86} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
+		{8B4B6AD2-2ADB-414C-B6AD-8D74F1EBE595} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
+		{A5E8F9D0-1234-5678-9ABC-DEF012345678} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
+		{B9316006-752D-47CF-A5A9-2285B867C2B2} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
+		{3524E823-F26D-4817-B1AC-30EB17C7FCEB} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
+		{C5F59A76-83C1-40BC-A676-8D6F23A65E70} = {25FCB8CC-4690-43A8-AD23-CDDBCC443C4F}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9F92069A-502C-435A-89FB-D1F30059ECBC}
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		Policies = $0
+		$0.TextStylePolicy = $3
+		$1.FileWidth = 100
+		$1.TabsToSpaces = True
+		$1.scope = text/x-csharp
+		$0.CSharpFormattingPolicy = $2
+		$2.IndentSwitchSection = False
+		$2.NewLinesForBracesInTypes = False
+		$2.NewLinesForBracesInMethods = False
+		$2.NewLinesForBracesInProperties = False
+		$2.NewLinesForBracesInAccessors = False
+		$2.NewLinesForBracesInAnonymousMethods = False
+		$2.NewLinesForBracesInControlBlocks = False
+		$2.NewLinesForBracesInAnonymousTypes = False
+		$2.NewLinesForBracesInObjectCollectionArrayInitializers = False
+		$2.NewLinesForBracesInLambdaExpressionBody = False
+		$2.NewLineForElse = False
+		$2.NewLineForCatch = False
+		$2.NewLineForFinally = False
+		$2.scope = text/x-csharp
+		$2.SpaceAfterCast = True
+		$3.FileWidth = 80
+		$3.TabsToSpaces = True
+		$3.scope = text/plain
+		$0.StandardHeader = $4
+		$4.Text = @${FileNameWithoutExtension}\n \nAuthors:\n  - ${AuthorName} <${AuthorEmail}>\n\nCopyright © ${Year} OpenRCT3 Contributors. All rights reserved.
+	EndGlobalSection
+EndGlobal

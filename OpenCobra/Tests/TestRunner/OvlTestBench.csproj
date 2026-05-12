@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OvlTestBench</RootNamespace>
+    <AssemblyName>OvlTestBench</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Integration\IntegrationTests.csproj" />
+    <ProjectReference Include="..\..\OVL\OVL.csproj" />
+  </ItemGroup>
+
+  <Choose>
+    <When Condition="$(Profile) == 'gui'">
+      <ItemGroup>
+        <Compile Remove="Program.cli.cs" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <Compile Remove="Program.cs" />
+        <Compile Remove="OvlTestBenchForm.cs" />
+        <Compile Remove="OvlTestBenchForm.Designer.cs" />
+        <Compile Remove="OvlTestBenchForm.Icons.cs" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+  <!-- Build GUI when not explicitly targeting the CLI -->
+  <!-- TODO: Use this section only when on Windows -->
+  <PropertyGroup Condition="$(Profile) != 'cli'">
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+  <ItemGroup Condition="$(Profile) != 'cli'">
+    <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
+  </ItemGroup>
+  <!-- OVL file decoding plugins -->
+  <ItemGroup>
+    <Content Include="..\..\..\bin\plugins\*.wasm">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>plugins\%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+  <!-- List of OVLs to test against -->
+  <ItemGroup>
+    <None Update="ovl-tests.local.json" Condition="Exists('ovl-tests.local.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
