@@ -90,10 +90,18 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
   }
 
   /// <summary>Find a resource by name.</summary>
-  public OvlFile? Find(string? name) => entries.Keys.FirstOrDefault(key =>
-    key.Type == FileType.Texture &&
-    (name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
-  );
+  public OvlFile? Find(string? name, FileType? type = null) => entries.Keys.FirstOrDefault(key => {
+    var nameProvided = name != null;
+    var nameMatch = name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase);
+    var typeMatch = type == null || key.Type == type;
+
+    // If a name is given, return true if the name matches.
+    // If a name and type is given, return true if both match.
+    // Otherwise, return true if either the name or type matches.
+    return nameProvided
+      ? nameMatch && (type == null || typeMatch)
+      : nameMatch || typeMatch;
+  });
 
   /// <summary>Read the resource data for a given file.</summary>
   public byte[]? ReadResource(OvlFile file) {
