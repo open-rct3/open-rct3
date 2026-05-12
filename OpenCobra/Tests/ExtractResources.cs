@@ -57,4 +57,17 @@ public class ExtractResources {
         $"FTX width {width} is not a power of two");
     }
   }
+
+  [Test]
+  public void Load_ShapesCommon_HasResources() {
+    var rct3 = Rct3Path();
+    if (rct3 == null)
+      Assert.Ignore("Cannot find RCT3. Skipping integration test.");
+
+    var shapesPath = Path.Combine(rct3, "test", "Shapes.common.ovl");
+    Assert.That(File.Exists(shapesPath), Is.True, $"Shapes.common.ovl not found at: {shapesPath}");
+
+    var resources = Ovl.Load(shapesPath);
+    Assert.That(resources, Is.Not.Empty, "No resources found in Shapes.common.ovl");
+  }
 }

@@ -28,6 +28,8 @@
     if (!File.Exists(ConfigPath))
       return new AppConfig();
     ```
+- In `OpenCobra/OVL/OVL.cs`, do not use potentially unbounded `while` loops or plain `for` loops; prefer `foreach`, LINQ, or bounded helper methods.
+- In `OpenCobra/OVL/OVL.cs`, do not rewind `BaseStream.Position`; parse forward only.
 - Do NOT use hex literals in `Color.FromArgb`; use whole ints, e.g. `Color.FromArgb(25, 118, 210)`.
 
 ## Tests

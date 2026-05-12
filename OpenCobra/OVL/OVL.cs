@@ -25,6 +25,7 @@ internal class FileBlock {
   public uint Size;
   public uint RelOffset;
   public ulong FileOffset;
+  public int TypeIndex;
   public byte[]? Data;
 }
 
@@ -40,7 +41,8 @@ internal class FileTypeBlock {
 public class Ovl {
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
-  private readonly List<LoaderHeader> allLoaderHeaders = [];
+  private readonly List<LoaderHeader[]> allLoaderHeaders = [];
+  private uint relocationOffset;
 
   /// <summary>Load an OVL archive and extract all resource entries.</summary>
   public static Dictionary<OvlFile, OvlEntry> Load(string ovlPath) {
@@ -63,7 +65,7 @@ public class Ovl {
   }
 
   private void ProcessFile(string filePath) {
-    using var stream = new FileStream(filePath, FileMode.Open);
+    using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
     using var reader = new BinaryReader(stream, Encoding.UTF8, false);
 
     var magic = reader.ReadUInt32();
@@ -90,15 +92,15 @@ public class Ovl {
     }
 
     var loaderHeaders = new List<LoaderHeader>();
-    if (version >= 4 && reader.BaseStream.Position + 8 <= reader.BaseStream.Length) {
-      reader.ReadUInt32(); // Unk
+    if (reader.BaseStream.Position + 8 <= reader.BaseStream.Length) {
+      reader.ReadUInt32(); // OvlHeader2.unk
       var fileTypeCount = reader.ReadUInt32();
       if (fileTypeCount > 0 && fileTypeCount < 1024) {
         loaderHeaders = ReadLoaderHeaders(reader, (int)fileTypeCount);
-        if (version == 5 && fileTypeCount > 0) ReadV5SymbolCounts(reader, loaderHeaders);
+        if (version == 5) ReadV5SymbolCounts(reader, loaderHeaders);
       }
     }
-    allLoaderHeaders.AddRange(loaderHeaders);
+    allLoaderHeaders.Add(loaderHeaders.ToArray());
 
     var blocks = ReadFileTypeBlocks(reader, version, subVersionFlag);
     allFileTypeBlocks.Add(blocks);
@@ -162,25 +164,33 @@ public class Ovl {
   }
 
   private static FileTypeBlock[] ReadFileTypeBlocks(BinaryReader reader, uint version, uint subVersionFlag) {
-    var blocks = new FileTypeBlock[10];
-    for (var i = 0; i < 10; i++) {
+    var blocks = new FileTypeBlock[9];
+    for (var i = 0; i < blocks.Length; i++) {
       if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) {
         blocks[i] = new FileTypeBlock();
         continue;
       }
       blocks[i] = new FileTypeBlock { Count = reader.ReadUInt32() };
       if (version > 1 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
-        blocks[i].RelOffset = reader.ReadUInt32();
+        reader.ReadUInt32();
         if (version == 5 && (subVersionFlag & 1) != 0 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length)
           blocks[i].UnknownV5_Extra = reader.ReadUInt32();
       }
-      blocks[i].Blocks = [];
-      for (var m = 0; m < blocks[i].Count && reader.BaseStream.Position + 4 <= reader.BaseStream.Length; m++) {
-        var size = reader.ReadUInt32();
-        blocks[i].Size += size;
-        blocks[i].Blocks.Add(new FileBlock { Size = size });
+
+      blocks[i].Blocks = Enumerable.Range(0, Convert.ToInt32(blocks[i].Count))
+          .Select(_ => new FileBlock())
+          .ToList();
+
+      if (version > 1) {
+        foreach (var block in blocks[i].Blocks) {
+          if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) break;
+          block.Size = reader.ReadUInt32();
+          blocks[i].Size += block.Size;
+        }
       }
-      if (blocks[i].Size > 0) Console.WriteLine($"[OVL] Type {i} count {blocks[i].Count} baseRelOffset 0x{blocks[i].RelOffset:X} totalSize {blocks[i].Size}");
+
+      if (blocks[i].Size > 0)
+        Console.WriteLine($"[OVL] Type {i} count {blocks[i].Count} totalSize {blocks[i].Size}");
     }
     return blocks;
   }
@@ -202,14 +212,17 @@ public class Ovl {
     }
   }
 
-  private static void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, uint version) {
-    var cumulativeOffset = 0u;
-    for (var i = 0; i < 10; i++) {
-      var currentRelOffset = (blocks[i].RelOffset > 0x10) ? blocks[i].RelOffset : cumulativeOffset;
+  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, uint version) {
+    for (var i = 0; i < blocks.Length; i++) {
       foreach (var block in blocks[i].Blocks) {
-        block.RelOffset = currentRelOffset;
-        currentRelOffset += block.Size;
-        cumulativeOffset += block.Size;
+        if (version == 1 && block.Size == 0) {
+          if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
+          block.Size = reader.ReadUInt32();
+        }
+
+        block.RelOffset = relocationOffset;
+        block.TypeIndex = i;
+        relocationOffset += block.Size;
         if (block.Size > 0 && reader.BaseStream.Position + block.Size <= reader.BaseStream.Length) {
           block.FileOffset = Convert.ToUInt64(reader.BaseStream.Position);
           block.Data = reader.ReadBytes(Convert.ToInt32(block.Size));
@@ -228,62 +241,83 @@ public class Ovl {
   }
 
   private void ExtractResources() {
-    var allBlocks = allFileTypeBlocks.SelectMany(ftb => ftb.SelectMany(b => b.Blocks)).ToList();
+    var allBlocks = allFileTypeBlocks
+        .SelectMany(ftb => ftb.SelectMany(b => b.Blocks))
+        .Where(b => b.Data != null)
+        .ToList();
 
-    foreach (var b in allBlocks.Where(sb => sb.Data != null)) {
-      var symbolSize = 24;
+    for (var fileIndex = 0; fileIndex < allFileTypeBlocks.Count; fileIndex++) {
+      var blocks = allFileTypeBlocks[fileIndex];
+      if (blocks.Length <= 2 || blocks[2].Blocks.Count == 0) continue;
+
+      var symbolBlock = blocks[2].Blocks[0];
+      if (symbolBlock.Data == null) continue;
+
+      var symbolSize = 0;
       var blockOffset = 0;
-      if (b.Data!.Length >= 24 && b.Data.Length % 24 == 0) blockOffset = 0;
-      else if (b.Data.Length >= 24 + 4 && (b.Data.Length - 4) % 24 == 0) blockOffset = 4;
-      else if (b.Data!.Length >= 12 && b.Data.Length % 12 == 0) symbolSize = 12;
+      if (symbolBlock.Data.Length % 16 == 0) {
+        symbolSize = 16;
+      }
+      else if (symbolBlock.Data.Length > 4 && (symbolBlock.Data.Length - 4) % 16 == 0) {
+        symbolSize = 16;
+        blockOffset = 4;
+      }
+      else if (symbolBlock.Data.Length % 12 == 0) {
+        symbolSize = 12;
+      }
+      else if (symbolBlock.Data.Length > 4 && (symbolBlock.Data.Length - 4) % 12 == 0) {
+        symbolSize = 12;
+        blockOffset = 4;
+      }
       else continue;
 
-      var count = (b.Data.Length - blockOffset) / symbolSize;
-      for (var i = 0; i < count; i++) {
-        var symOffset = blockOffset + i * symbolSize;
-        var namePtr = BitConverter.ToUInt32(b.Data, symOffset);
+      var loaderHeaders = fileIndex < allLoaderHeaders.Count ? allLoaderHeaders[fileIndex] : [];
+      var loaderIdx = 0;
+      var loaderSymbolRemaining = loaderHeaders.Length > 0 ? loaderHeaders[0].SymbolCount : 0u;
+
+      foreach (var symOffset in Enumerable.Range(0, (symbolBlock.Data.Length - blockOffset) / symbolSize).Select(i => blockOffset + i * symbolSize)) {
+        var namePtr = BitConverter.ToUInt32(symbolBlock.Data, symOffset);
         var name = ReadString(allBlocks, namePtr);
         if (string.IsNullOrEmpty(name)) continue;
 
-        uint dataPtr, size = 0, loaderIdx = 0;
-        if (symbolSize == 24) {
-          loaderIdx = BitConverter.ToUInt32(b.Data, symOffset + 4);
-          dataPtr = BitConverter.ToUInt32(b.Data, symOffset + 8);
-          size = BitConverter.ToUInt32(b.Data, symOffset + 20);
-        }
-        else {
-          dataPtr = BitConverter.ToUInt32(b.Data, symOffset + 8);
+        var dataPtr = BitConverter.ToUInt32(symbolBlock.Data, symOffset + 4);
+        var size = symbolSize == 16 ? BitConverter.ToUInt32(symbolBlock.Data, symOffset + 12) : 0u;
+
+        if (loaderIdx < loaderHeaders.Length && loaderSymbolRemaining == 0) {
+          loaderIdx = Math.Min(loaderIdx + 1, loaderHeaders.Length - 1);
+          loaderSymbolRemaining = loaderHeaders[loaderIdx].SymbolCount;
         }
 
-        FileType fileType = FileType.Unknown;
-        if (allLoaderHeaders.Count > 0 && loaderIdx < (uint)allLoaderHeaders.Count) {
-          // Use the tag from loader headers if available
-          fileType = allLoaderHeaders[(int)loaderIdx].Tag.ToFileType();
-        }
-        if (fileType == FileType.Unknown && name.Contains(':')) {
-          // If not found, try to infer from name (e.g., "Texture:MyTexture.dds")
+        var fileType = loaderIdx < loaderHeaders.Length
+            ? loaderHeaders[loaderIdx].Tag.ToFileType()
+            : FileType.Unknown;
+        if (fileType == FileType.Unknown && name.Contains(':'))
           fileType = name.Split(':')[0].ToFileType();
-        }
 
-        // Default entry creation
-        foreach (var fb in allBlocks) {
-          if (dataPtr >= fb.RelOffset && dataPtr < fb.RelOffset + fb.Size) {
-            var relOffset = dataPtr - fb.RelOffset;
-            // Ensure that the size does not exceed the remaining space in the block.
-            // If the provided size is 0 or larger than the remaining space, use the remaining space.
-            var effectiveSize = size == 0
-                ? fb.Size - relOffset
-                : Math.Min(size, fb.Size - relOffset);
-            entries[new OvlFile(name, fileType)] = new OvlEntry(Convert.ToInt64(fb.FileOffset + relOffset), effectiveSize);
-            break;
-          }
-        }
+        var resolvedBlock = allBlocks.FirstOrDefault(fb => dataPtr >= fb.RelOffset && dataPtr < fb.RelOffset + fb.Size);
+        if (resolvedBlock == null) continue;
+
+        var relOffset = dataPtr - resolvedBlock.RelOffset;
+        var effectiveSize = size == 0
+            ? resolvedBlock.Size - relOffset
+            : Math.Min(size, resolvedBlock.Size - relOffset);
+        entries[new OvlFile(name, fileType)] = new OvlEntry(Convert.ToInt64(resolvedBlock.FileOffset + relOffset), effectiveSize);
+
+        if (loaderSymbolRemaining > 0) loaderSymbolRemaining--;
       }
     }
   }
 
   private static string ReadString(List<FileBlock> blocks, uint ptr) {
-    if (ptr == 0) return "";
+    foreach (var fb in blocks.Where(fb => fb.TypeIndex == 0)) {
+      if (fb.Data == null) continue;
+      if (ptr >= fb.RelOffset && ptr < fb.RelOffset + fb.Size) {
+        var offset = (int)(ptr - fb.RelOffset);
+        var end = Array.IndexOf(fb.Data, (byte)0, offset);
+        if (end < 0) end = fb.Data.Length;
+        return Encoding.ASCII.GetString(fb.Data, offset, end - offset);
+      }
+    }
     foreach (var fb in blocks) {
       if (fb.Data == null) continue;
       if (ptr >= fb.RelOffset && ptr < fb.RelOffset + fb.Size) {
