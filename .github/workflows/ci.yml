@@ -1,4 +1,4 @@
-name: OVL CI
+name: OpenRCT3 CI
 
 on: push
 
@@ -14,10 +14,10 @@ jobs:
           # FIXME: CI fails on macOS runners
           # - name: macOS
           #   os: macos-latest
-          - name: Windows 10
-            os: windows-2019
-          - name: Windows 11
+          - name: Windows Server 2022
             os: windows-2022
+          - name: Windows Server 2025
+            os: windows-2025
 
     steps:
       - uses: actions/checkout@v4
