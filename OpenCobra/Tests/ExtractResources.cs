@@ -35,7 +35,9 @@ public class ExtractResources {
     var ftxEntry = resources.FirstOrDefault(e => e.Key.Type == FileType.FlexibleTexture);
     Assert.That(ftxEntry, Is.Not.Default, "No FlexibleTexture (ftx) resource found");
 
-    var bytes = Ovl.ReadResource(resources, ftxEntry.Key);
+    var bytes = resources.ReadResource(ftxEntry.Key);
+    Assert.That(bytes, Is.Not.Null);
+
     var asString = Encoding.ASCII.GetString(bytes, 0, Math.Min(bytes.Length, 16));
     using (Assert.EnterMultipleScope()) {
       // Must NOT be the symbol name string
