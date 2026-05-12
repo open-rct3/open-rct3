@@ -15,8 +15,6 @@ using File = System.IO.File;
 
 namespace Dumper;
 
-using Archive = Dictionary<OvlFile, OvlEntry>;
-
 public partial class MainForm : Form {
   readonly static string ready = "Ready";
   readonly static string openingArchive = "Opening archive…";
@@ -24,7 +22,7 @@ public partial class MainForm : Form {
   readonly static string ovlFmt = "{0} OVLs";
 
   private readonly PluginManager pluginManager = new();
-  private Archive? currentOvl;
+  private Ovl? currentOvl;
   private readonly Dictionary<TreeNode, OvlFile> _nodeEntries = [];
   private bool suppressSplitterMoved = false;
 
@@ -72,7 +70,7 @@ public partial class MainForm : Form {
     Settings.Default.Save();
   }
 
-  private void LoadOvl(Archive ovl) {
+  private void LoadOvl(Ovl ovl) {
     currentOvl = ovl;
     _nodeEntries.Clear();
     contentPanel.ShowEmpty(true);
@@ -403,7 +401,7 @@ Try again or continue anyway?",
         return;
       }
 
-      var data = Ovl.ReadResource(currentOvl, entry);
+      var data = currentOvl.ReadResource(entry);
       if (data == null) {
         contentPanel.ShowEmpty(currentOvl != null);
         MessageBox.Show(@"Failed to load selected resource.", @"Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -442,7 +440,7 @@ Try again or continue anyway?",
         };
         viewerItem.Click += (_, _) => {
           if (currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
-          var data = Ovl.ReadResource(currentOvl, entry);
+          var data = currentOvl.ReadResource(entry);
           if (data == null) return;
           contentPanel.ShowContent(viewers, data);
         };
@@ -488,7 +486,7 @@ Try again or continue anyway?",
     if (node is not { Tag: FileType fileType }) return;
     if (currentOvl == null || !_nodeEntries.TryGetValue(node, out var entry)) return;
 
-    var data = Ovl.ReadResource(currentOvl, entry);
+    var data = currentOvl.ReadResource(entry);
     if (data == null) {
       MessageBox.Show(@"Failed to read resource data.", @"Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
       return;

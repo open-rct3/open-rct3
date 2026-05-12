@@ -4,7 +4,9 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.
+using System.Collections;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using OpenCobra.OVL.Files;
 
@@ -51,19 +53,58 @@ internal class FileTypeBlock {
 }
 
 /// <summary>Represents an OVL archive, providing methods to load and extract resource entries.</summary>
-public class Ovl {
+public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
   public const string UnnamedOvl = "Untitled OVL";
 
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
   private uint relocationOffset;
+  private bool disposed = false;
+
+  #region IDictionary<OvlFile, OvlEntry>
+  public ICollection<OvlFile> Keys => ((IDictionary<OvlFile, OvlEntry>)entries).Keys;
+  public ICollection<OvlEntry> Values => ((IDictionary<OvlFile, OvlEntry>)entries).Values;
+  public int Count => ((ICollection<KeyValuePair<OvlFile, OvlEntry>>)entries).Count;
+  public bool IsReadOnly => ((ICollection<KeyValuePair<OvlFile, OvlEntry>>)entries).IsReadOnly;
+  public OvlEntry this[OvlFile key] { get => ((IDictionary<OvlFile, OvlEntry>)entries)[key]; set => ((IDictionary<OvlFile, OvlEntry>)entries)[key] = value; }
+
+  public void Add(OvlFile key, OvlEntry value) => ((IDictionary<OvlFile, OvlEntry>)entries).Add(key, value);
+  public bool ContainsKey(OvlFile key) => ((IDictionary<OvlFile, OvlEntry>)entries).ContainsKey(key);
+  public bool Remove(OvlFile key) => ((IDictionary<OvlFile, OvlEntry>)entries).Remove(key);
+  public bool TryGetValue(OvlFile key, [MaybeNullWhen(false)] out OvlEntry value) => ((IDictionary<OvlFile, OvlEntry>)entries).TryGetValue(key, out value);
+  public void Add(KeyValuePair<OvlFile, OvlEntry> item) => ((ICollection<KeyValuePair<OvlFile, OvlEntry>>)entries).Add(item);
+  public void Clear() => ((ICollection<KeyValuePair<OvlFile, OvlEntry>>)entries).Clear();
+  public bool Contains(KeyValuePair<OvlFile, OvlEntry> item) => ((ICollection<KeyValuePair<OvlFile, OvlEntry>>)entries).Contains(item);
+  public void CopyTo(KeyValuePair<OvlFile, OvlEntry>[] array, int arrayIndex) => ((ICollection<KeyValuePair<OvlFile, OvlEntry>>)entries).CopyTo(array, arrayIndex);
+  public bool Remove(KeyValuePair<OvlFile, OvlEntry> item) => ((ICollection<KeyValuePair<OvlFile, OvlEntry>>)entries).Remove(item);
+  public IEnumerator<KeyValuePair<OvlFile, OvlEntry>> GetEnumerator() => ((IEnumerable<KeyValuePair<OvlFile, OvlEntry>>)entries).GetEnumerator();
+  IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)entries).GetEnumerator();
+  #endregion
 
   /// <summary>Load an OVL archive and extract all resource entries.</summary>
-  public static Dictionary<OvlFile, OvlEntry> Load(string ovlPath) {
+  public static Ovl Load(string ovlPath) {
     var ovl = new Ovl();
     ovl.IngestArchive(ovlPath);
-    return ovl.entries;
+    return ovl;
+  }
+
+  /// <summary>Find a resource by name.</summary>
+  public OvlFile? Find(string? name) => entries.Keys.FirstOrDefault(key =>
+    key.Type == FileType.Texture &&
+    (name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+  );
+
+  /// <summary>Read the resource data for a given file.</summary>
+  public byte[]? ReadResource(OvlFile file) {
+    var entry = entries.GetValueOrDefault(file);
+    if (entry == null) return null;
+
+    var bytes = new byte[entry.Size];
+    using var fs = File.OpenRead(file.Path);
+    fs.Seek(Convert.ToInt32(entry.Offset), SeekOrigin.Begin);
+    fs.ReadExactly(bytes, 0, Convert.ToInt32(entry.Size));
+    return bytes;
   }
 
   private void IngestArchive(string ovlPath) {
@@ -115,7 +156,7 @@ public class Ovl {
         if (version == 5) ReadV5SymbolCounts(reader, loaderHeaders);
       }
     }
-    allLoaderHeaders.Add(loaderHeaders.ToArray());
+    allLoaderHeaders.Add([.. loaderHeaders]);
 
     var blocks = ReadFileTypeBlocks(filePath, reader, version, subVersionFlag);
     allFileTypeBlocks.Add(blocks);
@@ -194,9 +235,8 @@ public class Ovl {
           blocks[i].UnknownV5Extra = reader.ReadUInt32();
       }
 
-      blocks[i].Blocks = Enumerable.Range(0, Convert.ToInt32(blocks[i].Count))
-          .Select(_ => new FileBlock() { Path = filePath})
-          .ToList();
+      blocks[i].Blocks = [.. Enumerable.Range(0, Convert.ToInt32(blocks[i].Count))
+        .Select(_ => new FileBlock() { Path = filePath})];
 
       // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
       if (version > 1) foreach (var block in blocks[i].Blocks) {
@@ -350,14 +390,22 @@ public class Ovl {
     return null;
   }
 
-  public static byte[]? ReadResource(Dictionary<OvlFile, OvlEntry> archive, OvlFile file) {
-    var entry = archive.GetValueOrDefault(file);
-    if (entry == null) return null;
+  protected virtual void Dispose(bool disposing) {
+    if (disposed) return;
 
-    var bytes = new byte[entry.Size];
-    using var fs = File.OpenRead(file.Path);
-    fs.Seek(Convert.ToInt32(entry.Offset), SeekOrigin.Begin);
-    fs.ReadExactly(bytes, 0, Convert.ToInt32(entry.Size));
-    return bytes;
+    // Empty large fields
+    if (disposing) {
+      entries.Clear();
+      allFileTypeBlocks.Clear();
+      allLoaderHeaders.Clear();
+    }
+
+    disposed = true;
+  }
+
+  public void Dispose() {
+    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    Dispose(disposing: true);
+    GC.SuppressFinalize(this);
   }
 }

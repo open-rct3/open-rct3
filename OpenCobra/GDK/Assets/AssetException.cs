@@ -8,11 +8,10 @@ namespace OpenCobra.GDK.Assets;
 
 [Serializable]
 internal class AssetException : Exception {
+  public static readonly string MessagePrefix = "Could not process asset";
+
   public AssetException() {}
-
-  public AssetException(Exception? innerException) : base("Could not process asset", innerException) {}
-
+  public AssetException(Exception? innerException) : base($"{MessagePrefix}.", innerException) {}
   public AssetException(string? message) : base(message) {}
-
   public AssetException(string? message, Exception? innerException) : base(message, innerException) {}
 }

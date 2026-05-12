@@ -11,7 +11,6 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.GDK.Assets;
 
-using Archive = Dictionary<OvlFile, OvlEntry>;
 using Texture = Texture<Rgba32>;
 
 internal record FlexiTextureData(
@@ -23,21 +22,18 @@ internal record FlexiTextureData(
 );
 
 public class TextureLoader {
-  public static Texture? LoadTexture(string ovlPath, string? name = null) =>
-    !File.Exists(ovlPath)
-      ? throw new FileNotFoundException(ovlPath)
-      : LoadTexture(Ovl.Load(ovlPath), name);
+  public static Texture? LoadTexture(string ovlPath, string? name = null) {
+    if (!File.Exists(ovlPath)) throw new FileNotFoundException(ovlPath);
+    using var ovl = Ovl.Load(ovlPath);
+    return LoadTexture(ovl, ovl.Find(name) ?? throw new AssetException($"Texture '{name}' not found in OVL."));
+  }
 
-  public static Texture? LoadTexture(Archive ovl, string? name = null) {
+  public static Texture? LoadTexture(Ovl ovl, OvlFile file) {
     try {
-      var entry = ovl.Keys.FirstOrDefault(key =>
-        key.Type == FileType.Texture &&
-        (name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
-      );
-
-      return LoadTextureFromOvl(entry, ovl[entry]);
-    } catch (Exception ex) {
-      throw new AssetException(ex);
+      return LoadTextureFromOvl(file, ovl[file]);
+    }
+    catch (Exception ex) {
+      throw new AssetException($"{AssetException.MessagePrefix}: {file.Name}", ex);
     }
   }
 
@@ -46,26 +42,23 @@ public class TextureLoader {
     throw new NotImplementedException($"TODO: Load {file.Name}.{file.Type.ToTagString()} ({size}) from  OVL.");
   }
 
-  public static Texture? LoadFlexiTexture(string ovlPath, string? name = null) =>
-    !File.Exists(ovlPath)
-      ? throw new FileNotFoundException(ovlPath)
-      : LoadFlexiTexture(Ovl.Load(ovlPath), name);
+  public static Texture? LoadFlexiTexture(string ovlPath, string? name = null) {
+    if (!File.Exists(ovlPath)) throw new FileNotFoundException(ovlPath);
+    using var ovl = Ovl.Load(ovlPath);
+    return LoadFlexiTexture(ovl, ovl.Find(name) ?? throw new AssetException($"Flexi-texture '{name}' not found in OVL."));
+  }
 
-  public static Texture? LoadFlexiTexture(Archive ovl, string? name = null) {
+  public static Texture? LoadFlexiTexture(Ovl ovl, OvlFile file) {
     try {
-      var entry = ovl.Keys.FirstOrDefault(key =>
-        key.Type == FileType.FlexibleTexture &&
-        (name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
-      );
-
-      return LoadFlexiTextureFromOvl(entry, ovl[entry]);
-    } catch (Exception ex) {
-      throw new AssetException(ex);
+      return LoadFlexiTextureFromOvl(file, ovl[file]);
+    }
+    catch (Exception ex) {
+      throw new AssetException($"{AssetException.MessagePrefix}: {file.Name}", ex);
     }
   }
 
   private static Texture? LoadFlexiTextureFromOvl(OvlFile file, OvlEntry entry) {
-    var bytes = Ovl.ReadResource(Ovl.Load(file.Path), file);
+    var bytes = Ovl.Load(file.Path).ReadResource(file);
     if (bytes == null) return null;
 
     using var ms = new MemoryStream(bytes);
