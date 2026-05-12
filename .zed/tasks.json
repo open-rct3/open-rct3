@@ -6,6 +6,13 @@
     "cwd": "$ZED_WORKTREE_ROOT"
   },
   {
+    "label": "Test",
+    "command": "dotnet",
+    "args": ["test"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "show_summary": true
+  },
+  {
     "label": "Run OpenRCT3",
     "command": "dotnet",
     "args": ["run", "--project", "$ZED_WORKTREE_ROOT/OpenRCT3/OpenRCT3.csproj"],

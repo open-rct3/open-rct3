@@ -27,6 +27,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <StartupObject>Dumper.Program</StartupObject>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Suppress warning about unnecessary WPF conflict: -->
+    <!-- There was a conflict between "WindowsBase, Version=4" and "WindowsBase, Version=5" -->
+    <NoWarn>$(NoWarn);MSB3277</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>full</DebugType>
@@ -42,6 +45,12 @@
     <DefineConstants></DefineConstants>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="Properties\AssemblyInfo.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+    </Compile>
+  </ItemGroup>
   <!-- Project references -->
   <ItemGroup>
     <ProjectReference Include="..\OpenCobra\OVL\OVL.csproj" />
