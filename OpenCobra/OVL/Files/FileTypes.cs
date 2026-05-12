@@ -148,7 +148,7 @@ public static class FileTypeExtensions {
     };
 
     return asExtension
-      ? tag.Prepend('.').ToArray().ToString() ?? tag
+      ? new string([.. tag.Prepend('.')]) ?? tag
       : tag;
   }
 

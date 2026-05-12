@@ -24,11 +24,12 @@ sealed partial class ContentPanelHeader : TableLayoutPanel {
     viewerCombo.SelectedIndexChanged += ViewerCombo_SelectedIndexChanged;
   }
 
-  /// <summary>Set the header to show the given viewer's name and populate the dropdown.</summary>
-  public void SetViewers(IViewerPlugin plugin, IEnumerable<IViewerPlugin> allViewers) {
+  /// <summary>Set the header to show the given file name, viewer, and populate the dropdown.</summary>
+  public void SetViewers(string fileName, IViewerPlugin plugin, IEnumerable<IViewerPlugin> allViewers) {
     viewerCombo.SelectedIndexChanged -= ViewerCombo_SelectedIndexChanged;
 
-    nameLabel.Text = plugin.Name;
+    // FIXME: Why is this broken?
+    nameLabel.Text = fileName;
     viewerCombo.Items.Clear();
 
     foreach (var viewer in allViewers) {

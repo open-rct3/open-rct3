@@ -11,7 +11,6 @@ using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 using Rop.Winforms8.DuotoneIcons;
 using Rop.Winforms8.DuotoneIcons.MaterialDesign;
-using File = System.IO.File;
 
 namespace Dumper;
 
@@ -109,7 +108,7 @@ public partial class MainForm : Form {
         fileNames.Add(Path.GetFileName(ovl.Keys.First().Path));
 
       foreach (var fileName in fileNames) {
-        var fileNode = treeView.Nodes.Add(fileName, fileName);
+        var fileNode = treeView.Nodes.Add(fileName, Path.GetFileName(fileName));
         fileNode.ImageKey = "FolderOpen";
         fileNode.SelectedImageKey = "FolderOpen";
 
@@ -393,8 +392,11 @@ Try again or continue anyway?",
     var fileType = e.Node.Tag as FileType?;
 
     // If this node has a loader entry, show it via the plugin viewer
-    if (_nodeEntries.TryGetValue(e.Node, out var entry) && fileType != null && fileType != FileType.Unknown) {
+    if (_nodeEntries.TryGetValue(e.Node, out var entry) && fileType.HasValue && fileType != FileType.Unknown) {
+      Debug.Assert(fileType.HasValue);
+      var fileName = $"{e.Node.Text}{fileType.Value.ToTagString(asExtension: true)}";
       var tag = fileType.Value.ToTagString();
+
       var viewers = pluginManager.GetViewers(tag);
       if (viewers.Count == 0) {
         contentPanel.ShowNoViewer(fileType.Value);
@@ -408,7 +410,7 @@ Try again or continue anyway?",
         return;
       }
 
-      contentPanel.ShowContent(viewers, data);
+      contentPanel.ShowContent(fileName, viewers, data);
     } else {
       // Group node or no entry, show empty
       contentPanel.ShowEmpty(currentOvl != null);
@@ -421,10 +423,13 @@ Try again or continue anyway?",
     // Only show context menu on leaf nodes with a known file type and loader entry
     var fileType = e.Node.Tag as FileType?;
     if (fileType == null || fileType == FileType.Unknown || !_nodeEntries.ContainsKey(e.Node)) return;
+    Debug.Assert(fileType.HasValue);
 
+    var fileName = $"{e.Node.Text}{fileType.Value.ToTagString(asExtension: true)}";
     var tag = fileType.Value.ToTagString();
     var viewers = pluginManager.GetViewers(tag);
 
+    // TODO: Extract this to the designer
     var menu = new ContextMenuStrip();
 
     // --- Open With submenu ---
@@ -442,7 +447,7 @@ Try again or continue anyway?",
           if (currentOvl == null || !_nodeEntries.TryGetValue(e.Node, out var entry)) return;
           var data = currentOvl.ReadResource(entry);
           if (data == null) return;
-          contentPanel.ShowContent(viewers, data);
+          contentPanel.ShowContent(fileName, viewers, data);
         };
         openWith.DropDownItems.Add(viewerItem);
       }
