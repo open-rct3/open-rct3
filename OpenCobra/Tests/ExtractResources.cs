@@ -21,10 +21,9 @@ public class ExtractResources {
   }
 
   [Test]
+  [SkipIfEnvironmentMissing("RCT3_PATH", "Cannot find RCT3. Skipping integration test.")]
   public void Load_NullbmpFtx_ExtractsFlexibleTexture() {
-    var rct3 = Rct3Path();
-    if (rct3 == null)
-      Assert.Ignore("Cannot find RCT3. Skipping integration test.");
+    var rct3 = Rct3Path()!;
 
     var commonPath = Path.Combine(rct3, "nullbmp.common.ovl");
     Assert.That(File.Exists(commonPath), Is.True, $"nullbmp.common.ovl not found at: {commonPath}");

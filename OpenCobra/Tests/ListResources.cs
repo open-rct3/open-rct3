@@ -11,6 +11,7 @@ namespace OVL.Tests;
 
 [TestFixture]
 public class ListResources {
+  private static readonly string cannotFindRct3 = "Cannot find RCT3. Skipping integration test.";
   private static string? Rct3Path() => Environment.GetEnvironmentVariable("RCT3_PATH");
 
   [SetUp]
@@ -19,12 +20,23 @@ public class ListResources {
       Env.NoClobber().Load(Constants.EnvFilePath);
   }
 
-  private static string[] GetOvlFixtures() {
+  private static IEnumerable<TestCaseData> GetOvlFixtures() {
     var rct3Path = Rct3Path();
-    if (string.IsNullOrEmpty(rct3Path) || !Directory.Exists(rct3Path))
-      return [];
+    if (string.IsNullOrEmpty(rct3Path)) {
+      yield return new TestCaseData(string.Empty)
+        .Explicit(cannotFindRct3)
+        .Ignore(cannotFindRct3);
+      yield break;
+    }
 
-    return Directory.GetFiles(rct3Path, "*.common.ovl", SearchOption.AllDirectories);
+    var files = Directory.GetFiles(rct3Path, "*.common.ovl", SearchOption.AllDirectories);
+    if (files.Length == 0) {
+      yield return new TestCaseData(string.Empty).Ignore("No OVL fixtures found.");
+      yield break;
+    }
+
+    foreach (var file in files)
+      yield return new TestCaseData(file);
   }
 
   [TestCaseSource(nameof(GetOvlFixtures))]
