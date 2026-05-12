@@ -50,6 +50,16 @@ See the full [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap) on o
    make debug
    ```
 
-## Disclaimer of Warranty
+## Disclaimers
 
 This is a _volunteer-driven_ project. **Please** temper your expectations accordingly.
+
+The software is provided "as is", without warranty of any kind. Use of this software may require original RollerCoaster
+Tycoon 3 game assets, which are not provided by this project.
+
+### Trademarks and Copyright
+
+RollerCoaster Tycoon is a registered trademark of Chris Sawyer. Frontier and the Frontier logo are trademarks of
+Frontier Developments plc, variably registered around the world. All rights reserved.
+
+This project is not affiliated with, endorsed by, or sponsored by Chris Sawyer or Frontier Developments.
