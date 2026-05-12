@@ -1,0 +1,17 @@
+@import "./variables";
+
+@mixin on-top {
+  & {
+    z-index: $onTop;
+  }
+}
+@mixin backdrop-blur($color: white, $opacity: 75%) {
+  & {
+    backdrop-filter: blur(8px);
+    background-color: rgba($color, $opacity);
+    @media (prefers-reduced-transparency) {
+      background-color: $color;
+      backdrop-filter: none;
+    }
+  }
+}

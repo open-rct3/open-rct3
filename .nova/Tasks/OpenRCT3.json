@@ -1,0 +1,17 @@
+{
+  "actions": {
+    "build": {
+      "enabled": true,
+      "script": "#!\/bin\/sh\ndotnet build\n"
+    },
+    "clean": {
+      "enabled": true,
+      "script": "#!\/bin\/sh\ndotnet clean\n"
+    },
+    "run": {
+      "enabled": true,
+      "script": "#!\/bin\/sh\ndotnet run --project OpenRCT3\/OpenRCT3.csproj\n"
+    }
+  },
+  "openLogOnRun": "fail"
+}

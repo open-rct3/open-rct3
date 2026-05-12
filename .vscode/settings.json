@@ -1,0 +1,11 @@
+{
+  "deno.enable": true,
+  "deno.config": "clients/website/deno.json",
+  "makefile.configureOnOpen": false,
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[handlebars]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  }
+}

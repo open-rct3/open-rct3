@@ -1,0 +1,99 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <StartupObject>OpenRCT3.Program</StartupObject>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Display name -->
+    <ApplicationTitle>OpenRCT3</ApplicationTitle>
+    <Company>OpenRCT3 Contributors</Company>
+    <Copyright>Copyright © 2024 OpenRCT3 Contributors. All rights reserved.</Copyright>
+    <!-- App ID -->
+    <ApplicationId>llc.snow.rct3</ApplicationId>
+    <ApplicationIdGuid>af680530-78f7-406c-aa4b-f38a376fdbb9</ApplicationIdGuid>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+  </PropertyGroup>
+  <!-- Configure debug and release modes -->
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <CreatePackage>false</CreatePackage>
+    <UseSGen>false</UseSGen>
+    <WarningLevel>1</WarningLevel>
+    <LinkMode>None</LinkMode>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <CreatePackage>false</CreatePackage>
+    <UseSGen>false</UseSGen>
+    <LinkMode>None</LinkMode>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <!-- TODO: <TrimMode>Link</TrimMode> to minimize bundle size -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../OpenCobra/Analyzers/Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../OpenCobra/GDK/GDK.csproj" />
+    <ProjectReference Include="../OpenCobra/OVL/OVL.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NLog" Version="5.3.4" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.4" />
+    <PackageReference Include="Silk.NET.OpenGL" Version="2.22.0" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.5" />
+    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
+    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Panda.ico" />
+    <InternalsVisibleTo Include="OpenRCT3.Tests" />
+  </ItemGroup>
+  <Choose>
+    <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
+      <PropertyGroup>
+        <ProfileName>macOS</ProfileName>
+        <DefineConstants>$(DefineConstants);MACOS;OSX</DefineConstants>
+        <!-- See https://github.com/xamarin/xamarin-macios -->
+        <TargetFramework>net8.0-macos</TargetFramework>
+        <ImplicitUsings>true</ImplicitUsings>
+        <TargetPlatformVersion>14.0</TargetPlatformVersion>
+        <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
+      </PropertyGroup>
+      <ItemGroup>
+        <Compile Remove="OpenGL\GLContext.windows.cs" />
+        <Compile Remove="Platforms\Windows\**\*.cs" />
+        <Compile Update="Platforms\macOS\MainWindow.designer.cs">
+          <DependentUpon>MainWindow.cs</DependentUpon>
+        </Compile>
+        <Compile Update="Platforms\macOS\GameViewController.designer.cs">
+          <DependentUpon>GameViewController.cs</DependentUpon>
+        </Compile>
+        <Compile Remove="Program.windows.cs" />
+      </ItemGroup>
+    </When>
+    <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
+      <PropertyGroup>
+        <ProfileName>Windows</ProfileName>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <UseWindowsForms>true</UseWindowsForms>
+        <TargetPlatformVersion>8.0</TargetPlatformVersion>
+      </PropertyGroup>
+      <ItemGroup>
+        <Compile Remove="OpenGL\GLContext.macOS.cs" />
+        <Compile Remove="**\Platforms\macOS\**\*.cs" />
+        <Compile Remove="Program.macOS.cs" />
+      </ItemGroup>
+    </When>
+  </Choose>
+  <ItemGroup>
+    <None Update="nlog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

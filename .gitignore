@@ -1,24 +1,82 @@
-# Compiled Object files
+# Environment Variables
+.env
+
+# Tests
+nunit_random_seed.tmp
+TestResults/
+
+# Tests for Production OVLs
+OpenCobra/Tests/TestRunner/bin/**/ovl-tests.local.json
+OpenCobra/Tests/TestRunner/ovl-tests.local.json
+
+# Artifacts
+bin/open-rct3
+bin/open-rct3-test-application
+bin/OpenRCT3
+bin/OpenRCT3 Server
 *.o
 *.obj
-
-# Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
-
-# Compiled Static libraries
 *.a
 *.lib
-
-# Executables
 *.exe
 
 # DUB
 .dub
 docs.json
 __dummy.html
-docs/
 
-# Code coverage
+############
+# Artifacts
+############
+
+# .NET
+obj/
+**/bin/Debug/**/*.app
+**/bin/Debug/**/*.msCoverage*
+**/bin/Debug/**/Coverlet*
+**/bin/Debug/*/*.config
+**/bin/Debug/**/createdump
+**/bin/Debug/*/*.deps.json
+**/bin/Debug/*/*.runtimeconfig.json
+**/bin/Debug/**/*.items
+**/bin/Debug/**/*.exe.WebView2/
+**/bin/Debug/**/*.WebView2.*.xml
+**/bin/Debug/**/OVL Dumper
+**/bin/Debug/**/OvlTestBench
+**/bin/Debug/**/plugins/*.wasm
+**/bin/Release/**/*.deps.json
+
+bin/OpenRCT3*
+OpenRCT3/bin/
+OpenRCT3.Tests/bin/
+
+# Dub
+bin/open-rct3
+bin/open-rct3-*
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+*.pdb
+
+# Visual Studio
+.vs/CopilotSnapshots/
+.vs/**/project-cache/*.json
+.vs/OpenRCT3/v18/*
+.vs/OpenRCT3/xs/UserPrefs.xml
+.vs/OpenRCT3/DesignTimeBuild/*
+.vs/OpenRCT3/CopilotIndices/*
+.vs/ProjectEvaluation/*
+.vs/slnx.sqlite
+**/FileContentIndex/*.vsidx
+*.sln.DotSettings.user
+
+# Code Coverage
 *.lst

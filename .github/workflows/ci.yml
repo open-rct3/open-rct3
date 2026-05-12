@@ -1,0 +1,50 @@
+name: OpenRCT3 CI
+
+on: push
+
+jobs:
+  Test:
+    name: Tests (${{ matrix.name }})
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          # FIXME: CI fails on macOS runners
+          # - name: macOS
+          #   os: macos-latest
+          - name: Windows Server 2022
+            os: windows-2022
+          - name: Windows Server 2025
+            os: windows-2025
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          cache: true
+      - name: Cache NuGet Packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      - name: Restore Workloads
+        if: runner.os == 'macOS'
+        run: dotnet workload restore
+      - name: Restore Dependencies
+        run: dotnet restore
+      - name: Test
+        run: dotnet test --no-restore --verbosity normal --collect:"XPlat Code Coverage"
+      - name: Upload Coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@v4
+        with:
+          files: "**/coverage.cobertura.xml"
