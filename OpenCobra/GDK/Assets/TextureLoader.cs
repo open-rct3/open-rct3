@@ -11,55 +11,61 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.GDK.Assets;
 
+using Archive = Dictionary<OvlFile, OvlEntry>;
 using Texture = Texture<Rgba32>;
 
+internal record FlexiTextureData(
+  uint Scale, uint Width, uint Height,
+  Recolorable Recolorable,
+  byte[] Palette,
+  byte[] TextureData,
+  byte[] AlphaData
+);
+
 public class TextureLoader {
-  public static Texture? LoadTexture(string ovlPath, string? name = null) {
-    if (!System.IO.File.Exists(ovlPath)) throw new FileNotFoundException(ovlPath);
+  public static Texture? LoadTexture(string ovlPath, string? name = null) =>
+    !File.Exists(ovlPath)
+      ? throw new FileNotFoundException(ovlPath)
+      : LoadTexture(Ovl.Load(ovlPath), name);
 
-    using var ovl = Ovl.Load(ovlPath);
-    return LoadTexture(ovl, name);
-  }
-
-  public static Texture? LoadTexture(Ovl ovl, string? name = null) {
+  public static Texture? LoadTexture(Archive ovl, string? name = null) {
     try {
-      var entry = ovl.LoaderEntries.FirstOrDefault(e =>
-        e.Tag == FileType.Texture.ToTagString() &&
-        (name == null || e.SymbolName.Contains(name, StringComparison.OrdinalIgnoreCase))
+      var entry = ovl.Keys.FirstOrDefault(key =>
+        key.Type == FileType.Texture &&
+        (name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
       );
 
-      return LoadTextureFromOvl(ovl, entry);
+      return LoadTextureFromOvl(entry, ovl[entry]);
     } catch (Exception ex) {
       throw new AssetException(ex);
     }
   }
 
-  private static Texture? LoadTextureFromOvl(Ovl ovl, OvlLoaderEntry entry) {
-    throw new NotImplementedException();
+  private static Texture? LoadTextureFromOvl(OvlFile file, OvlEntry entry) {
+    var size = entry.Size;
+    throw new NotImplementedException($"TODO: Load {file.Name}.{file.Type.ToTagString()} ({size}) from  OVL.");
   }
 
-  public static Texture? LoadFlexiTexture(string ovlPath, string? name = null) {
-    if (!System.IO.File.Exists(ovlPath)) throw new FileNotFoundException(ovlPath);
+  public static Texture? LoadFlexiTexture(string ovlPath, string? name = null) =>
+    !File.Exists(ovlPath)
+      ? throw new FileNotFoundException(ovlPath)
+      : LoadFlexiTexture(Ovl.Load(ovlPath), name);
 
-    using var ovl = Ovl.Load(ovlPath);
-    return LoadFlexiTexture(ovl, name);
-  }
-
-  public static Texture? LoadFlexiTexture(Ovl ovl, string? name = null) {
+  public static Texture? LoadFlexiTexture(Archive ovl, string? name = null) {
     try {
-      var entry = ovl.LoaderEntries.FirstOrDefault(e =>
-        e.Tag == FileType.FlexibleTexture.ToTagString() &&
-        (name == null || e.SymbolName.Contains(name, StringComparison.OrdinalIgnoreCase))
+      var entry = ovl.Keys.FirstOrDefault(key =>
+        key.Type == FileType.FlexibleTexture &&
+        (name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
       );
 
-      return LoadFlexiTextureFromOvl(ovl, entry);
+      return LoadFlexiTextureFromOvl(entry, ovl[entry]);
     } catch (Exception ex) {
       throw new AssetException(ex);
     }
   }
 
-  private static Texture? LoadFlexiTextureFromOvl(Ovl ovl, OvlLoaderEntry entry) {
-    var bytes = ovl.GetResourceBytes(entry);
+  private static Texture? LoadFlexiTextureFromOvl(OvlFile file, OvlEntry entry) {
+    var bytes = Ovl.ReadResource(Ovl.Load(file.Path), file);
     if (bytes == null) return null;
 
     using var ms = new MemoryStream(bytes);
@@ -67,57 +73,43 @@ public class TextureLoader {
 
     // Parse FlexiTextureData
     // Structure (20 bytes header + palette + texture + alpha):
-    // uint scale (4)
-    // uint width (4)
-    // uint height (4)
-    // uint recolorable (4)
-    // uint hasPalette (4) - usually 1 if it has palette
-
+    // uint scale (4), uint width (4), uint height (4)
+    // uint recolorable (4), uint hasPalette (4) - usually 1 if it has palette
     var scale = reader.ReadUInt32();
     var width = reader.ReadUInt32();
     var height = reader.ReadUInt32();
     var recolorable = (Recolorable)reader.ReadUInt32();
     var hasPalette = reader.ReadUInt32() != 0;
 
-    byte[] palette = [];
-    if (hasPalette) {
-      palette = reader.ReadBytes(768); // 256 * 3 (RGB)
-    }
+    var palette = hasPalette
+      ? reader.ReadBytes(768) // 256 * 3 (RGB)
+      : [];
 
-    var pixelCount = (int)(width * height);
+    var pixelCount = Convert.ToInt32(width * height);
     var textureData = reader.ReadBytes(pixelCount);
-
     // Some flexi-textures have an alpha channel at the end
-    byte[] alphaData = [];
-    if (ms.Position < ms.Length) {
-      alphaData = reader.ReadBytes(pixelCount);
-    }
+    var alphaData = ms.Position < ms.Length ? reader.ReadBytes(pixelCount) : [];
 
-    var flexi = new FlexiTextureData {
-      scale = scale,
-      width = width,
-      height = height,
-      recolorable = recolorable,
-      palette = palette,
-      texture = textureData,
-      alpha = alphaData
-    };
-
-    return ConvertFlexiToGdkTexture(entry.SymbolName, flexi);
+    return ConvertFlexiToGdkTexture(file.Name, new FlexiTextureData(
+      scale, width, height, recolorable,
+      palette, textureData, alphaData
+    ));
   }
 
   private static Texture ConvertFlexiToGdkTexture(string name, FlexiTextureData flexi) {
-    var width = (int)flexi.width;
-    var height = (int)flexi.height;
+    var width = Convert.ToInt32(flexi.Width);
+    var height = Convert.ToInt32(flexi.Height);
     var pixels = new Rgba32[width * height * 4];
 
-    PaletteConverter.ConvertIndexedToRgba(flexi.texture, width, height, flexi.palette, flexi.alpha, pixels);
+    PaletteConverter.ConvertIndexedToRgba(
+      flexi.TextureData, width, height, flexi.Palette, flexi.AlphaData, pixels
+    );
 
     return new(name) {
       Width = width,
       Height = height,
       Pixels = pixels,
-      HasAlpha = flexi.alpha.Length > 0
+      HasAlpha = flexi.AlphaData.Length > 0
     };
   }
 }

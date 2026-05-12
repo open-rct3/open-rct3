@@ -8,7 +8,7 @@ using OvlTestBench.Tests;
 namespace OvlTestBench;
 
 internal static class Program {
-    static int Main(string[] args) {
+  private static int Main(string[] args) {
         bool runPlugins = args.Length == 0 || args.Contains("--plugins");
         string? ovlDir = null;
         for (int i = 0; i < args.Length - 1; i++)
@@ -69,7 +69,7 @@ internal static class Program {
         return failures;
     }
 
-    static List<OvlPair> DiscoverPairs(string dir) {
+    private static List<OvlPair> DiscoverPairs(string dir) {
         var allFiles = Directory.GetFiles(dir, "*.ovl", SearchOption.AllDirectories);
         var common = allFiles.Where(f => Path.GetFileName(f).Contains(".common.")).ToList();
         var unique  = allFiles.Where(f => Path.GetFileName(f).Contains(".unique.")).ToList();
@@ -78,13 +78,7 @@ internal static class Program {
             var prefix = Path.GetFileName(c).Split('.')[0];
             var u = unique.FirstOrDefault(f => Path.GetFileName(f).StartsWith(prefix));
             if (u == null) continue;
-            pairs.Add(new OvlPair {
-                Name = prefix, CommonPath = c, UniquePath = u,
-                Files = [
-                    new OvlFile { Path = c, Type = OvlType.Common },
-                    new OvlFile { Path = u, Type = OvlType.Unique },
-                ],
-            });
+            pairs.Add(new OvlPair(prefix, c, u));
         }
         return pairs;
     }

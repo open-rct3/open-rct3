@@ -18,13 +18,15 @@ using OpenCobra.OVL;
 
 namespace Dumper.Models;
 
+using Archive = Dictionary<OvlFile, OvlEntry>;
+
 [Serializable]
-public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChanged, INotifyPropertyChanging, IObservable<Ovl>, ISerializable {
+public sealed class Project : IDisposable, ICollection<Archive>, INotifyPropertyChanged, INotifyPropertyChanging, IObservable<Archive>, ISerializable {
   public const string UnnamedProject = "New Project";
   private string name = UnnamedProject;
-  private readonly ObservableCollection<Ovl> archives = new();
-  private readonly ObservableCollection<long> archiveHashes = new();
-  private readonly List<IDisposable> subscriptions = new();
+  private readonly ObservableCollection<Archive> archives = [];
+  private readonly ObservableCollection<long> archiveHashes = [];
+  private readonly List<IDisposable> subscriptions = [];
 
   public event PropertyChangingEventHandler? PropertyChanging;
   public event PropertyChangedEventHandler? PropertyChanged;
@@ -39,7 +41,7 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
       SetField(ref name, value);
     }
   }
-  IReadOnlyCollection<Ovl> Archives => archives.AsReadOnly();
+  IReadOnlyCollection<Archive> Archives => archives.AsReadOnly();
 
   public Project() {
     subscriptions.Add(
@@ -57,14 +59,14 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
   /// <summary>
   /// Listen for changes to this project's collection of OVL archives.
   /// </summary>
-  public IDisposable Subscribe(IObserver<Ovl> observer) {
+  public IDisposable Subscribe(IObserver<Archive> observer) {
     return archives.ToObservable()
       .CombineLatest(archiveHashes.ToObservable(), (archive, hash) => archive)
       .Subscribe(observer);
   }
 
-  #region ICollection<Ovl> Members
-  public IEnumerator<Ovl> GetEnumerator() {
+  #region ICollection<Archive> Members
+  public IEnumerator<Archive> GetEnumerator() {
     return archives.GetEnumerator();
   }
 
@@ -72,7 +74,7 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
     return ((IEnumerable) archives).GetEnumerator();
   }
 
-  public void Add(Ovl item) {
+  public void Add(Archive item) {
     OnPropertyChanging(nameof(Archives));
     archives.Add(item);
     archiveHashes.Add(item.GetHashCode());
@@ -84,15 +86,15 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
     archiveHashes.Clear();
   }
 
-  public bool Contains(Ovl item) {
+  public bool Contains(Archive item) {
     return archives.Contains(item);
   }
 
-  public void CopyTo(Ovl[] array, int arrayIndex) {
+  public void CopyTo(Archive[] array, int arrayIndex) {
     archives.CopyTo(array, arrayIndex);
   }
 
-  public bool Remove(Ovl item) {
+  public bool Remove(Archive item) {
     OnPropertyChanging(nameof(Archives));
     archiveHashes.RemoveAt(archives.IndexOf(item));
     var result = archives.Remove(item);
@@ -105,7 +107,7 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
   /// </summary>
   public int Count => archives.Count;
 
-  public bool IsReadOnly => ((ICollection<Ovl>) archives).IsReadOnly;
+  public bool IsReadOnly => (archives as ICollection<Archive>)?.IsReadOnly ?? true;
   #endregion
 
   #region INotifyPropertyChanged Members
@@ -128,6 +130,6 @@ public sealed class Project : IDisposable, ICollection<Ovl>, INotifyPropertyChan
 
   public void GetObjectData(SerializationInfo info, StreamingContext context) {
     info.AddValue("name", Name);
-    info.AddValue("archives", Archives.Select(x => x.FileName));
+    info.AddValue("archives", Archives.Select(x => x.Keys));
   }
 }

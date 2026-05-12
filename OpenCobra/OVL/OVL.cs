@@ -52,6 +52,8 @@ internal class FileTypeBlock {
 
 /// <summary>Represents an OVL archive, providing methods to load and extract resource entries.</summary>
 public class Ovl {
+  public const string UnnamedOvl = "Untitled OVL";
+
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
@@ -348,9 +350,9 @@ public class Ovl {
     return null;
   }
 
-  public static byte[] ReadResource(Dictionary<OvlFile, OvlEntry> archive, OvlFile file) {
+  public static byte[]? ReadResource(Dictionary<OvlFile, OvlEntry> archive, OvlFile file) {
     var entry = archive.GetValueOrDefault(file);
-    if (entry == null) return [];
+    if (entry == null) return null;
 
     var bytes = new byte[entry.Size];
     using var fs = File.OpenRead(file.Path);

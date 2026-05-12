@@ -35,12 +35,7 @@ public class ExtractResources {
     var ftxEntry = resources.FirstOrDefault(e => e.Key.Type == FileType.FlexibleTexture);
     Assert.That(ftxEntry, Is.Not.Default, "No FlexibleTexture (ftx) resource found");
 
-    var bytes = new byte[ftxEntry.Value.Size];
-    using (var fs = File.OpenRead(commonPath)) {
-      fs.Seek(ftxEntry.Value.Offset, SeekOrigin.Begin);
-      fs.ReadExactly(bytes, 0, (int)ftxEntry.Value.Size);
-    }
-
+    var bytes = Ovl.ReadResource(resources, ftxEntry.Key);
     var asString = Encoding.ASCII.GetString(bytes, 0, Math.Min(bytes.Length, 16));
     using (Assert.EnterMultipleScope()) {
       // Must NOT be the symbol name string

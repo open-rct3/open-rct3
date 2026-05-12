@@ -3,14 +3,6 @@ using OpenCobra.OVL;
 
 namespace OvlTestBench.Tests;
 
-public class OvlFile {
-  public string Path = "";
-  public OvlType Type;
-}
-
-public class OvlPair {
-  public string Name = "";
-  public string CommonPath = "";
-  public string UniquePath = "";
-  public List<OvlFile> Files = new();
+public record OvlPair(string Name, string CommonPath, string UniquePath) {
+  public List<OvlFile> Files = [];
 }
