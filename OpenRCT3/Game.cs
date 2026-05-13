@@ -56,7 +56,7 @@ public class Game : IDisposable {
 
     if (!string.IsNullOrEmpty(Config.InstallPath)) {
       var nullbmpPath = System.IO.Path.Combine(Config.InstallPath, "nullbmp.common.ovl");
-      Scene.LoadTexture(nullbmpPath);
+      Scene.LoadTexture(nullbmpPath, "nullbmp");
     }
 
     _stopwatch.Start();

@@ -60,9 +60,9 @@ void main() {
     UpdateCamera(1.0f);
   }
 
-  public void LoadTexture(string path) {
+  public void LoadTexture(string path, string name) {
     if (File.Exists(path)) {
-      Model.Material.AlbedoTexture = TextureLoader.LoadFlexiTexture(path);
+      Model.Material.AlbedoTexture = TextureLoader.LoadFlexiTexture(path, name);
     }
   }
 

@@ -4,7 +4,6 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
-using System;
 
 namespace OpenCobra.OVL;
 
@@ -27,6 +26,7 @@ public enum Addon : uint {
 /// <summary>Combinable recolorability flags for flexi-textures.</summary>
 [Flags]
 public enum Recolorable : uint {
+  None = 0,
   First = 1,
   Second = 2,
   Third = 4

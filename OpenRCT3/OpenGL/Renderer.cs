@@ -5,14 +5,16 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using System;
-using System.Numerics;
-using Silk.NET.OpenGL;
-using OpenRCT3.Platforms;
+using NLog;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Shaders;
-using NLog;
+using OpenRCT3.Platforms;
+using Silk.NET.OpenGL;
+using SixLabors.ImageSharp.PixelFormats;
+using System;
+using System.Diagnostics;
 using System.Drawing;
+using System.Numerics;
 
 namespace OpenRCT3.OpenGL;
 
@@ -59,11 +61,19 @@ public class Renderer(GL gl) : IRenderer {
       _gl.BindTexture(TextureTarget.Texture2D, _texture);
 
       var texture = scene.Model.Material.AlbedoTexture;
-      unsafe {
-        fixed (void* p = &texture.Pixels[0]) {
-          _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)texture.Width, (uint)texture.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, p);
-        }
-      }
+      Debug.Assert(texture.Pixels.DangerousTryGetSinglePixelMemory(out var pixelMemory));
+      ReadOnlySpan<Rgba32> pixels = pixelMemory.Span;
+      _gl.TexImage2D(
+        TextureTarget.Texture2D,
+        0,
+        InternalFormat.Rgba,
+        Convert.ToUInt32(texture.Width),
+        Convert.ToUInt32(texture.Height),
+        0,
+        PixelFormat.Rgba,
+        PixelType.UnsignedByte,
+        pixels
+      );
 
       _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
       _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
