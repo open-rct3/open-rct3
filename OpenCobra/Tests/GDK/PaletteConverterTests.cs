@@ -26,9 +26,7 @@ public class PaletteConverterTests {
     // Index 2: Blue
     palette[8] = 0; palette[9] = 0; palette[10] = 255; palette[11] = 255;
     var alphaPixels = Array.Empty<byte>();
-    var outputRgba = new Rgba32[width * height];
-
-    PaletteConverter.ConvertIndexedToRgba(indexedPixels, width, height, palette, alphaPixels, outputRgba);
+    var outputRgba = PaletteConverter.ConvertIndexedToRgba(indexedPixels, width, height, palette, alphaPixels);
 
     Assert.That(outputRgba[0], Is.EqualTo(new Rgba32(255, 0, 0, 255)));
     Assert.That(outputRgba[1], Is.EqualTo(new Rgba32(0, 255, 0, 255)));
@@ -49,9 +47,7 @@ public class PaletteConverterTests {
     // Index 2
     palette[8] = 70; palette[9] = 80; palette[10] = 90; palette[11] = 255;
     var alphaPixels = new byte[] { 100, 150, 200, 250 };
-    var outputRgba = new Rgba32[width * height];
-
-    PaletteConverter.ConvertIndexedToRgba(indexedPixels, width, height, palette, alphaPixels, outputRgba);
+    var outputRgba = PaletteConverter.ConvertIndexedToRgba(indexedPixels, width, height, palette, alphaPixels);
 
     Assert.That(outputRgba[0], Is.EqualTo(new Rgba32(40, 50, 60, 100)));
     Assert.That(outputRgba[1], Is.EqualTo(new Rgba32(10, 20, 30, 150)));

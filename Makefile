@@ -55,8 +55,8 @@ test: test-plugins
 	deno task check:plugins
 	dotnet test
 
-.PHONY: test-ovl
-test-ovl:
+.PHONY: test-gdk
+test-gdk:
 	dotnet test OpenCobra/Tests/Tests.csproj /p:SolutionDir=$(CURDIR)/
 
 .PHONY: test-plugins

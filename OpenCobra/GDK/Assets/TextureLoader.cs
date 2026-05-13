@@ -13,19 +13,19 @@ namespace OpenCobra.GDK.Assets;
 
 using Texture = Texture<Rgba32>;
 
-internal record FlexiTextureData(
+internal record struct FlexiTexture(
   uint Scale, uint Width, uint Height,
   Recolorable Recolorable,
   byte[] Palette,
-  byte[] TextureData,
-  byte[] AlphaData
+  byte[] Texture,
+  byte[] AlphaMap
 );
 
 public class TextureLoader {
   public static Texture? LoadTexture(string ovlPath, string? name = null) {
     if (!File.Exists(ovlPath)) throw new FileNotFoundException(ovlPath);
     using var ovl = Ovl.Load(ovlPath);
-    return LoadTexture(ovl, ovl.Find(name) ?? throw new AssetException($"Texture '{name}' not found in OVL."));
+    return LoadTexture(ovl, ovl.Find(name, FileType.Texture) ?? throw new AssetException($"Texture '{name}' not found in OVL."));
   }
 
   public static Texture? LoadTexture(Ovl ovl, OvlFile file) {
@@ -45,7 +45,8 @@ public class TextureLoader {
   public static Texture? LoadFlexiTexture(string ovlPath, string? name = null) {
     if (!File.Exists(ovlPath)) throw new FileNotFoundException(ovlPath);
     using var ovl = Ovl.Load(ovlPath);
-    return LoadFlexiTexture(ovl, ovl.Find(name) ?? throw new AssetException($"Flexi-texture '{name}' not found in OVL."));
+    return LoadFlexiTexture(ovl, ovl.Find(name, FileType.FlexibleTexture) ??
+      throw new AssetException($"Flexi-texture '{name}' not found in OVL."));
   }
 
   public static Texture? LoadFlexiTexture(Ovl ovl, OvlFile file) {
@@ -75,7 +76,7 @@ public class TextureLoader {
     var hasPalette = reader.ReadUInt32() != 0;
 
     var palette = hasPalette
-      ? reader.ReadBytes(768) // 256 * 3 (RGB)
+      ? reader.ReadBytes(1024) // 256 * 4 (RGBA)
       : [];
 
     var pixelCount = Convert.ToInt32(width * height);
@@ -83,26 +84,34 @@ public class TextureLoader {
     // Some flexi-textures have an alpha channel at the end
     var alphaData = ms.Position < ms.Length ? reader.ReadBytes(pixelCount) : [];
 
-    return ConvertFlexiToGdkTexture(file.Name, new FlexiTextureData(
+    return ConvertFlexiToGdkTexture(file.Name, new FlexiTexture(
       scale, width, height, recolorable,
       palette, textureData, alphaData
     ));
   }
 
-  private static Texture ConvertFlexiToGdkTexture(string name, FlexiTextureData flexi) {
+  private static Texture ConvertFlexiToGdkTexture(string name, FlexiTexture flexi) {
     var width = Convert.ToInt32(flexi.Width);
     var height = Convert.ToInt32(flexi.Height);
-    var pixels = new Rgba32[width * height * 4];
+
+    var texture = new Texture(name, width, height, flexi.AlphaMap.Length > 0);
+    // Perform pallete conversion in-place
+    texture.Pixels.AsSpan().ConvertIndexedToRgba(flexi);
+
+    return texture;
+  }
+}
+
+internal static class SpanExtensions {
+  /// <summary>
+  /// Converts an indexed pixel span to RGBA format using the given flexi-texture.
+  /// </summary>
+  public static void ConvertIndexedToRgba(this Span<Rgba32> destination, FlexiTexture source) {
+    var width = Convert.ToInt32(source.Width);
+    var height = Convert.ToInt32(source.Height);
 
     PaletteConverter.ConvertIndexedToRgba(
-      flexi.TextureData, width, height, flexi.Palette, flexi.AlphaData, pixels
+      destination, source.Texture, width, height, source.Palette, source.AlphaMap
     );
-
-    return new(name) {
-      Width = width,
-      Height = height,
-      Pixels = pixels,
-      HasAlpha = flexi.AlphaData.Length > 0
-    };
   }
 }

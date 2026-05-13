@@ -9,20 +9,20 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.GDK.Materials;
 
-public class Texture<PixelFormat>(string name) : IDisposable
+public class Texture<PixelFormat>(string name, int width, int height, bool opaque = true) : IDisposable
   where PixelFormat : struct, IPixel {
   private bool _disposed;
 
   [Category("Design")]
   public string Name { get; private set; } = name;
   [Category("Appearance")]
-  public int Width { get; init; }
+  public int Width { get; } = width;
   [Category("Appearance")]
-  public int Height { get; init; }
+  public int Height { get; } = height;
   [Category("Appearance")]
-  public PixelFormat[] Pixels { get; init; } = [];
+  public PixelFormat[] Pixels { get; init; } = new PixelFormat[width * height];
   [Category("Appearance")]
-  public bool HasAlpha { get; init; }
+  public bool HasAlpha { get; } = !opaque;
 
   public void Dispose() {
     if (_disposed) return;

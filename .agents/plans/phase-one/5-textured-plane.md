@@ -14,9 +14,9 @@ Verify the existing `PaletteConverter.cs` in `OpenCobra.GDK`.
 
 Complete the implementation in `OpenCobra/GDK/Assets/TextureLoader.cs`.
 
-- [ ] Implement `LoadTextureFromOvl` to handle standard texture files (if any are needed, otherwise stub).
-- [ ] Refine `LoadFlexiTextureFromOvl` to ensure it correctly reads the 768-byte palette (256 * RGB).
-- [ ] Fix `ConvertFlexiToGdkTexture` to use the correct stride (it currently allocates `width * height * 4` but passes the `Rgba32[]` directly).
+- [x] Implement `LoadTextureFromOvl` to handle standard texture files.
+- [x] Refine `LoadFlexiTextureFromOvl` to ensure it correctly reads the 768-byte palette (256 * RGB).
+- [x] Fix `ConvertFlexiToGdkTexture` to use the correct stride (it currently allocates `width * height * 4` but passes the `Rgba32[]` directly).
 
 ## 3. Integrate Texture in `Scene`
 
