@@ -22,7 +22,7 @@ internal static class Program {
     // See https://www.jetbrains.com/help/rider/UsingStatementResourceInitialization.html
     using var alert = new NSAlert();
     alert.MessageText = "OpenRCT3 Error";
-    alert.InformativeText = $"An unhandled exception occurred: {e.Message}";
+    alert.InformativeText = $"An unhandled exception occurred:\n\n{e.Message}";
     alert.AlertStyle = NSAlertStyle.Critical;
     alert.RunModal();
   }

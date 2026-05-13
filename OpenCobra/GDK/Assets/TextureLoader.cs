@@ -33,7 +33,7 @@ public class TextureLoader {
       return LoadTextureFromOvl(file, ovl[file]);
     }
     catch (Exception ex) {
-      throw new AssetException($"{AssetException.MessagePrefix}: {file.Name}", ex);
+      throw new AssetException(file.Name, ex);
     }
   }
 
@@ -54,7 +54,7 @@ public class TextureLoader {
       return LoadFlexiTextureFromOvl(file, ovl[file]);
     }
     catch (Exception ex) {
-      throw new AssetException($"{AssetException.MessagePrefix}: {file.Name}", ex);
+      throw new AssetException(file.Name, ex);
     }
   }
 

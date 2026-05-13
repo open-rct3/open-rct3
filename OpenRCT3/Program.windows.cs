@@ -19,12 +19,15 @@ internal static class Program {
   private static void HandleException(Exception? e) {
     if (e == null) return;
     Logger.Fatal(e, "An unhandled exception occurred.");
-    MessageBox.Show(
-      $"An unhandled exception occurred: {e.Message}",
+    // TODO: Refactor to custom modal with "Restart" label in place of "Retry".
+    var result = MessageBox.Show(
+      $"An unhandled exception occurred:\n\n{e.Message}",
       "OpenRCT3 Error",
-      MessageBoxButtons.OK,
+      MessageBoxButtons.AbortRetryIgnore,
       MessageBoxIcon.Error
     );
+    if (result == DialogResult.Abort) Environment.Exit(1);
+    else if (result == DialogResult.Retry) Application.Restart();
   }
 
   private static AppConfig LoadConfigAndFindInstall() {
