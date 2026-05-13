@@ -5,8 +5,6 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using System;
-using System.IO;
 using System.Numerics;
 using OpenCobra.GDK.Meshes;
 using OpenCobra.GDK.Shaders;

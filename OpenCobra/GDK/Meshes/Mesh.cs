@@ -11,9 +11,9 @@ namespace OpenCobra.GDK.Meshes;
 
 public class Mesh {
   [Category("Data")]
-  public List<Vertex> Vertices { get; init; } = new();
+  public List<Vertex> Vertices { get; init; } = [];
   [Category("Data")]
-  public List<uint> Indices { get; init; } = new();
+  public List<uint> Indices { get; init; } = [];
   [Category("Data")]
   public BoundingBox? BoundingBox { get; set; }
 
