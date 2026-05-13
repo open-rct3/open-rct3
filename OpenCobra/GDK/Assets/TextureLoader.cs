@@ -59,7 +59,9 @@ public class TextureLoader {
   }
 
   private static Texture? LoadFlexiTextureFromOvl(OvlFile file, OvlEntry entry) {
-    var bytes = Ovl.Load(file.Path).ReadResource(file);
+    byte[]? bytes = null;
+    using (var ovl = Ovl.Load(file.Path))
+      bytes = ovl.ReadResource(file);
     if (bytes == null) return null;
 
     using var ms = new MemoryStream(bytes);
@@ -79,6 +81,7 @@ public class TextureLoader {
       ? reader.ReadBytes(1024) // 256 * 4 (RGBA)
       : [];
 
+    // FIXME: Use spans instead of copying albedo and alpha pixel data
     var pixelCount = Convert.ToInt32(width * height);
     var textureData = reader.ReadBytes(pixelCount);
     // Some flexi-textures have an alpha channel at the end

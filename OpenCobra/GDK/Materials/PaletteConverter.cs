@@ -39,7 +39,8 @@ public static class PaletteConverter {
           a: hasAlpha ? alphaPixels[i] : (stride == 4 ? palette[index * stride + 3] : Convert.ToByte(255))
         );
       }
-      else {
+      else
+        // FIXME: This throws because alphaPixels.Length is smaller than destination.Length
         destination[i] = new Rgba32(0, 0, 0, hasAlpha ? alphaPixels[i] : Convert.ToByte(255));
       }
     }

@@ -20,7 +20,7 @@ Complete the implementation in `OpenCobra/GDK/Assets/TextureLoader.cs`.
 
 ## 3. Integrate Texture in `Scene`
 
-- [ ] Update `OpenCobra/GDK/Scene.cs`:
+- [x] Update `OpenCobra/GDK/Scene.cs`:
     - Ensure `LoadTexture(string path)` is called with the correct path to `nullbmp.common.ovl`.
     - Verify UV coordinates on the quad are `(0,0)` to `(1,1)`.
 
