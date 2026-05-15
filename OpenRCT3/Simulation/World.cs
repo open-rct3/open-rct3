@@ -17,4 +17,8 @@ public class World {
   // TODO: private Network<Path> Paths { get; init; }
   // TODO: private List<Attraction> Attractions { get; init; }
   // TODO: private List<Stall> Stalls { get; init; }
+
+  // TODO: Use Task.Factory.StartNew to do slow async work in the background
+
+  // TODO: Implement IDisposable
 }

@@ -9,6 +9,7 @@ namespace OpenCobra.OVL;
 
 /// <summary>OVL archive format version.</summary>
 public enum Version : uint {
+  Unknown = 0,
   One = 1,
   Four = 4,
   Five = 5
@@ -236,51 +237,62 @@ public enum SidType {
 
 public enum TextureFormat : uint {
   /// <summary>RGB, no alpha</summary>
-  R8G8B8 = 0x01, //  | No      | —
+  R8G8B8 = 0x01,
   /// <summary>Full RGBA, primary uncompressed target</summary>
-  A8R8G8B8 = 0x02, //  | **Yes** | 64
+  [SeenInGame]
+  A8R8G8B8 = 0x02,
   /// <summary>RGB with unused alpha byte</summary>
-  X8R8G8B8 = 0x03, //  | No      | —
+  X8R8G8B8 = 0x03,
   /// <summary>5-6-5 RGB</summary>
-  R5G6B5 = 0x04, //  | No      | —
+  R5G6B5 = 0x04,
   /// <summary>RGB with 1 unused bit</summary>
-  X1R5G5B5 = 0x05, //  | No      | —
+  X1R5G5B5 = 0x05,
   /// <summary>8-bit palette index</summary>
-  P8 = 0x07, //   | No      | —
+  P8 = 0x07,
   /// <summary>1-bit alpha + 15-bit RGB</summary>
-  A1R5G5B5 = 0x08, //  | No      | —
+  A1R5G5B5 = 0x08,
   /// <summary>4-4-4 RGB with 4 unused bits</summary>
-  X4R4G4B4 = 0x09, //  | No      | —
+  X4R4G4B4 = 0x09,
   /// <summary>4-bit alpha + 12-bit RGB</summary>
-  A4R4G4B4 = 0x0A, //  | No      | —
+  A4R4G4B4 = 0x0A,
   /// <summary>8-bit luminance (grayscale)</summary>
-  L8 = 0x0B, //   | No      | —
+  L8 = 0x0B,
   /// <summary>8-bit alpha + 8-bit luminance</summary>
-  A8L8 = 0x0C, //  | No      | —
+  A8L8 = 0x0C,
   /// <summary>Normal map format</summary>
-  V8U8 = 0x0E, //  | No      | —
+  V8U8 = 0x0E,
   /// <summary>YUV 4:2:2 packed</summary>
-  Uyvy = 0x10, //  | No      | —
+  Uyvy = 0x10,
   /// <summary>YUV 4:2:2 packed</summary>
-  Yuy2 = 0x11, //  | No      | —
+  Yuy2 = 0x11,
   /// <summary>S3TC/DXT1 compression</summary>
-  Dxt1 = 0x12, //   | **Yes** | 8
+  [SeenInGame]
+  Dxt1 = 0x12,
   /// <summary>S3TC/DXT3 compression</summary>
-  Dxt3 = 0x13, //   | **Yes** | 16
+  [SeenInGame]
+  Dxt3 = 0x13,
   /// <summary>S3TC/DXT5 compression</summary>
-  Dxt5 = 0x14, //   | No      | 16
+  Dxt5 = 0x14,
   /// <summary>3-3-2 RGB</summary>
-  R3G3B2 = 0x15, //   | No      | —
+  R3G3B2 = 0x15,
   /// <summary>Alpha-only</summary>
-  A8 = 0x16, //   | No      | —
+  A8 = 0x16,
   /// <summary>Depth buffer</summary>
-  D16 = 0x100, //  | No      | —
+  D16 = 0x100,
   /// <summary>Depth buffer</summary>
-  D32 = 0x101, //  | No      | —
+  D32 = 0x101,
   /// <summary>Depth + stencil</summary>
-  D15S1 = 0x102, //  | No      | —
+  D15S1 = 0x102,
   /// <summary>Depth + stencil</summary>
-  D24S8 = 0x103, //  | No      | —
+  D24S8 = 0x103,
+}
+
+/// <summary>
+/// Whether a the thing annotated has been observed in-game.
+/// </summary>
+[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field | AttributeTargets.Property)]
+public class SeenInGameAttribute : Attribute {
+  public long Value { get; init; }
 }
 
 public static class TextureFormatExtensions {
@@ -324,11 +336,15 @@ public static class TextureFormatExtensions {
     _ => false,
   };
 
+  /// <returns>Size of a single pixel, in bits.</returns>
+  /// <exception cref="ArgumentOutOfRangeException">
+  /// Thrown when the format is not supported.
+  /// </exception>
   public static int BlockSize(this TextureFormat format) => format switch {
     TextureFormat.A8R8G8B8 => 64,
     TextureFormat.Dxt1 => 8,
     TextureFormat.Dxt3 => 16,
     TextureFormat.Dxt5 => 16,
-    _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Uncompressed texture format"),
+    _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Unsupported texture format"),
   };
 }
