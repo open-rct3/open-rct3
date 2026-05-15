@@ -45,8 +45,8 @@ function base64Encode(data: Uint8Array): string {
 
 export function render(): i32 {
   const data = Host.input();
-  if (data.length < 20) {
-    Host.outputString("<div class='ftx-viewer'><p class='empty'>No texture data.</p></div>");
+  if (data.length === 0) {
+    Host.outputString("<p class='error'>Invalid flexi-texture data: empty input.</p>");
     return 0;
   }
 

@@ -12,6 +12,11 @@
     <ProjectReference Include="..\..\OVL\OVL.csproj" />
   </ItemGroup>
 
+  <Target Name="BuildProfile" BeforeTargets="Restore">
+      <Message Text="Profile value: $(Profile)" />
+      <Message Text="Removing GUI sources for CLI profile." Importance="high" Condition="$(Profile) != 'gui'" />
+  </Target>
+
   <Choose>
     <When Condition="$(Profile) == 'gui'">
       <ItemGroup>
@@ -30,13 +35,13 @@
 
   <!-- Build GUI when not explicitly targeting the CLI -->
   <!-- TODO: Use this section only when on Windows -->
-  <PropertyGroup Condition="$(Profile) != 'cli'">
+  <PropertyGroup Condition="$(Profile) == 'gui'">
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
-  <ItemGroup Condition="$(Profile) != 'cli'">
+  <ItemGroup Condition="$(Profile) == 'gui'">
     <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
   </ItemGroup>
   <!-- OVL file decoding plugins -->
