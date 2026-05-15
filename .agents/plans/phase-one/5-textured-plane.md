@@ -28,12 +28,12 @@ Complete the implementation in `OpenCobra/GDK/Assets/TextureLoader.cs`.
 
 The `Renderer.cs` in `OpenRCT3.OpenGL` already has some texture logic, but it needs verification.
 
-- [ ] Ensure `SetupResources` correctly handles `scene.Model.Material.AlbedoTexture`.
-- [ ] Bind `u_Texture` uniform to texture unit 0.
-- [ ] Verify `TexImage2D` is using `PixelFormat.Rgba` and `PixelType.UnsignedByte`.
+- [x] Ensure `SetupResources` correctly handles `scene.Model.Material.AlbedoTexture`.
+- [x] Bind `u_Texture` uniform to texture unit 0.
+- [x] Verify `TexImage2D` is using `PixelFormat.Rgba` and `PixelType.UnsignedByte`.
 
 ## 5. Verification
 
-- [ ] Run `make test` to ensure GDK logic is sound.
-- [ ] Launch the application.
-- [ ] **Milestone**: The ground plane should no longer be a solid color, but display the `nullbmp` texture (likely a grey/white grid or placeholder).
+- [x] Run `make test` to ensure GDK logic is sound.
+- [x] Launch the application.
+- [x] **Milestone**: The ground plane should no longer be a solid color, but display the `nullbmp` texture.

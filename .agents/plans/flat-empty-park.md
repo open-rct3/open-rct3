@@ -129,7 +129,7 @@ Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate proje
 
 ---
 
-## Phase 5: Render Textured Plane with `nullbmp`
+## ~~Phase 5: Render Textured Plane with `nullbmp`~~ (Done)
 
 ### `OpenCobra/GDK/`
 
