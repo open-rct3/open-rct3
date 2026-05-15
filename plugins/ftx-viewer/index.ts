@@ -53,19 +53,14 @@ export function render(): i32 {
   const scale = decodeU32(data, 0);
   const width = decodeU32(data, 4);
   const height = decodeU32(data, 8);
-  const recolorable = decodeU32(data, 12);
-  const hasPalette = decodeU32(data, 16) != 0;
+  const _fps = decodeU32(data, 12);
+  const recolorable = decodeU32(data, 16);
+  // Skip past offsets, frame count, and repeated scale, width, height, and recolorable flags
+  let offset = 36 + 16;
 
-  let offset = 20;
-  let palette = new Uint8Array(0);
-  if (hasPalette) {
-    if (data.length < offset + 1024) {
-      Host.outputString("<p class='error'>Invalid flexi-texture data: missing palette.</p>");
-      return 0;
-    }
-    palette = data.slice(offset, offset + 1024);
-    offset += 1024;
-  }
+  // Read palette and texture data
+  const palette = data.slice(offset, offset + 1024);
+  offset += 1024;
 
   const pixelCount = i32(width * height);
   if (data.length < offset + pixelCount) {
