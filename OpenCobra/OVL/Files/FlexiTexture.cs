@@ -4,7 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-
+using CommunityToolkit.HighPerformance;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.Diagnostics;
@@ -24,7 +24,7 @@ public record struct FlexiTextureList(uint Fps, FlexiTexture[] Frames) {
     var bytes = ovl.ReadResource(file) ??
       throw new InvalidOperationException($"Resource '{file.Name}' not found in OVL.");
 
-    using var ms = new MemoryStream(bytes);
+    using var ms = new ReadOnlyMemory<byte>(bytes).AsStream();
     using var reader = new BinaryReader(ms);
 
     var scale = reader.ReadUInt32();

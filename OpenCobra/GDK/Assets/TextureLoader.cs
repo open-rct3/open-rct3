@@ -8,6 +8,8 @@ using OpenCobra.GDK.Materials;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 
+using Texture = OpenCobra.GDK.Materials.Texture;
+
 namespace OpenCobra.GDK.Assets;
 
 public static class TextureLoader {

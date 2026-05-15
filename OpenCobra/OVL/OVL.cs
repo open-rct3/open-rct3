@@ -14,7 +14,7 @@ namespace OpenCobra.OVL;
 
 /// <summary>OVL archive entry (resource) identifier.</summary>
 public record OvlFile(string Name, FileType Type, string Path) {
-  public override string ToString() => $"{Name}.{Type}";
+  public override string ToString() => $"{Name}.{Type.ToTagString()}";
   public override int GetHashCode() => HashCode.Combine(Name, Type, Path);
 }
 
@@ -53,8 +53,10 @@ internal class FileTypeBlock {
 }
 
 /// <summary>Represents an OVL archive, providing methods to load and extract resource entries.</summary>
-public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
+public class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposable {
   public const string UnnamedOvl = "Untitled OVL";
+
+  public readonly string Name = name;
 
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
@@ -84,7 +86,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
 
   /// <summary>Load an OVL archive and extract all resource entries.</summary>
   public static Ovl Load(string ovlPath) {
-    var ovl = new Ovl();
+    var ovl = new Ovl(Path.GetFileName(ovlPath));
     ovl.IngestArchive(ovlPath);
     return ovl;
   }

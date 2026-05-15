@@ -233,3 +233,102 @@ public enum SidType {
 }
 
 /// <remarks>TODO: Tracked rides. See <see href="https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/include/rct3constants.h#L505"/>.</remarks>
+
+public enum TextureFormat : uint {
+  /// <summary>RGB, no alpha</summary>
+  R8G8B8 = 0x01, //  | No      | —
+  /// <summary>Full RGBA, primary uncompressed target</summary>
+  A8R8G8B8 = 0x02, //  | **Yes** | 64
+  /// <summary>RGB with unused alpha byte</summary>
+  X8R8G8B8 = 0x03, //  | No      | —
+  /// <summary>5-6-5 RGB</summary>
+  R5G6B5 = 0x04, //  | No      | —
+  /// <summary>RGB with 1 unused bit</summary>
+  X1R5G5B5 = 0x05, //  | No      | —
+  /// <summary>8-bit palette index</summary>
+  P8 = 0x07, //   | No      | —
+  /// <summary>1-bit alpha + 15-bit RGB</summary>
+  A1R5G5B5 = 0x08, //  | No      | —
+  /// <summary>4-4-4 RGB with 4 unused bits</summary>
+  X4R4G4B4 = 0x09, //  | No      | —
+  /// <summary>4-bit alpha + 12-bit RGB</summary>
+  A4R4G4B4 = 0x0A, //  | No      | —
+  /// <summary>8-bit luminance (grayscale)</summary>
+  L8 = 0x0B, //   | No      | —
+  /// <summary>8-bit alpha + 8-bit luminance</summary>
+  A8L8 = 0x0C, //  | No      | —
+  /// <summary>Normal map format</summary>
+  V8U8 = 0x0E, //  | No      | —
+  /// <summary>YUV 4:2:2 packed</summary>
+  Uyvy = 0x10, //  | No      | —
+  /// <summary>YUV 4:2:2 packed</summary>
+  Yuy2 = 0x11, //  | No      | —
+  /// <summary>S3TC/DXT1 compression</summary>
+  Dxt1 = 0x12, //   | **Yes** | 8
+  /// <summary>S3TC/DXT3 compression</summary>
+  Dxt3 = 0x13, //   | **Yes** | 16
+  /// <summary>S3TC/DXT5 compression</summary>
+  Dxt5 = 0x14, //   | No      | 16
+  /// <summary>3-3-2 RGB</summary>
+  R3G3B2 = 0x15, //   | No      | —
+  /// <summary>Alpha-only</summary>
+  A8 = 0x16, //   | No      | —
+  /// <summary>Depth buffer</summary>
+  D16 = 0x100, //  | No      | —
+  /// <summary>Depth buffer</summary>
+  D32 = 0x101, //  | No      | —
+  /// <summary>Depth + stencil</summary>
+  D15S1 = 0x102, //  | No      | —
+  /// <summary>Depth + stencil</summary>
+  D24S8 = 0x103, //  | No      | —
+}
+
+public static class TextureFormatExtensions {
+  public static int BitsPerPixel(this TextureFormat format) {
+    switch (format) {
+      case TextureFormat.Dxt1:
+        return 4;
+      case TextureFormat.Dxt3:
+      case TextureFormat.Dxt5:
+      case TextureFormat.R3G3B2:
+      case TextureFormat.A8:
+      case TextureFormat.L8:
+      case TextureFormat.P8:
+        return 8;
+      case TextureFormat.R5G6B5:
+      case TextureFormat.X1R5G5B5:
+      case TextureFormat.A1R5G5B5:
+      case TextureFormat.X4R4G4B4:
+      case TextureFormat.A4R4G4B4:
+      case TextureFormat.A8L8:
+      case TextureFormat.V8U8:
+      case TextureFormat.Uyvy:
+      case TextureFormat.Yuy2:
+      case TextureFormat.D15S1:
+      case TextureFormat.D16:
+        return 16;
+      case TextureFormat.R8G8B8:
+        return 24;
+      case TextureFormat.A8R8G8B8:
+      case TextureFormat.X8R8G8B8:
+      case TextureFormat.D32:
+      case TextureFormat.D24S8:
+        return 32;
+      default:
+        throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown texture format");
+    }
+  }
+
+  public static bool IsCompressed(this TextureFormat format) => format switch {
+    TextureFormat.A8R8G8B8 or TextureFormat.Dxt1 or TextureFormat.Dxt3 or TextureFormat.Dxt5 => true,
+    _ => false,
+  };
+
+  public static int BlockSize(this TextureFormat format) => format switch {
+    TextureFormat.A8R8G8B8 => 64,
+    TextureFormat.Dxt1 => 8,
+    TextureFormat.Dxt3 => 16,
+    TextureFormat.Dxt5 => 16,
+    _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Uncompressed texture format"),
+  };
+}
