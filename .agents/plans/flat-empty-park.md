@@ -165,13 +165,14 @@ Path: `$RCT3_PATH/nullbmp.common.ovl`
 
 ### `OpenCobra/GDK/`
 
-1. **Identify Grass Resources**:
-   - Load `terrain/RCT3/Terrain_RCT3.common.ovl` (1,191,981 bytes)
-   - Search for terrain texture resources (flexi-textures with "grass" or similar names)
-   - Per user: "grass" is in the terrain OVLs, likely indexed by terrain type loader
+1. **Identify Default Grass Resource**:
+   - Load `terrain/RCT3/Terrain_RCT3.common.ovl`
+   - Search for terrain texture resources:
+
+       textures (tex) with "Terrain_xx" names, where xx is the terrain type index (0-25)
 
 2. **Load Grass Texture**:
-   - Extract the default grass flexi-texture
+   - Extract the default grass texture
    - Convert to GDK `Material` with albedo texture
 
 ### `OpenRCT3/OpenGL/`

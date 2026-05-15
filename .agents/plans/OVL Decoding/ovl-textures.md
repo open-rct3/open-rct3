@@ -3,9 +3,9 @@
 ## Problem
 
 The OVL library can parse archive structure (headers, symbols, loaders, relocations) but cannot yet interpret texture
-data into usable .NET `Bitmap` instances. RCT3 stores textures through a two-part system: **TEX** (texture
-metadata/symbol references) and **FLIC** (actual pixel data with optional compression/mipmaps). We need to decode these
-into displayable images.
+data into usable .NET `SixLabors.ImageSharp.Image<Rgba32>` instances. RCT3 stores textures through a two-part system:
+**TEX** (texture metadata/symbol references) and **FLIC** (actual pixel data with optional compression/mipmaps). We need
+to decode these into displayable images.
 
 ## Background Research
 
@@ -75,56 +75,77 @@ into displayable images.
 
 ### Existing C# Code
 
-- `FlexiTexture` already handles FTX format with palette/alpha channels
-- `Color` struct uses BGRA byte order (matches RCT3)
-- Uses `System.Drawing` namespace
+- `OpenCobra/OVL/Files/FlexiTexture.cs` already handles FTX format with palette/alpha channels
+- Uses `SixLabors.ImageSharp` namespace
 - Post-processing pipeline: `ResolveRelocations()` → `ParseStrings()` → `ParseSymbols()` → `ParseLoaders()`
 
 ## Solution Architecture
 
 ### New File: `OpenCobra/OVL/Files/Textures.cs`
 
-#### Core Types
+#### Core Types (from icontexture.h)
 
 ```csharp
-// On-disk structures from icontexture.h
-struct TextureStruct {
-  uint unk1-unk8;     // always 0x70007
-  uint unk9;          // count (usually 1)
-  uint unk10;         // usually 8
-  uint unk11;         // usually 0x10
-  uint textureDataAddr; // symbol ref address
-  uint unk12;         // usually 1
-  uint flicArrayAddr; // pointer to FlicStruct array
-  uint ts2Addr;       // pointer to TextureStruct2
-}
-
-struct TextureStruct2 {
-  uint textureAddr;   // back-pointer
-  uint flicAddr;      // FlicStruct pointer
+struct BmpTbl {
+	uint unk;   // always 0 in game files
+	uint count; // Number of stored textures
 }
 
 struct FlicStruct {
-  uint flicDataPtr;   // always 0 on disk
+  uint flicDataPtr;   // always 0 in game files
   uint unk1;          // always 1
   float unk2;         // always 1.0
 }
 
 struct FlicHeader {
-  uint format;        // texture format code
+  uint format;   // texture format code
   uint width;
   uint height;
-  uint mipcount;      // 0 or 9
+  uint mipcount; // 0 or 9
 }
 
 struct FlicMipHeader {
-  uint mWidth;
-  uint mHeight;
+  uint width;
+  uint height;
   uint pitch;
   uint blocks;
 }
 
+struct Tex {
+  TextureStruct t1;
+	TextureStruct2 t2;
+}
+
+struct TextureStruct {
+  uint unk1;              // always 0x70007
+  uint unk2;              // always 0x70007
+  uint unk3;              // always 0x70007
+  uint unk4;              // always 0x70007
+  uint unk5;              // always 0x70007
+  uint unk6;              // always 0x70007
+  uint unk7;              // always 0x70007
+  uint unk8;              // always 0x70007
+  uint unk9;              // count (usually 1)
+  uint unk10;             // usually 8
+  uint unk11;             // usually 0x10
+  byte[] texture;         // symbol ref address
+  uint unk12;             // usually 1
+  /*
+  Is an array with either unk9 or unk12 members. Not relocated if those are 0.
+  */
+  FlicStruct[] flicArray; // FlicStruct array
+  ref TextureStruct2 ts2; // pointer to TextureStruct2
+}
+
+struct TextureStruct2 {
+  ref TextureStruct texture;   // points back to the TextureStruct
+  /* This is actually seems to be an array with either TextureStruct.unk9 or TextureStruct.unk12 (loword) items. */
+  FlicStruct[] flicArray;      // FlicStruct array
+}
+
+//===================================
 // High-level texture representation
+//===================================
 record Texture : IDisposable {
   string Name;              // symbol name (e.g. "GUIIcon:txs")
   TextureFormat Format;
@@ -144,7 +165,7 @@ record Texture : IDisposable {
 public static class Textures {
   // Main entry point - extract all textures from an OVL
   public static TextureCollection Extract(Ovl ovl);
-  
+
   // Format helpers
   public static bool IsCompressed(TextureFormat format);
   public static bool IsDecodable(TextureFormat format);
@@ -164,16 +185,17 @@ public class TextureCollection : IReadOnlyList<Texture> {
 
 #### Phase 1: Structure Parsing (New File Only)
 
+**No modifications to `Ovl.cs`**: All parsing is additive to OpenCobra/OVL/Files
+
 1. **Create `Textures.cs`** with on-disk structs matching `icontexture.h` and `ManagerBTBL.h`
-2. **Parse TEX loader entries** from `Ovl.LoaderEntries` where `Tag == "tex"`
-3. **Parse FLIC loader entries** from `Ovl.LoaderEntries` where `Tag == "flic"`
-4. **Parse BTBL loader entries** from `Ovl.LoaderEntries` where `Tag == "btbl"` (if present)
-5. **Extract texture metadata**: name from symbol, dimensions from FLIC data
-6. **No modifications to `Ovl.cs`** — all parsing is additive in `Textures.cs`
+2. **Parse TEX loader entries** from `Ovl[file]` where `file.Type == Texture`
+3. **Parse FLIC loader entries** from `Ovl[file]` where `file.Type == Flic`
+4. **Parse BTBL loader entries** from `Ovl[file]` where `file.Type == BitmapTable` (if present)
+5. **Extract texture metadata**: name from `OvlFile.Name`, dimensions from FLIC data
 
 #### Phase 2: FLIC Data Extraction (Two Layouts)
 
-1. **Detect BTBL presence** — check if any loader has `Tag == "btbl"`
+1. **Detect BTBL presence**: check if any Ovl has any files `Type == BitmapTable`
 2. **BTBL layout** (when BTBL present):
    - Parse BTBL loader data for `BmpTbl` struct (unk + count)
    - Extra data chunk 0: skip 8 bytes → `FlicHeader[]` array
@@ -224,7 +246,7 @@ The reference `OVLDump.cpp` **does NOT dump textures to disk**. It only:
   formats
 - Never converts raw pixel data to any image format (DDS/BMP/PNG/TGA)
 
-**Our implementation goes beyond the reference** — we must actually decode pixels to .NET `Bitmap` instances.
+**Our implementation goes beyond the reference** — we must actually decode pixels to `Image` instances.
 
 ### Two FLIC Data Layouts (RESOLVED)
 
