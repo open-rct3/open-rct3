@@ -82,7 +82,7 @@ public static class Textures {
 
     // Read bitmap tables FIRST, because other flics in the archive may depend on it
     // If an archive contains a bitmap table, we cannot collect texture references until it is read
-    var textureFiles = textureFilesData as OvlData[] ?? textureFilesData.ToArray();
+    var textureFiles = textureFilesData as OvlData[] ?? [.. textureFilesData];
     var bitmapTableData = textureFiles.Where(fileData => fileData.File.Type == FileType.BitmapTable);
     var otherTextureData = textureFiles.Where(fileData => fileData.File.Type != FileType.BitmapTable);
 
