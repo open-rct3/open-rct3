@@ -1,15 +1,11 @@
-﻿// InstallFinder
+// InstallFinder
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-
-namespace OpenRCT3.Platforms;
+namespace OpenCobra.OVL;
 
 public class InstallNotFoundException(string message) : Exception(message);
 

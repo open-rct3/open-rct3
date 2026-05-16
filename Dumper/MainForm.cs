@@ -30,8 +30,7 @@ public partial class MainForm : Form {
     InitializeComponentIcons();
 
     Settings.Default.Reload();
-    // TODO: Add user's RCT3 dir
-    // openDialog.CustomPlaces.Add(InstallFinder.Find());
+    TryFindRct3();
     TryLoadPlugins();
   }
 
@@ -349,6 +348,22 @@ Try again or continue anyway?",
       // User cancelled the operation, confirm app exit
       else if (result == DialogResult.Cancel && TryExit() == DialogResult.Yes)
         Application.Exit();
+    }
+  }
+
+  private void TryFindRct3() {
+    try {
+      // Add user's RCT3 dir to the open modal
+      var rct3Dir = Settings.Default.Rct3Dir = Settings.Default.Rct3Dir ?? InstallFinder.Find();
+      Settings.Default.Save();
+      openDialog.CustomPlaces.Add(rct3Dir);
+    } catch (InstallNotFoundException) {
+      MessageBox.Show(
+        "Could not automatically find your local RCT3 installation.\n\nYou can set the path in Tools > Options...",
+        "RCT3 Not Found",
+        MessageBoxButtons.OK,
+        MessageBoxIcon.Warning
+      );
     }
   }
 

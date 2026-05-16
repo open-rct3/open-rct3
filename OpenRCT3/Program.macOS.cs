@@ -5,6 +5,7 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
+using OpenCobra.OVL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.macOS;
 using NLog;
