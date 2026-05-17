@@ -7,6 +7,7 @@
 using System.Security;
 using Dumper.Plugins;
 using Dumper.Properties;
+using Dumper.Settings;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 using Rop.Winforms8.DuotoneIcons;
@@ -20,6 +21,7 @@ public partial class MainForm : Form {
   readonly static string resourcesFmt = "{0} Resources";
   readonly static string ovlFmt = "{0} OVLs";
 
+  private readonly Properties.Settings settings = Properties.Settings.Default;
   private readonly PluginManager pluginManager = new();
   private Ovl? currentOvl;
   private readonly Dictionary<TreeNode, OvlFile> _nodeEntries = [];
@@ -29,7 +31,7 @@ public partial class MainForm : Form {
     InitializeComponent();
     InitializeComponentIcons();
 
-    Settings.Default.Reload();
+    settings.Reload();
     TryFindRct3();
     TryLoadPlugins();
   }
@@ -39,12 +41,12 @@ public partial class MainForm : Form {
 
     // Initialize web view after the form is shown (requires message loop)
     _ = contentPanel.InitializeAsync().ContinueWith(_ => {
-        try {
-          return Task.FromResult(Invoke(() => contentPanel.Visible = true));
-        } catch (Exception exception)  {
-          return Task.FromException<bool>(exception);
-        }
+      try {
+        return Task.FromResult(Invoke(() => contentPanel.Visible = true));
+      } catch (Exception exception) {
+        return Task.FromException<bool>(exception);
       }
+    }
     );
   }
 
@@ -55,7 +57,7 @@ public partial class MainForm : Form {
   }
 
   private async Task OpenOvl() {
-    var lastOvlOpened = Settings.Default.LastOvlOpened;
+    var lastOvlOpened = settings.LastOvlOpened;
     openDialog.InitialDirectory = lastOvlOpened != null
       ? Directory.GetParent(lastOvlOpened)?.FullName ?? ""
       : "";
@@ -66,8 +68,8 @@ public partial class MainForm : Form {
     LoadOvl(await Task.Run(() => Ovl.Load(openDialog.FileName)));
     this.Cursor = Cursors.Default;
 
-    Settings.Default.LastOvlOpened = openDialog.FileName;
-    Settings.Default.Save();
+    settings.LastOvlOpened = openDialog.FileName;
+    settings.Save();
   }
 
   private void LoadOvl(Ovl ovl) {
@@ -354,12 +356,12 @@ Try again or continue anyway?",
   private void TryFindRct3() {
     try {
       // Add user's RCT3 dir to the open modal
-      var rct3Dir = Settings.Default.Rct3Dir = Settings.Default.Rct3Dir ?? InstallFinder.Find();
-      Settings.Default.Save();
+      var rct3Dir = settings.Rct3Dir = settings.Rct3Dir ?? InstallFinder.Find();
+      settings.Save();
       openDialog.CustomPlaces.Add(rct3Dir);
     } catch (InstallNotFoundException) {
       MessageBox.Show(
-        "Could not automatically find your local RCT3 installation.\n\nYou can set the path in Tools > Options...",
+        "Could not automatically find your local RCT3 installation.\n\nYou can set the path in Tools > Settings...",
         "RCT3 Not Found",
         MessageBoxButtons.OK,
         MessageBoxIcon.Warning
@@ -432,6 +434,12 @@ Try again or continue anyway?",
       // Group node or no entry, show empty
       contentPanel.ShowEmpty(currentOvl != null);
     }
+  }
+
+  private void SettingsToolStripMenuItem_Click(object sender, EventArgs e) {
+    var dialog = new SettingsDialog();
+    dialog.Show(this);
+    // FIXME: dialog.Location = new Point(); // Center the dialog in the middle of this window
   }
 
   private void OvlTree_NodeMouseClick(object? sender, TreeNodeMouseClickEventArgs e) {
@@ -521,17 +529,17 @@ Try again or continue anyway?",
     saveDialog.FileName = $"{node.Text}.{ext}";
     saveDialog.Filter = $@"RCT3 {fileTypeName} (*.{ext})|*.{ext}|All Files (*.*)|*.*";
     saveDialog.DefaultExt = ext;
-    saveDialog.InitialDirectory = Settings.Default.LastDocumentExported != null
-      ? Directory.GetParent(Settings.Default.LastDocumentExported)?.FullName ?? ""
+    saveDialog.InitialDirectory = settings.LastDocumentExported != null
+      ? Directory.GetParent(settings.LastDocumentExported)?.FullName ?? ""
       : "";
     if (saveDialog.ShowDialog(this) != DialogResult.OK) return;
 
     try {
       var fileName = saveDialog.FileName;
       File.WriteAllBytesAsync(fileName, data).ContinueWith(_ => {
-          Settings.Default.LastDocumentExported = fileName;
-          Settings.Default.Save();
-        }
+        settings.LastDocumentExported = fileName;
+        settings.Save();
+      }
       );
     } catch (Exception ex) {
       MessageBox.Show(

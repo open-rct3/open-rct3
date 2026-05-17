@@ -30,6 +30,7 @@
     <!-- Suppress warning about unnecessary WPF conflict: -->
     <!-- There was a conflict between "WindowsBase, Version=4" and "WindowsBase, Version=5" -->
     <NoWarn>$(NoWarn);MSB3277</NoWarn>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>full</DebugType>
