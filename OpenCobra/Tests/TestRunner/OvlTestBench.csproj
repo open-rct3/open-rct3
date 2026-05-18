@@ -2,9 +2,23 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <RootNamespace>OvlTestBench</RootNamespace>
+    <RootNamespace>OVL.Tests.Integration</RootNamespace>
     <AssemblyName>OvlTestBench</AssemblyName>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Critical for .NET 10: -->
+  <!-- FIXME: https://github.com/dotnet/sdk/issues/51283 -->
+  <!-- FIXME: https://github.com/microsoft/testfx/issues/4783 -->
+  <!-- FIXME: https://github.com/dotnet/sdk/issues/51316 -->
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+    <!-- Opt-in to the old runner. -->
+    <!-- Note: MUST be in project file to beat the bugs -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- Tell the SDK this project is definitely NOT a test app -->
+    <UseTestingPlatform>false</UseTestingPlatform>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
   </PropertyGroup>
 
   <ItemGroup>

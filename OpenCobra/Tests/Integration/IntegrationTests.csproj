@@ -1,10 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <AssemblyName>OvlTestBench.Tests</AssemblyName>
+    <AssemblyName>OpenCobra.Tests.Integration</AssemblyName>
     <RootNamespace>OpenCobra.Tests.Integration</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <!-- Critical for .NET 10: -->
+  <!-- FIXME: https://github.com/dotnet/sdk/issues/51283 -->
+  <!-- FIXME: https://github.com/microsoft/testfx/issues/4783 -->
+  <!-- FIXME: https://github.com/dotnet/sdk/issues/51316 -->
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <!-- Opt-in to the old runner. -->
+    <!-- Note: MUST be in project file to beat the bugs -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- Tell the SDK this project is definitely NOT a test app -->
+    <UseTestingPlatform>false</UseTestingPlatform>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Extism.Sdk" Version="1.10.0" />
     <PackageReference Include="Extism.runtime.all" Version="1.13.0" />
