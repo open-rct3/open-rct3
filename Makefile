@@ -49,19 +49,34 @@ ovl:
 dumper:
 	dotnet run --project Dumper/Dumper.csproj
 
+# Tests
+# Sources and targets are automatically detected, i.e. re-builds are only performed if sources change
+
+TESTS_SRC := $(wildcard OpenCobra/Tests/*.cs OpenCobra/Tests/*/*.cs)
+# Extract TargetFramework from the csproj
+TESTS_TFM := $(shell grep -oPm1 '(?<=<TargetFramework>)[^<]+' OpenCobra/Tests/Tests.csproj)
+TESTS_DLL := OpenCobra/Tests/bin/Debug/$(TESTS_TFM)/Tests.dll
+
+$(TESTS_DLL): $(TESTS_SRC)
+	dotnet build OpenCobra/Tests/Tests.csproj
+
+# Extract TargetFramework from the csproj
+TFM := $(shell grep -oPm1 '(?<=<TargetFramework>)[^<]+' OpenCobra/Tests/TestRunner/OvlTestBench.csproj)
+# Path to the compiled test runner using the detected TFM
+OVL_TEST_BENCH_DLL := OpenCobra/Tests/TestRunner/bin/Debug/$(TFM)/OvlTestBench.dll
+
 .PHONY: test
-test: test-plugins
+test: $(PLUGINS_OUT) $(TESTS_DLL) $(OVL_TEST_BENCH_DLL)
 	deno check clients/desktop/main.ts
 	deno task check:plugins
-	dotnet test
+	dotnet test --no-build /p:SolutionDir=$(CURDIR)/
 
-.PHONY: test-gdk
-test-gdk:
-	dotnet test OpenCobra/Tests/Tests.csproj /p:SolutionDir=$(CURDIR)/
-
-.PHONY: test-plugins
-test-plugins:
+PLUGINS_SRC := $(wildcard plugins/*/index.ts)
+PLUGINS_OUT := $(patsubst plugins/%/index.ts,bin/plugins/%.wasm,$(PLUGINS_SRC))
+$(PLUGINS_OUT): $(PLUGINS_SRC)
 	deno task build:plugins
+
+$(OVL_TEST_BENCH_DLL): $(PLUGINS_OUT) $(TESTS_SRC)
 # FIXME: This doesn't work on macOS
 ifeq ($(PLATFORM),Windows)
 	dotnet build OpenCobra/Tests/TestRunner/OvlTestBench.csproj
