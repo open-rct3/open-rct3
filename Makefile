@@ -63,6 +63,22 @@ debug:
 # Re-builds are only performed if sources change
 # =========================================================
 
+# Plugins
+
+PLUGINS_SRC := $(wildcard plugins/*/index.ts)
+PLUGINS_OUT := $(patsubst plugins/%/index.ts,bin/plugins/%.wasm,$(PLUGINS_SRC))
+$(PLUGINS_OUT): $(PLUGINS_SRC)
+	deno task build:plugins
+
+.PHONY: plugins
+plugins: $(PLUGINS_OUT)
+
+.PHONY: test-plugins
+test-plugins: $(PLUGINS_OUT)
+	deno task test:plugins
+
+# .NET Tests
+
 TESTS_SRC := $(wildcard OpenCobra/Tests/*.cs OpenCobra/Tests/*/*.cs)
 # Extract TargetFramework from the csproj
 TESTS_TFM := $(shell grep -oPm1 '(?<=<TargetFramework>)[^<]+' OpenCobra/Tests/Tests.csproj)
@@ -77,18 +93,10 @@ TFM := $(shell grep -oPm1 '(?<=<TargetFramework>)[^<]+' OpenCobra/Tests/TestRunn
 OVL_TEST_BENCH_DLL := OpenCobra/Tests/TestRunner/bin/Debug/$(TFM)/OvlTestBench.dll
 
 .PHONY: test
-test: $(PLUGINS_OUT) $(TESTS_DLL) $(OVL_TEST_BENCH_DLL)
+test: $(PLUGINS_OUT) test-plugins $(TESTS_DLL) $(OVL_TEST_BENCH_DLL)
 	deno check clients/desktop/main.ts
 	deno task check:plugins
 	dotnet test --no-build /p:SolutionDir=$(CURDIR)/
-
-PLUGINS_SRC := $(wildcard plugins/*/index.ts)
-PLUGINS_OUT := $(patsubst plugins/%/index.ts,bin/plugins/%.wasm,$(PLUGINS_SRC))
-$(PLUGINS_OUT): $(PLUGINS_SRC)
-	deno task build:plugins
-
-.PHONY: plugins
-plugins: $(PLUGINS_OUT)
 
 $(OVL_TEST_BENCH_DLL): $(PLUGINS_OUT) $(TESTS_SRC)
 # FIXME: This doesn't work on macOS
