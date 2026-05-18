@@ -27,7 +27,7 @@ export function render(): i32 {
     return 0;
   }
 
-  let html = "<div class='tex-viewer'>";
+  let html = "";
 
   // Determine whether the source data is a plain texture or bitmap table
   const firstU32_sentinel = decodeU32(data, 0);
@@ -36,7 +36,6 @@ export function render(): i32 {
 
   // FIXME: ONLY render the hex-dump if the data is not a plain texture or bitmap table
   html += renderHexView(data);
-  html += "</div>";
 
   Host.outputString(html);
   return 0;
