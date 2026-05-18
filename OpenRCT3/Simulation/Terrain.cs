@@ -5,15 +5,16 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using OpenCobra.GDK.Materials;
+using OpenCobra.OVL;
+using OpenRCT3.Platforms;
 
 namespace OpenRCT3.Simulation;
 
 /// <summary>
-/// Represents the terrain of the park.
+/// Represents the terrain of the park, a grid of tiles, each 4x4 meters.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The terrain is a grid of tiles, each 4x4 meters.
 /// The coordinate system is Z-up:
 /// <list type="bullet">
 /// <item><description>X: West to East (East is +X)</description></item>
@@ -45,8 +46,14 @@ public class Terrain {
   /// </summary>
   /// <returns>A loaded <see cref="Terrain"/> instance.</returns>
   public static Terrain Load() {
+    var config = AppConfig.Instance;
+    Debug.Assert(config.InstallPath != null);
+
     var terrain = new Terrain();
-    // TODO: Load textures from terrain/RCT3/Terrain_RCT3.common.ovl
+    // Load textures from terrain/RCT3/Terrain_RCT3.common.ovl
+    var terrainOvl = Path.Combine(config.InstallPath, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
+    var ovl = Ovl.Load(terrainOvl);
+
     return terrain;
   }
 }

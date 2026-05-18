@@ -54,6 +54,10 @@
     <EmbeddedResource Include="Panda.ico" />
     <InternalsVisibleTo Include="OpenRCT3.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <Using Include="System.Diagnostics" />
+    <Using Include="System.IO" />
+  </ItemGroup>
   <Choose>
     <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
       <PropertyGroup>

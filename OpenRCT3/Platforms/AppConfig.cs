@@ -1,4 +1,4 @@
-﻿// InstallFinder
+﻿// AppConfig
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>

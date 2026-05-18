@@ -5,12 +5,11 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using NLog;
 using System;
-using System.Diagnostics;
 using OpenCobra.GDK;
 using OpenRCT3.Simulation;
 using OpenRCT3.Platforms;
-using NLog;
 
 #if WINDOWS
 using System.Windows.Forms;
@@ -45,7 +44,6 @@ public class Game : IDisposable {
   /// Target frame time of the game loop.
   /// </summary>
   public TimeSpan TargetFrameTime { get; private set; } = TimeSpan.FromSeconds(1.0 / 60.0);
-  [Unowned("The renderer is owned by the platform abstraction layer.")]
   public IRenderer Renderer { get; }
   public World World { get; }
   public Scene Scene { get; } = new();
@@ -64,7 +62,7 @@ public class Game : IDisposable {
     // TODO: Show a progress bar while loading
     World.Load();
     if (!string.IsNullOrEmpty(Config.InstallPath)) {
-      var nullbmpPath = System.IO.Path.Combine(Config.InstallPath, "nullbmp.common.ovl");
+      var nullbmpPath = Path.Combine(Config.InstallPath, "nullbmp.common.ovl");
       Scene.LoadTexture(nullbmpPath, "nullbmp");
     }
   }
@@ -132,8 +130,7 @@ public class Game : IDisposable {
   /// </summary>
   /// <param name="interpolation">The interpolation fraction.</param>
   private void Render(float interpolation) {
-    if (Renderer.TryGetTarget(out var renderer))
-      renderer.Render(Scene);
+    Renderer.Render(Scene);
   }
 
   public void Dispose() {
