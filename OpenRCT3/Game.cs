@@ -73,6 +73,9 @@ public class Game : IDisposable {
   /// <seealso cref="TargetFrameTime"/>
   /// <see href="https://gameprogrammingpatterns.com/game-loop.html"/>
   public void Run() {
+    World.Load();
+
+    // Run the game loop
     var previousTime = _stopwatch.Elapsed;
     var lag = TimeSpan.Zero;
     var msPerUpdate = TargetFrameTime;
@@ -83,7 +86,7 @@ public class Game : IDisposable {
       previousTime = currentTime;
       lag += elapsed;
 
-      // Process any pending window events (e.g. input events)
+      // Process any pending window events, e.g. input events
 #if WINDOWS
       Application.DoEvents();
 #elif OSX

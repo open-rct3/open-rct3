@@ -278,8 +278,8 @@ Each phase is a separate task:
 3. [x] **Render solid color plane** — Quad in perspective with solid color
 4. [x] **Create ftx-viewer plugin** — Decode flexi-textures
 5. [ ] **Prototype palette conversion** — Test KGySoft vs manual lookup for OVL texture palettes
-6. [ ] **Render nullbmp texture** — Plane with nullbmp texture
-7. [ ] **Render grass texture** — Plane with grass from terrain OVL
+6. [x] **Render nullbmp texture** — Plane with nullbmp texture
+7. [ ] **Render grass plane** — Full park grid textured with grass; see [Phase 6: Render Grass Plane](phase-one/6-grass-plane.md)
 
 ---
 

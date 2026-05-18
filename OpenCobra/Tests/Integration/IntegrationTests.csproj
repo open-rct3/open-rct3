@@ -2,14 +2,21 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>OvlTestBench.Tests</AssemblyName>
-    <RootNamespace>OvlTestBench.Tests</RootNamespace>
+    <RootNamespace>OpenCobra.Tests.Integration</RootNamespace>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Extism.Sdk" Version="1.10.0" />
     <PackageReference Include="Extism.runtime.all" Version="1.13.0" />
+    <PackageReference Include="NUnit" Version="4.6.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.13.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Tests.csproj" />
+    <ProjectReference Include="..\..\GDK\GDK.csproj" />
     <ProjectReference Include="..\..\OVL\OVL.csproj" />
   </ItemGroup>
 </Project>

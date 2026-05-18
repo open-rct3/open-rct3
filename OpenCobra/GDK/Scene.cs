@@ -16,12 +16,12 @@ public class Scene {
   public Model Model { get; set; } = new();
 
   public Scene() {
-    // Create a flat quad
+    // Create a flat quad on the XY plane (Z-up)
     Model.Mesh.Vertices.AddRange([
-      new Vertex { Position = new Vector3(-10, 0, -10), TexCoord = new Vector2(0, 0), Color = new Vector4(1, 1, 1, 1) },
-      new Vertex { Position = new Vector3( 10, 0, -10), TexCoord = new Vector2(1, 0), Color = new Vector4(1, 1, 1, 1) },
-      new Vertex { Position = new Vector3( 10, 0,  10), TexCoord = new Vector2(1, 1), Color = new Vector4(1, 1, 1, 1) },
-      new Vertex { Position = new Vector3(-10, 0,  10), TexCoord = new Vector2(0, 1), Color = new Vector4(1, 1, 1, 1) }
+      new Vertex { Position = new Vector3(-10, -10, 0), TexCoord = new Vector2(0, 0), Color = new Vector4(1, 1, 1, 1) },
+      new Vertex { Position = new Vector3( 10, -10, 0), TexCoord = new Vector2(1, 0), Color = new Vector4(1, 1, 1, 1) },
+      new Vertex { Position = new Vector3( 10,  10, 0), TexCoord = new Vector2(1, 1), Color = new Vector4(1, 1, 1, 1) },
+      new Vertex { Position = new Vector3(-10,  10, 0), TexCoord = new Vector2(0, 1), Color = new Vector4(1, 1, 1, 1) }
     ]);
     Model.Mesh.Indices.AddRange([0, 1, 2, 0, 2, 3]);
     Model.Mesh.ComputeBoundingBox();
@@ -40,6 +40,7 @@ varying vec4 v_Color;
 
 void main() {
     gl_Position = u_Projection * u_View * u_Model * vec4(a_Position, 1.0);
+    v_TexCoord = v_TexCoord; // FIXME: Flip Y if needed for texture orientation
     v_TexCoord = a_TexCoord;
     v_Color = a_Color;
 }";
@@ -71,7 +72,8 @@ void main() {
   /// </summary>
   /// <param name="aspectRatio">The aspect ratio of the viewport.</param>
   public void UpdateCamera(float aspectRatio) {
-    var view = Matrix4x4.CreateLookAt(new Vector3(0, 15, 20), new Vector3(0, 0, 0), Vector3.UnitY);
+    // Looking at the origin from the South-East, with Z as Up
+    var view = Matrix4x4.CreateLookAt(new Vector3(20, -20, 15), new Vector3(0, 0, 0), Vector3.UnitZ);
     var projection = Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 3f, aspectRatio, 0.1f, 1000f);
 
     foreach (var uniform in Model.Shader.Uniforms) {
