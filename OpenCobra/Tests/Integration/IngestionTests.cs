@@ -1,13 +1,20 @@
+// GdkIngestionTests
+//
+// Authors:
+//   - Chance Snow <git@chancesnow.me>
+//
+// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using NUnit.Framework;
 using OpenCobra.GDK.Assets;
 using OpenCobra.OVL;
+using OVL.Tests;
 using System;
 using System.IO;
 
 namespace OpenCobra.Tests.Integration;
 
 [TestFixture]
-public class GdkIngestionTests {
+public class IngestionTests {
   [Test]
   [SkipIfEnvironmentMissing("RCT3_PATH")]
   public void LoadTerrainTexture_Succeeds() {
