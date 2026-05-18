@@ -55,6 +55,7 @@
     <InternalsVisibleTo Include="OpenRCT3.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <Using Include="System" />
     <Using Include="System.Diagnostics" />
     <Using Include="System.IO" />
   </ItemGroup>
