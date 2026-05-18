@@ -47,7 +47,7 @@
     <PackageReference Include="System.Drawing.Common" Version="10.0.8" />
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />
     <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
-    <PackageReference Include="System.Text.Json" Version="9.0.16" />
+    <PackageReference Include="System.Text.Json" Version="10.0.8" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Panda.ico" />
