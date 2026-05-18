@@ -6,7 +6,6 @@
     <ProjectTypeGuids>{A3F8F2AB-B479-4A4A-A458-A89E7DC349F1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <RootNamespace>Dumper</RootNamespace>
     <AssemblyName>OVL Dumper</AssemblyName>
@@ -24,12 +23,13 @@
     <ApplicationIcon>Dumper.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+  <PropertyGroup>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <StartupObject>Dumper.Program</StartupObject>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Suppress warning about unnecessary WPF conflict: -->
-    <!-- There was a conflict between "WindowsBase, Version=4" and "WindowsBase, Version=5" -->
-    <NoWarn>$(NoWarn);MSB3277</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -110,6 +110,7 @@
   </ItemGroup>
   <ItemGroup>
     <Using Include="System.Diagnostics" />
+    <Using Include="System.IO" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Properties\Settings.settings">
