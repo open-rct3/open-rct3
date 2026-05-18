@@ -6,7 +6,6 @@
 // Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
 using System.Security;
 using Dumper.Plugins;
-using Dumper.Properties;
 using Dumper.Settings;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
