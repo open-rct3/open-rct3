@@ -27,6 +27,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Extism.Sdk" Version="1.10.0" />
     <PackageReference Include="Extism.runtime.all" Version="1.13.0" />
     <PackageReference Include="NUnit" Version="4.6.0" />

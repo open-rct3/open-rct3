@@ -64,7 +64,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="*" />
     <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
-    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
+    <PackageReference Include="System.Linq.Async" Version="7.0.1" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
     <PackageReference Include="System.Resources.Extensions" Version="10.0.8" />
   </ItemGroup>
