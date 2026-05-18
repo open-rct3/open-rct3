@@ -63,7 +63,7 @@ namespace Dumper
       toolStrip = new ToolStrip();
       helpToolStripButton = new ToolStripButton();
       openArchiveToolStripButton = new ToolStripButton();
-      treeView = new TreeView();
+      treeView = new FileTree();
       contentPanel = new ContentPanel();
       menuStrip.SuspendLayout();
       statusStrip.SuspendLayout();
@@ -208,7 +208,6 @@ namespace Dumper
       optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
       optionsToolStripMenuItem.Size = new Size(180, 22);
       optionsToolStripMenuItem.Text = "Settings…";
-      optionsToolStripMenuItem.Click += SettingsToolStripMenuItem_Click;
       // 
       // helpToolStripMenuItem
       // 
@@ -349,11 +348,8 @@ namespace Dumper
       treeView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
       treeView.Location = new Point(0, 28);
       treeView.Name = "treeView";
-      treeView.ShowNodeToolTips = true;
       treeView.Size = new Size(225, 312);
       treeView.TabIndex = 0;
-      treeView.AfterSelect += OvlTree_AfterSelect;
-      treeView.NodeMouseClick += OvlTree_NodeMouseClick;
       // 
       // contentPanel
       // 
@@ -427,7 +423,7 @@ namespace Dumper
     private System.Windows.Forms.ToolStripProgressBar progressBar;
     private System.Windows.Forms.OpenFileDialog openDialog;
     private System.Windows.Forms.SplitContainer splitView;
-    private System.Windows.Forms.TreeView treeView;
+    private Dumper.FileTree treeView;
     private System.Windows.Forms.ToolStrip toolStrip;
     private System.Windows.Forms.ToolStripButton helpToolStripButton;
     private System.Windows.Forms.ToolStripButton openArchiveToolStripButton;
