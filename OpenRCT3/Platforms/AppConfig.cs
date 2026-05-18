@@ -17,7 +17,7 @@ public record AppConfig {
     ?? throw new InvalidOperationException("App configuration is not initialized");
   private static AppConfig? _instance = null;
 
-  private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
   /// <summary>
   /// Cached path to the user's RCT3 installation.
@@ -40,7 +40,7 @@ public record AppConfig {
       var json = File.ReadAllText(ConfigPath);
       return _instance = JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
     } catch (Exception e) {
-      Logger.Error(e, "Could not load app config.json");
+      logger.Error(e, "Could not load app config.json");
       return _instance = new AppConfig();
     }
   }

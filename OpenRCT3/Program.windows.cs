@@ -15,11 +15,11 @@ using System.Windows.Forms;
 namespace OpenRCT3;
 
 internal static class Program {
-  private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
   private static void HandleException(Exception? e) {
     if (e == null) return;
-    Logger.Fatal(e, "An unhandled exception occurred.");
+    logger.Fatal(e, "An unhandled exception occurred.");
     // TODO: Refactor to custom modal with "Restart" label in place of "Retry".
     var result = MessageBox.Show(
       $"An unhandled exception occurred:\n\n{e.Message}",
@@ -66,7 +66,7 @@ internal static class Program {
     Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
 
     LogManager.Setup().LoadConfigurationFromFile("nlog.config");
-    Logger.Info("Starting OpenRCT3 on Windows...");
+    logger.Info("Starting OpenRCT3 on Windows...");
 
     // ‼ This order matters!
     // SetCompatibleTextRenderingDefault() must be called before any UI elements are created.

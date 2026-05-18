@@ -19,7 +19,7 @@ using System.Numerics;
 namespace OpenRCT3.OpenGL;
 
 public class Renderer(GL gl) : IRenderer {
-  private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
   private readonly GL _gl = gl;
   private uint _program;
@@ -201,7 +201,7 @@ public class Renderer(GL gl) : IRenderer {
   private void CheckShaderError(uint shader) {
     string infoLog = _gl.GetShaderInfoLog(shader);
     if (!string.IsNullOrEmpty(infoLog)) {
-      Logger.Error($"Shader Error: {infoLog}");
+      logger.Error($"Shader Error: {infoLog}");
       throw new ShaderError(infoLog);
     }
   }
@@ -209,7 +209,7 @@ public class Renderer(GL gl) : IRenderer {
   private void CheckProgramError(uint program) {
     string infoLog = _gl.GetProgramInfoLog(program);
     if (!string.IsNullOrEmpty(infoLog)) {
-      Logger.Error($"Program Error: {infoLog}");
+      logger.Error($"Shader Program Error: {infoLog}");
       throw new ShaderError(infoLog);
     }
   }
