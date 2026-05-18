@@ -5,8 +5,15 @@ else
     PLATFORM := $(shell uname -s)
 endif
 
-all: gui
-	dotnet build OpenRCT3/OpenRCT3.csproj
+all: release
+
+.PHONY: website
+website: ovl
+	deno task build:website
+
+# ===========
+# Publishing
+# ===========
 
 .PHONY: install
 ifeq ($(PLATFORM),Darwin)
@@ -15,6 +22,7 @@ else ifeq ($(PLATFORM),Windows)
 install: bin/OpenRCT3.exe
 endif
 
+# FIXME: Use `dotnet publish` to generate the bundle, this doesn't include all dependencies
 ifeq ($(PLATFORM),Darwin)
 bin/OpenRCT3.app: release
 	@cp -R OpenRCT3/bin/Release/net8.0-macos/osx-x64/OpenRCT3.app bin/OpenRCT3.app
@@ -31,9 +39,17 @@ release: gui
 gui: ovl
 	deno task build:desktop
 
-.PHONY: website
-website: ovl
-	deno task build:website
+.PHONY: ovl
+ovl:
+	dotnet build OpenCobra/OVL/OVL.csproj -c Release
+
+# ==========
+# Debugging
+# ==========
+
+.PHONY: dumper
+dumper:
+	dotnet run --project Dumper/Dumper.csproj
 
 .PHONY: debug
 debug:
@@ -41,16 +57,11 @@ debug:
 	deno task build:desktop
 	dotnet run --project OpenRCT3/OpenRCT3.csproj
 
-.PHONY: ovl
-ovl:
-	dotnet build OpenCobra/OVL/OVL.csproj
-
-.PHONY: dumper
-dumper:
-	dotnet run --project Dumper/Dumper.csproj
-
+# =========================================================
 # Tests
-# Sources and targets are automatically detected, i.e. re-builds are only performed if sources change
+#
+# Re-builds are only performed if sources change
+# =========================================================
 
 TESTS_SRC := $(wildcard OpenCobra/Tests/*.cs OpenCobra/Tests/*/*.cs)
 # Extract TargetFramework from the csproj

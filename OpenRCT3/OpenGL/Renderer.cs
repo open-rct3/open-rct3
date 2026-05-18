@@ -61,7 +61,8 @@ public class Renderer(GL gl) : IRenderer {
       _gl.BindTexture(TextureTarget.Texture2D, _texture);
 
       var texture = scene.Model.Material.AlbedoTexture;
-      Debug.Assert(texture.Pixels.DangerousTryGetSinglePixelMemory(out var pixelMemory));
+      var success = texture.Pixels.DangerousTryGetSinglePixelMemory(out var pixelMemory);
+      Debug.Assert(success, "Failed to get pixel memory from albedo texture");
       ReadOnlySpan<Rgba32> pixels = pixelMemory.Span;
       _gl.TexImage2D(
         TextureTarget.Texture2D,
