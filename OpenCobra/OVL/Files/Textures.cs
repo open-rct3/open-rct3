@@ -58,7 +58,7 @@ public class Texture(string name, TextureFormat format, uint width, uint height,
 }
 
 public static class Textures {
-  private readonly static ILogger logger = LogManager.GetCurrentClassLogger();
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
   public static bool IsDecodable(TextureFormat _) => false;
 
