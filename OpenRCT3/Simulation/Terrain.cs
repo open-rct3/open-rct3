@@ -4,10 +4,9 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-
 using OpenCobra.GDK.Materials;
 
-namespace OpenRCT3.Terrain;
+namespace OpenRCT3.Simulation;
 
 /// <summary>
 /// Represents the terrain of the park.
@@ -27,19 +26,6 @@ namespace OpenRCT3.Terrain;
 /// </para>
 /// </remarks>
 public class Terrain {
-  /// <summary>
-  /// The size of a single grid square in meters.
-  /// </summary>
-  public const float TileSize = 4.0f;
-  /// <summary>
-  /// The default width and height of the buildable area in tiles.
-  /// </summary>
-  public const int DefaultMapSize = 128;
-  /// <summary>
-  /// The width of the out-of-bounds border in tiles.
-  /// </summary>
-  public const int OutOfBoundsBorder = 5;
-
   public int Width { get; }
   public int Height { get; }
   public Texture? GrassTexture { get; private set; }
@@ -49,9 +35,9 @@ public class Terrain {
   /// </summary>
   /// <param name="width">The buildable width in tiles.</param>
   /// <param name="height">The buildable height in tiles.</param>
-  public Terrain(int width = DefaultMapSize, int height = DefaultMapSize) {
-    Width = width + (OutOfBoundsBorder * 2);
-    Height = height + (OutOfBoundsBorder * 2);
+  public Terrain(int width = Park.DefaultMapSize, int height = Park.DefaultMapSize) {
+    Width = width + (Park.OutOfBoundsBorder * 2);
+    Height = height + (Park.OutOfBoundsBorder * 2);
   }
 
   /// <summary>

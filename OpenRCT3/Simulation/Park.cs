@@ -4,9 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-
 using System.Numerics;
-using OpenRCT3.Terrain;
 
 namespace OpenRCT3.Simulation;
 
@@ -25,26 +23,38 @@ namespace OpenRCT3.Simulation;
 /// </remarks>
 public class Park {
   /// <summary>
+  /// The size of a single grid square in meters.
+  /// </summary>
+  public const float TileSize = 4.0f;
+  /// <summary>
+  /// The default width and height of the buildable area in tiles.
+  /// </summary>
+  public const int DefaultMapSize = 128;
+  /// <summary>
+  /// The width of the out-of-bounds border in tiles.
+  /// </summary>
+  public const int OutOfBoundsBorder = 5;
+  /// <summary>
   /// The position of the park entrance.
   /// </summary>
   /// <remarks>
   /// The entrance is typically on the South edge of the buildable area.
   /// </remarks>
   // FIXME: This should be loaded from park data, not hard-coded.
-  public Vector3 EntrancePosition { get; set; } = new(0, Terrain.Terrain.OutOfBoundsBorder * Terrain.Terrain.TileSize, 0);
+  public Vector3 EntrancePosition { get; set; } = new(0, OutOfBoundsBorder * TileSize, 0);
 
   /// <summary>
   /// The rectangular boundary of the buildable area.
   /// </summary>
   public (Vector2 Min, Vector2 Max) BuildableBounds { get; }
 
-  public Park(int buildableWidth = Terrain.Terrain.DefaultMapSize, int buildableHeight = Terrain.Terrain.DefaultMapSize) {
-    float halfWidth = (buildableWidth * Terrain.Terrain.TileSize) / 2.0f;
-    float borderOffset = Terrain.Terrain.OutOfBoundsBorder * Terrain.Terrain.TileSize;
+  public Park(int buildableWidth = DefaultMapSize, int buildableHeight = DefaultMapSize) {
+    float halfWidth = (buildableWidth * TileSize) / 2.0f;
+    float borderOffset = OutOfBoundsBorder * TileSize;
 
     BuildableBounds = (
       new Vector2(-halfWidth, borderOffset),
-      new Vector2(halfWidth, borderOffset + (buildableHeight * Terrain.Terrain.TileSize))
+      new Vector2(halfWidth, borderOffset + (buildableHeight * TileSize))
     );
   }
 }
