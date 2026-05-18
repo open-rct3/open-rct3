@@ -3,6 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>OpenCobra.Tests.Integration</AssemblyName>
     <RootNamespace>OpenCobra.Tests.Integration</RootNamespace>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -14,7 +15,8 @@
   <!-- FIXME: https://github.com/microsoft/testfx/issues/4783 -->
   <!-- FIXME: https://github.com/dotnet/sdk/issues/51316 -->
   <PropertyGroup>
-    <IsTestProject>true</IsTestProject>
+    <!-- FIXME: Isn't this project a dependency of the GUI test runner? -->
+    <OutputType>Exe</OutputType>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <!-- Opt-in to the old runner. -->
     <!-- Note: MUST be in project file to beat the bugs -->
@@ -33,6 +35,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
+  <!-- FIXME: Only include these if this project is running as a test project -->
+  <ItemGroup>
+    <PackageReference Include="NUnit3TestAdapter" Version="6.2.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Tests.csproj" />
     <ProjectReference Include="..\..\GDK\GDK.csproj" />
