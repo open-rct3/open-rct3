@@ -1,6 +1,7 @@
 /// <reference no-default-lib="true" />
 import "../types.ts";
 import { Host } from "@extism/as-pdk";
+import { renderHexView } from "../lib/hexViewer.ts";
 
 export function name(): i32 {
   Host.outputString("Sound Player");
@@ -166,6 +167,7 @@ function renderSound(data: Uint8Array): string {
     }
   }
 
+  html += renderHexView(data);
   html += "</div>";
   return html;
 }

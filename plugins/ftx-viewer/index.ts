@@ -2,6 +2,7 @@
 import { Host } from "@extism/as-pdk";
 import "../types.ts";
 import { convertIndexedToRgba } from "../palette-converter.ts";
+import { renderHexView } from "../lib/hexViewer.ts";
 
 export function name(): i32 {
   Host.outputString("Flexi-Texture Viewer");
@@ -146,6 +147,7 @@ export function render(): i32 {
   html += "  <div class='image-container'>";
   html += "    <img src='" + dataUrl + "' alt='Flexi-texture' style='image-rendering: pixelated; max-width: 100%;' />";
   html += "  </div>";
+  html += renderHexView(data);
   html += "</div>";
 
   Host.outputString(html);

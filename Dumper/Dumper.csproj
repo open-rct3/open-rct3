@@ -97,14 +97,15 @@
   <!-- Bundle built-in plugins -->
   <Target Name="BuildPlugins" BeforeTargets="BeforeBuild">
     <!-- FIXME: Why can't we use $(SolutionDir) here? -->
-    <Exec Command="deno task build:plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
+    <Exec Command="make plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
   </Target>
   <ItemGroup>
     <Folder Include="Plugins\Artifacts\" />
   </ItemGroup>
   <ItemGroup>
+    <!-- FIXME: Plugins are not _always_ copied to output directory -->
     <Content Include="$(SolutionDir)bin\plugins\*.wasm">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Link>Plugins\Artifacts\%(Filename).wasm</Link>
       <TargetPath>plugins\%(Filename).wasm</TargetPath>
     </Content>

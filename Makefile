@@ -87,6 +87,9 @@ PLUGINS_OUT := $(patsubst plugins/%/index.ts,bin/plugins/%.wasm,$(PLUGINS_SRC))
 $(PLUGINS_OUT): $(PLUGINS_SRC)
 	deno task build:plugins
 
+.PHONY: plugins
+plugins: $(PLUGINS_OUT)
+
 $(OVL_TEST_BENCH_DLL): $(PLUGINS_OUT) $(TESTS_SRC)
 # FIXME: This doesn't work on macOS
 ifeq ($(PLATFORM),Windows)
