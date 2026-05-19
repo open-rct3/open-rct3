@@ -45,11 +45,26 @@ internal class FileBlock {
   public byte[]? Data;
 }
 
-internal class FileTypeBlock {
+internal class FileBlockGroup {
   public uint Count;
   public uint Size;
   public uint UnknownV5Extra;
   public List<FileBlock> Blocks = [];
+}
+
+internal struct RelocationSource(int index, uint offset) {
+  /// <summary>
+  /// The index of this relocation in the relocation table.
+  /// </summary>
+  public readonly int Index = index;
+  /// <summary>
+  /// The location of a pointer stored in the archive, relative to the start of the archive's data section.
+  /// </summary>
+  public readonly uint Offset = offset;
+}
+
+internal record Relocation(RelocationSource Source) {
+  public uint? TargetOffset { get; internal set; } = null;
 }
 
 /// <summary>Represents an OVL archive, providing methods to load and extract resource entries.</summary>
@@ -57,12 +72,12 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   public const string UnnamedOvl = "Untitled OVL";
 
   public readonly string Name = name;
-  public Version Version => version;
+  public Version Version { get; private set; }
 
-  private Version version;
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
-  private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
+  private readonly List<FileBlockGroup[]> fileBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
+  private readonly List<Relocation> relocations = [];
   private uint relocationOffset;
   private bool disposed = false;
 
@@ -89,7 +104,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// <summary>Load an OVL archive and extract all resource entries.</summary>
   public static Ovl Load(string ovlPath) {
     var ovl = new Ovl(Path.GetFileName(ovlPath));
-    ovl.version = ovl.IngestArchive(ovlPath);
+    ovl.Version = ovl.IngestArchive(ovlPath);
     return ovl;
   }
 
@@ -120,6 +135,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   }
 
   private Version IngestArchive(string ovlPath) {
+    // ReSharper disable once LocalVariableHidesMember
     var version = Version.Unknown;
     var basePath = Path.GetDirectoryName(ovlPath) ?? "";
     var fileName = Path.GetFileNameWithoutExtension(ovlPath).Split('.')[0];
@@ -134,6 +150,10 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
       version = version == Version.Unknown ? v : version;
     }
 
+    // Resolve relocations, if any
+    if (relocations.Count > 0) ResolveRelocations();
+
+    // Build dictionary of files in the archive
     ExtractResources();
 
     return version;
@@ -146,6 +166,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     var magic = reader.ReadUInt32();
     Debug.Assert(magic == 0x4b524746, "Invalid OVL magic");
     var reserved = reader.ReadUInt32();
+    // ReSharper disable once LocalVariableHidesMember
     var version = (Version) reader.ReadUInt32();
     var headerRefs = reader.ReadUInt32();
 
@@ -170,7 +191,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     if (reader.BaseStream.Position + 8 <= reader.BaseStream.Length) {
       reader.ReadUInt32(); // OvlHeader2.unk
       var fileTypeCount = reader.ReadUInt32();
-      if (fileTypeCount > 0 && fileTypeCount < 1024) {
+      if (fileTypeCount is > 0 and < 1024) {
         loaderHeaders = ReadLoaderHeaders(reader, (int)fileTypeCount);
         if (version == Version.Five) ReadV5SymbolCounts(reader, loaderHeaders);
       }
@@ -178,11 +199,11 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     allLoaderHeaders.Add([.. loaderHeaders]);
 
     var blocks = ReadFileTypeBlocks(filePath, reader, version, subVersionFlag);
-    allFileTypeBlocks.Add(blocks);
+    fileBlocks.Add(blocks);
 
     ReadPostBlockUnknowns(reader, version);
     ReadBlockData(reader, blocks, version);
-    SkipRelocations(reader);
+    relocations.AddRange(ReadRelocations(reader));
 
     if (version < Version.Four || reader.BaseStream.Position + 4 > reader.BaseStream.Length) return version;
     if (version == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
@@ -239,16 +260,16 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     }
   }
 
-  private static FileTypeBlock[] ReadFileTypeBlocks(
+  private static FileBlockGroup[] ReadFileTypeBlocks(
     string filePath, BinaryReader reader, Version version, uint subVersionFlag
   ) {
-    var blocks = new FileTypeBlock[9];
+    var blocks = new FileBlockGroup[9];
     for (var i = 0; i < blocks.Length; i++) {
       if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) {
-        blocks[i] = new FileTypeBlock();
+        blocks[i] = new FileBlockGroup();
         continue;
       }
-      blocks[i] = new FileTypeBlock { Count = reader.ReadUInt32() };
+      blocks[i] = new FileBlockGroup { Count = reader.ReadUInt32() };
       if (version > Version.One && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
         reader.ReadUInt32();
         if (version == Version.Five && (subVersionFlag & 1) != 0 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length)
@@ -288,7 +309,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     }
   }
 
-  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, Version version) {
+  private void ReadBlockData(BinaryReader reader, FileBlockGroup[] blocks, Version version) {
     for (var i = 0; i < blocks.Length; i++) {
       foreach (var block in blocks[i].Blocks) {
         if (version == Version.One && block.Size == 0) {
@@ -308,22 +329,79 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     }
   }
 
-  private static void SkipRelocations(BinaryReader reader) {
-    if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
-    var relCount = reader.ReadUInt32();
-    var bytesToSkip = Convert.ToInt64(relCount) * 4;
-    if (bytesToSkip <= reader.BaseStream.Length - reader.BaseStream.Position)
-      reader.BaseStream.Seek(bytesToSkip, SeekOrigin.Current);
+  private static List<Relocation> ReadRelocations(BinaryReader reader) {
+    if (reader.BaseStream.Position + 4 > reader.BaseStream.Length)
+      throw new EndOfStreamException("Unexpected end of file");
+
+    var count = reader.ReadUInt32();
+    if (count == 0) return [];
+
+    var relocations = reader.ReadBytes(Convert.ToInt32(count * 4));
+
+    return Enumerable.Range(0, Convert.ToInt32(count))
+      .Select(i => new Relocation(
+        new RelocationSource(i, BitConverter.ToUInt32(relocations, i * 4))
+      )).ToList();
+  }
+
+  /// <summary>
+  /// Resolves resource relocations by following <see cref="Relocation.Source.Offset"/> and assigning
+  /// <see cref="Relocation.TargetOffset"/>.
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  /// <see cref="Relocation.TargetOffset"/> is the offset of the target resource, relative to the start of the data
+  /// block.
+  /// </para>
+  /// <para>
+  /// See the RCT3 Importer reference implementation:
+  /// <a href="https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/src/libOVLDump/OVLDump.cpp#L484">cOVLDump::ResolveRelocation</a>.
+  /// </para>
+  /// </remarks>
+  private void ResolveRelocations() {
+    // Threshold where unique file starts (i.e., end of common file's data)
+    // This is the relative offset of the first block in the unique file's first block type
+    var uniqueStartOffset = fileBlocks.Count > 1 && fileBlocks[1].Length > 0 && fileBlocks[1][0].Blocks.Count > 0
+      ? fileBlocks[1][0].Blocks[0].RelativeOffset
+      : 0;
+
+    foreach (var rel in relocations) {
+      var sourceOffset = rel.Source.Offset;
+
+      // Determine which file (common or unique) the relocation belongs to
+      var isCommon = sourceOffset < uniqueStartOffset;
+
+      // Find the block type and block containing this offset
+      var block = FindBlockContaining(isCommon ? 0 : 1, sourceOffset);
+      if (block?.Data == null) {
+        relocations[rel.Source.Index].TargetOffset = null;
+        continue;
+      }
+
+      // Read the pointer value at sourceOffset location
+      var offsetInBlock = sourceOffset - block.RelativeOffset;
+      var targetOffset = BitConverter.ToUInt32(block.Data, (int)offsetInBlock);
+
+      // Assign resolved target offset
+      relocations[rel.Source.Index].TargetOffset = targetOffset;
+    }
+  }
+
+  private FileBlock? FindBlockContaining(int fileIndex, uint offset) {
+    var blocks = fileBlocks[fileIndex];
+    return blocks.SelectMany(
+      group => group.Blocks.Where(block => offset >= block.RelativeOffset && offset < block.RelativeOffset + block.Size)
+    ).FirstOrDefault();
   }
 
   private void ExtractResources() {
-    var allBlocks = allFileTypeBlocks
+    var allBlocks = fileBlocks
         .SelectMany(ftb => ftb.SelectMany(b => b.Blocks))
         .Where(b => b.Data != null)
         .ToList();
 
-    for (var fileIndex = 0; fileIndex < allFileTypeBlocks.Count; fileIndex++) {
-      var blocks = allFileTypeBlocks[fileIndex];
+    for (var fileIndex = 0; fileIndex < fileBlocks.Count; fileIndex++) {
+      var blocks = fileBlocks[fileIndex];
       if (blocks.Length <= 2 || blocks[2].Blocks.Count == 0) continue;
 
       var symbolBlock = blocks[2].Blocks[0];
@@ -333,19 +411,15 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
       var blockOffset = 0;
       if (symbolBlock.Size % 16 == 0) {
         symbolSize = 16;
-      }
-      else if (symbolBlock.Size > 4 && (symbolBlock.Size - 4) % 16 == 0) {
+      } else if (symbolBlock.Size > 4 && (symbolBlock.Size - 4) % 16 == 0) {
         symbolSize = 16;
         blockOffset = 4;
-      }
-      else if (symbolBlock.Size % 12 == 0) {
+      } else if (symbolBlock.Size % 12 == 0) {
         symbolSize = 12;
-      }
-      else if (symbolBlock.Size > 4 && (symbolBlock.Size - 4) % 12 == 0) {
+      } else if (symbolBlock.Size > 4 && (symbolBlock.Size - 4) % 12 == 0) {
         symbolSize = 12;
         blockOffset = 4;
-      }
-      else continue;
+      } else continue;
 
       var loaderHeaders = fileIndex < allLoaderHeaders.Count ? allLoaderHeaders[fileIndex] : [];
       var loaderIdx = 0;
@@ -416,7 +490,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     // Empty large fields
     if (disposing) {
       entries.Clear();
-      allFileTypeBlocks.Clear();
+      fileBlocks.Clear();
       allLoaderHeaders.Clear();
     }
 

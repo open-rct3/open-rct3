@@ -102,7 +102,7 @@ The data for all blocks defined in section 4, stored sequentially.
 A list of addresses within the archive's relative offset space that contain pointers which must be patched/resolved.
 
 - `count` (u32)
-- `offsets` (count * u32): Relative offsets where 32-bit pointers are located.
+- `offsets` (count * u32): Relative offsets from the start of the data section (beginning of Block Type `0`, Block `0`) where 32-bit pointers are located.
 
 #### Relocation Resolution
 
@@ -118,6 +118,8 @@ determined, the address is resolved via a two-level search:
   address, then
 2. The specific block instance within that type is found by checking which instance's range
   (`[relative offset, relative offset + size)`) contains the address.
+
+The relative offset starts at `0` and accumulates as blocks are read. Each block's relative offset is the sum of all preceding blocks. The relocation values are compared against these to determine which block contains the pointer.
 
 The final pointer is computed as `block.data + (relocation - block's relative offset)`.
 
