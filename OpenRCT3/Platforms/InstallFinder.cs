@@ -43,6 +43,30 @@ public static class InstallFinder {
       "/Applications/RollerCoaster Tycoon 3 Complete Edition.app/Contents/Assets",
       "/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets",
       // TODO: Add GOG and Steam to macOS search paths
+#elif LINUX
+      // RCT3 runs through Proton on Linux; assets live inside the Steam library.
+      // We search the canonical Steam locations as well as common Flatpak/Snap
+      // and Lutris/Bottles prefixes.
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".steam", "steam", "steamapps", "common", SteamIds.Complete),
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".steam", "steam", "steamapps", "common", SteamIds.Platinum),
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".local", "share", "Steam", "steamapps", "common", SteamIds.Complete),
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".local", "share", "Steam", "steamapps", "common", SteamIds.Platinum),
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".var", "app", "com.valvesoftware.Steam", "data", "Steam", "steamapps", "common",
+        SteamIds.Complete),
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".var", "app", "com.valvesoftware.Steam", "data", "Steam", "steamapps", "common",
+        SteamIds.Platinum),
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "snap", "steam", "common", ".local", "share", "Steam", "steamapps", "common",
+        SteamIds.Complete),
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "snap", "steam", "common", ".local", "share", "Steam", "steamapps", "common",
+        SteamIds.Platinum),
 #endif
     ]);
 
