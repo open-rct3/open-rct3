@@ -173,11 +173,11 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     Debug.WriteLine($"[OVL] Loading {Path.GetFileName(filePath)} (v{version})");
 
     var subVersionFlag = 0u;
-    uint referenceCount = 0;
-
-    if (version == Version.Five) referenceCount = ReadV5References(reader, out subVersionFlag);
-    else if (version == Version.Four) referenceCount = reader.ReadUInt32();
-    else referenceCount = headerRefs;
+    var referenceCount = version switch {
+      Version.Five => ReadV5References(reader, out subVersionFlag),
+      Version.Four => reader.ReadUInt32(),
+      _ => headerRefs
+    };
 
     Debug.WriteLine($"[OVL] subVersionFlag: {subVersionFlag}, referenceCount: {referenceCount}");
 
@@ -213,14 +213,12 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
   private static uint ReadV5References(BinaryReader reader, out uint subVersionFlag) {
     subVersionFlag = reader.ReadUInt32();
-    if (subVersionFlag != 0) {
-      if (reader.BaseStream.Position + 12 <= reader.BaseStream.Length) {
-        reader.ReadBytes(12);
-        while (reader.BaseStream.Position < reader.BaseStream.Length && reader.ReadByte() != 0) { }
-        while (reader.BaseStream.Position < reader.BaseStream.Length && reader.BaseStream.Position % 4 != 0)
-          reader.ReadByte();
-      }
-    }
+    if (subVersionFlag == 0 || reader.BaseStream.Position + 12 > reader.BaseStream.Length)
+      return reader.BaseStream.Position + 4 <= reader.BaseStream.Length ? reader.ReadUInt32() : 0;
+    reader.ReadBytes(12);
+    while (reader.BaseStream.Position < reader.BaseStream.Length && reader.ReadByte() != 0) { }
+    while (reader.BaseStream.Position < reader.BaseStream.Length && reader.BaseStream.Position % 4 != 0)
+      reader.ReadByte();
     return reader.BaseStream.Position + 4 <= reader.BaseStream.Length ? reader.ReadUInt32() : 0;
   }
 
@@ -293,18 +291,20 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   }
 
   private static void ReadPostBlockUnknowns(BinaryReader reader, Version version) {
-    if (version == Version.Four && reader.BaseStream.Position + 8 <= reader.BaseStream.Length) {
-      reader.ReadBytes(8);
-    }
-    else if (version >= Version.Five && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
-      var bytesCount = reader.ReadUInt32();
-      if (bytesCount > 0 && bytesCount <= reader.BaseStream.Length - reader.BaseStream.Position)
-        reader.ReadBytes(Convert.ToInt32(bytesCount));
+    switch (version) {
+      case Version.Four when reader.BaseStream.Position + 8 <= reader.BaseStream.Length:
+        reader.ReadBytes(8);
+        break;
+      case >= Version.Five when reader.BaseStream.Position + 4 <= reader.BaseStream.Length: {
+        var bytesCount = reader.ReadUInt32();
+        if (bytesCount > 0 && bytesCount <= reader.BaseStream.Length - reader.BaseStream.Position)
+          reader.ReadBytes(Convert.ToInt32(bytesCount));
 
-      if (reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
+        if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
         var longCount = reader.ReadUInt32();
         if (Convert.ToInt64(longCount * 4) <= reader.BaseStream.Length - reader.BaseStream.Position)
           reader.ReadBytes(Convert.ToInt32(longCount * 4));
+        break;
       }
     }
   }
@@ -503,6 +503,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   public void Dispose() {
     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
     Dispose(disposing: true);
+    // ReSharper disable once GCSuppressFinalizeForTypeWithoutDestructor because this class doesn't use unamanged data
     GC.SuppressFinalize(this);
   }
 }
