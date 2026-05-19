@@ -31,7 +31,7 @@ internal class FileBlock {
   /// <summary>
   /// Absolute offset within the OVL archive.
   /// </summary>
-  public ulong Offset;
+  public uint Offset;
   /// <summary>
   /// Size of the block in bytes.
   /// </summary>
@@ -75,8 +75,8 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   public Version Version { get; private set; }
 
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
-  private readonly List<FileBlockGroup[]> fileBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
+  private readonly List<FileBlockGroup[]> fileBlocks = [];
   private readonly List<Relocation> relocations = [];
   private uint relocationOffset;
   private bool disposed = false;
@@ -129,6 +129,34 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
     var bytes = new byte[entry.Size];
     using var fs = new FileStream(file.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+    fs.Seek(Convert.ToInt32(entry.Offset), SeekOrigin.Begin);
+    fs.ReadExactly(bytes, 0, Convert.ToInt32(entry.Size));
+    return bytes;
+  }
+
+  /// <summary>
+  /// Read the resource data for a given relocation pointer.
+  /// </summary>
+  public byte[]? ReadResource(RelocationPointer ptr) {
+    var relocation = relocations.FirstOrDefault(rel => rel.Source.Offset == ptr.Value);
+    if (relocation == null) return null;
+
+    // Look up which file block ptr is relocated to
+    var blocks =
+      from groups in fileBlocks
+      from @group in groups
+      from fileBlock in @group.Blocks
+      let offset = ptr.Value
+      where offset >= fileBlock.RelativeOffset && offset < fileBlock.RelativeOffset + fileBlock.Size
+      where fileBlock.Offset - relocationOffset == ptr.Value
+      select fileBlock;
+    var block = blocks.FirstOrDefault();
+    if (block == null) return null;
+
+    // Read the block of data from the archive
+    var entry = new OvlEntry(block.Offset, block.Size);
+    var bytes = new byte[entry.Size];
+    using var fs = new FileStream(block.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
     fs.Seek(Convert.ToInt32(entry.Offset), SeekOrigin.Begin);
     fs.ReadExactly(bytes, 0, Convert.ToInt32(entry.Size));
     return bytes;
@@ -322,7 +350,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
         relocationOffset += block.Size;
 
         if (block.Size <= 0 || reader.BaseStream.Position + block.Size > reader.BaseStream.Length) continue;
-        block.Offset = Convert.ToUInt64(reader.BaseStream.Position);
+        block.Offset = Convert.ToUInt32(reader.BaseStream.Position);
         block.Data = reader.ReadBytes(Convert.ToInt32(block.Size));
         Debug.WriteLine($"[OVL] Seek past block {i} size {block.Size} at relOffset 0x{block.RelativeOffset:X}");
       }

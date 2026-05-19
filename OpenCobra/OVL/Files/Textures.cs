@@ -12,7 +12,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace OpenCobra.OVL.Files;
 
@@ -99,16 +98,19 @@ public static class Textures {
     Parallel.ForEach(otherTextureData, data => {
       try {
         var name = data.File.ToString();
+        var type = data.File.Type;
         var version = data.Version;
         var bitmapTable = bitmapTables.GetValueOrDefault(data.OvlName);
         using var fs = new FileStream(data.File.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
         fs.Seek(data.Entry.Offset, SeekOrigin.Begin);
 
-        // ReSharper disable once ConvertIfStatementToSwitchStatement
-        if (data.File.Type == FileType.Texture)
-          bag.Add(ReadTexture(name, fs, version));
-        else if (data.File.Type == FileType.Flic)
-          bag.Add(ReadFlic(name, fs, version, bitmapTable));
+        // ReSharper disable once ConvertIfStatementToSwitchStatement for brevity
+        if (type == FileType.Texture)
+          foreach (var texture in ReadTextures(name, fs, ovl, bitmapTable))
+            bag.Add(texture);
+        else if (type == FileType.Flic)
+          bag.Add(ReadFlic(name, ovl.ReadResource(data.File), version, bitmapTable));
+        else throw new NotImplementedException($"Unknown file type: {type.ToTagString()}");
       } catch (Exception ex) {
         logger.Error($"Failed to decode {data.File}:\n{ex.Message}");
         failures.Add(data.File);
@@ -125,29 +127,28 @@ public static class Textures {
   }
 
   // See ManagerTEX.cpp
-  private static Texture ReadTexture(string name, Stream stream, Version ovlVersion) {
+  private static IEnumerable<Texture> ReadTextures(string name, Stream stream, Ovl ovl, Texture[]? table = null) {
     using var reader = new BinaryReader(stream);
 
     var read = reader.Read<Tex>(out var tex);
     Debug.Assert(read == Marshal.SizeOf<Tex>());
-    //read = reader.Read<TexExtra>(out var texExtra);
-    //Debug.Assert(read == Marshal.SizeOf<TexExtra>());
 
+    // A texture is NOT relocated when count is zero
     var count = Math.Max(tex.Count, tex.OtherCount);
-    if (count == 0) throw new NotImplementedException("How the hell do you read an un-relocated flic texture?");
+    if (count == 0) throw new NotImplementedException("How the hell do you read non-relocated TEX flics?");
 
     for (var i = 0; i < count; i++) {
+      yield return ReadFlic(name, ovl.ReadResource(tex.Flic), ovl.Version, table);
+
       // TODO: Read texture style symbol reference
       // See ManagerTEX.cpp:123
       // See https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/src/libOVLng/LodSymRefManager.cpp#L161
     }
-
-    throw new NotImplementedException("How the fell do you read TEX flics?");
   }
 
   // See ManagerFLIC.cpp
-  private static Texture ReadFlic(string name, Stream stream, Version ovlVersion, Texture[]? table = null) {
-    using var reader = new BinaryReader(stream);
+  private static Texture ReadFlic(string name, ReadOnlyMemory<byte> data, Version ovlVersion, Texture[]? table = null) {
+    using var reader = new BinaryReader(data.AsStream());
 
     // Flics are either:
     // A: Indices to bitmaps in the same OVL's bitmap table, or
@@ -172,8 +173,8 @@ public static class Textures {
       // QUESTION: What is the purpose of `mipHeader.pitch`?
       // QUESTION: Ought `mipHeader.blocks` be used to calculate the size?
       var size = Convert.ToInt32(mipHeader.Width * mipHeader.Height * (format.BlockSize() / 8));
-      ReadOnlySpan<byte> data = reader.ReadBytes(size);
-      texture.MipLevels[i] = data.ToImage(format);
+      ReadOnlySpan<byte> pixels = reader.ReadBytes(size);
+      texture.MipLevels[i] = pixels.ToImage(format);
     }
 
     // NOTE: According to ManagerFLIC.cpp, there's trailing data:
@@ -331,13 +332,13 @@ internal struct Tex {
   public readonly uint Unk11;
 
   [FieldOffset(44)]
-  public SymbolReference TextureData;
+  public RelocationPointer TextureData;
 
   /// <remarks>
   /// <list type="bullet">
-  /// <item>loword is a count. See <see cref="OtherCount"/> and <see cref="Count"/>.</item>
+  /// <item>Lo-word is a count. See <see cref="OtherCount"/> and <see cref="Count"/>.</item>
   /// <item>
-  /// hiword is addonpack and in this case determines the number of unknown longs at the end of the structure.
+  /// Hi-word is addon pack and in this case determines the number of unknown longs at the end of the structure.
   /// </item>
   /// </list>
   /// </remarks>
@@ -359,13 +360,13 @@ internal struct Tex {
   /// <para>Always points to location before flic data.</para>
   /// </remarks>
   [FieldOffset(52)]
-  public DataPointer Flic;
+  public RelocationPointer Flic;
 
   /// <summary>
   /// Pointer to the rest of this structure's data, i.e. <see cref="TexExtra"/>.
   /// </summary>
   [FieldOffset(56)]
-  public readonly DataPointer ExtraData;
+  public readonly RelocationPointer ExtraData;
 }
 
 [StructLayout(LayoutKind.Explicit)]
@@ -374,13 +375,13 @@ internal struct TexExtra {
   /// A pointer back to the beginning of the <see cref="Tex"/> struct.
   /// </summary>
   [FieldOffset(0)]
-  public readonly DataPointer Tex;
+  public readonly RelocationPointer Tex;
 
   /// <summary>
   /// A relocated array of <see cref="Files.Flic"/> textures.
   /// </summary>
   [FieldOffset(4)]
-  public DataPointer Flic;
+  public RelocationPointer Flic;
 }
 
 internal static class BinaryReaderExtensions {
@@ -394,7 +395,7 @@ internal static class BinaryReaderExtensions {
   /// Reads a structure of type <typeparamref name="T"/> from the binary reader and returns the number of bytes read.
   /// </summary>
   public static uint Read<T>(this BinaryReader reader, out T data) {
-    byte[] bytes = reader.ReadBytes(Marshal.SizeOf(typeof(T)));
+    byte[] bytes = reader.ReadBytes(Marshal.SizeOf<T>());
 
     var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
     var ptr = handle.AddrOfPinnedObject();
@@ -402,7 +403,7 @@ internal static class BinaryReaderExtensions {
       data = default!;
       return 0;
     }
-    var structure = (T?)Marshal.PtrToStructure(ptr, typeof(T));
+    var structure = Marshal.PtrToStructure<T>(ptr);
     if (structure == null) data = default!;
     handle.Free();
 
