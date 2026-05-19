@@ -66,7 +66,9 @@
       </PropertyGroup>
       <ItemGroup>
         <Compile Remove="OpenGL\GLContext.windows.cs" />
+        <Compile Remove="OpenGL\GLContext.linux.cs" />
         <Compile Remove="Platforms\Windows\**\*.cs" />
+        <Compile Remove="Platforms\Linux\**\*.cs" />
         <Compile Update="Platforms\macOS\MainWindow.designer.cs">
           <DependentUpon>MainWindow.cs</DependentUpon>
         </Compile>
@@ -74,6 +76,7 @@
           <DependentUpon>GameViewController.cs</DependentUpon>
         </Compile>
         <Compile Remove="Program.windows.cs" />
+        <Compile Remove="Program.linux.cs" />
       </ItemGroup>
     </When>
     <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
@@ -86,8 +89,28 @@
       </PropertyGroup>
       <ItemGroup>
         <Compile Remove="OpenGL\GLContext.macOS.cs" />
+        <Compile Remove="OpenGL\GLContext.linux.cs" />
         <Compile Remove="**\Platforms\macOS\**\*.cs" />
+        <Compile Remove="**\Platforms\Linux\**\*.cs" />
         <Compile Remove="Program.macOS.cs" />
+        <Compile Remove="Program.linux.cs" />
+      </ItemGroup>
+    </When>
+    <When Condition="$([MSBuild]::IsOSPlatform('linux'))">
+      <PropertyGroup>
+        <ProfileName>Linux</ProfileName>
+        <DefineConstants>$(DefineConstants);LINUX</DefineConstants>
+      </PropertyGroup>
+      <ItemGroup>
+        <Compile Remove="OpenGL\GLContext.windows.cs" />
+        <Compile Remove="OpenGL\GLContext.macOS.cs" />
+        <Compile Remove="**\Platforms\Windows\**\*.cs" />
+        <Compile Remove="**\Platforms\macOS\**\*.cs" />
+        <Compile Remove="Program.windows.cs" />
+        <Compile Remove="Program.macOS.cs" />
+        <EmbeddedResource Remove="**\Platforms\Windows\**\*.resx" />
+        <PackageReference Include="Silk.NET.Windowing" Version="2.22.0" />
+        <PackageReference Include="Silk.NET.Windowing.Glfw" Version="2.22.0" />
       </ItemGroup>
     </When>
   </Choose>
