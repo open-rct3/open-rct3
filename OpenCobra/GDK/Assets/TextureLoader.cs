@@ -35,7 +35,7 @@ public static class TextureLoader {
 
     var textures = FlexiTextureList.Load(ovl, ovl.Find(name, FileType.FlexibleTexture) ??
       throw new AssetException($"Flexi-texture '{name}' not found in OVL."));
-    return new Texture(name, textures.Width, textures.Height, textures[0].Texture, textures.Recolorable);
+    return new Texture(name, textures[0].Texture, textures.Recolorable);
   }
 
   public static AnimatedTexture LoadAnimatedTexture(string ovlPath, string name) {

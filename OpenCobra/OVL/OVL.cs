@@ -128,7 +128,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     if (entry == null) return null;
 
     var bytes = new byte[entry.Size];
-    using var fs = File.OpenRead(file.Path);
+    using var fs = new FileStream(file.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
     fs.Seek(Convert.ToInt32(entry.Offset), SeekOrigin.Begin);
     fs.ReadExactly(bytes, 0, Convert.ToInt32(entry.Size));
     return bytes;
@@ -442,8 +442,11 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
         var fileType = loaderIdx < loaderHeaders.Length
             ? loaderHeaders[loaderIdx].Tag.ToFileType()
             : FileType.Unknown;
-        if (fileType == FileType.Unknown && name.Contains(':'))
-          fileType = name.Split(':')[0].ToFileType();
+        if (name.Contains(':')) {
+          var parts = name.Split(':');
+          name = parts[0];
+          fileType = parts[1].ToFileType();
+        }
 
         var resolvedBlock = allBlocks.FirstOrDefault(fb => dataPtr >= fb.RelativeOffset && dataPtr < fb.RelativeOffset + fb.Size);
         if (resolvedBlock == null) continue;

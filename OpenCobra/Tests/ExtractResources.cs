@@ -4,7 +4,6 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using DotNetEnv;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 
@@ -13,12 +12,6 @@ namespace OVL.Tests;
 [TestFixture]
 public class ExtractResources {
   private static string? Rct3Path() => Environment.GetEnvironmentVariable("RCT3_PATH");
-
-  [SetUp]
-  public void Setup() {
-    if (File.Exists(Constants.EnvFilePath))
-      Env.NoClobber().Load(Constants.EnvFilePath);
-  }
 
   [Test]
   [SkipIfEnvironmentMissing("RCT3_PATH", "Cannot find RCT3. Skipping integration test.")]

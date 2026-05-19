@@ -4,9 +4,10 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using OpenCobra.GDK.Materials;
+using System.Linq;
 using OpenCobra.OVL;
 using OpenRCT3.Platforms;
+using OpenCobra.OVL.Files;
 
 namespace OpenRCT3.Simulation;
 
@@ -29,7 +30,7 @@ namespace OpenRCT3.Simulation;
 public class Terrain {
   public int Width { get; }
   public int Height { get; }
-  public Texture? GrassTexture { get; private set; }
+  public Texture? Grass { get; private set; }
 
   /// <summary>
   /// Initializes a new instance of the <see cref="Terrain"/> class.
@@ -49,11 +50,12 @@ public class Terrain {
     var config = AppConfig.Instance;
     Debug.Assert(config.InstallPath != null);
 
-    var terrain = new Terrain();
     // Load textures from terrain/RCT3/Terrain_RCT3.common.ovl
     var terrainOvl = Path.Combine(config.InstallPath, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
     var ovl = Ovl.Load(terrainOvl);
 
-    return terrain;
+    return new Terrain {
+      Grass = Textures.Extract(ovl).Where(t => t.Name == "Terrain_00")?.FirstOrDefault()
+    };
   }
 }

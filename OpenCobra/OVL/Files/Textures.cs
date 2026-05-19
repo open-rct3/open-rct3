@@ -4,14 +4,15 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
-using System.Collections;
-using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using CommunityToolkit.HighPerformance;
 using NLog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace OpenCobra.OVL.Files;
 
@@ -64,19 +65,15 @@ public static class Textures {
 
   // Extract all textures from an OVL
   public static TextureCollection Extract(Ovl ovl) {
-    // Find all tex, flic, and btbl files and read their data, in parallel
+    // Find all tex, flic, and btbl files
     var textureTypes = new[] { FileType.Texture, FileType.Flic, FileType.BitmapTable };
-    // QUESTION: What will disk resource contention look like here?
     var textureFilesData =
       from type in textureTypes
-      from file in ovl.Keys.Where(file => file.Type == type).AsParallel()
-        .WithDegreeOfParallelism(Environment.ProcessorCount)
-        .WithMergeOptions(ParallelMergeOptions.NotBuffered)
-      let data = ovl.ReadResource(file)
-      where data != null
-      select new OvlData(ovl.Name, ovl.Version, file, data);
+      from file in ovl.Keys.Where(file => file.Type == type)
+      select new OvlData(ovl.Name, ovl.Version, file, ovl[file]);
 
     // Decode texture data in parallel
+    // QUESTION: What will disk resource contention look like here?
     var bag = new ConcurrentBag<Texture>();
     var failures = new ConcurrentBag<OvlFile>();
 
@@ -88,76 +85,69 @@ public static class Textures {
 
     // Read bitmap tables in parallel
     var bitmapTables = new Dictionary<string, Texture[]>();
-    Parallel.ForEach(bitmapTableData, fileData => {
-      var name = fileData.File.ToString();
-      var data = fileData.Data;
+    Parallel.ForEach(bitmapTableData, data => {
+      var name = data.File.ToString();
+      using var fs = new FileStream(data.File.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+      fs.Seek(data.Entry.Offset, SeekOrigin.Begin);
 
-      var table = ReadBitmapTable(name, data);
-      bitmapTables[fileData.OvlName] = table;
+      var table = ReadBitmapTable(name, fs);
+      bitmapTables[data.OvlName] = table;
       foreach (var texture in table) bag.Add(texture);
     });
 
     // Read other textures in parallel
-    Parallel.ForEach(otherTextureData, fileData => {
+    Parallel.ForEach(otherTextureData, data => {
       try {
-        var name = fileData.File.ToString();
-        var version = fileData.Version;
-        var data = fileData.Data;
-        var bitmapTable = bitmapTables.GetValueOrDefault(fileData.OvlName);
+        var name = data.File.ToString();
+        var version = data.Version;
+        var bitmapTable = bitmapTables.GetValueOrDefault(data.OvlName);
+        using var fs = new FileStream(data.File.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        fs.Seek(data.Entry.Offset, SeekOrigin.Begin);
 
         // ReSharper disable once ConvertIfStatementToSwitchStatement
-        if (fileData.File.Type == FileType.Texture)
-          bag.Add(ReadTexture(name, data));
-        else if (fileData.File.Type == FileType.Flic)
-          bag.Add(ReadFlic(name, data, version, bitmapTable));
-      } catch {
-        logger.Error("Failed to decode {FileName}", fileData.File.ToString());
-        failures.Add(fileData.File);
+        if (data.File.Type == FileType.Texture)
+          bag.Add(ReadTexture(name, fs, version));
+        else if (data.File.Type == FileType.Flic)
+          bag.Add(ReadFlic(name, fs, version, bitmapTable));
+      } catch (Exception ex) {
+        logger.Error($"Failed to decode {data.File}:\n{ex.Message}");
+        failures.Add(data.File);
       }
     });
 
-    if (!failures.IsEmpty)
-      logger.Error(
-        "Failed to decode {count} textures from {x} OVL{suffix}.",
-        failures.Count,
-        textureFiles.Length,
-        textureFiles.Length != 1 ? "s" : string.Empty
-      );
+    if (!failures.IsEmpty) logger.Error(
+      "Failed to decode {count} textures from {x} OVLs.",
+      failures.Count,
+      textureFiles.Length
+    );
 
     return [.. bag];
   }
 
   // See ManagerTEX.cpp
-  private static Texture ReadTexture(string name, ReadOnlyMemory<byte> bytes) {
-    using var ms = bytes.AsStream();
-    using var reader = new BinaryReader(ms);
+  private static Texture ReadTexture(string name, Stream stream, Version ovlVersion) {
+    using var reader = new BinaryReader(stream);
 
     var read = reader.Read<Tex>(out var tex);
     Debug.Assert(read == Marshal.SizeOf<Tex>());
-    // Not relocated if `tex.count` or `tex.Unk12` are 0.
-    var flics = new Flic[Math.Max(tex.Count, tex.Unk12)];
-    for (var i = 0; i < flics.Length; i++) {
-      read = reader.Read<Flic>(out var flic);
-      Debug.Assert(read == Marshal.SizeOf<Flic>());
-      flics[i] = flic;
+    //read = reader.Read<TexExtra>(out var texExtra);
+    //Debug.Assert(read == Marshal.SizeOf<TexExtra>());
+
+    var count = Math.Max(tex.Count, tex.OtherCount);
+    if (count == 0) throw new NotImplementedException("How the hell do you read an un-relocated flic texture?");
+
+    for (var i = 0; i < count; i++) {
       // TODO: Read texture style symbol reference
       // See ManagerTEX.cpp:123
       // See https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/src/libOVLng/LodSymRefManager.cpp#L161
     }
 
-    _ = new Texture(name, TextureFormat.A8R8G8B8, 0, 0);
-
-    // Ugh, ManagerTEX.cpp:109-123 is hella confusing
-    // TODO: Read textures from TEX flics
-    throw new NotImplementedException("How the hell do you read a \"flicman\" image?");
+    throw new NotImplementedException("How the fell do you read TEX flics?");
   }
 
   // See ManagerFLIC.cpp
-  private static Texture ReadFlic(
-    string name, ReadOnlyMemory<byte> bytes, Version ovlVersion, Texture[]? table = null
-  ) {
-    using var ms = bytes.AsStream();
-    using var reader = new BinaryReader(ms);
+  private static Texture ReadFlic(string name, Stream stream, Version ovlVersion, Texture[]? table = null) {
+    using var reader = new BinaryReader(stream);
 
     // Flics are either:
     // A: Indices to bitmaps in the same OVL's bitmap table, or
@@ -196,9 +186,8 @@ public static class Textures {
   }
 
   // See ManagerBTBL.cpp
-  private static Texture[] ReadBitmapTable(string name, ReadOnlyMemory<byte> bytes) {
-    using var ms = bytes.AsStream();
-    using var reader = new BinaryReader(ms);
+  private static Texture[] ReadBitmapTable(string name, Stream stream) {
+    using var reader = new BinaryReader(stream);
 
     var header = reader.ReadBitmapTable();
     if (header.Length == 0) return [];
@@ -247,7 +236,7 @@ public class TextureCollection : IReadOnlyList<Texture> {
   }
 }
 
-internal record struct OvlData(string OvlName, Version Version, OvlFile File, ReadOnlyMemory<byte> Data);
+internal record struct OvlData(string OvlName, Version Version, OvlFile File, OvlEntry Entry);
 
 [StructLayout(LayoutKind.Sequential, Size = 14)]
 internal readonly struct ExtraDataInfoV5 {
@@ -298,6 +287,9 @@ internal readonly struct FlicMipHeader {
   public readonly uint Blocks;
 }
 
+/// <remarks>
+/// See <a href="https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/include/icontexture.h#L167">icontexture.h</a>.
+/// </remarks>
 [StructLayout(LayoutKind.Explicit)]
 internal struct Tex {
   // ReSharper disable once UnusedMember.Global because this struct has initializers
@@ -339,8 +331,56 @@ internal struct Tex {
   public readonly uint Unk11;
 
   [FieldOffset(44)]
+  public SymbolReference TextureData;
+
+  /// <remarks>
+  /// <list type="bullet">
+  /// <item>loword is a count. See <see cref="OtherCount"/> and <see cref="Count"/>.</item>
+  /// <item>
+  /// hiword is addonpack and in this case determines the number of unknown longs at the end of the structure.
+  /// </item>
+  /// </list>
+  /// </remarks>
+  [FieldOffset(48)]
   [SeenInGame(Value = 1)]
-  public readonly uint Unk12;
+  public uint CountAndAddon;
+
+  public readonly ushort OtherCount => Convert.ToUInt16(CountAndAddon & 0xFFFF);
+  /// <summary>
+  /// Determines the shape of the rest of this structure.
+  /// </summary>
+  public readonly Addon Addon => (Addon) Convert.ToUInt16((CountAndAddon >> 16) & 0xFFFF);
+
+  /// <summary>
+  /// An array of <see cref="Files.Flic"/> textures.
+  /// </summary>
+  /// <remarks>
+  /// <para>This array is <i>not</i> relocated if <see cref="OtherCount"/> or <see cref="Count"/> are zero.</para>
+  /// <para>Always points to location before flic data.</para>
+  /// </remarks>
+  [FieldOffset(52)]
+  public DataPointer Flic;
+
+  /// <summary>
+  /// Pointer to the rest of this structure's data, i.e. <see cref="TexExtra"/>.
+  /// </summary>
+  [FieldOffset(56)]
+  public readonly DataPointer ExtraData;
+}
+
+[StructLayout(LayoutKind.Explicit)]
+internal struct TexExtra {
+  /// <summary>
+  /// A pointer back to the beginning of the <see cref="Tex"/> struct.
+  /// </summary>
+  [FieldOffset(0)]
+  public readonly DataPointer Tex;
+
+  /// <summary>
+  /// A relocated array of <see cref="Files.Flic"/> textures.
+  /// </summary>
+  [FieldOffset(4)]
+  public DataPointer Flic;
 }
 
 internal static class BinaryReaderExtensions {

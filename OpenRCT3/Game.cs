@@ -4,9 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-
 using NLog;
-using System;
 using OpenCobra.GDK;
 using OpenRCT3.Simulation;
 using OpenRCT3.Platforms;

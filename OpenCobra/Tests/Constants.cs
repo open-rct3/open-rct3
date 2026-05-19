@@ -1,5 +1,5 @@
-﻿namespace OVL.Tests;
+namespace OVL.Tests;
 
-internal static class Constants {
+public static partial class Constants {
   internal static string EnvFilePath => Path.Combine(ThisAssembly.Constants.SolutionDir, ".env");
 }

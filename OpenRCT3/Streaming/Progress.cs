@@ -34,7 +34,7 @@ public record struct Progress(string Task, float Loaded = 0.0f) {
 
   public static Progress operator +(Progress a, Progress b) => new(a.Task, a.Loaded + b.Loaded);
 
-  public override readonly string ToString() => $"{Task}: {LoadedPercentRounded}%";
+  public override readonly string ToString() => $"{LoadedPercentRounded}% {Task}";
 
   /// <summary>
   /// Measures the progress of a list of tasks.

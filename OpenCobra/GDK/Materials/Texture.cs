@@ -10,19 +10,18 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.Collections;
 using System.ComponentModel;
-using System.Xml.Linq;
 
 namespace OpenCobra.GDK.Materials;
 
-public class Texture(string name, int width, int height, Image<Rgba32> texture, Recolorable recolorable = 0) : IDisposable {
+public class Texture(string name, Image<Rgba32> texture, Recolorable recolorable = 0) : IDisposable {
   private bool disposed;
 
   [Category("Design")]
   public string Name { get; private set; } = name;
   [Category("Appearance")]
-  public int Width { get; } = width;
+  public int Width { get; } = texture.Width;
   [Category("Appearance")]
-  public int Height { get; } = height;
+  public int Height { get; } = texture.Height;
   [Category("Appearance")]
   public Recolorable Recolorable { get; } = recolorable;
   [Category("Appearance")]
@@ -43,7 +42,7 @@ public class Texture(string name, int width, int height, Image<Rgba32> texture, 
 
 public class AnimatedTexture(string name, FlexiTextureList textures) : IEnumerable<Texture> {
   private readonly Texture[] _textures = [.. textures.Frames.Select(
-    frame => new Texture(name, textures.Width, textures.Height, frame.Texture, frame.Recolorable)
+    frame => new Texture(name, frame.Texture, frame.Recolorable)
   )];
 
   [Category("Design")]
