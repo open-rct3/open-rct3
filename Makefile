@@ -1,8 +1,8 @@
 # OS detection for cross-platform bundling
 ifeq ($(OS),Windows_NT)
-    PLATFORM := Windows
+  PLATFORM := Windows
 else
-    PLATFORM := $(shell uname -s)
+  PLATFORM := $(shell uname -s)
 endif
 
 all: release
@@ -75,32 +75,52 @@ plugins: $(PLUGINS_OUT)
 
 .PHONY: test-plugins
 test-plugins: $(PLUGINS_OUT)
+	deno task check:plugins
 	deno task test:plugins
 
 # .NET Tests
 
+TESTS_PROJ := OpenCobra/Tests/Tests.csproj
+TEST_BENCH_PROJ := OpenCobra/Tests/TestRunner/OvlTestBench.csproj
+
 TESTS_SRC := $(wildcard OpenCobra/Tests/*.cs OpenCobra/Tests/*/*.cs)
 # Extract TargetFramework from the csproj
-TESTS_TFM := $(shell grep -oPm1 '(?<=<TargetFramework>)[^<]+' OpenCobra/Tests/Tests.csproj)
+TESTS_TFM := $(shell grep -oEm1 "<TargetFramework>[^<]+" OpenCobra/Tests/Tests.csproj | sed "s/<TargetFramework>//")
 TESTS_DLL := OpenCobra/Tests/bin/Debug/$(TESTS_TFM)/Tests.dll
 
-$(TESTS_DLL): $(TESTS_SRC)
+$(TESTS_DLL): $(TESTS_PROJ) $(TESTS_SRC)
 	dotnet build OpenCobra/Tests/Tests.csproj
 
-# Extract TargetFramework from the csproj
-TFM := $(shell grep -oPm1 '(?<=<TargetFramework>)[^<]+' OpenCobra/Tests/TestRunner/OvlTestBench.csproj)
+# Extract TargetFramework from the project files
+TEST_BENCH_TFM := $(shell grep -oEm1 "<TargetFramework>[^<]+" $(TEST_BENCH_PROJ) | sed "s/<TargetFramework>//")
 # Path to the compiled test runner using the detected TFM
-OVL_TEST_BENCH_DLL := OpenCobra/Tests/TestRunner/bin/Debug/$(TFM)/OvlTestBench.dll
+TEST_BENCH_DLL := OpenCobra/Tests/TestRunner/bin/Debug/$(TEST_BENCH_TFM)/OvlTestBench.dll
+
+# Validate TFM resolution
+TFM_ERROR := Could not determine .NET target framework!
+ifeq ($(TESTS_TFM),)
+  $(error $(TFM_ERROR))
+else ifeq ($(TEST_BENCH_TFM),)
+  $(error $(TFM_ERROR))
+else
+  $(info Using '$(TESTS_TFM)' to compile $(TESTS_PROJ))
+  $(info Using '$(TEST_BENCH_TFM)' to compile $(TEST_BENCH_PROJ))
+endif
 
 .PHONY: test
-test: $(PLUGINS_OUT) test-plugins $(TESTS_DLL) $(OVL_TEST_BENCH_DLL)
+test: $(TESTS_DLL)
 	deno check clients/desktop/main.ts
-	deno task check:plugins
-	dotnet test --no-build /p:SolutionDir=$(CURDIR)/
+	dotnet test OpenRCT3.tests.slnf --no-build /p:SolutionDir=$(CURDIR)
 
-$(OVL_TEST_BENCH_DLL): $(PLUGINS_OUT) $(TESTS_SRC)
-# FIXME: This doesn't work on macOS
-ifeq ($(PLATFORM),Windows)
-	dotnet build OpenCobra/Tests/TestRunner/OvlTestBench.csproj
-	dotnet run --project OpenCobra/Tests/TestRunner/OvlTestBench.csproj -- --plugins
-endif
+.PHONY: cover
+cover: $(TESTS_DLL)
+	dotnet test $(TESTS_PROJ) --no-build \
+	  /p:SolutionDir=$(CURDIR) \
+	  --collect:"XPlat Code Coverage;Format=lcov" \
+	  --results-directory "$(CURDIR)/coverage"
+
+.PHONY: integration
+$(TEST_BENCH_DLL): $(PLUGINS_OUT) test-plugins $(TEST_BENCH_PROJ) $(TESTS_SRC)
+integration: $(TEST_BENCH_DLL)
+	dotnet run --project $(TEST_BENCH_PROJ) -- --plugins
+	dotnet test OpenCobra/Tests/Integration/IntegrationTests.csproj

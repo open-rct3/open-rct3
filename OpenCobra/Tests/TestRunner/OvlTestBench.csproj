@@ -48,7 +48,6 @@
   </Choose>
 
   <!-- Build GUI when not explicitly targeting the CLI -->
-  <!-- TODO: Use this section only when on Windows -->
   <PropertyGroup Condition="$(Profile) == 'gui'">
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
