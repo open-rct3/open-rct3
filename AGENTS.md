@@ -2,8 +2,9 @@
 
 ## Rules
 
-- Do NOT remove extant code comments. Move and reword them, if absolutely neccesary.
+- Do NOT remove extant code comments. Move and reword them, if absolutely necessary.
 - Do NOT create summary documents, unless explicitly requested.
+- Links in any markdown file MUST work both locally and on GitHub. Use relative paths for links.
 
 ### Brevity
 
