@@ -10,30 +10,17 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <!-- Critical for .NET 10: -->
-  <!-- FIXME: https://github.com/dotnet/sdk/issues/51283 -->
-  <!-- FIXME: https://github.com/microsoft/testfx/issues/4783 -->
-  <!-- FIXME: https://github.com/dotnet/sdk/issues/51316 -->
-  <PropertyGroup>
-    <!-- FIXME: Isn't this project a dependency of the GUI test runner? -->
-    <OutputType>Exe</OutputType>
-    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-    <!-- Opt-in to the old runner. -->
-    <!-- Note: MUST be in project file to beat the bugs -->
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-    <!-- Tell the SDK this project is definitely NOT a test app -->
-    <UseTestingPlatform>false</UseTestingPlatform>
-    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
-  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Tests.csproj" />
+    <ProjectReference Include="..\..\GDK\GDK.csproj" />
+    <ProjectReference Include="..\..\OVL\OVL.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="10.0.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="DotNetEnv" Version="3.2.0" />
     <PackageReference Include="Extism.Sdk" Version="1.10.0" />
     <PackageReference Include="Extism.runtime.all" Version="1.13.0" />
+    <!-- Testing Infrastructure -->
     <PackageReference Include="NUnit" Version="4.6.0" />
     <PackageReference Include="NUnit.Analyzers" Version="4.13.0">
       <PrivateAssets>all</PrivateAssets>
@@ -45,11 +32,19 @@
   <ItemGroup>
     <PackageReference Include="NUnit3TestAdapter" Version="6.2.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+    <!-- Code Coverage -->
+    <PackageReference Include="ReportGenerator" Version="5.5.10" />
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Tests.csproj" />
-    <ProjectReference Include="..\..\GDK\GDK.csproj" />
-    <ProjectReference Include="..\..\OVL\OVL.csproj" />
+    <Using Include="NUnit.Framework" />
+    <Using Include="System" />
+    <Using Include="System.IO" />
+    <Using Include="System.Linq" />
+    <Using Include="System.Text" />
   </ItemGroup>
 </Project>

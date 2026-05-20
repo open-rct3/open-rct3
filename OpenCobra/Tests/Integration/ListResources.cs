@@ -5,6 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using OpenCobra.OVL;
+using System.Collections.Generic;
 
 namespace OVL.Tests;
 

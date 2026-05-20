@@ -108,5 +108,5 @@ The C# parser currently attempts to read a `FlicHeader`, immediately followed by
 ## 4. Verification Plan
 
 ### Automated Tests
-* Run the unit and integration tests using `make test`.
+* Run the unit and integration tests using `make test integration`.
 * Confirm that `LoadTerrainTexture_Succeeds` and the new unique OVL texture tests pass successfully without stream corruption or dimension crashes.
