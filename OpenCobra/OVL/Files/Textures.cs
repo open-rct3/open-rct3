@@ -108,8 +108,11 @@ public static class Textures {
         if (type == FileType.Texture)
           foreach (var texture in ReadTextures(name, fs, ovl, bitmapTable))
             bag.Add(texture);
-        else if (type == FileType.Flic)
-          bag.Add(ReadFlic(name, ovl.ReadResource(data.File), version, bitmapTable));
+        else if (type == FileType.Flic) {
+          var flicData = ovl.ReadResource(data.File);
+          if (flicData != null)
+            bag.Add(ReadFlic(name, flicData, version, table: bitmapTable));
+        }
         else throw new NotImplementedException($"Unknown file type: {type.ToTagString()}");
       } catch (Exception ex) {
         logger.Error($"Failed to decode {data.File}:\n{ex.Message}");
@@ -138,7 +141,9 @@ public static class Textures {
     if (count == 0) throw new NotImplementedException("How the hell do you read non-relocated TEX flics?");
 
     for (var i = 0; i < count; i++) {
-      yield return ReadFlic(name, ovl.ReadResource(tex.Flic), ovl.Version, table);
+      var flicData = ovl.ReadResource(tex.Flic);
+      if (flicData != null)
+        yield return ReadFlic(name, flicData, ovl.Version, table: table, isRelocatedPtr: true);
 
       // TODO: Read texture style symbol reference
       // See ManagerTEX.cpp:123
@@ -147,8 +152,11 @@ public static class Textures {
   }
 
   // See ManagerFLIC.cpp
-  private static Texture ReadFlic(string name, ReadOnlyMemory<byte> data, Version ovlVersion, Texture[]? table = null) {
+  private static Texture ReadFlic(string name, ReadOnlyMemory<byte> data, Version ovlVersion, Texture[]? table = null, bool isRelocatedPtr = false) {
     using var reader = new BinaryReader(data.AsStream());
+
+    if (isRelocatedPtr)
+      reader.BaseStream.Position += 4;
 
     // Flics are either:
     // A: Indices to bitmaps in the same OVL's bitmap table, or
@@ -172,9 +180,9 @@ public static class Textures {
       Debug.Assert(read == Marshal.SizeOf<FlicMipHeader>());
       // QUESTION: What is the purpose of `mipHeader.pitch`?
       // QUESTION: Ought `mipHeader.blocks` be used to calculate the size?
-      var size = Convert.ToInt32(mipHeader.Width * mipHeader.Height * (format.BlockSize() / 8));
-      ReadOnlySpan<byte> pixels = reader.ReadBytes(size);
-      texture.MipLevels[i] = pixels.ToImage(format);
+      var size = Convert.ToInt32(mipHeader.Pitch * mipHeader.Blocks);
+      var pixels = reader.ReadBytes(size);
+      texture.MipLevels[i] = ReadOnlySpanExtensions.ToImage(pixels, format);
     }
 
     // NOTE: According to ManagerFLIC.cpp, there's trailing data:
@@ -195,15 +203,21 @@ public static class Textures {
 
     reader.BaseStream.Position += 8;
     var textures = new Texture[header.Length];
-    for (int i = 0; i < header.Length; i++) {
-      var flic = reader.ReadFlicHeader();
+    var headers = new FlicHeader[header.Length];
+    for (var i = 0; i < header.Length; i++)
+      headers[i] = reader.ReadFlicHeader();
+
+    for (var i = 0; i < header.Length; i++) {
+      var flic = headers[i];
       Debug.Assert(flic.MipCount == 0 || flic.MipCount == 9);
 
-      var size = flic.Width * flic.Height * flic.Format.BitsPerPixel() / 8;
       textures[i] = new Texture(name, flic.Format, flic.Width, flic.Height, flic.MipCount);
-      for (int mip = 0; mip < flic.MipCount; mip++) {
-        var data = reader.ReadBytes(Convert.ToInt32(size));
-        textures[i].MipLevels[mip] = Image.Load<Rgba32>(data);
+      var mipCount = flic.MipCount == 0 ? 1u : flic.MipCount;
+      for (var mip = 0; mip < mipCount; mip++) {
+        var mipDim = Math.Max(1u, flic.Width >> mip);
+        var size = Convert.ToInt32(mipDim * mipDim * flic.Format.BlockSize() / 16);
+        var pixels = reader.ReadBytes(size);
+        textures[i].MipLevels[mip] = ReadOnlySpanExtensions.ToImage(pixels, flic.Format);
       }
     }
 
