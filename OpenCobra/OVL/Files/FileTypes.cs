@@ -60,11 +60,11 @@ public enum FileType : ushort {
   /// <summary>Manifold Mesh (mam)</summary>
   [Description("Manifold Mesh")]
   ManifoldMesh,
-  /// <summary>Path Type (ptd)</summary>
-  [Description("Path Type")]
+  /// <summary>Path (ptd)</summary>
+  [Description("Path")]
   PathType,
-  /// <summary>Queue Type (qtd)</summary>
-  [Description("Queue Type")]
+  /// <summary>Queue (qtd)</summary>
+  [Description("Queue")]
   QueueType,
   /// <summary>Ride Car (ric)</summary>
   [Description("Ride Car")]
@@ -90,8 +90,8 @@ public enum FileType : ushort {
   /// <summary>Scenery Item Visual (svd)</summary>
   [Description("Scenery Item Visual")]
   SceneryItemVisual,
-  /// <summary>Terrain Type (ter)</summary>
-  [Description("Terrain Type")]
+  /// <summary>Terrain (ter)</summary>
+  [Description("Terrain")]
   TerrainType,
   /// <summary>Track Section (tks)</summary>
   [Description("Track Section")]
