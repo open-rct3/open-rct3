@@ -1,8 +1,14 @@
 # Correctly Parsing Cobra Textures
 
-## Critical Ingestion Pitfalls & Alignment Differences
+## 1. Goal Description
 
-When porting `libOVLng`'s texture parser to C#, three critical bugs/misalignments must be accounted for:
+This plan addresses several structural and relocation bugs in `OpenCobra`'s texture ingestion pipeline. Ingesting RollerCoaster Tycoon 3 (Cobra engine) textures requires precise handling of `tex`, `flic`, and `btbl` archive resources. The current C# implementation contains alignment misalignments, incorrect block offset lookups, a factor-of-2 size bug for compressed mips, and an interleaved reading loop that fails on bitmap tables (`btbl`).
+
+We will patch `OVL.cs`, `Textures.cs`, and add new comprehensive integration tests in `IngestionTests.cs` to verify texture correctness under all conditions.
+
+---
+
+## 2. Critical Ingestion Pitfalls & Alignment Differences
 
 ### 1. Pointer Prefix Offset in `tex.Flic` vs. `FileType.Flic` Symbols
 In the reference C++ implementation, the `Flic` struct on disk actually contains a pointer followed by the structure itself:
@@ -40,95 +46,67 @@ The C# parser currently attempts to read a `FlicHeader`, immediately followed by
 
 ---
 
-## Re-implementation (C# Parser Patches)
+## 3. Proposed Changes
 
-### Standalone FLIC Decoder
+### [OpenCobra/OVL](file:///Users/chancesnow/GitHub/open-rct3/OpenCobra/OVL)
+
+#### [MODIFY] [OVL.cs](file:///Users/chancesnow/GitHub/open-rct3/OpenCobra/OVL/OVL.cs)
+* Correct the `ReadResource(RelocationPointer ptr)` implementation.
+* Look up the pointer relocation target offset (`TargetOffset`), find the file block that contains that target offset, and calculate the exact read slice from `fileBlock.Offset + relOffset` with correct length `fileBlock.Size - relOffset` (instead of reading the whole block blindly from index zero).
+
 ```csharp
-private static Texture ReadFlic(string name, ReadOnlyMemory<byte> data, Version ovlVersion, bool isRelocatedPtr = false, Texture[]? table = null) {
-  using var reader = new BinaryReader(data.AsStream());
+  public byte[]? ReadResource(RelocationPointer ptr) {
+    var relocation = relocations.FirstOrDefault(rel => rel.Source.Offset == ptr.Value);
+    if (relocation == null || relocation.TargetOffset == null) return null;
 
-  // Pitfall 1: Skip 4-byte fl pointer if the stream was obtained via a tex.Flic relocation pointer
-  if (isRelocatedPtr) {
-    reader.BaseStream.Position += 4;
+    var targetOffset = relocation.TargetOffset.Value;
+    var blocks =
+      from groups in fileBlocks
+      from @group in groups
+      from fileBlock in @group.Blocks
+      where targetOffset >= fileBlock.RelativeOffset && targetOffset < fileBlock.RelativeOffset + fileBlock.Size
+      select fileBlock;
+    var block = blocks.FirstOrDefault();
+    if (block == null) return null;
+
+    var relOffset = targetOffset - block.RelativeOffset;
+    var size = block.Size - relOffset;
+    var bytes = new byte[size];
+    using var fs = new FileStream(block.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+    fs.Seek(Convert.ToInt32(block.Offset + relOffset), SeekOrigin.Begin);
+    fs.ReadExactly(bytes, 0, Convert.ToInt32(size));
+    return bytes;
   }
-
-  var read = reader.Read<Flic>(out _);
-  Debug.Assert(read == Marshal.SizeOf<Flic>());
-
-  if (table != null) {
-    var index = reader.ReadUInt32();
-    Debug.Assert(index < table.Length);
-    if (ovlVersion == Version.Five)
-      reader.BaseStream.Position += Marshal.SizeOf<ExtraDataInfoV5>();
-    return table[index].WithName(name);
-  }
-
-  var header = reader.ReadFlicHeader();
-  var format = header.Format;
-  var texture = new Texture(name, format, header.Width, header.Height, header.MipCount);
-
-  for (var i = 0; i < header.MipCount; i++) {
-    read = reader.Read<FlicMipHeader>(out var mipHeader);
-    Debug.Assert(read == Marshal.SizeOf<FlicMipHeader>());
-
-    // Pitfall 3: Calculate size using pitch * blocks to support all formats safely
-    var size = Convert.ToInt32(mipHeader.Pitch * mipHeader.Blocks);
-    ReadOnlySpan<byte> pixels = reader.ReadBytes(size);
-    texture.MipLevels[i] = pixels.ToImage(format);
-  }
-
-  return texture;
-}
 ```
 
-### Bitmap Table Decoder
-```csharp
-private static Texture[] ReadBitmapTable(string name, Stream stream) {
-  using var reader = new BinaryReader(stream);
+### [OpenCobra/OVL/Files](file:///Users/chancesnow/GitHub/open-rct3/OpenCobra/OVL/Files)
 
-  var header = reader.ReadBitmapTable();
-  if (header.Length == 0) return [];
+#### [MODIFY] [Textures.cs](file:///Users/chancesnow/GitHub/open-rct3/OpenCobra/OVL/Files/Textures.cs)
+* Update `ReadFlic` signature and body:
+  - Add `bool isRelocatedPtr = false` parameter.
+  - Skip the first 4 bytes (`fl` pointer prefix) if `isRelocatedPtr` is `true`.
+  - Calculate mip dimensions/sizes using `mipHeader.Pitch * mipHeader.Blocks` which is robust and correct for all formats.
+* Update `ReadTextures`:
+  - Pass `isRelocatedPtr: true` when calling `ReadFlic(..., ovl.ReadResource(tex.Flic), ...)` since it originates from a relocated pointer.
+* Update standalone flic decoding path in `Extract`:
+  - Pass `isRelocatedPtr: false` (the default) since it was read from a symbol record.
+* Update `ReadBitmapTable`:
+  - Skip the 8-byte padding.
+  - Read **all** `FlicHeader`s first into an array.
+  - Loop through each texture, read its mips sequentially, calculating sizes via `mipDim * mipDim * flic.Format.BlockSize() / 16`.
+  - Use `.ToImage(flic.Format)` to ensure compressed formats decode properly.
 
-  // Skip the 8-byte padding in Chunk 1
-  reader.BaseStream.Position += 8;
+### [OpenCobra/Tests/Integration](file:///Users/chancesnow/GitHub/open-rct3/OpenCobra/Tests/Integration)
 
-  // Pitfall 2: Read all FlicHeaders first
-  var headers = new FlicHeader[header.Length];
-  for (int i = 0; i < header.Length; i++) {
-    headers[i] = reader.ReadFlicHeader();
-  }
+#### [MODIFY] [IngestionTests.cs](file:///Users/chancesnow/GitHub/open-rct3/OpenCobra/Tests/Integration/IngestionTests.cs)
+* Add a test `LoadUniqueTextures_Succeeds` that loads a unique OVL file (with standalone or indexed textures) to verify cross-relocation and style symbol resolving invariants.
+* Add assertions to verify that all mip levels are parsed with non-zero dimensions and valid pixel counts.
+* Verify the texture style TXS name mapping matches expectations (e.g. `GUIIcon` or `PathGround` style maps).
 
-  // Read all raw texture pixels sequentially from Chunk 2
-  var textures = new Texture[header.Length];
-  for (int i = 0; i < header.Length; i++) {
-    var flic = headers[i];
-    textures[i] = new Texture(name, flic.Format, flic.Width, flic.Height, flic.MipCount);
+---
 
-    for (int mip = 0; mip < flic.MipCount; mip++) {
-      // Calculate mip dimensions and size
-      var mipDim = flic.Width >> mip;
-      var size = mipDim * mipDim * flic.Format.BlockSize() / 16;
+## 4. Verification Plan
 
-      var data = reader.ReadBytes(Convert.ToInt32(size));
-      textures[i].MipLevels[mip] = Image.Load<Rgba32>(data);
-    }
-  }
-
-  return textures;
-}
-```
-
-### Resolving Texture Styles (TXS)
-Texture styles mapped by `TextureData` can be resolved by looking up the relocation table offset:
-```csharp
-public string? ResolveTextureStyle(Ovl ovl, Tex tex) {
-  if (tex.TextureData.Value == 0) return null;
-
-  // Find the relocation corresponding to the TextureData pointer address
-  var relocation = ovl.Relocations.FirstOrDefault(r => r.Source.Offset == tex.TextureData.Value);
-  if (relocation?.TargetOffset == null) return null;
-
-  // Look up the symbol whose data pointer matches the relocation's target offset
-  return ovl.Keys.FirstOrDefault(k => ovl[k].Offset == relocation.TargetOffset)?.Name;
-}
-```
+### Automated Tests
+* Run the unit and integration tests using `make test`.
+* Confirm that `LoadTerrainTexture_Succeeds` and the new unique OVL texture tests pass successfully without stream corruption or dimension crashes.
