@@ -1,5 +1,3 @@
-import { Host } from "@extism/as-pdk";
-
 function toHex(value: u32, width: i32 = 8): string {
   let hex = value.toString(16).toUpperCase();
   while (hex.length < width) {
@@ -20,14 +18,14 @@ export function renderHexView(data: Uint8Array, startOffset: i32 = 0): string {
   if (rowCount > 1024) rowCount = 1024; // Limit for performance
 
   for (let r = 0; r < rowCount; r++) {
-    let offset = r * 16;
+    const offset = r * 16;
     html += "<tr><td>" + toHex(startOffset + offset, 4) + "</td>";
 
     let ascii = "";
     for (let i = 0; i < 16; i++) {
-      let idx = offset + i;
+      const idx = offset + i;
       if (idx < data.length) {
-        let byte = data[idx];
+        const byte = data[idx];
         html += "<td>" + byte.toString(16).toUpperCase().padStart(2, "0") + "</td>";
         if (byte >= 32 && byte < 127) {
           ascii += String.fromCharCode(byte);

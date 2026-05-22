@@ -43,7 +43,7 @@ export function render(): i32 {
 
 // Convert ABGR (from A8R8G8B8 format) to BGR for BMP
 function abgrToBgr(abgr: u32): u32 {
-  const a = (abgr >> 24) & 0xFF;
+  const _a = (abgr >> 24) & 0xFF;
   const b = (abgr >> 16) & 0xFF;
   const g = (abgr >> 8) & 0xFF;
   const r = abgr & 0xFF;
