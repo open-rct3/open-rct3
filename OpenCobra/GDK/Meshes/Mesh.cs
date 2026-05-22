@@ -9,6 +9,14 @@ using System.Numerics;
 
 namespace OpenCobra.GDK.Meshes;
 
+/// <summary>
+/// Stores geometry data for rendering: vertices, indices, and an optional
+/// bounding box.
+/// </summary>
+/// <remarks>
+/// Primitives follow the <abbr title="Counter-Clockwise">CCW</abbr> winding convention, matching the industry standard.
+/// Counter-clockwise is the default OpenGL and Direct3D front-face rule.
+/// </remarks>
 public class Mesh {
   [Category("Data")]
   public List<Vertex> Vertices { get; init; } = [];
@@ -42,7 +50,7 @@ public struct Vertex {
   public Vector3 Normal;
   [Category("Data")]
   public Vector2 TexCoord;
-  [Category("Data")]
+  [Category("Appearance")]
   public Vector4 Color;
 }
 
