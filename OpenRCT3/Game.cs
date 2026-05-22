@@ -45,7 +45,7 @@ public class Game : IDisposable {
   /// </summary>
   public TimeSpan TargetFrameTime { get; private set; } = TimeSpan.FromSeconds(1.0 / 60.0);
   public IRenderer Renderer { get; }
-  public World World { get; }
+  public World World { get; } = new();
   public Scene Scene { get; } = new();
 
   private readonly Stopwatch _stopwatch = new();
@@ -54,7 +54,6 @@ public class Game : IDisposable {
   public Game(IRenderer renderer) {
     Instance = this;
     Renderer = renderer;
-    World = new World();
 
     logger.Info("Simulation features are unimplemented");
 
