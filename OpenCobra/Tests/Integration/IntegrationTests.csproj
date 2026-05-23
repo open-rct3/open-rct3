@@ -1,15 +1,50 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <AssemblyName>OvlTestBench.Tests</AssemblyName>
-    <RootNamespace>OvlTestBench.Tests</RootNamespace>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>OpenCobra.Tests.Integration</AssemblyName>
+    <RootNamespace>OpenCobra.Tests.Integration</RootNamespace>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
   <ItemGroup>
+    <ProjectReference Include="..\Tests.csproj" />
+    <ProjectReference Include="..\..\GDK\GDK.csproj" />
+    <ProjectReference Include="..\..\OVL\OVL.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotNetEnv" Version="3.2.0" />
     <PackageReference Include="Extism.Sdk" Version="1.10.0" />
     <PackageReference Include="Extism.runtime.all" Version="1.13.0" />
+    <!-- Testing Infrastructure -->
+    <PackageReference Include="NUnit" Version="4.6.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.13.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
+
+  <!-- FIXME: Only include these if this project is running as a test project -->
   <ItemGroup>
-    <ProjectReference Include="..\..\OVL\OVL.csproj" />
+    <PackageReference Include="NUnit3TestAdapter" Version="6.2.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+    <!-- Code Coverage -->
+    <PackageReference Include="ReportGenerator" Version="5.5.10" />
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+    <Using Include="System" />
+    <Using Include="System.IO" />
+    <Using Include="System.Linq" />
+    <Using Include="System.Text" />
   </ItemGroup>
 </Project>

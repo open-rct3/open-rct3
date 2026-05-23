@@ -32,8 +32,10 @@ internal static class Program {
             return 0;
         }
         var wasmFiles = Directory.GetFiles(pluginsDir, "*.wasm");
+
         int failures = 0;
         foreach (var wasm in wasmFiles) {
+            Console.WriteLine($"Testing {wasm}");
             var name = Path.GetFileNameWithoutExtension(wasm);
             bool groupPassed = true;
             foreach (var test in PluginTests.All) {

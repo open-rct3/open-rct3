@@ -4,29 +4,57 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using System.ComponentModel;
+using OpenCobra.OVL;
+using OpenCobra.OVL.Files;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Collections;
+using System.ComponentModel;
+using System.Xml.Linq;
 
 namespace OpenCobra.GDK.Materials;
 
-public class Texture<PixelFormat>(string name) : IDisposable
-  where PixelFormat : struct, IPixel {
-  private bool _disposed;
+public class Texture(string name, int width, int height, Image<Rgba32> texture, Recolorable recolorable = 0) : IDisposable {
+  private bool disposed;
 
   [Category("Design")]
   public string Name { get; private set; } = name;
   [Category("Appearance")]
-  public int Width { get; init; }
+  public int Width { get; } = width;
   [Category("Appearance")]
-  public int Height { get; init; }
+  public int Height { get; } = height;
   [Category("Appearance")]
-  public PixelFormat[] Pixels { get; init; } = [];
+  public Recolorable Recolorable { get; } = recolorable;
   [Category("Appearance")]
-  public bool HasAlpha { get; init; }
+  public Image<Rgba32> Pixels { get; } = texture;
+
+  /// <summary>
+  /// Whether this texture is recolorable.
+  /// </summary>
+  public bool IsRecolorable => Recolorable != Recolorable.None;
 
   public void Dispose() {
-    if (_disposed) return;
+    if (disposed) return;
     GC.SuppressFinalize(this);
-    _disposed = true;
+    Pixels.Dispose();
+    disposed = true;
   }
+}
+
+public class AnimatedTexture(string name, FlexiTextureList textures) : IEnumerable<Texture> {
+  private readonly Texture[] _textures = [.. textures.Frames.Select(
+    frame => new Texture(name, textures.Width, textures.Height, frame.Texture, frame.Recolorable)
+  )];
+
+  [Category("Design")]
+  public string Name { get; private set; } = name;
+  [Category("Appearance")]
+  public uint Fps { get; } = textures.Fps;
+  [Browsable(false)]
+  public Texture[] Frames => _textures;
+  [Browsable(false)]
+  public Texture this[int index] => _textures[index];
+
+  public IEnumerator<Texture> GetEnumerator() => _textures.AsEnumerable().GetEnumerator();
+  IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
