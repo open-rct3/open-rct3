@@ -5,6 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using CommunityToolkit.HighPerformance;
 using DryIoc;
 using NLog;
 using OpenCobra.GDK;
@@ -17,6 +18,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Materials = OpenCobra.GDK.Materials;
 using Services = OpenCobra.GDK.Services;
 
@@ -43,9 +45,12 @@ public class Renderer : IRenderer {
   }
 
   public void Initialize(IGraphicsSurface surface) {
+    gl.HookupDebugCallback();
+
     var clearColor = ClearColor.ToGl();
     gl.ClearColor(clearColor.X, clearColor.Y, clearColor.Z, clearColor.W);
     gl.Enable(EnableCap.DepthTest);
+
     State = State.Ready;
   }
 
@@ -58,6 +63,7 @@ public class Renderer : IRenderer {
     State = State.Disposed;
   }
 
+  [MethodImpl(MethodImplOptions.Synchronized)]
   public void Render(Scene scene) {
     ContextRequested?.Invoke(this, EventArgs.Empty);
 
@@ -76,6 +82,7 @@ public class Renderer : IRenderer {
       gl.UseProgram(item.ShaderHandle);
       gl.BindVertexArray(item.Vao);
       gl.BindBuffer(BufferTargetARB.ArrayBuffer, item.Vbo);
+      // FIXME: Invalid operation OpenGL error
       GLError.CheckError(gl, string.Format("Binding {0} vertex buffer", item.Name));
 
       if (item.TextureHandle != null) {
@@ -139,6 +146,7 @@ public class Renderer : IRenderer {
   private void UploadChanges(Camera camera, IEnumerable<Model> models) {
     foreach (var model in models) {
       Debug.Assert(model.Material != null);
+      // TODO: Use KhrParallelShaderCompile
       UploadMaterial(model.Material);
 
       // Attach model and scene uniforms

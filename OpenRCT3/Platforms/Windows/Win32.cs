@@ -1,9 +1,11 @@
-using System;
 using System.Runtime.InteropServices;
 
 namespace OpenRCT3.Platforms.Windows;
 
 internal static partial class Win32 {
+  private const string USER32 = "user32.dll";
+  private const string GDI32 = "gdi32.dll";
+
   public readonly struct HWND(IntPtr value) {
     public readonly IntPtr Value = value;
 
@@ -12,15 +14,11 @@ internal static partial class Win32 {
     public override string ToString() => Value.ToString();
   }
 
-  const string USER32 = "user32.dll";
-  const string GDI32 = "gdi32.dll";
-  const string OPENGL32 = "opengl32.dll";
+  [LibraryImport(USER32, SetLastError = true)]
+  public static partial nint GetDC(nint hWnd);
 
-  [DllImport(USER32, SetLastError = true)]
-  public static extern IntPtr GetDC(IntPtr hWnd);
-
-  [DllImport(USER32, SetLastError = true)]
-  public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+  [LibraryImport(USER32, SetLastError = true)]
+  public static partial int ReleaseDC(nint hWnd, nint hDC);
 
   [StructLayout(LayoutKind.Sequential)]
   public struct PIXELFORMATDESCRIPTOR {
@@ -53,22 +51,11 @@ internal static partial class Win32 {
   }
 
   [LibraryImport(GDI32, SetLastError = true)]
-  public static partial int ChoosePixelFormat(IntPtr hdc, ref PIXELFORMATDESCRIPTOR pfd);
+  public static partial nint ChoosePixelFormat(IntPtr hdc, ref PIXELFORMATDESCRIPTOR pfd);
 
   [LibraryImport(GDI32, SetLastError = true)]
   [return: MarshalAs(UnmanagedType.Bool)]
-  public static partial bool SetPixelFormat(IntPtr hdc, int format, ref PIXELFORMATDESCRIPTOR pfd);
-
-  [LibraryImport(OPENGL32, SetLastError = true)]
-  public static partial IntPtr wglCreateContext(IntPtr hdc);
-
-  [LibraryImport(OPENGL32, SetLastError = true)]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  public static partial bool wglMakeCurrent(IntPtr hdc, IntPtr hglrc);
-
-  [LibraryImport(OPENGL32, SetLastError = true)]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  public static partial bool wglDeleteContext(IntPtr hglrc);
+  public static partial bool SetPixelFormat(IntPtr hdc, nint format, ref PIXELFORMATDESCRIPTOR pfd);
 
   [LibraryImport("gdi32.dll", SetLastError = true)]
   [return: MarshalAs(UnmanagedType.Bool)]

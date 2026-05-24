@@ -8,6 +8,8 @@
 using NLog;
 using OpenRCT3.OpenGL;
 using Silk.NET.OpenGL;
+using Silk.NET.WGL;
+using Silk.NET.WGL.Extensions.ARB;
 using System.ComponentModel;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -17,14 +19,15 @@ using static OpenRCT3.Platforms.Windows.Win32;
 namespace OpenRCT3.Platforms.Windows;
 
 public class GLSurface : Control, IWindow, IGraphicsSurface {
-  private const string OpenGLCreateContextError = "Could not create an OpenGL context.";
+  private const string OpenGLCreateContextError =
+    "Could not create an OpenGL context. Please upgrade your graphics drivers.";
 
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private readonly SurfaceSettings settings;
   private nint hdc = 0;
-  private nint ctx = 0;
+  private nint context = 0;
   private OpenGLSurface? surface;
-  private GLContext? context;
+  private WGL wgl;
   private GL? gl;
   private Renderer? renderer;
 
@@ -39,6 +42,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     DoubleBuffered = false;
 
     this.settings = settings?.Clone() ?? new SurfaceSettings();
+    wgl = new WGL(new GLContext(settings!));
   }
 
   [Category("OpenGL")]
@@ -73,7 +77,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   public SurfaceSettings Settings => settings;
 
   [Browsable(false)]
-  public bool HasValidContext => IsHandleCreated && ctx != 0 && gl != null;
+  public bool HasValidContext => IsHandleCreated && context != 0 && gl != null;
 
   [Browsable(false)]
   public GL GL => gl ?? throw new InvalidOperationException("Current OpenGL context is invalid!");
@@ -108,7 +112,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   public void MakeCurrent() {
     if (DesignMode || !HasValidContext) return;
     if (hdc == 0) throw new Exception("Could not make the GL context current.");
-    if (!wglMakeCurrent(hdc, ctx)) throw new Exception("Could not make the GL context current.");
+    if (!wgl.MakeCurrent(hdc, context)) throw new Exception("Could not make the GL context current.");
   }
 
   public void SwapBuffers() {
@@ -127,7 +131,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     styles |= WindowStyles.WS_CLIPSIBLINGS | WindowStyles.WS_CLIPCHILDREN;
     SetWindowLongPtr(Handle, WindowLongs.GWL_STYLE, (IntPtr)styles);
 
-    // Try to create an OpenGL context
+    // Try to create an appropriate pixel format
     hdc = GetDC(Handle);
     var pfd = new PIXELFORMATDESCRIPTOR {
       nSize = (ushort)Marshal.SizeOf<PIXELFORMATDESCRIPTOR>(),
@@ -139,19 +143,42 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
       cStencilBits = 8,
       iLayerType = 0 // PFD_MAIN_PLANE
     };
-    int pix = ChoosePixelFormat(hdc, ref pfd);
-    if (pix == 0) throw new Exception("Could not choose an appropriate pixel format for OpenGL.");
+    var pix = ChoosePixelFormat(hdc, ref pfd);
+    if (pix == nint.Zero) throw new Exception("Could not choose an appropriate pixel format for OpenGL.");
     if (!SetPixelFormat(hdc, pix, ref pfd)) throw new Exception("Could not set the surface's pixel format.");
-    if (hdc == 0) throw new InvalidOperationException("Surface HDC context is invalid!");
-    ctx = wglCreateContext(hdc);
-    if (ctx == 0) throw new Exception(OpenGLCreateContextError);
-    MakeCurrent();
+    if (hdc == nint.Zero) throw new InvalidOperationException("Surface HDC context is invalid!");
+    // Create a staging OpenGL context
+    var tempContext = context = wgl.CreateContext(hdc);
+    if (tempContext == nint.Zero) throw new Exception(OpenGLCreateContextError);
+    wgl.MakeCurrent(hdc, tempContext);
+
+    // Create a customized OpenGL context
+    if (wgl.TryGetExtension<ArbCreateContext>(out var ext) == false)
+      throw new PlatformNotSupportedException("OpenGL wglCreateContextAttribsARB extension is unavilable.");
+    var arbCreateContext = ext ?? throw new Exception(OpenGLCreateContextError);
+    context = arbCreateContext.CreateContextAttrib(hdc, nint.Zero, [
+      (int)ContextAttribute.MajorVersion, settings.Version.Major,
+      (int)ContextAttribute.MinorVersion, settings.Version.Minor,
+      (int)ContextAttribute.ProfileMask, (int)settings.Profile,
+      (int)ContextAttribute.Flags,
+      (int)(
+        settings.Flags |
+#if DEBUG
+        // Request a debugging context
+        ContextFlagMask.DebugBit
+#endif
+      ),
+      0 // NULL terminator
+    ]);
+    if (context == nint.Zero) context = wgl.CreateContext(hdc);
+    if (context == nint.Zero) throw new Exception(OpenGLCreateContextError);
+    // Cleanup temporary context
+    wgl.MakeCurrent(hdc, 0);
+    wgl.DeleteContext(tempContext);
+    wgl.MakeCurrent(hdc, context);
 
     // Load Silk.NET OpenGL with the current context
-    // FIXME: The surface settings are not taken into account
-    context = new GLContext(settings);
-    gl = GL.GetApi(proc => context.GetProcAddress(proc))
-      ?? throw new Exception(OpenGLCreateContextError);
+    gl = GL.GetApi((wgl.Context as GLContext)!.GetProcAddress) ?? throw new Exception(OpenGLCreateContextError);
     logger.Info("Created OpenGL context: {ctxSettings}", settings);
     surface = new(Handle, ownsHandle: false);
     SurfaceChanged?.Invoke(surface);
@@ -182,7 +209,11 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     logger.Trace("Renderer disposed");
     gl?.Dispose();
     gl = null;
+    if (context != nint.Zero) wgl.DeleteContext(context);
+    context = 0;
+    logger.Trace("Context disposed");
     if (hdc != 0) _ = ReleaseDC(Handle, hdc);
+    hdc = 0;
     logger.Trace("Surface disposed");
   }
 

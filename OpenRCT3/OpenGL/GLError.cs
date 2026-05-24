@@ -28,6 +28,7 @@ public class GLError(string? message = null, Exception? innerException = null)
   /// <param name="gl">OpenGL context</param>
   /// <param name="context">Local application context</param>
   /// <exception cref="GLError"></exception>
+  [Conditional("DEBUG")]
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static void CheckError(GL gl, string? context = null) {
     var errCode = gl.GetError();

@@ -12,7 +12,7 @@ namespace OpenRCT3.OpenGL;
 
 public class GLContext(SurfaceSettings settings) : IGLContext {
   private const string OPENGL32 = "opengl32.dll";
-  private readonly nint openglLib = LoadLibrary("opengl32.dll");
+  private readonly nint openglLib = LoadLibrary(OPENGL32);
 
   public SurfaceSettings Settings { get; } = settings;
 
@@ -21,6 +21,28 @@ public class GLContext(SurfaceSettings settings) : IGLContext {
     GC.SuppressFinalize(this);
     FreeLibrary(openglLib);
   }
+
+  public nint GetProcAddress(string procName) => GetProcAddress(procName, null);
+
+  public nint GetProcAddress(string proc, int? slot = null) {
+    var addr = GetProcAddress(openglLib, proc);
+    if (addr != nint.Zero) return addr;
+    // Fallback to extern DLL import
+    return WglGetProcAddress(proc);
+  }
+
+  public bool TryGetProcAddress(string proc, out nint addr, int? slot = null) {
+    try {
+      addr = GetProcAddress(proc, null);
+      if (addr == nint.Zero) return false;
+      return true;
+    } catch {
+      addr = nint.Zero;
+      return false;
+    }
+  }
+
+  public override string ToString() => base.ToString() ?? nameof(GLContext);
 
   [DllImport(OPENGL32, EntryPoint = "wglGetProcAddress", CharSet = CharSet.Ansi)]
   private static extern nint WglGetProcAddress(string proc);
@@ -33,24 +55,4 @@ public class GLContext(SurfaceSettings settings) : IGLContext {
 
   [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
   private static extern bool FreeLibrary(nint lib);
-
-  public nint GetProcAddress(string procName) => GetProcAddress(procName, null);
-
-  public nint GetProcAddress(string proc, int? slot = null) {
-    var addr = WglGetProcAddress(proc);
-    if (addr != nint.Zero) return addr;
-    return GetProcAddress(openglLib, proc);
-  }
-
-  public bool TryGetProcAddress(string proc, out nint addr, int? slot = null) {
-    try {
-      addr = GetProcAddress(proc, null);
-      return true;
-    } catch {
-      addr = nint.Zero;
-      return false;
-    }
-  }
-
-  public override string ToString() => base.ToString() ?? nameof(GLContext);
 }

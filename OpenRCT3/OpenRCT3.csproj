@@ -92,6 +92,10 @@
         <TargetPlatformVersion>8.0</TargetPlatformVersion>
       </PropertyGroup>
       <ItemGroup>
+        <PackageReference Include="Silk.NET.WGL" Version="2.23.0" />
+        <PackageReference Include="Silk.NET.WGL.Extensions.ARB" Version="2.23.0" />
+      </ItemGroup>
+      <ItemGroup>
         <Compile Remove="OpenGL\GLContext.macOS.cs" />
         <Compile Remove="**\Platforms\macOS\**\*.cs" />
         <Compile Remove="Program.macOS.cs" />
