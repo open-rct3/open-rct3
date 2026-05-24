@@ -18,7 +18,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Materials = OpenCobra.GDK.Materials;
 using Services = OpenCobra.GDK.Services;
 
@@ -63,7 +62,6 @@ public class Renderer : IRenderer {
     State = State.Disposed;
   }
 
-  [MethodImpl(MethodImplOptions.Synchronized)]
   public void Render(Scene scene) {
     ContextRequested?.Invoke(this, EventArgs.Empty);
 

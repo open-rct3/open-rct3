@@ -119,7 +119,7 @@ public class Game : IDisposable {
         lag -= msPerUpdate;
       }
 
-      Render((float)(lag.TotalMilliseconds / msPerUpdate.TotalMilliseconds));
+      Render(lag.TotalMilliseconds / msPerUpdate.TotalMilliseconds);
 
       // Reduce CPU usage by sleeping when ahead of schedule
       var remaining = msPerUpdate - lag;
@@ -145,7 +145,7 @@ public class Game : IDisposable {
   /// Renders the scene.
   /// </summary>
   /// <param name="interpolation">The interpolation fraction.</param>
-  private void Render(float interpolation) {
+  private void Render(double interpolation) {
     // TODO: Supply the interpolation fraction to the scene for animations
     Renderer.Render(Scene);
   }

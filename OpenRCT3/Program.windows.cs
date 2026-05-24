@@ -82,7 +82,7 @@ internal static class Program {
     Application.EnableVisualStyles();
     Application.SetCompatibleTextRenderingDefault(false);
     LoadConfigAndFindInstall();
-    Application.Run(new MainForm());
+    Application.Run(new GameWindow());
 
     logger.Info("Application exited");
   }

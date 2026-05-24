@@ -18,7 +18,7 @@ using static OpenRCT3.Platforms.Windows.Win32;
 
 namespace OpenRCT3.Platforms.Windows;
 
-public class GLSurface : Control, IWindow, IGraphicsSurface {
+public class GLSurface : Control, IGraphicsSurface {
   private const string OpenGLCreateContextError =
     "Could not create an OpenGL context. Please upgrade your graphics drivers.";
 
@@ -31,6 +31,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   private GL? gl;
   private Renderer? renderer;
 
+  public event SurfaceCreated? SurfaceCreated;
   public event SurfaceChanged? SurfaceChanged;
 
   public GLSurface() : this(null) { }
@@ -45,30 +46,6 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     wgl = new WGL(new GLContext(settings!));
   }
 
-  [Category("OpenGL")]
-  public GraphicsAPI API {
-    get => settings.API;
-    set => settings.API = value;
-  }
-
-  [Category("OpenGL")]
-  public ContextProfileMask Profile {
-    get => settings.Profile;
-    set => settings.Profile = value;
-  }
-
-  [Category("OpenGL")]
-  public ContextFlagMask Flags {
-    get => settings.Flags;
-    set => settings.Flags = value;
-  }
-
-  [Category("OpenGL")]
-  public Version APIVersion {
-    get => settings.Version;
-    set => settings.Version = value;
-  }
-
   [Browsable(false)]
   public IRenderer Renderer => renderer
     ?? throw new InvalidOperationException("Renderer has not been initialized.");
@@ -77,26 +54,13 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   public SurfaceSettings Settings => settings;
 
   [Browsable(false)]
-  public bool HasValidContext => IsHandleCreated && context != 0 && gl != null;
+  public bool IsValid => IsHandleCreated && context != 0 && gl != null;
+
+  [Browsable(false)]
+  public Handle<nint> Surface => surface ?? throw new InvalidOperationException("Current surface is invalid!");
 
   [Browsable(false)]
   public GL GL => gl ?? throw new InvalidOperationException("Current OpenGL context is invalid!");
-
-  [Browsable(false)]
-  public OpenGLSurface Surface => surface ?? throw new InvalidOperationException("Current surface is invalid!");
-
-  // IWindow
-  [Category("Behavior")]
-  public string Title { get => base.Text; set => Text = value; }
-
-  public Dpi Dpi {
-    get {
-      using var g = CreateGraphics();
-      return new Dpi(g.DpiX / 96f, g.DpiY / 96f);
-    }
-  }
-
-  public Size FrameBufferSize => ClientSize;
 
   protected override CreateParams CreateParams {
     get {
@@ -110,13 +74,13 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   }
 
   public void MakeCurrent() {
-    if (DesignMode || !HasValidContext) return;
+    if (DesignMode || !IsValid) return;
     if (hdc == 0) throw new Exception("Could not make the GL context current.");
     if (!wgl.MakeCurrent(hdc, context)) throw new Exception("Could not make the GL context current.");
   }
 
   public void SwapBuffers() {
-    if (DesignMode || !HasValidContext) return;
+    if (DesignMode || !IsValid) return;
     if (hdc == 0) throw new Exception("Could not swap graphics buffers.");
 
     Win32.SwapBuffers(hdc);
@@ -181,17 +145,21 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     gl = GL.GetApi((wgl.Context as GLContext)!.GetProcAddress) ?? throw new Exception(OpenGLCreateContextError);
     logger.Info("Created OpenGL context: {ctxSettings}", settings);
     surface = new(Handle, ownsHandle: false);
-    SurfaceChanged?.Invoke(surface);
 
-    // Start the game
+    // Create and initialize the world renderer
     renderer = new Renderer(gl);
+    renderer.ContextRequested += (_, _) => Invoke(() => {
+      MakeCurrent();
+    });
+    renderer.Rendered += (_, _) => Invoke(() => {
+      SwapBuffers();
+    });
     renderer.Initialize(this);
-    _ = new Game(renderer);
+    MakeCurrent();
+    renderer.SetViewport(ClientSize.Width, ClientSize.Height);
+    SurfaceCreated?.Invoke(this, renderer);
 
     base.OnHandleCreated(e);
-
-    MakeCurrent();
-    renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
     Invalidate();
   }
 
@@ -200,7 +168,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     if (DesignMode) return;
 
     GetDC(Handle);
-    if (!HasValidContext) return;
+    if (!IsValid) return;
 
     Game.Instance?.Dispose();
     logger.Trace("Game instance disposed");
@@ -218,11 +186,11 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   }
 
   protected override void OnResize(EventArgs e) {
-    if (DesignMode || !HasValidContext) return;
+    if (DesignMode || !IsValid) return;
 
     MakeCurrent();
     renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
-    SurfaceChanged?.Invoke(surface!);
+    SurfaceChanged?.Invoke(this);
     Game.Instance?.Scene.Update(Convert.ToSingle(ClientSize.Width / ClientSize.Height));
     Invalidate();
 
@@ -235,17 +203,14 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
       using var brush = new SolidBrush(Color.FromArgb(200, 200, 200));
       using var font = new Font("Segoe UI", 9);
       e.Graphics.DrawString($"[{GetType().Name}]", font, brush, 8, 8);
-    } else {
-      OnRenderFrame();
+      return;
     }
 
     base.OnPaint(e);
-  }
 
-  private void OnRenderFrame() {
-    if (!HasValidContext) return;
-
+    // Render the scene
     // TODO: Extract the rest of this method to prevent duplication between platforms
+    if (!IsValid) return;
     if (Game.Instance != null && renderer != null) {
       var scene = Game.Instance.Scene;
       scene.Update(ClientSize.Width * 1f / ClientSize.Height);

@@ -1,5 +1,5 @@
 namespace OpenRCT3.Platforms.Windows {
-  partial class MainForm {
+  partial class GameWindow {
     private System.ComponentModel.IContainer components = null;
 
     protected override void Dispose(bool disposing) {
@@ -12,14 +12,12 @@ namespace OpenRCT3.Platforms.Windows {
     #region Windows Form Designer generated code
 
     private void InitializeComponent() {
-      System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
+      System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GameWindow));
       glSurface = new GLSurface();
       SuspendLayout();
       // 
       // glSurface
       // 
-      glSurface.API = GraphicsAPI.OpenGL;
-      glSurface.APIVersion = new System.Version(4, 1, 0, 0);
       glSurface.Dock = System.Windows.Forms.DockStyle.Fill;
       glSurface.Location = new System.Drawing.Point(0, 0);
       glSurface.Name = "glSurface";

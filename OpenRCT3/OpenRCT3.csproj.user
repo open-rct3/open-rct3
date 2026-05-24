@@ -5,7 +5,7 @@
     <Compile Update="Platforms\Windows\GLSurface.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Update="Platforms\Windows\MainForm.cs">
+    <Compile Update="Platforms\Windows\GameWindow.cs">
       <SubType>Form</SubType>
     </Compile>
   </ItemGroup>
