@@ -60,12 +60,13 @@ public class Game : IDisposable {
     Instance = this;
     Renderer = renderer;
 
-    logger.Trace("Creating game world:");
+    logger.Trace("Creating game world...");
     logger.Info("Simulation features are unimplemented");
 
     // Load the game world
     // TODO: Show a progress bar while loading
     World.Load();
+    logger.Trace("Game world loaded");
 
     // Create a flat quad on the XY plane (Z-up)
     var grass = Color.FromArgb(79, 129, 14).ToGl();
@@ -74,7 +75,7 @@ public class Game : IDisposable {
       new Vertex { Position = new Vector3( 10, -10, 0), TexCoord = new Vector2(1, 0), Color = grass },
       new Vertex { Position = new Vector3( 10,  10, 0), TexCoord = new Vector2(1, 1), Color = grass },
       new Vertex { Position = new Vector3(-10,  10, 0), TexCoord = new Vector2(0, 1), Color = grass }
-    ], [0, 1, 2, 0, 2, 3])) {
+    ], [0, 1, 2, 0, 2, 3]) { Name = "Ground" }) {
       Material = new()
     });
     logger.Trace("Added ground plane");

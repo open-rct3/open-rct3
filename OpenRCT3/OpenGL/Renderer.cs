@@ -81,16 +81,16 @@ public class Renderer : IRenderer {
     foreach (var item in BuildDisplayList(scene)) {
       gl.UseProgram(item.ShaderHandle);
       gl.BindVertexArray(item.Vao);
+      gl.CheckError(string.Format("Binding {0} vertex array object", item.Name));
       gl.BindBuffer(BufferTargetARB.ArrayBuffer, item.Vbo);
-      // FIXME: Invalid operation OpenGL error
-      GLError.CheckError(gl, string.Format("Binding {0} vertex buffer", item.Name));
+      gl.CheckError(string.Format("Binding {0} vertex buffer", item.Name));
 
       if (item.TextureHandle != null) {
         gl.ActiveTexture(TextureUnit.Texture0);
         gl.BindTexture(TextureTarget.Texture2D, item.TextureHandle.Value);
         var loc = gl.GetUniformLocation(item.ShaderHandle, Materials.Texture.UniformName);
         if (loc != -1) gl.Uniform1(loc, 0);
-        GLError.CheckError(gl, string.Format("Binding {0} textures", item.Name));
+        gl.CheckError(string.Format("Binding {0} textures", item.Name));
       }
 
       // Set model and camera uniforms
@@ -100,18 +100,18 @@ public class Renderer : IRenderer {
         transpose: false,
         item.ModelTransform.ToGl().AsSpan()
       );
-      GLError.CheckError(gl, string.Format("Set {0} model transformation uniform", item.Name));
+      gl.CheckError(string.Format("Set {0} model transformation uniform", item.Name));
       gl.UniformMatrix4(
         gl.GetUniformLocation(item.ShaderHandle, Camera.UniformName),
         count: 1,
         transpose: false,
         viewProj.Value.ToGl().AsSpan()
       );
-      GLError.CheckError(gl, string.Format("Binding {0} camera uniform", item.Name));
+      gl.CheckError(string.Format("Binding {0} camera uniform", item.Name));
 
       // Draw the model
       gl.DrawElements<uint>(PrimitiveType.Triangles, item.IndexCount, DrawElementsType.UnsignedInt, indices: null);
-      GLError.CheckError(gl, string.Format("Draw {0}", item.Name));
+      gl.CheckError(string.Format("Draw {0}", item.Name));
     }
 
     gl.BindVertexArray(0);

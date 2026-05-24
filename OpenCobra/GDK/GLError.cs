@@ -9,7 +9,7 @@ using NLog;
 using Silk.NET.OpenGL;
 using System.Runtime.CompilerServices;
 
-namespace OpenRCT3.OpenGL;
+namespace OpenCobra.GDK;
 
 /// <summary>
 /// Represents an OpenGL error.
@@ -18,8 +18,10 @@ namespace OpenRCT3.OpenGL;
 /// <see cref="GL.GetError"/>
 /// </remarks>
 public class GLError(string? message = null, Exception? innerException = null)
-  : Exception(message, innerException) {
-  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
+  : Exception(message, innerException) {}
+
+public static class GLExtensions {
+  private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
   /// <summary>
   /// Check for an OpenGL validation error.
@@ -30,7 +32,7 @@ public class GLError(string? message = null, Exception? innerException = null)
   /// <exception cref="GLError"></exception>
   [Conditional("DEBUG")]
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
-  public static void CheckError(GL gl, string? context = null) {
+  public static void CheckError(this GL gl, string? context = null) {
     var errCode = gl.GetError();
     if (errCode == 0) return;
 

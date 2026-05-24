@@ -56,16 +56,18 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
     // VAO
     Vao = gl.GenVertexArray();
     gl.BindVertexArray(Vao);
+    gl.CheckError(string.Format("Binding {0} vertex array", Name));
 
     // VBO
     Vbo = gl.GenBuffer();
     gl.BindBuffer(BufferTargetARB.ArrayBuffer, Vbo);
     var vertices = Vertices.ToArray();
     gl.BufferData<Vertex>(
-      BufferTargetARB.ElementArrayBuffer,
+      BufferTargetARB.ArrayBuffer,
       Convert.ToUInt32(vertices.Length * Marshal.SizeOf<Vertex>()),
       vertices,
       BufferUsageARB.StaticDraw);
+    gl.CheckError(string.Format("Uploading {0} vertex buffer", Name));
 
     // EBO
     Ebo = gl.GenBuffer();
@@ -76,8 +78,9 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
       Convert.ToUInt32(indices.Length * sizeof(uint)),
       indices,
       BufferUsageARB.StaticDraw);
+    gl.CheckError(string.Format("Uploading {0} index buffer", Name));
 
-    // Bind vertex attributes to shader locations
+    #region Bind vertex attributes to shader locations
     var stride = Convert.ToUInt32(Marshal.SizeOf<Vertex>());
 
     var posLoc = gl.GetAttribLocation(shader.Handle, "a_Position");
@@ -90,6 +93,7 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
       normalized: false,
       stride,
       CastFrom<int>.To<nint>(0));
+    gl.CheckError(string.Format("Binding {0} vertex attribute: {1}", Name, "a_Position"));
 
     var normLoc = gl.GetAttribLocation(shader.Handle, "a_Normal");
     if (normLoc >= 0) {
@@ -101,6 +105,7 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
         normalized: false,
         stride,
         CastFrom<int>.To<nint>(12));
+      gl.CheckError(string.Format("Binding {0} vertex attribute: {1}", Name, "a_Normal"));
     }
 
     var texLoc = gl.GetAttribLocation(shader.Handle, "a_TexCoord");
@@ -113,6 +118,7 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
         normalized: false,
         stride,
         CastFrom<int>.To<nint>(24));
+      gl.CheckError(string.Format("Binding {0} vertex attribute: {1}", Name, "a_TexCoord"));
     }
 
     var colLoc = gl.GetAttribLocation(shader.Handle, "a_Color");
@@ -125,6 +131,8 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
       normalized: false,
       stride,
       CastFrom<int>.To<nint>(32));
+    gl.CheckError(string.Format("Binding {0} vertex attribute: {1}", Name, "a_Color"));
+    #endregion
 
     // Cleanup
     gl.BindVertexArray(0);

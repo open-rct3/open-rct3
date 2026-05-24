@@ -84,6 +84,6 @@ internal static class Program {
     LoadConfigAndFindInstall();
     Application.Run(new MainForm());
 
-    logger.Info("Application exited.");
+    logger.Info("Application exited");
   }
 }
