@@ -76,7 +76,7 @@ public class Renderer : IRenderer {
     if (models.Length > 0) UploadChanges(scene.Camera, models);
 
     // Render the scene
-    gl.Clear(Convert.ToUInt32(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit));
+    gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
     foreach (var item in BuildDisplayList(scene)) {
       gl.UseProgram(item.ShaderHandle);

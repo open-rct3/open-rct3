@@ -27,7 +27,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   private nint hdc = 0;
   private nint context = 0;
   private OpenGLSurface? surface;
-  private WGL wgl;
+  private readonly WGL wgl;
   private GL? gl;
   private Renderer? renderer;
 
@@ -246,12 +246,14 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     if (!HasValidContext) return;
 
     // TODO: Extract the rest of this method to prevent duplication between platforms
-    MakeCurrent();
     if (Game.Instance != null && renderer != null) {
       var scene = Game.Instance.Scene;
       scene.Update(ClientSize.Width * 1f / ClientSize.Height);
       renderer.Render(scene);
+    } else {
+      MakeCurrent();
+      gl?.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+      SwapBuffers();
     }
-    SwapBuffers();
   }
 }
