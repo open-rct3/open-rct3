@@ -24,6 +24,6 @@ public class Camera : Uniform<Matrix4x4> {
     var view = Matrix4x4.CreateLookAt(new Vector3(20, -20, 15), new Vector3(0, 0, 0), Vector3.UnitZ);
     var projection = Matrix4x4.CreatePerspectiveFieldOfView(MathF.PI / 3f, aspectRatio, 0.1f, 1000f);
 
-    Value = projection * view;
+    Value = view * projection;
   }
 }
