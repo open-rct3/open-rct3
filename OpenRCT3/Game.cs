@@ -76,7 +76,7 @@ public class Game : IDisposable {
       new Vertex { Position = new Vector3( 10,  10, 0), TexCoord = new Vector2(1, 1), Color = grass },
       new Vertex { Position = new Vector3(-10,  10, 0), TexCoord = new Vector2(0, 1), Color = grass }
     ], [0, 1, 2, 0, 2, 3]) { Name = "Ground" }) {
-      Material = new()
+      Material = new Flat()
     });
     logger.Trace("Added ground plane");
   }
