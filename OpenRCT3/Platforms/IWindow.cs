@@ -5,56 +5,34 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
-using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
 namespace OpenRCT3.Platforms;
 
-public struct Dpi(float x, float y) {
-  public float X = x;
-  public float Y = y;
-}
+public record struct Dpi(float X, float Y);
 
-public interface IWindow : IObservable<OpenGLSurface> {
+public delegate void SurfaceChanged(OpenGLSurface surface);
+
+public interface IWindow {
   public string Title { get; set; }
   public Dpi Dpi { get; }
   public Size FrameBufferSize { get; }
+  /// <summary>
+  /// Raised whenever the backing GPU surface changes, e.g. when the framebuffer is resized.
+  /// </summary>
+  public event SurfaceChanged? SurfaceChanged;
 }
 
-public abstract class Handle<T> : SafeHandle {
-  private readonly Func<bool>? _disposeHandle;
-
-  public Handle(nint handle, bool ownsHandle, Func<bool>? disposeHandle = null) : base((nint)handle, ownsHandle) {
-    _disposeHandle = disposeHandle;
-  }
+public abstract class Handle<T>(
+  nint handle, bool ownsHandle, Func<bool>? disposeHandle = null
+) : SafeHandle(handle, ownsHandle) {
+  private readonly Func<bool>? disposeHandle = disposeHandle;
 
   public override bool IsInvalid => this.handle == 0;
 
   protected override bool ReleaseHandle() {
-    if (_disposeHandle != null) return _disposeHandle();
+    if (disposeHandle != null) return disposeHandle();
     else return true;
-  }
-}
-
-public sealed class OpenGLSurface : Handle<nint> {
-  public OpenGLSurface(nint handle, bool ownsHandle, Func<bool>? disposeHandle = null) : base(handle, ownsHandle, disposeHandle) { }
-}
-
-public delegate void SurfaceChanged(OpenGLSurface surface);
-
-internal class SurfaceSubscription : IDisposable {
-  private readonly List<IObserver<OpenGLSurface>> _observers;
-  private readonly IObserver<OpenGLSurface> observer;
-
-  public SurfaceSubscription(List<IObserver<OpenGLSurface>> observers, IObserver<OpenGLSurface> observer) {
-    this._observers = observers;
-    this.observer = observer;
-  }
-
-  public void Dispose() {
-    if (observer != null && _observers.Contains(observer))
-      _observers.Remove(observer);
   }
 }

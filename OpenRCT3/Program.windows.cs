@@ -9,7 +9,6 @@ using NLog;
 using OpenCobra.OVL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.Windows;
-using System;
 using System.Windows.Forms;
 
 namespace OpenRCT3;
@@ -17,6 +16,9 @@ namespace OpenRCT3;
 internal static class Program {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
+  /// <summary>
+  /// Safely handles all unhandled exceptions.
+  /// </summary>
   private static void HandleException(Exception? e) {
     if (e == null) return;
     logger.Fatal(e, "An unhandled exception occurred.");
@@ -31,6 +33,7 @@ internal static class Program {
     else if (result == DialogResult.Retry) Application.Restart();
   }
 
+  // TODO: Extract this to a common place to keep `Program`s DRY
   private static AppConfig LoadConfigAndFindInstall() {
     var config = AppConfig.Load();
     if (!string.IsNullOrEmpty(config.InstallPath) && InstallFinder.Validate(config.InstallPath)) {
@@ -54,6 +57,7 @@ internal static class Program {
         return config;
       }
 
+      logger.Fatal("Could not find RCT3 installation folder.");
       Environment.Exit(1);
       return config;
     }
@@ -75,5 +79,7 @@ internal static class Program {
     Application.SetCompatibleTextRenderingDefault(false);
     LoadConfigAndFindInstall();
     Application.Run(new MainForm());
+
+    logger.Info("Application exited.");
   }
 }

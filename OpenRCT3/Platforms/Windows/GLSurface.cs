@@ -1,28 +1,34 @@
-using Silk.NET.Core.Loader;
-using Silk.NET.Core.Native;
+// Windows OpenGL Surface
+//
+// Authors:
+//   - Chance Snow <git@chancesnow.me>
+//
+// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+
+using NLog;
+using OpenRCT3.OpenGL;
 using Silk.NET.OpenGL;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using OpenRCT3.OpenGL;
 using static OpenRCT3.Platforms.Windows.Win32;
 
 namespace OpenRCT3.Platforms.Windows;
 
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
 public class GLSurface : Control, IWindow, IGraphicsSurface {
   private const string OpenGLCreateContextError = "Could not create an OpenGL context.";
 
-  private readonly SurfaceSettings _settings;
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
+  private readonly SurfaceSettings settings;
   private nint hdc = 0;
   private nint ctx = 0;
+  private OpenGLSurface? surface;
+  private GLContext? context;
   private GL? gl;
-  private Renderer? _renderer;
-  private readonly HashSet<IObserver<OpenGLSurface>> _observers = new();
+  private Renderer? renderer;
+
+  public event SurfaceChanged? SurfaceChanged;
 
   public GLSurface() : this(null) { }
 
@@ -32,45 +38,48 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     SetStyle(ControlStyles.AllPaintingInWmPaint, true);
     DoubleBuffered = false;
 
-    _settings = settings?.Clone() ?? new SurfaceSettings();
+    this.settings = settings?.Clone() ?? new SurfaceSettings();
   }
 
   [Category("OpenGL")]
   public GraphicsAPI API {
-    get => _settings.API;
-    set => _settings.API = value;
+    get => settings.API;
+    set => settings.API = value;
   }
 
   [Category("OpenGL")]
   public ContextProfileMask Profile {
-    get => _settings.Profile;
-    set => _settings.Profile = value;
+    get => settings.Profile;
+    set => settings.Profile = value;
   }
 
   [Category("OpenGL")]
   public ContextFlagMask Flags {
-    get => _settings.Flags;
-    set => _settings.Flags = value;
+    get => settings.Flags;
+    set => settings.Flags = value;
   }
 
   [Category("OpenGL")]
   public Version APIVersion {
-    get => _settings.Version;
-    set => _settings.Version = value;
+    get => settings.Version;
+    set => settings.Version = value;
   }
 
   [Browsable(false)]
-  public IRenderer Renderer => _renderer
+  public IRenderer Renderer => renderer
     ?? throw new InvalidOperationException("Renderer has not been initialized.");
 
   [Browsable(false)]
-  public SurfaceSettings Settings => _settings;
+  public SurfaceSettings Settings => settings;
 
   [Browsable(false)]
   public bool HasValidContext => IsHandleCreated && ctx != 0 && gl != null;
 
   [Browsable(false)]
-  public GL GL => gl ?? throw new Exception("Current OpenGL context is invalid!");
+  public GL GL => gl ?? throw new InvalidOperationException("Current OpenGL context is invalid!");
+
+  [Browsable(false)]
+  public OpenGLSurface Surface => surface ?? throw new InvalidOperationException("Current surface is invalid!");
 
   // IWindow
   [Category("Behavior")]
@@ -84,11 +93,6 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   }
 
   public Size FrameBufferSize => ClientSize;
-
-  public IDisposable Subscribe(IObserver<OpenGLSurface> observer) {
-    _observers.Add(observer);
-    return new Unsubscriber<OpenGLSurface>(_observers, observer);
-  }
 
   protected override CreateParams CreateParams {
     get {
@@ -144,18 +148,23 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     MakeCurrent();
 
     // Load Silk.NET OpenGL with the current context
-    gl = GL.GetApi(proc => OpenGLProcResolver.GetProc(proc, _settings.Version)) ?? throw new Exception(OpenGLCreateContextError);
+    // FIXME: The surface settings are not taken into account
+    context = new GLContext(settings);
+    gl = GL.GetApi(proc => context.GetProcAddress(proc))
+      ?? throw new Exception(OpenGLCreateContextError);
+    logger.Info("Created OpenGL context: {ctxSettings}", settings);
+    surface = new(Handle, ownsHandle: false);
+    SurfaceChanged?.Invoke(surface);
 
     // Start the game
-    _renderer = new Renderer(gl);
-    _renderer.Initialize(this);
-    _ = new Game(_renderer);
+    renderer = new Renderer(gl);
+    renderer.Initialize(this);
+    _ = new Game(renderer);
 
     base.OnHandleCreated(e);
 
     MakeCurrent();
-    GL.Viewport(0, 0, (uint)ClientSize.Width, (uint)ClientSize.Height);
-    _renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
+    renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
     Invalidate();
   }
 
@@ -164,23 +173,26 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     if (DesignMode) return;
 
     GetDC(Handle);
-    if (HasValidContext) {
-      Game.Instance?.Dispose();
-      _renderer?.Dispose();
-      _renderer = null;
-      gl?.Dispose();
-      gl = null;
-      if (hdc != 0) _ = ReleaseDC(Handle, hdc);
-    }
+    if (!HasValidContext) return;
+
+    Game.Instance?.Dispose();
+    logger.Trace("Game instance disposed");
+    renderer?.Dispose();
+    renderer = null;
+    logger.Trace("Renderer disposed");
+    gl?.Dispose();
+    gl = null;
+    if (hdc != 0) _ = ReleaseDC(Handle, hdc);
+    logger.Trace("Surface disposed");
   }
 
   protected override void OnResize(EventArgs e) {
     if (DesignMode || !HasValidContext) return;
 
     MakeCurrent();
-    GL.Viewport(0, 0, (uint)ClientSize.Width, (uint)ClientSize.Height);
-    _renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
-    Game.Instance?.Scene.UpdateCamera((float)ClientSize.Width / ClientSize.Height);
+    renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
+    SurfaceChanged?.Invoke(surface!);
+    Game.Instance?.Scene.Update(Convert.ToSingle(ClientSize.Width / ClientSize.Height));
     Invalidate();
 
     base.OnResize(e);
@@ -202,11 +214,12 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
   private void OnRenderFrame() {
     if (!HasValidContext) return;
 
-    // TODO: Extract the rest of this method to prevent duplication between macOS and Windows
+    // TODO: Extract the rest of this method to prevent duplication between platforms
     MakeCurrent();
-    if (Game.Instance != null && _renderer != null) {
-      Game.Instance.Scene.UpdateCamera(ClientSize.Width * 1f / ClientSize.Height);
-      _renderer.Render(Game.Instance.Scene);
+    if (Game.Instance != null && renderer != null) {
+      var scene = Game.Instance.Scene;
+      scene.Update(ClientSize.Width * 1f / ClientSize.Height);
+      renderer.Render(scene);
     }
     SwapBuffers();
   }

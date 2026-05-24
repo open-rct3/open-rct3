@@ -6,10 +6,15 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using NLog;
-using System;
 using OpenCobra.GDK;
-using OpenRCT3.Simulation;
+using OpenCobra.GDK.Materials;
+using OpenCobra.GDK.Meshes;
+using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
+using OpenRCT3.Simulation;
+using Silk.NET.OpenGL;
+using System.Drawing;
+using System.Numerics;
 
 #if WINDOWS
 using System.Windows.Forms;
@@ -55,15 +60,24 @@ public class Game : IDisposable {
     Instance = this;
     Renderer = renderer;
 
+    logger.Trace("Creating game world:");
     logger.Info("Simulation features are unimplemented");
 
     // Load the game world
     // TODO: Show a progress bar while loading
     World.Load();
-    if (!string.IsNullOrEmpty(Config.InstallPath)) {
-      var nullbmpPath = Path.Combine(Config.InstallPath, "nullbmp.common.ovl");
-      Scene.LoadTexture(nullbmpPath, "nullbmp");
-    }
+
+    // Create a flat quad on the XY plane (Z-up)
+    var grass = Color.FromArgb(79, 129, 14).ToGl();
+    Scene.Models.Add(new(new Mesh([
+      new Vertex { Position = new Vector3(-10, -10, 0), TexCoord = new Vector2(0, 0), Color = grass },
+      new Vertex { Position = new Vector3( 10, -10, 0), TexCoord = new Vector2(1, 0), Color = grass },
+      new Vertex { Position = new Vector3( 10,  10, 0), TexCoord = new Vector2(1, 1), Color = grass },
+      new Vertex { Position = new Vector3(-10,  10, 0), TexCoord = new Vector2(0, 1), Color = grass }
+    ], [0, 1, 2, 0, 2, 3])) {
+      Material = new()
+    });
+    logger.Trace("Added ground plane");
   }
 
   /// <summary>
@@ -114,6 +128,8 @@ public class Game : IDisposable {
           System.Threading.Thread.Sleep(sleepMs / 2);
       }
     }
+
+    logger.Info("Exiting game...");
   }
 
   /// <summary>
@@ -129,6 +145,7 @@ public class Game : IDisposable {
   /// </summary>
   /// <param name="interpolation">The interpolation fraction.</param>
   private void Render(float interpolation) {
+    // TODO: Supply the interpolation fraction to the scene for animations
     Renderer.Render(Scene);
   }
 

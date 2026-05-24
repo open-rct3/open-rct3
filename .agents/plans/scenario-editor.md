@@ -11,7 +11,7 @@ RCT3 texture files.
 
 ## Phase 1: Bootstrap ImGui and Grass Mesh
 
-### 1. Add ImGui Package
+### 1. ~~Add ImGui Package~~ (Done)
 
 Edit [`OpenCobra/GDK/GDK.csproj`](OpenCobra/GDK/GDK.csproj):
 
@@ -19,7 +19,7 @@ Edit [`OpenCobra/GDK/GDK.csproj`](OpenCobra/GDK/GDK.csproj):
 <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" Version="2.23.0" />
 ```
 
-### 2. Refactor for Stateful GPU Caching
+### 2. ~~Refactor for Stateful GPU Caching~~ (Done)
 
 Refactor so that `Mesh` and `Material` owns GPU-resident state and `Renderer` is purely immediate:
 
@@ -48,7 +48,7 @@ Strip all GL handle management from the render loop.
 - Hook into OpenGL renderer for `Begin`/`End` frame calls
 - Render a simple debug overlay per frame
 
-### 3. Create Scenario Editor Window
+### 3. ~~Create Scenario Editor Window~~ (Done)
 
 Create [`OpenRCT3/Scenario/Editor.cs`](OpenRCT3/Scenario/Editor.cs):
 
