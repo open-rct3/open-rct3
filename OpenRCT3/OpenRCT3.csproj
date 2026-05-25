@@ -17,6 +17,7 @@
     <!-- Versions -->
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
+    <LangVersion>14</LangVersion>
   </PropertyGroup>
   <!-- Configure debug and release modes -->
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">

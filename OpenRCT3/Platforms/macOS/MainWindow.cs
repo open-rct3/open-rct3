@@ -12,11 +12,7 @@ using ObjCRuntime;
 namespace OpenRCT3.Platforms.macOS;
 
 public partial class MainWindow : NSWindow, IWindow {
-  private List<IObserver<OpenGLSurface>> observers = new();
-
-  public MainWindow(NativeHandle handle) : base(handle) {
-    this.MakeKeyAndOrderFront(this);
-  }
+  public MainWindow(NativeHandle handle) : base(handle) => MakeKeyAndOrderFront(this);
 
   public uint FrameBufferWidth => (uint) Math.Round(
     Controller?.Game.Bounds.Width.Value * BackingScaleFactor.Value ?? 640
@@ -34,15 +30,12 @@ public partial class MainWindow : NSWindow, IWindow {
   public override void AwakeFromNib() {
     base.AwakeFromNib();
 
-    if (Controller != null) Controller.SurfaceChanged += SurfaceChanged;
+    Controller?.Surface.SurfaceCreated += SurfaceCreated;
+    // TODO: Update framebuffer on WillResize/DidResize, DidChangeScreen, and DidChangeScreenProfile
+    // See also DidEndLiveResize
   }
 
-  private void SurfaceChanged(OpenGLSurface surface) {
-    foreach (var observer in observers) observer.OnNext(surface);
-  }
-
-  public IDisposable Subscribe(IObserver<OpenGLSurface> observer) {
-    if (!observers.Contains(observer)) observers.Add(observer);
-    return new SurfaceSubscription(observers, observer);
-  }
+  private static void SurfaceCreated(IGraphicsSurface surface, IRenderer renderer) =>
+    // Start the game
+    Task.Run(() => new Game(renderer).Run());
 }

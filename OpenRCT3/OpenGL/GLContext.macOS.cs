@@ -5,37 +5,28 @@ using Silk.NET.Core.Contexts;
 namespace OpenRCT3.OpenGL;
 
 public class GLContext : IGLContext, INativeContext {
-  private readonly nint _openglLib;
+  private const int RTLD_LAZY = 1;
+  private readonly nint openglLib = dlopen("/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY);
 
-  public GLContext() {
-    _openglLib = dlopen("/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY);
-  }
+  public nint GetProcAddress(string procName) => dlsym(openglLib, procName);
 
-  public nint GetProcAddress(string procName) {
-    return dlsym(_openglLib, procName);
-  }
-
-  public nint GetProcAddress(string proc, int? slot = null) {
-    return dlsym(_openglLib, proc);
-  }
+  public nint GetProcAddress(string proc, int? slot = null) => dlsym(openglLib, proc);
 
   public bool TryGetProcAddress(string proc, out nint addr, int? slot = null) {
-    addr = dlsym(_openglLib, proc);
+    addr = dlsym(openglLib, proc);
     return addr != 0;
   }
 
   public void Dispose() {
-    if (_openglLib != nint.Zero) dlclose(_openglLib);
+    if (openglLib != nint.Zero) dlclose(openglLib);
   }
 
-  private const int RTLD_LAZY = 1;
+  [DllImport("libSystem.dylib")]
+  private extern static nint dlopen(string path, int mode);
 
   [DllImport("libSystem.dylib")]
-  private static extern nint dlopen(string path, int mode);
+  private extern static nint dlsym(nint handle, string symbol);
 
   [DllImport("libSystem.dylib")]
-  private static extern nint dlsym(nint handle, string symbol);
-
-  [DllImport("libSystem.dylib")]
-  private static extern int dlclose(nint handle);
+  private extern static int dlclose(nint handle);
 }
