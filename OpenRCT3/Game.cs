@@ -86,14 +86,12 @@ public class Game : IDisposable {
 
     // Create a flat quad on the XY plane (Z-up)
     var grass = Color.FromArgb(79, 129, 14).ToGl();
-    Scene.Models.Add(new(new Mesh([
-      new Vertex { Position = new Vector3(-10, -10, 0), TexCoord = new Vector2(0, 0), Color = grass },
-      new Vertex { Position = new Vector3( 10, -10, 0), TexCoord = new Vector2(1, 0), Color = grass },
-      new Vertex { Position = new Vector3( 10,  10, 0), TexCoord = new Vector2(1, 1), Color = grass },
-      new Vertex { Position = new Vector3(-10,  10, 0), TexCoord = new Vector2(0, 1), Color = grass }
-    ], [0, 1, 2, 0, 2, 3]) { Name = "Ground" }) {
+    var ground = new Model(Primitives.Plane("Ground", color: grass)) {
       Material = new Flat()
-    });
+    };
+    // Scale the mesh to ten (10) square meters
+    ground.Transform.Matrix *= 10;
+    Scene.Models.Add(ground);
     logger.Trace("Added ground plane");
   }
 
