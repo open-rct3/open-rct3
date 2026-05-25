@@ -15,6 +15,8 @@ using OpenRCT3.Simulation;
 using Silk.NET.OpenGL;
 using System.Drawing;
 using System.Numerics;
+using System.Threading;
+
 
 #if WINDOWS
 using System.Windows.Forms;
@@ -29,7 +31,7 @@ namespace OpenRCT3;
 /// </summary>
 public class Game : IDisposable {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
-  private bool isRunning = true;
+  private bool isRunning = false;
 
   public static Game? Instance { get; private set; }
   public static bool IsRunning => Instance?.isRunning ?? false;
@@ -37,6 +39,19 @@ public class Game : IDisposable {
   /// Default frame rate of the game loop, in frames per second.
   /// </summary>
   public static readonly int DefaultFrameRate = 60;
+
+  /// <summary>
+  /// Raised once the game has started and the game loop is running.
+  /// </summary>
+  /// <remarks>
+  /// The game is started via <see cref="Run"/>.
+  /// </remarks>
+  public event Action? Started;
+  /// <summary>
+  /// <para>Raised when the game ends, i.e. when the user quits.</para>
+  /// <para>See <see cref="Quit"/>.</para>
+  /// </summary>
+  public event Action? Exited;
 
   public AppConfig Config { get; } = AppConfig.Instance;
   /// <summary>
@@ -62,7 +77,7 @@ public class Game : IDisposable {
     Renderer = renderer;
 
     logger.Trace("Creating game world...");
-    logger.Info("Simulation features are unimplemented");
+    logger.Warn("Simulation features are unimplemented!");
 
     // Load the game world
     // TODO: Show a progress bar while loading
@@ -92,9 +107,11 @@ public class Game : IDisposable {
   /// <seealso cref="TargetFrameTime"/>
   /// <see href="https://gameprogrammingpatterns.com/game-loop.html"/>
   public void Run() {
+    isRunning = true;
     _stopwatch.Start();
 
     // Run the game loop
+    Started?.Invoke();
     var previousTime = _stopwatch.Elapsed;
     var lag = TimeSpan.Zero;
     var msPerUpdate = TargetFrameTime;
@@ -127,11 +144,12 @@ public class Game : IDisposable {
       if (remaining > TimeSpan.Zero) {
         var sleepMs = (int)(remaining.TotalMilliseconds / 2.0);
         if (sleepMs > 2)
-          System.Threading.Thread.Sleep(sleepMs / 2);
+          Thread.Sleep(sleepMs / 2);
       }
     }
 
-    logger.Info("Exiting game...");
+    Exited?.Invoke();
+    logger.Info("Game exited");
   }
 
   /// <summary>
@@ -142,6 +160,7 @@ public class Game : IDisposable {
     // TODO: Check for unsaved changes and prevent closure
     isRunning = false;
 
+    if (!isRunning) logger.Info("Exiting game...");
     return isRunning == false;
   }
 
