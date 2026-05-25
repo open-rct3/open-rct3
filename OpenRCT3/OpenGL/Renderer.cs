@@ -30,12 +30,14 @@ public class Renderer : ThreadAffine, IRenderer {
   private readonly ConcurrentDictionary<Material, ShaderProgram> shaders = new();
 
   public State State { get; private set; } = State.Uninitialized;
+  public IGraphicsSurface Surface { get; init; }
   public Color ClearColor { get; set; } = Color.FromArgb(45, 45, 48);
 
   public event EventHandler? ContextRequested;
   public event EventHandler? Rendered;
 
-  public Renderer(GL gl) {
+  public Renderer(IGraphicsSurface surface, GL gl) {
+    Surface = surface;
     this.gl = gl;
     Scene.IoC.Register<IGL>(
       Reuse.Singleton,
@@ -95,17 +97,17 @@ public class Renderer : ThreadAffine, IRenderer {
 
       // Set model and camera uniforms
       gl.UniformMatrix4(
-        gl.GetUniformLocation(item.ShaderHandle, Transform.UniformName),
+        location: gl.GetUniformLocation(item.ShaderHandle, Transform.UniformName),
         count: 1,
         transpose: false,
-        item.ModelTransform.ToGl().AsSpan()
+        value: item.ModelTransform.ToGl().AsSpan()
       );
       gl.CheckError(string.Format("Set {0} model transformation uniform", item.Name));
       gl.UniformMatrix4(
-        gl.GetUniformLocation(item.ShaderHandle, Camera.UniformName),
+        location: gl.GetUniformLocation(item.ShaderHandle, Camera.UniformName),
         count: 1,
         transpose: false,
-        viewProj.Value.ToGl().AsSpan()
+        value: viewProj.Value.ToGl().AsSpan()
       );
       gl.CheckError(string.Format("Binding {0} camera uniform", item.Name));
 

@@ -73,6 +73,11 @@ public class GLSurface : Control, IGraphicsSurface {
     }
   }
 
+  // FIXME: This doesn't take the pixel density into account
+  public Size FrameBufferSize => ClientSize;
+
+  public float AspectRatio => (float)ClientSize.Width / (float)ClientSize.Height;
+
   public void MakeCurrent() {
     if (DesignMode || !IsValid) return;
     if (hdc == 0) throw new Exception("Could not make the GL context current.");
@@ -146,8 +151,8 @@ public class GLSurface : Control, IGraphicsSurface {
     logger.Info("Created OpenGL context: {ctxSettings}", settings);
     surface = new(Handle, ownsHandle: false);
 
-    // Create and initialize the world renderer
-    renderer = new Renderer(gl);
+    // Create the scene renderer
+    renderer = new Renderer(this, gl);
     renderer.ContextRequested += (_, _) => {
       if (!IsValid) return;
       Invoke(() => MakeCurrent());
@@ -156,8 +161,10 @@ public class GLSurface : Control, IGraphicsSurface {
       if (!IsValid) return;
       Invoke(() => SwapBuffers());
     };
-    renderer.Initialize(this);
+
+    // Initialize the scene renderer
     MakeCurrent();
+    renderer.Initialize(this);
     renderer.SetViewport(ClientSize.Width, ClientSize.Height);
     SurfaceCreated?.Invoke(this, renderer);
 
@@ -193,7 +200,7 @@ public class GLSurface : Control, IGraphicsSurface {
     MakeCurrent();
     renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
     SurfaceChanged?.Invoke(this);
-    Game.Instance?.Scene.Update(Convert.ToSingle(ClientSize.Width / ClientSize.Height));
+    Game.Instance?.Scene.Update(AspectRatio);
     Invalidate();
 
     base.OnResize(e);
@@ -215,7 +222,7 @@ public class GLSurface : Control, IGraphicsSurface {
     if (!IsValid) return;
     if (Game.Instance != null && renderer != null) {
       var scene = Game.Instance.Scene;
-      scene.Update(ClientSize.Width * 1f / ClientSize.Height);
+      scene.Update(AspectRatio);
       renderer.Render(scene);
     } else {
       MakeCurrent();

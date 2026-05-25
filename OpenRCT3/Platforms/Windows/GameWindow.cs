@@ -29,7 +29,8 @@ internal partial class GameWindow : Form, IWindow {
     }
   }
 
-  public Size FrameBufferSize => ClientSize;
+  // FIXME: This doesn't take the pixel density into account
+  public Size FrameBufferSize => glSurface.ClientSize;
 
   private void GameWindow_FormClosing(object sender, FormClosingEventArgs e) {
     var wasGameStopped = Game.Instance?.Quit() ?? false;

@@ -174,6 +174,7 @@ public class Game : IDisposable {
   /// </summary>
   /// <param name="interpolation">The interpolation fraction.</param>
   private void Render(double interpolation) {
+    Scene.Update(Renderer.Surface.AspectRatio);
     // TODO: Supply the interpolation fraction to the scene for animations
     Renderer.Render(Scene);
   }
