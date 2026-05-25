@@ -32,6 +32,7 @@ namespace OpenRCT3;
 public class Game : IDisposable {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private bool isRunning = false;
+  private readonly Stopwatch stopwatch = new();
 
   public static Game? Instance { get; private set; }
   public static bool IsRunning => Instance?.isRunning ?? false;
@@ -69,8 +70,6 @@ public class Game : IDisposable {
   public World World { get; } = new();
   public Scene Scene { get; } = new();
 
-  private readonly Stopwatch _stopwatch = new();
-
   /// <param name="renderer">The game renderer.</param>
   public Game(IRenderer renderer) {
     Instance = this;
@@ -106,16 +105,16 @@ public class Game : IDisposable {
   /// <see href="https://gameprogrammingpatterns.com/game-loop.html"/>
   public void Run() {
     isRunning = true;
-    _stopwatch.Start();
 
     // Run the game loop
     Started?.Invoke();
-    var previousTime = _stopwatch.Elapsed;
+    stopwatch.Start();
+    var previousTime = stopwatch.Elapsed;
     var lag = TimeSpan.Zero;
     var msPerUpdate = TargetFrameTime;
 
     while (IsRunning) {
-      var currentTime = _stopwatch.Elapsed;
+      var currentTime = stopwatch.Elapsed;
       var elapsed = currentTime - previousTime;
       previousTime = currentTime;
       lag += elapsed;
