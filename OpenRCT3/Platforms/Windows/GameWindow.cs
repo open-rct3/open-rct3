@@ -30,4 +30,10 @@ internal partial class GameWindow : Form, IWindow {
   }
 
   public Size FrameBufferSize => ClientSize;
+
+  private void GameWindow_FormClosing(object sender, FormClosingEventArgs e) {
+    var wasGameStopped = Game.Instance?.Quit() ?? false;
+    // Cancel the closure if the game is still running
+    e.Cancel = wasGameStopped == false || Game.IsRunning;
+  }
 }

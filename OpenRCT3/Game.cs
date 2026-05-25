@@ -29,9 +29,10 @@ namespace OpenRCT3;
 /// </summary>
 public class Game : IDisposable {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
+  private bool isRunning = true;
 
   public static Game? Instance { get; private set; }
-  public static bool IsRunning => Instance != null;
+  public static bool IsRunning => Instance?.isRunning ?? false;
   /// <summary>
   /// Default frame rate of the game loop, in frames per second.
   /// </summary>
@@ -131,6 +132,17 @@ public class Game : IDisposable {
     }
 
     logger.Info("Exiting game...");
+  }
+
+  /// <summary>
+  /// Try to quit the game.
+  /// </summary>
+  /// <returns>Whether the game stopped running.</returns>
+  public bool Quit() {
+    // TODO: Check for unsaved changes and prevent closure
+    isRunning = false;
+
+    return isRunning == false;
   }
 
   /// <summary>

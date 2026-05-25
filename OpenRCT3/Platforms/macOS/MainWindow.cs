@@ -21,21 +21,11 @@ public partial class MainWindow : NSWindow, IWindow {
     Controller?.Game.Bounds.Height.Value * BackingScaleFactor.Value ?? 420
   );
 
-  public Size FrameBufferSize => new Size((int)FrameBufferWidth, (int)FrameBufferHeight);
+  public Size FrameBufferSize => new((int)FrameBufferWidth, (int)FrameBufferHeight);
 
   public Dpi Dpi => new Dpi((float)BackingScaleFactor.Value, (float)BackingScaleFactor.Value);
 
+  public AppKit.NSObjectPredicate? WindowShouldClose => Controller?.ShouldClose;
+
   private GameViewController? Controller => ContentViewController as GameViewController;
-
-  public override void AwakeFromNib() {
-    base.AwakeFromNib();
-
-    Controller?.Surface.SurfaceCreated += SurfaceCreated;
-    // TODO: Update framebuffer on WillResize/DidResize, DidChangeScreen, and DidChangeScreenProfile
-    // See also DidEndLiveResize
-  }
-
-  private static void SurfaceCreated(IGraphicsSurface surface, IRenderer renderer) =>
-    // Start the game
-    Task.Run(() => new Game(renderer).Run());
 }

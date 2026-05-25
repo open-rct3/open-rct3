@@ -29,5 +29,22 @@ public partial class GameViewController(NativeHandle handle) : NSViewController(
 
     game.WantsLayer = true;
     game.Layer = new OpenGLLayer();
+    Surface.SurfaceCreated += SurfaceCreated;
+
+    // TODO: Update framebuffer on WillResize/DidResize, DidChangeScreen, and DidChangeScreenProfile
+    // See also DidEndLiveResize
+  }
+
+  private static void SurfaceCreated(IGraphicsSurface surface, IRenderer renderer) =>
+    // Start the game
+    Task.Run(() => new Game(renderer).Run());
+
+  public static bool ShouldClose(NSObject _) => OpenRCT3.Game.Instance?.Quit() ?? false;
+
+  public void WillClose(NSObject _, EventArgs _) {
+    var game = OpenRCT3.Game.Instance;
+    var isRunning = game?.IsRunning ?? true;
+    Debug.Assert(!isRunning, "Game should be stopped before closing!");
+    game?.Dispose();
   }
 }
