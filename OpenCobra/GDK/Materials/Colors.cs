@@ -10,6 +10,7 @@ using System.Numerics;
 namespace OpenCobra.GDK.Materials;
 
 public static class Colors {
+  public static readonly Vector4 Transparent = default;
   public static readonly Vector4 Black = Vector4.Zero with { W = 1 };
   public static readonly Vector4 White = Vector4.One;
   public static readonly Vector4 Red = Vector4.Zero with { X = 1, W = 1 };
