@@ -64,6 +64,7 @@ public class Renderer : ThreadAffine, IRenderer {
   });
 
   public void Render(Scene scene) => Invoke(() => {
+    if (!Game.IsRunning) return;
     ContextRequested?.Invoke(this, EventArgs.Empty);
 
     // Cannot render scene without a camera
