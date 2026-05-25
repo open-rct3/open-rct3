@@ -153,20 +153,14 @@ Integrate `ImGuiController` from `Silk.NET.OpenGL.Extensions.ImGui` into the ren
 - **Rebind VAO**: ImGui creates a transient VAO per frame (`GenVertexArray`/`DeleteVertexArray`) — restore the app's VAO afterwards
 - **Blend**: ImGui uses premultiplied alpha; your scene shaders should be compatible or you must disable blending during the ImGui pass if your scene writes to alpha
 
-**Minimal render order:**
+Change `Scene.Update`:
 
 ```csharp
-// In your render loop
-foreach (var system in orderedSystems) system.Update(deltaSeconds);
-
-// Scene update -> camera, uploads
-scene.Update(aspectRatio);
-
-// ImGui input + new frame
-imguiController.Update(deltaSeconds);
+imguiController.Update(delta.Seconds);
+Camera.Update(aspectRatio);
 ```
 
-Update `Game.Render`:
+Change `Game.Render`:
 
 ```csharp
 // ...
