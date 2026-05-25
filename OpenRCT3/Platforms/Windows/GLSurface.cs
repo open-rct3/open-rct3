@@ -200,7 +200,7 @@ public class GLSurface : Control, IGraphicsSurface {
     MakeCurrent();
     renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
     SurfaceChanged?.Invoke(this);
-    Game.Instance?.Scene.Update(AspectRatio);
+    Game.Instance?.Scene.Update(TimeSpan.Zero, AspectRatio);
     Invalidate();
 
     base.OnResize(e);
@@ -222,7 +222,7 @@ public class GLSurface : Control, IGraphicsSurface {
     if (!IsValid) return;
     if (Game.Instance != null && renderer != null) {
       var scene = Game.Instance.Scene;
-      scene.Update(AspectRatio);
+      scene.Update(TimeSpan.Zero, AspectRatio);
       renderer.Render(scene);
     } else {
       MakeCurrent();

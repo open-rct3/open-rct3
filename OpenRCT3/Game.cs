@@ -12,9 +12,7 @@ using OpenCobra.GDK.Meshes;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Simulation;
-using Silk.NET.OpenGL;
 using System.Drawing;
-using System.Numerics;
 using System.Threading;
 
 
@@ -30,9 +28,16 @@ namespace OpenRCT3;
 /// The game world.
 /// </summary>
 public class Game : IDisposable {
+  /// <summary>The maximum number of simulation ticks to process in one instant.</summary>
+  private const int MaxSimulationTicks = 8;
+  /// <summary>The minimum time between lag warning messages.</summary>
+  /// <remarks>This prevents spamming the log with warnings about lag.</remarks>
+  private readonly TimeSpan LagWarningDebounceInterval = TimeSpan.FromSeconds(5);
+
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private bool isRunning = false;
   private readonly Stopwatch stopwatch = new();
+  private DateTime lastLagWarning = DateTime.Now;
 
   public static Game? Instance { get; private set; }
   public static bool IsRunning => Instance?.isRunning ?? false;
@@ -102,7 +107,7 @@ public class Game : IDisposable {
   /// </remarks>
   /// <seealso cref="TargetFrameRate"/>
   /// <seealso cref="TargetFrameTime"/>
-  /// <see href="https://gameprogrammingpatterns.com/game-loop.html"/>
+  /// <seealso href="https://gameprogrammingpatterns.com/game-loop.html"/>
   public void Run() {
     isRunning = true;
 
@@ -110,9 +115,14 @@ public class Game : IDisposable {
     Started?.Invoke();
     stopwatch.Start();
     var previousTime = stopwatch.Elapsed;
+    // Measures real time that's elapsed since the last frame
     var lag = TimeSpan.Zero;
-    var msPerUpdate = TargetFrameTime;
 
+    // Implements the fixed-update-time-step, variable-rendering pattern to decouple
+    // simulation stability (fixed step for physics/AI determinism) from visual
+    // smoothness (variable render rate).
+    //
+    // See https://gameprogrammingpatterns.com/game-loop.html
     while (IsRunning) {
       var currentTime = stopwatch.Elapsed;
       var elapsed = currentTime - previousTime;
@@ -128,20 +138,27 @@ public class Game : IDisposable {
       NSApplication.EnsureUIThread();
 #endif
 
-      while (lag >= msPerUpdate) {
-        // FIXME: Shouldn't the amount of time Tick takes affect the lag calculation?
-        Tick(msPerUpdate);
-        lag -= msPerUpdate;
+      // Simulation ticks are fixed steps to aid physics/AI determinism
+      // For example, a 60Hz target frame-rate would process one tick 60 times per second
+      LogLagWarning(lag);
+      for (var tickCount = 0; tickCount < MaxSimulationTicks && lag >= TargetFrameTime; tickCount++) {
+        Tick(
+          delta: TargetFrameTime,
+          // Normalize the lag to a percentage representing how far into the
+          // simulation step we are (0.0 = just started, 1.0 = just finished)
+          interpolation: lag.TotalMilliseconds / TargetFrameTime.TotalMilliseconds);
+        lag -= TargetFrameTime;
       }
 
-      Render(lag.TotalMilliseconds / msPerUpdate.TotalMilliseconds);
+      // Rendering can happen at arbitrary points between updates, and frames can
+      // be dropped if the machine is slow.
+      Renderer.Render(Scene);
 
       // Reduce CPU usage by sleeping when ahead of schedule
-      var remaining = msPerUpdate - lag;
+      var remaining = TargetFrameTime - lag;
       if (remaining > TimeSpan.Zero) {
-        var sleepMs = (int)(remaining.TotalMilliseconds / 2.0);
-        if (sleepMs > 2)
-          Thread.Sleep(sleepMs / 2);
+        var sleepMs = remaining.TotalMilliseconds / 2.0;
+        if (sleepMs > 2) Thread.Sleep((int)sleepMs / 2);
       }
     }
 
@@ -161,27 +178,32 @@ public class Game : IDisposable {
     return isRunning == false;
   }
 
-  /// <summary>
-  /// Advances the simulation.
-  /// </summary>
-  /// <param name="delta">The time between ticks.</param>
-  private void Tick(TimeSpan delta) {
-    // TODO: Advance the simulation logic by a fixed time step
-  }
-
-  /// <summary>
-  /// Renders the scene.
-  /// </summary>
-  /// <param name="interpolation">The interpolation fraction.</param>
-  private void Render(double interpolation) {
-    Scene.Update(Renderer.Surface.AspectRatio);
-    // TODO: Supply the interpolation fraction to the scene for animations
-    Renderer.Render(Scene);
-  }
-
   public void Dispose() {
     // TODO: World.Dispose();
     GC.SuppressFinalize(this);
     Instance = null;
+  }
+
+  /// <summary>
+  /// Advances the simulation.
+  /// </summary>
+  /// <param name="delta">The time between ticks.</param>
+  /// <param name="interpolation">The interpolation fraction.</param>
+  private void Tick(TimeSpan delta, double interpolation) {
+    Scene.Update(delta, Renderer.Surface.AspectRatio);
+    // TODO: Advance the simulation logic by a fixed time step
+    // TODO: foreach (var system in orderedSystems) system.Update(delta);
+  }
+
+  private void LogLagWarning(TimeSpan lag) {
+    // TODO: Detect excessive lag and lower the user's target frame-rate
+    // TODO: Maybe even show a modal to the user:
+    // "You are experiencing excessive lag. Lowering frame-rate to prevent stuttering."
+    // "Consider lowering your target frame-rate in the game settings."
+    if (lag > TargetFrameTime && DateTime.Now - lastLagWarning > LagWarningDebounceInterval) {
+      var details = $"{lag.TotalMilliseconds}ms (target: {TargetFrameTime.TotalMilliseconds}ms)";
+      logger.Warn($"Lag has exceeded target frame time budget: {details}");
+      lastLagWarning = DateTime.Now;
+    }
   }
 }

@@ -22,8 +22,9 @@ public class Scene : IResource, IDisposable {
   /// <summary>
   /// Updates the camera view and projection matrices.
   /// </summary>
+  /// <param name="delta">The time since the last update.</param>
   /// <param name="aspectRatio">The aspect ratio of the viewport.</param>
-  public void Update(float aspectRatio) {
+  public void Update(TimeSpan delta, float aspectRatio) {
     Camera.Update(aspectRatio);
   }
 
