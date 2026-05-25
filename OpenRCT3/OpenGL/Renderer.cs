@@ -13,6 +13,7 @@ using OpenCobra.GDK.Materials;
 using OpenCobra.GDK.Services;
 using OpenCobra.GDK.Shaders;
 using OpenRCT3.Platforms;
+using OpenRCT3.Threading;
 using Silk.NET.OpenGL;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ using Services = OpenCobra.GDK.Services;
 
 namespace OpenRCT3.OpenGL;
 
-public class Renderer : IRenderer {
+public class Renderer : ThreadAffine, IRenderer {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private readonly GL gl;
   private readonly ConcurrentDictionary<Material, ShaderProgram> shaders = new();
@@ -43,7 +44,7 @@ public class Renderer : IRenderer {
     );
   }
 
-  public void Initialize(IGraphicsSurface surface) {
+  public void Initialize(IGraphicsSurface surface) => Invoke(() => {
     gl.HookupDebugCallback();
 
     var clearColor = ClearColor.ToGl();
@@ -51,18 +52,18 @@ public class Renderer : IRenderer {
     gl.Enable(EnableCap.DepthTest);
 
     State = State.Ready;
-  }
+  });
 
-  public void Dispose() {
+  public void Dispose() => Invoke(() => {
     if (State == State.Disposed) return;
     GC.SuppressFinalize(this);
 
     foreach (var program in shaders.Values) gl.DeleteProgram(program.Shader.Handle);
     Scene.IoC.Unregister<IGL>();
     State = State.Disposed;
-  }
+  });
 
-  public void Render(Scene scene) {
+  public void Render(Scene scene) => Invoke(() => {
     ContextRequested?.Invoke(this, EventArgs.Empty);
 
     // Cannot render scene without a camera
@@ -116,9 +117,9 @@ public class Renderer : IRenderer {
     gl.UseProgram(0);
 
     Rendered?.Invoke(this, EventArgs.Empty);
-  }
+  });
 
-  public void SetViewport(int width, int height) => gl.Viewport(0, 0, (uint)width, (uint)height);
+  public void SetViewport(int width, int height) => Invoke(() => gl.Viewport(0, 0, (uint)width, (uint)height));
 
   private IEnumerable<DrawNode> BuildDisplayList(Scene scene) {
     foreach (var model in scene.Models) {

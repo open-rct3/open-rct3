@@ -54,7 +54,7 @@ public class GLSurface : Control, IGraphicsSurface {
   public SurfaceSettings Settings => settings;
 
   [Browsable(false)]
-  public bool IsValid => IsHandleCreated && context != 0 && gl != null;
+  public bool IsValid => IsHandleCreated && context != nint.Zero && gl != null;
 
   [Browsable(false)]
   public Handle<nint> Surface => surface ?? throw new InvalidOperationException("Current surface is invalid!");
@@ -148,12 +148,14 @@ public class GLSurface : Control, IGraphicsSurface {
 
     // Create and initialize the world renderer
     renderer = new Renderer(gl);
-    renderer.ContextRequested += (_, _) => Invoke(() => {
-      MakeCurrent();
-    });
-    renderer.Rendered += (_, _) => Invoke(() => {
-      SwapBuffers();
-    });
+    renderer.ContextRequested += (_, _) => {
+      if (!IsValid) return;
+      Invoke(() => MakeCurrent());
+    };
+    renderer.Rendered += (_, _) => {
+      if (!IsValid) return;
+      Invoke(() => SwapBuffers());
+    };
     renderer.Initialize(this);
     MakeCurrent();
     renderer.SetViewport(ClientSize.Width, ClientSize.Height);
@@ -167,7 +169,7 @@ public class GLSurface : Control, IGraphicsSurface {
     base.OnHandleDestroyed(e);
     if (DesignMode) return;
 
-    GetDC(Handle);
+    hdc = GetDC(Handle);
     if (!IsValid) return;
 
     Game.Instance?.Dispose();
@@ -178,10 +180,10 @@ public class GLSurface : Control, IGraphicsSurface {
     gl?.Dispose();
     gl = null;
     if (context != nint.Zero) wgl.DeleteContext(context);
-    context = 0;
+    context = nint.Zero;
     logger.Trace("Context disposed");
     if (hdc != 0) _ = ReleaseDC(Handle, hdc);
-    hdc = 0;
+    hdc = nint.Zero;
     logger.Trace("Surface disposed");
   }
 
