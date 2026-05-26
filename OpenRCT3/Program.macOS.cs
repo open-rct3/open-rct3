@@ -21,46 +21,9 @@ internal static class Program {
     if (e == null) return;
     Logger.Fatal(e, "An unhandled exception occurred.");
 
-    var app = NSApplication.SharedApplication;
-    app.InvokeOnMainThread(() => {
-      // TODO: Extract everything else in this method below to a new NSAlert subclass: OpenRCT3/Platforms/macOS/CrashAlert.cs
-      var config = AppConfig.Instance;
-
-      // See https://www.jetbrains.com/help/rider/UsingStatementResourceInitialization.html
-      using var alert = new NSAlert();
-      alert.Delegate = new CrashAlertDelegate();
-      alert.ShowsHelp = true;
-      // TODO: Write an Apple Help Book for the game
-      // TODO: alert.HelpAnchor = "#Troubleshooting";
-      alert.MessageText = "OpenRCT3 Has Crashed";
-      alert.InformativeText = $"An unhandled exception occurred:\n\n{e.Message}";
-      alert.AlertStyle = NSAlertStyle.Critical;
-
-      // Add accessories
-      alert.ShowsSuppressionButton = true;
-      alert.SuppressionButton?.Title = "Do not show this error again";
-      // TODO: Add an AccessoryView to send feedback?
-
-      var abortBtn = alert.AddButton("Abort");
-      abortBtn.HasDestructiveAction = false;
-      abortBtn.KeyEquivalent = "\r";
-
-      var restartBtn = alert.AddButton("Ignore");
-      restartBtn.KeyEquivalent = "\u001b";
-
-      // Queue window activation to run on the next run loop iteration so it
-      // fires once the modal window is shown.
-      app.BeginInvokeOnMainThread(() => {
-        app.ActivateIgnoringOtherApps(true);
-        alert.Window.MakeKeyAndOrderFront(alert.Window);
-        alert.Window.DefaultButtonCell = abortBtn.Cell as NSButtonCell;
-      });
-
-      var response = alert.RunModal();
-      config.SuppressCrashAlerts = alert.SuppressionButton.State == NSCellStateValue.On;
-      config.Save();
-      if (response == Convert.ToInt64(NSAlertButtonReturn.First))
-        Environment.Exit(1);
+    NSApplication.SharedApplication.InvokeOnMainThread(() => {
+      using var alert = new CrashAlert(e);
+      alert.RunAndHandle();
     });
   }
 
