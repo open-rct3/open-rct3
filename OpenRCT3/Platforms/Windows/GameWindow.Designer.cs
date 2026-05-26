@@ -15,17 +15,18 @@ namespace OpenRCT3.Platforms.Windows {
       var resources = new System.ComponentModel.ComponentResourceManager(typeof(GameWindow));
       glSurface = new GLSurface();
       SuspendLayout();
-      // 
+      //
       // glSurface
-      // 
+      //
       glSurface.Dock = System.Windows.Forms.DockStyle.Fill;
       glSurface.Location = new System.Drawing.Point(0, 0);
       glSurface.Name = "glSurface";
       glSurface.Size = new System.Drawing.Size(624, 381);
       glSurface.TabIndex = 0;
-      // 
+      glSurface.SurfaceCreated += GlSurface_RendererCreated;
+      //
       // GameWindow
-      // 
+      //
       AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
       AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       ClientSize = new System.Drawing.Size(624, 381);
@@ -35,7 +36,10 @@ namespace OpenRCT3.Platforms.Windows {
       Name = "GameWindow";
       StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
       Text = "OpenRCT3";
+      GotFocus += GameWindow_GotFocus;
+      LostFocus += GameWindow_LostFocus;
       FormClosing += GameWindow_FormClosing;
+      Resize += GameWindow_Resize;
       ResumeLayout(false);
     }
 

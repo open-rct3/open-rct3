@@ -36,6 +36,8 @@ public class Game : IDisposable {
 
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private bool isRunning = false;
+  private bool isPaused = false;
+  private readonly ManualResetEvent resumeSignal = new(true);
   private readonly Stopwatch stopwatch = new();
   private DateTime lastLagWarning = DateTime.Now;
 
@@ -60,6 +62,15 @@ public class Game : IDisposable {
   public event Action? Exited;
 
   public AppConfig Config { get; } = AppConfig.Instance;
+
+  public bool IsPaused => isPaused;
+
+  /// <summary>
+  /// <para>The time taken to render the last frame, or null if no frame has been rendered yet.</para>
+  /// <para>Use <see cref="TargetFrameRate"/> to set the frame rate.</para>
+  /// </summary>
+  public TimeSpan? FrameTime { get; private set; } = null;
+
   /// <summary>
   /// Target frame rate of the game loop, in frames per second.
   /// </summary>
@@ -67,10 +78,21 @@ public class Game : IDisposable {
     get => Convert.ToInt32(1.0 / TargetFrameTime.TotalSeconds);
     set => TargetFrameTime = TimeSpan.FromSeconds(1.0 / value);
   }
+
   /// <summary>
   /// Target frame time of the game loop.
   /// </summary>
   public TimeSpan TargetFrameTime { get; private set; } = TimeSpan.FromSeconds(1.0 / 60.0);
+
+  /// <summary>
+  /// Target simulation tick rate.
+  /// </summary>
+  public TimeSpan TargetUpdateRate { get; set; } = TimeSpan.FromSeconds(1.0 / 60.0);
+
+  /// <summary>
+  /// Whether the game should use vertical sync (VSync) to limit the frame rate.
+  /// </summary>
+  public bool VSync { get; set; } = false;
   public IRenderer Renderer { get; }
   public World World { get; } = new();
   public Scene Scene { get; } = new();
@@ -125,8 +147,10 @@ public class Game : IDisposable {
     // See https://gameprogrammingpatterns.com/game-loop.html
     while (IsRunning) {
       var currentTime = stopwatch.Elapsed;
-      var elapsed = currentTime - previousTime;
+      var elapsed = (FrameTime = currentTime - previousTime) ?? TimeSpan.Zero;
       previousTime = currentTime;
+      // Wait for the resume signal if the game is paused
+      if (isPaused) resumeSignal.WaitOne();
       lag += elapsed;
 
       // Process any pending window events, e.g. input events
@@ -164,6 +188,16 @@ public class Game : IDisposable {
 
     Exited?.Invoke();
     logger.Info("Game exited");
+  }
+
+  public void Pause() {
+    isPaused = true;
+    resumeSignal.Reset();
+  }
+
+  public void Resume() {
+    isPaused = false;
+    resumeSignal.Set();
   }
 
   /// <summary>

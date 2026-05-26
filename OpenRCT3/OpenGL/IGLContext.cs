@@ -11,10 +11,11 @@ using Silk.NET.Core.Contexts;
 using Silk.NET.OpenGL;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Contexts = Silk.NET.Core.Contexts;
 
 namespace OpenRCT3.OpenGL;
 
-public interface IGLContext : INativeContext, IDisposable {
+public interface IGLContext : Contexts.IGLContext, INativeContext, IDisposable {
   nint GetProcAddress(string procName);
 }
 

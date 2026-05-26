@@ -32,6 +32,7 @@ public class Renderer : ThreadAffine, IRenderer {
   public State State { get; private set; } = State.Uninitialized;
   public IGraphicsSurface Surface { get; init; }
   public Color ClearColor { get; set; } = Color.FromArgb(45, 45, 48);
+  public int MsaaSamples { get; } = 0;
 
   public event EventHandler? ContextRequested;
   public event EventHandler? Rendered;
@@ -39,7 +40,7 @@ public class Renderer : ThreadAffine, IRenderer {
   public Renderer(IGraphicsSurface surface, GL gl) {
     Surface = surface;
     this.gl = gl;
-    Scene.IoC.Register<IGL>(
+    Scene.IoC.Register<IContextSource>(
       Reuse.Singleton,
       Made.Of(() => new Services.GLContext(gl)),
       ifAlreadyRegistered: IfAlreadyRegistered.Replace
@@ -61,7 +62,7 @@ public class Renderer : ThreadAffine, IRenderer {
     GC.SuppressFinalize(this);
 
     foreach (var program in shaders.Values) gl.DeleteProgram(program.Shader.Handle);
-    Scene.IoC.Unregister<IGL>();
+    Scene.IoC.Unregister<IContextSource>();
     State = State.Disposed;
   });
 
@@ -119,6 +120,9 @@ public class Renderer : ThreadAffine, IRenderer {
     gl.BindVertexArray(0);
     gl.UseProgram(0);
 
+    // FIXME: Apply VSync settings
+    // if (Game.Instance!.VSync) gl.SwapInterval(1);
+    // else gl.SwapInterval(0);
     Rendered?.Invoke(this, EventArgs.Empty);
   });
 

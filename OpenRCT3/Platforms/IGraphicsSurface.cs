@@ -6,7 +6,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 // ReSharper disable InconsistentNaming
-using OpenRCT3.OpenGL;
+using Silk.NET.Core.Contexts;
 using System.ComponentModel;
 using System.Drawing;
 
@@ -15,7 +15,7 @@ namespace OpenRCT3.Platforms;
 public delegate void SurfaceCreated(IGraphicsSurface surface, IRenderer renderer);
 public delegate void SurfaceChanged(IGraphicsSurface surface);
 
-public interface IGraphicsSurface {
+public interface IGraphicsSurface : IGLContextSource {
   IRenderer Renderer { get; }
   SurfaceSettings Settings { get; }
 

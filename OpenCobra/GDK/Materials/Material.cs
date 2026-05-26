@@ -51,7 +51,7 @@ public abstract class Material : IResource, IDisposable {
     if (disposed) return;
     GC.SuppressFinalize(this);
 
-    var gl = Scene.IoC.Resolve<IGL>().Context;
+    var gl = Scene.IoC.Resolve<IContextSource>().Context;
     // FIXME: Dispose of shader sources
     Texture?[] textures = [AlbedoTexture, NormalMap, SpecularMap, EmissiveMap];
     foreach (var texture in textures.Where(t => t != null)) {

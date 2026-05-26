@@ -89,7 +89,7 @@ public readonly struct GLState : IDisposable {
   /// disposed.
   /// </returns>
   public static GLState Push() {
-    var gl = Scene.IoC.Resolve<IGL>().Context;
+    var gl = Scene.IoC.Resolve<IContextSource>().Context;
     var state = new GLState(gl);
     stack.Push(state);
     return state;
@@ -107,7 +107,7 @@ public readonly struct GLState : IDisposable {
   /// Restores every captured GL field to its pre-Push value.
   /// </summary>
   private void Restore() {
-    var gl = Scene.IoC.Resolve<IGL>().Context;
+    var gl = Scene.IoC.Resolve<IContextSource>().Context;
 
     SetEnabled(gl, EnableCap.Blend, blendEnabled);
     gl.CheckError("GLState restore Blend");

@@ -47,7 +47,7 @@ public class Texture(string name, int width, int height, Image<Rgba32> texture, 
   public uint Handle { get; private set; }
 
   public void Upload() {
-    var gl = Scene.IoC.Resolve<IGL>().Context;
+    var gl = Scene.IoC.Resolve<IContextSource>().Context;
     Handle = gl.GenTexture();
     gl.BindTexture(TextureTarget.Texture2D, Handle);
 

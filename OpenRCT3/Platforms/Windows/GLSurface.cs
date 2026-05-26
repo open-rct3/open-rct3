@@ -8,26 +8,17 @@
 using NLog;
 using OpenRCT3.OpenGL;
 using Silk.NET.OpenGL;
-using Silk.NET.WGL;
-using Silk.NET.WGL.Extensions.ARB;
 using System.ComponentModel;
 using System.Drawing;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static OpenRCT3.Platforms.Windows.Win32;
 
 namespace OpenRCT3.Platforms.Windows;
 
 public class GLSurface : Control, IGraphicsSurface {
-  private const string OpenGLCreateContextError =
-    "Could not create an OpenGL context. Please upgrade your graphics drivers.";
-
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private readonly SurfaceSettings settings;
-  private nint hdc = 0;
-  private nint context = 0;
-  private OpenGLSurface? surface;
-  private readonly WGL wgl;
+  private SurfaceHandle? surface;
   private GL? gl;
   private Renderer? renderer;
 
@@ -43,8 +34,11 @@ public class GLSurface : Control, IGraphicsSurface {
     DoubleBuffered = false;
 
     this.settings = settings?.Clone() ?? new SurfaceSettings();
-    wgl = new WGL(new GLContext(settings!));
+    Context = new GLContext(settings!);
   }
+
+  [Browsable(false)]
+  public readonly GLContext Context;
 
   [Browsable(false)]
   public IRenderer Renderer => renderer
@@ -54,13 +48,21 @@ public class GLSurface : Control, IGraphicsSurface {
   public SurfaceSettings Settings => settings;
 
   [Browsable(false)]
-  public bool IsValid => IsHandleCreated && context != nint.Zero && gl != null;
+  public bool IsValid => IsHandleCreated && Context.IsValid && gl != null;
 
   [Browsable(false)]
   public Handle<nint> Surface => surface ?? throw new InvalidOperationException("Current surface is invalid!");
 
   [Browsable(false)]
+  public Silk.NET.Core.Contexts.IGLContext? GLContext => Context;
+
+  [Browsable(false)]
   public GL GL => gl ?? throw new InvalidOperationException("Current OpenGL context is invalid!");
+
+  // FIXME: This doesn't take the pixel density into account
+  public Size FrameBufferSize => ClientSize;
+
+  public float AspectRatio => (float)ClientSize.Width / ClientSize.Height;
 
   protected override CreateParams CreateParams {
     get {
@@ -73,22 +75,14 @@ public class GLSurface : Control, IGraphicsSurface {
     }
   }
 
-  // FIXME: This doesn't take the pixel density into account
-  public Size FrameBufferSize => ClientSize;
-
-  public float AspectRatio => (float)ClientSize.Width / (float)ClientSize.Height;
-
   public void MakeCurrent() {
     if (DesignMode || !IsValid) return;
-    if (hdc == 0) throw new Exception("Could not make the GL context current.");
-    if (!wgl.MakeCurrent(hdc, context)) throw new Exception("Could not make the GL context current.");
+    Context.MakeCurrent();
   }
 
   public void SwapBuffers() {
     if (DesignMode || !IsValid) return;
-    if (hdc == 0) throw new Exception("Could not swap graphics buffers.");
-
-    Win32.SwapBuffers(hdc);
+    Context.SwapBuffers();
   }
 
   protected override void OnHandleCreated(EventArgs e) {
@@ -100,54 +94,12 @@ public class GLSurface : Control, IGraphicsSurface {
     styles |= WindowStyles.WS_CLIPSIBLINGS | WindowStyles.WS_CLIPCHILDREN;
     SetWindowLongPtr(Handle, WindowLongs.GWL_STYLE, (IntPtr)styles);
 
-    // Try to create an appropriate pixel format
-    hdc = GetDC(Handle);
-    var pfd = new PIXELFORMATDESCRIPTOR {
-      nSize = (ushort)Marshal.SizeOf<PIXELFORMATDESCRIPTOR>(),
-      nVersion = 1,
-      dwFlags = 0x00000004 | 0x00000020, // PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL
-      iPixelType = 0, // PFD_TYPE_RGBA
-      cColorBits = 32,
-      cDepthBits = 24,
-      cStencilBits = 8,
-      iLayerType = 0 // PFD_MAIN_PLANE
-    };
-    var pix = ChoosePixelFormat(hdc, ref pfd);
-    if (pix == nint.Zero) throw new Exception("Could not choose an appropriate pixel format for OpenGL.");
-    if (!SetPixelFormat(hdc, pix, ref pfd)) throw new Exception("Could not set the surface's pixel format.");
-    if (hdc == nint.Zero) throw new InvalidOperationException("Surface HDC context is invalid!");
-    // Create a staging OpenGL context
-    var tempContext = context = wgl.CreateContext(hdc);
-    if (tempContext == nint.Zero) throw new Exception(OpenGLCreateContextError);
-    wgl.MakeCurrent(hdc, tempContext);
-
-    // Create a customized OpenGL context
-    if (wgl.TryGetExtension<ArbCreateContext>(out var ext) == false)
-      throw new PlatformNotSupportedException("OpenGL wglCreateContextAttribsARB extension is unavilable.");
-    var arbCreateContext = ext ?? throw new Exception(OpenGLCreateContextError);
-    context = arbCreateContext.CreateContextAttrib(hdc, nint.Zero, [
-      (int)ContextAttribute.MajorVersion, settings.Version.Major,
-      (int)ContextAttribute.MinorVersion, settings.Version.Minor,
-      (int)ContextAttribute.ProfileMask, (int)settings.Profile,
-      (int)ContextAttribute.Flags,
-      (int)(
-        settings.Flags |
-#if DEBUG
-        // Request a debugging context
-        ContextFlagMask.DebugBit
-#endif
-      ),
-      0 // NULL terminator
-    ]);
-    if (context == nint.Zero) context = wgl.CreateContext(hdc);
-    if (context == nint.Zero) throw new Exception(OpenGLCreateContextError);
-    // Cleanup temporary context
-    wgl.MakeCurrent(hdc, 0);
-    wgl.DeleteContext(tempContext);
-    wgl.MakeCurrent(hdc, context);
+    // Try to create an appropriate OpenGL context
+    Context.Hdc = GetDC(Handle);
 
     // Load Silk.NET OpenGL with the current context
-    gl = GL.GetApi((wgl.Context as GLContext)!.GetProcAddress) ?? throw new Exception(OpenGLCreateContextError);
+    gl = GL.GetApi(Context!.GetProcAddress) ??
+      throw new Exception(OpenGL.GLContext.CreateContextError);
     logger.Info("Created OpenGL context: {ctxSettings}", settings);
     surface = new(Handle, ownsHandle: false);
 
@@ -176,7 +128,6 @@ public class GLSurface : Control, IGraphicsSurface {
     base.OnHandleDestroyed(e);
     if (DesignMode) return;
 
-    hdc = GetDC(Handle);
     if (!IsValid) return;
 
     Game.Instance?.Dispose();
@@ -184,13 +135,14 @@ public class GLSurface : Control, IGraphicsSurface {
     renderer?.Dispose();
     renderer = null;
     logger.Trace("Renderer disposed");
+    Context.Dispose();
+    if (Context.Hdc != nint.Zero) {
+      _ = ReleaseDC(Handle, Context.Hdc);
+      Context.Hdc = nint.Zero;
+    }
+    logger.Trace("Context disposed");
     gl?.Dispose();
     gl = null;
-    if (context != nint.Zero) wgl.DeleteContext(context);
-    context = nint.Zero;
-    logger.Trace("Context disposed");
-    if (hdc != 0) _ = ReleaseDC(Handle, hdc);
-    hdc = nint.Zero;
     logger.Trace("Surface disposed");
   }
 
@@ -226,7 +178,7 @@ public class GLSurface : Control, IGraphicsSurface {
       renderer.Render(scene);
     } else {
       MakeCurrent();
-      gl?.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+      Context.Clear();
       SwapBuffers();
     }
   }

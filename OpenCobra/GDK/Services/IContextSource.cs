@@ -13,11 +13,11 @@ namespace OpenCobra.GDK.Services;
 /// <summary>
 /// Current OpenGL context IoC service.
 /// </summary>
-public interface IGL {
+public interface IContextSource {
   GL Context { get; }
 }
 
 /// <summary>
 /// Current OpenGL context.
 /// </summary>
-public record struct GLContext(GL Context) : IGL;
+public record struct GLContext(GL Context) : IContextSource;

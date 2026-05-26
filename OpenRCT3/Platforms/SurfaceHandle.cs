@@ -1,4 +1,4 @@
-// OpenGL Surface Handle
+// Surface Handle
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
@@ -7,9 +7,9 @@
 
 using System.Runtime.InteropServices;
 
-namespace OpenRCT3.OpenGL;
+namespace OpenRCT3.Platforms;
 
-public sealed class OpenGLSurface(
+public sealed class SurfaceHandle(
   nint handle, bool ownsHandle, Func<bool>? disposeHandle = null
 ) : Handle<nint>(handle, ownsHandle, disposeHandle) { }
 

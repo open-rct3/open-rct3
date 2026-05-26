@@ -51,7 +51,7 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
   // TODO: Extract this method into the renderer
   public void Upload(Shader shader) {
     if (State == State.Ready) return;
-    var gl = Scene.IoC.Resolve<IGL>().Context;
+    var gl = Scene.IoC.Resolve<IContextSource>().Context;
 
     // VAO
     Vao = gl.GenVertexArray();
@@ -144,7 +144,7 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
   public void Dispose() {
     if (State == State.Disposed) return;
 
-    var gl = Scene.IoC.Resolve<IGL>().Context;
+    var gl = Scene.IoC.Resolve<IContextSource>().Context;
     gl.DeleteVertexArray(Vao);
     Vao = 0;
     gl.DeleteBuffer(Vbo);
