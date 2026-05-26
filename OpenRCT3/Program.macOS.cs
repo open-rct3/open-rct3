@@ -23,19 +23,20 @@ internal static class Program {
 
     var app = NSApplication.SharedApplication;
     app.InvokeOnMainThread(() => {
+      // TODO: Extract everything else in this method below to a new NSAlert subclass: OpenRCT3/Platforms/macOS/CrashAlert.cs
       var config = AppConfig.Instance;
-      var processPath = Environment.ProcessPath;
 
       // See https://www.jetbrains.com/help/rider/UsingStatementResourceInitialization.html
       using var alert = new NSAlert();
-      alert.MessageText = "OpenRCT3 Error";
+      alert.Delegate = new CrashAlertDelegate();
+      alert.ShowsHelp = true;
+      // TODO: Write an Apple Help Book for the game
+      // TODO: alert.HelpAnchor = "#Troubleshooting";
+      alert.MessageText = "OpenRCT3 Has Crashed";
       alert.InformativeText = $"An unhandled exception occurred:\n\n{e.Message}";
       alert.AlertStyle = NSAlertStyle.Critical;
 
       // Add accessories
-      // FIXME: alert.HelpAnchor = "";
-      // alert.ShowsHelp = true;
-      // TODO: Wire the status of this checkbox to the app settings
       alert.ShowsSuppressionButton = true;
       alert.SuppressionButton?.Title = "Do not show this error again";
       // TODO: Add an AccessoryView to send feedback?
@@ -47,10 +48,13 @@ internal static class Program {
       var restartBtn = alert.AddButton("Ignore");
       restartBtn.KeyEquivalent = "\u001b";
 
-      app.ActivateIgnoringOtherApps(true);
-      alert.Window.DefaultButtonCell = abortBtn.Cell as NSButtonCell;
-      // FIXME: The window isn't shown at this point, so this doesn't work
-      alert.Window.MakeKeyAndOrderFront(alert.Window);
+      // Queue window activation to run on the next run loop iteration so it
+      // fires once the modal window is shown.
+      app.BeginInvokeOnMainThread(() => {
+        app.ActivateIgnoringOtherApps(true);
+        alert.Window.MakeKeyAndOrderFront(alert.Window);
+        alert.Window.DefaultButtonCell = abortBtn.Cell as NSButtonCell;
+      });
 
       var response = alert.RunModal();
       config.SuppressCrashAlerts = alert.SuppressionButton.State == NSCellStateValue.On;
