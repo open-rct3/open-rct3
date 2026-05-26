@@ -32,7 +32,7 @@ public class Game : IDisposable {
   private const int MaxSimulationTicks = 8;
   /// <summary>The minimum time between lag warning messages.</summary>
   /// <remarks>This prevents spamming the log with warnings about lag.</remarks>
-  private readonly TimeSpan LagWarningDebounceInterval = TimeSpan.FromSeconds(5);
+  private readonly TimeSpan lagWarningDebounceInterval = TimeSpan.FromSeconds(10);
 
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private bool isRunning = false;
@@ -44,7 +44,7 @@ public class Game : IDisposable {
   /// <summary>
   /// Default frame rate of the game loop, in frames per second.
   /// </summary>
-  public static readonly int DefaultFrameRate = 60;
+  public readonly static int DefaultFrameRate = 60;
 
   /// <summary>
   /// Raised once the game has started and the game loop is running.
@@ -115,7 +115,7 @@ public class Game : IDisposable {
     Started?.Invoke();
     stopwatch.Start();
     var previousTime = stopwatch.Elapsed;
-    // Measures real time that's elapsed since the last frame
+    // Measures wall time that has elapsed since the last frame
     var lag = TimeSpan.Zero;
 
     // Implements the fixed-update-time-step, variable-rendering pattern to decouple
@@ -175,7 +175,7 @@ public class Game : IDisposable {
     isRunning = false;
 
     if (!isRunning) logger.Info("Exiting game...");
-    return isRunning == false;
+    return !isRunning;
   }
 
   public void Dispose() {
@@ -195,15 +195,16 @@ public class Game : IDisposable {
     // TODO: foreach (var system in orderedSystems) system.Update(delta);
   }
 
+  [Conditional("DEBUG")]
   private void LogLagWarning(TimeSpan lag) {
     // TODO: Detect excessive lag and lower the user's target frame-rate
     // TODO: Maybe even show a modal to the user:
     // "You are experiencing excessive lag. Lowering frame-rate to prevent stuttering."
     // "Consider lowering your target frame-rate in the game settings."
-    if (lag > TargetFrameTime && DateTime.Now - lastLagWarning > LagWarningDebounceInterval) {
-      var details = $"{lag.TotalMilliseconds}ms (target: {TargetFrameTime.TotalMilliseconds}ms)";
-      logger.Warn($"Lag has exceeded target frame time budget: {details}");
-      lastLagWarning = DateTime.Now;
-    }
+    if (lag <= TargetFrameTime || DateTime.Now - lastLagWarning <= lagWarningDebounceInterval) return;
+
+    var details = $"{lag.TotalMilliseconds}ms (target: {TargetFrameTime.TotalMilliseconds}ms)";
+    logger.Warn($"Lag has exceeded target frame time budget: {details}");
+    lastLagWarning = DateTime.Now;
   }
 }
