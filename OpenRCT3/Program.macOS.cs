@@ -15,11 +15,11 @@ using System;
 namespace OpenRCT3;
 
 internal static class Program {
-  private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
   private static void HandleException(Exception? e) {
     if (e == null) return;
-    Logger.Fatal(e, "An unhandled exception occurred.");
+    logger.Fatal(e, "An unhandled exception occurred.");
 
     NSApplication.SharedApplication.InvokeOnMainThread(() => {
       using var alert = new CrashAlert(e);
@@ -37,7 +37,8 @@ internal static class Program {
       config.Save();
       return config;
     } catch (InstallNotFoundException) {
-      var picker = new FolderPicker();
+      logger.Trace("Install not found! Attempting to show folder chooser...");
+      using var picker = new FolderPicker();
       var selectedPath = picker.PickFolder("Select your RCT3 Assets folder");
 
       if (!string.IsNullOrEmpty(selectedPath) && InstallFinder.Validate(selectedPath)) {
@@ -57,7 +58,7 @@ internal static class Program {
     AppDomain.CurrentDomain.UnhandledException += (sender, e) => HandleException(e.ExceptionObject as Exception);
 
     LogManager.Setup().LoadConfigurationFromFile("nlog.config");
-    Logger.Info("Starting OpenRCT3 on macOS...");
+    logger.Info("Starting OpenRCT3 on macOS...");
 
     // ‼ This order matters!
     // NSApplication.Init() must be called before any UI elements are created.
