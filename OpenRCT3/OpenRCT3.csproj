@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StartupObject>OpenRCT3.Program</StartupObject>
+    <TieredCompilation>true</TieredCompilation>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Display name -->
     <ApplicationTitle>OpenRCT3</ApplicationTitle>
@@ -24,14 +25,17 @@
     <CreatePackage>false</CreatePackage>
     <UseSGen>false</UseSGen>
     <WarningLevel>1</WarningLevel>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
     <LinkMode>None</LinkMode>
+    <TrimMode>disable</TrimMode>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <CreatePackage>false</CreatePackage>
     <UseSGen>false</UseSGen>
     <LinkMode>None</LinkMode>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <!-- TODO: <TrimMode>Link</TrimMode> to minimize bundle size -->
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 
   <ItemGroup>

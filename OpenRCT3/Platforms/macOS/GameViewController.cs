@@ -41,10 +41,9 @@ public partial class GameViewController(NativeHandle handle) : NSViewController(
 
   public static bool ShouldClose(NSObject _) => OpenRCT3.Game.Instance?.Quit() ?? false;
 
-  public void WillClose(NSObject _, EventArgs _) {
+  public void WillClose(NSObject _sender, EventArgs _e) {
     var game = OpenRCT3.Game.Instance;
-    var isRunning = game?.IsRunning ?? true;
-    Debug.Assert(!isRunning, "Game should be stopped before closing!");
+    Debug.Assert(!OpenRCT3.Game.IsRunning, "Game should be stopped before closing!");
     game?.Dispose();
   }
 }
