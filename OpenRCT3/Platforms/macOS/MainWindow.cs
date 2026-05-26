@@ -19,7 +19,10 @@ using ObjCRuntime;
 namespace OpenRCT3.Platforms.macOS;
 
 public partial class MainWindow : NSWindow, IWindow {
-  public MainWindow(NativeHandle handle) : base(handle) => MakeKeyAndOrderFront(this);
+  public MainWindow(NativeHandle handle) : base(handle) {
+    NSApplication.SharedApplication.ActivateIgnoringOtherApps(true);
+    MakeKeyAndOrderFront(this);
+  }
 
   public uint FrameBufferWidth => (uint) Math.Round(
     Controller?.Game.Bounds.Width.Value * BackingScaleFactor.Value ?? 640
