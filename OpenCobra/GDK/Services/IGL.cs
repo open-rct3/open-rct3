@@ -7,6 +7,7 @@
 
 using Silk.NET.OpenGL;
 
+// ReSharper disable InconsistentNaming
 namespace OpenCobra.GDK.Services;
 
 /// <summary>

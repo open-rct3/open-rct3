@@ -87,7 +87,7 @@ Create [`OpenCobra/GDK/Meshes/Primitives.cs`](../../OpenCobra/GDK/Meshes/Primiti
 > **🐛 Bug**: The ground mesh's `Model.Transform` is not being applied in the scene. Suspect either the uniform
 > upload (check `Materials.Flat`/`Materials.Textured` shaders) or the shader code itself.
 
-### 6. Add `GLState` Struct
+### 6. ~~Add `GLState` Struct~~ (Done)
 
 Create [`OpenCobra/GDK/GLState.cs`](../../OpenCobra/GDK/GLState.cs):
 
