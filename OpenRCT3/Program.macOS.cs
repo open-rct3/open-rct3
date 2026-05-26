@@ -1,4 +1,4 @@
-﻿// Program
+// Program
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
@@ -20,28 +20,56 @@ internal static class Program {
   private static void HandleException(Exception? e) {
     if (e == null) return;
     Logger.Fatal(e, "An unhandled exception occurred.");
-    // See https://www.jetbrains.com/help/rider/UsingStatementResourceInitialization.html
-    using var alert = new NSAlert();
-    alert.MessageText = "OpenRCT3 Error";
-    alert.InformativeText = $"An unhandled exception occurred:\n\n{e.Message}";
-    alert.AlertStyle = NSAlertStyle.Critical;
-    alert.RunModal();
+
+    var app = NSApplication.SharedApplication;
+    app.InvokeOnMainThread(() => {
+      var config = AppConfig.Instance;
+      var processPath = Environment.ProcessPath;
+
+      // See https://www.jetbrains.com/help/rider/UsingStatementResourceInitialization.html
+      using var alert = new NSAlert();
+      alert.MessageText = "OpenRCT3 Error";
+      alert.InformativeText = $"An unhandled exception occurred:\n\n{e.Message}";
+      alert.AlertStyle = NSAlertStyle.Critical;
+
+      // Add accessories
+      // FIXME: alert.HelpAnchor = "";
+      // alert.ShowsHelp = true;
+      // TODO: Wire the status of this checkbox to the app settings
+      alert.ShowsSuppressionButton = true;
+      alert.SuppressionButton?.Title = "Do not show this error again";
+      // TODO: Add an AccessoryView to send feedback?
+
+      var abortBtn = alert.AddButton("Abort");
+      abortBtn.HasDestructiveAction = false;
+      abortBtn.KeyEquivalent = "\r";
+
+      var restartBtn = alert.AddButton("Ignore");
+      restartBtn.KeyEquivalent = "\u001b";
+
+      app.ActivateIgnoringOtherApps(true);
+      alert.Window.DefaultButtonCell = abortBtn.Cell as NSButtonCell;
+      // FIXME: The window isn't shown at this point, so this doesn't work
+      alert.Window.MakeKeyAndOrderFront(alert.Window);
+
+      var response = alert.RunModal();
+      config.SuppressCrashAlerts = alert.SuppressionButton.State == NSCellStateValue.On;
+      config.Save();
+      if (response == Convert.ToInt64(NSAlertButtonReturn.First))
+        Environment.Exit(1);
+    });
   }
 
   private static AppConfig LoadConfigAndFindInstall() {
     var config = AppConfig.Load();
-    if (!string.IsNullOrEmpty(config.InstallPath) && InstallFinder.Validate(config.InstallPath)) {
+    if (!string.IsNullOrEmpty(config.InstallPath) && InstallFinder.Validate(config.InstallPath))
       return config;
-    }
 
     try {
-      var installPath = InstallFinder.Find(config.ExtraPaths);
-      // ReSharper disable once WithExpressionModifiesAllMembers
-      config = config with { InstallPath = installPath };
+      config.InstallPath = InstallFinder.Find(config.ExtraPaths);
       config.Save();
       return config;
-    }
-    catch (InstallNotFoundException) {
+    } catch (InstallNotFoundException) {
       var picker = new FolderPicker();
       var selectedPath = picker.PickFolder("Select your RCT3 Assets folder");
 
@@ -68,8 +96,7 @@ internal static class Program {
     // NSApplication.Init() must be called before any UI elements are created.
     // LoadConfigAndFindInstall may show a dialog to the user.
     NSApplication.Init();
-    // FIXME: Use LoadConfigAndFindInstall instead
-    AppConfig.Load();
+    LoadConfigAndFindInstall();
     InstallFinder.Find(AppConfig.Instance.ExtraPaths);
     NSApplication.SharedApplication.Delegate = new AppDelegate();
     NSApplication.Main(args);
