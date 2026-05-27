@@ -7,8 +7,10 @@
 
 using NLog;
 using OpenCobra.GDK;
+using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Materials;
 using OpenCobra.GDK.Meshes;
+using OpenCobra.GDK.Platform;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Simulation;
@@ -27,7 +29,7 @@ namespace OpenRCT3;
 /// <summary>
 /// The game world.
 /// </summary>
-public class Game : IDisposable {
+public class Game : IGame {
   /// <summary>The maximum number of simulation ticks to process in one instant.</summary>
   private const int MaxSimulationTicks = 8;
   /// <summary>The minimum time between lag warning messages.</summary>
@@ -69,7 +71,7 @@ public class Game : IDisposable {
   /// <para>The time taken to render the last frame, or null if no frame has been rendered yet.</para>
   /// <para>Use <see cref="TargetFrameRate"/> to set the frame rate.</para>
   /// </summary>
-  public TimeSpan? FrameTime { get; private set; } = null;
+  public TimeSpan FrameTime { get; private set; } = TimeSpan.Zero;
 
   /// <summary>
   /// Target frame rate of the game loop, in frames per second.
@@ -93,6 +95,7 @@ public class Game : IDisposable {
   /// Whether the game should use vertical sync (VSync) to limit the frame rate.
   /// </summary>
   public bool VSync { get; set; } = false;
+
   public IRenderer Renderer { get; }
   public World World { get; } = new();
   public Scene Scene { get; } = new();
@@ -146,11 +149,16 @@ public class Game : IDisposable {
     //
     // See https://gameprogrammingpatterns.com/game-loop.html
     while (IsRunning) {
-      var currentTime = stopwatch.Elapsed;
-      var elapsed = (FrameTime = currentTime - previousTime) ?? TimeSpan.Zero;
-      previousTime = currentTime;
       // Wait for the resume signal if the game is paused
-      if (isPaused) resumeSignal.WaitOne();
+      if (isPaused) {
+        resumeSignal.WaitOne();
+        logger.Trace("Game resumed");
+      }
+
+      var currentTime = stopwatch.Elapsed;
+      var elapsed = FrameTime = currentTime - previousTime;
+      previousTime = currentTime;
+      // FIXME: Ought the game NOT accumulate lag if the game was paused?
       lag += elapsed;
 
       // Process any pending window events, e.g. input events

@@ -6,9 +6,8 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System.ComponentModel;
-using OpenCobra.GDK;
 
-namespace OpenRCT3.Platforms;
+namespace OpenCobra.GDK.Platform;
 
 public interface IRenderer : IResource, IDisposable {
   [Category("GPU")]

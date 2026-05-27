@@ -5,20 +5,28 @@
 //
 // Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
 
+using DryIoc;
+using DryIoc.ImTools;
+using NLog;
+using OpenCobra.GDK;
+using OpenCobra.GDK.Game;
+using OpenCobra.GDK.Platform;
+using Silk.NET.Core.Contexts;
+using Silk.NET.Input;
+using Silk.NET.Maths;
+using Silk.NET.OpenGL;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using DryIoc.ImTools;
-using Silk.NET.Core.Contexts;
-using Silk.NET.Maths;
-using Silk.NET.OpenGL;
-using Silk.NET.Windowing;
+using Windowing = Silk.NET.Windowing;
 
 namespace OpenRCT3.Platforms.Windows;
 
 internal partial class GameWindow : Form, IWindow {
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
+
   private readonly Dictionary<Delegate, EventHandler> handlerMap = [];
   private readonly ManualResetEvent rendererCreated = new(false);
   private readonly Stopwatch stopwatch = new();
@@ -26,7 +34,13 @@ internal partial class GameWindow : Form, IWindow {
   private bool isClosing = false;
   private event Action<double>? UpdateView;
 
-  public GameWindow() => Start();
+  public GameWindow() {
+    logger.Trace("Initializing game window...");
+    InitializeComponent();
+    if (!Visible) Show();
+    Initialize();
+    logger.Trace("Game window created");
+  }
 
   public string Title { get => base.Text; set => Text = value; }
 
@@ -37,6 +51,7 @@ internal partial class GameWindow : Form, IWindow {
     }
   }
 
+  #region IView Properties
   // FIXME: This doesn't take the pixel density into account
   [Category("GPU")]
   public Vector2D<int> FramebufferSize => new(glSurface.ClientSize.Width, glSurface.ClientSize.Height);
@@ -83,23 +98,23 @@ internal partial class GameWindow : Form, IWindow {
   }
 
   [Browsable(false)]
-  public Silk.NET.Windowing.GraphicsAPI API {
+  public Windowing.GraphicsAPI API {
     get {
-      var flags = ContextFlags.Default;
+      var flags = Windowing.ContextFlags.Default;
       if (glSurface.Settings.Flags.HasFlag(ContextFlagMask.ForwardCompatibleBit))
-        flags |= ContextFlags.ForwardCompatible;
+        flags |= Windowing.ContextFlags.ForwardCompatible;
       if (glSurface.Settings.Flags.HasFlag(ContextFlagMask.DebugBit))
-        flags |= ContextFlags.Debug;
+        flags |= Windowing.ContextFlags.Debug;
 
-      return new Silk.NET.Windowing.GraphicsAPI {
-        API = ContextAPI.OpenGL,
+      return new Windowing.GraphicsAPI {
+        API = Windowing.ContextAPI.OpenGL,
         Profile = glSurface.Settings.Profile switch {
-          ContextProfileMask.CompatibilityProfileBit => ContextProfile.Compatability,
-          ContextProfileMask.CoreProfileBit => ContextProfile.Core,
+          ContextProfileMask.CompatibilityProfileBit => Windowing.ContextProfile.Compatability,
+          ContextProfileMask.CoreProfileBit => Windowing.ContextProfile.Core,
           _ => throw new InvalidOperationException()
         },
         Flags = flags,
-        Version = new APIVersion(glSurface.Settings.Version)
+        Version = new Windowing.APIVersion(glSurface.Settings.Version)
       };
     }
   }
@@ -111,7 +126,7 @@ internal partial class GameWindow : Form, IWindow {
   }
 
   [Category("GPU")]
-  public VideoMode VideoMode => new(FramebufferSize, Game.Instance!.TargetFrameRate);
+  public Windowing.VideoMode VideoMode => new(FramebufferSize, Game.Instance!.TargetFrameRate);
 
   [Category("GPU")]
   public int? PreferredDepthBufferBits => OpenGL.GLContext.PreferredDepthBufferBits;
@@ -135,13 +150,15 @@ internal partial class GameWindow : Form, IWindow {
   public INativeWindow? Native => null;
 
   [Category("GPU")]
-  Vector2D<int> IViewProperties.Size => new(ClientSize.Width, ClientSize.Height);
+  Vector2D<int> Windowing.IViewProperties.Size => new(ClientSize.Width, ClientSize.Height);
+  #endregion
 
+  #region IView Events
   public event Action<Vector2D<int>>? FramebufferResize;
   public event Action<bool>? FocusChanged;
   public event Action<double>? Render;
 
-  event Action<Vector2D<int>>? IView.Resize {
+  event Action<Vector2D<int>>? Windowing.IView.Resize {
     add {
       if (value == null) return;
       void handler(object? s, EventArgs e) => value(FramebufferSize);
@@ -154,7 +171,7 @@ internal partial class GameWindow : Form, IWindow {
     }
   }
 
-  event Action? IView.Closing {
+  event Action? Windowing.IView.Closing {
     add {
       if (value == null) return;
       // Wait for our own Closing event handlers to complete
@@ -170,7 +187,7 @@ internal partial class GameWindow : Form, IWindow {
     }
   }
 
-  event Action? IView.Load {
+  event Action? Windowing.IView.Load {
     add {
       if (value == null) return;
       void handler(object? s, EventArgs e) => value();
@@ -183,21 +200,42 @@ internal partial class GameWindow : Form, IWindow {
     }
   }
 
-  event Action<double>? IView.Update {
+  event Action<double>? Windowing.IView.Update {
     add => UpdateView += value;
     remove => UpdateView -= value;
   }
+  #endregion
+
+
+  #region IView Methods
+  public void Initialize() {
+    if (glSurface.IsHandleCreated) rendererCreated.Set();
+    logger.Trace("Waiting for renderer instantiation...");
+    rendererCreated.WaitOne();
+    logger.Trace("Renderer created");
+  }
+
+  public void Reset() {
+    Game.Instance?.Pause();
+    Hide();
+    Controls.Clear();
+    glSurface.Dispose();
+    glSurface = null;
+  }
+
+  public void Run(Action onFrame) {
+    while (!isClosing) {
+      DoEvents();
+      onFrame();
+    }
+  }
+
+  void Windowing.IView.Focus() => Focus();
 
   public void ContinueEvents() => Invoke(Application.DoEvents);
   public void DoEvents() => Application.DoEvents();
-  public void DoRender() => Render?.Invoke(Game.Instance!.FrameTime?.TotalMilliseconds ?? 0.0);
-  public void DoUpdate() => UpdateView?.Invoke(Game.Instance!.FrameTime?.TotalMilliseconds ?? 0.0);
-
-  public void Initialize() {
-    if (glSurface.IsHandleCreated) rendererCreated.Set();
-    rendererCreated.WaitOne();
-  }
-
+  public void DoRender() => Render?.Invoke(Game.Instance!.FrameTime.TotalMilliseconds);
+  public void DoUpdate() => UpdateView?.Invoke(Game.Instance!.FrameTime.TotalMilliseconds);
   public Vector2D<int> PointToClient(Vector2D<int> point) {
     var pt = base.PointToClient(new(point.X, point.Y));
     return new(pt.X, pt.Y);
@@ -213,6 +251,7 @@ internal partial class GameWindow : Form, IWindow {
     var pt = base.PointToScreen(new(point.X, point.Y));
     return new(pt.X, pt.Y);
   }
+  #endregion
 
   /// <summary>
   /// Start the game.
@@ -227,21 +266,10 @@ internal partial class GameWindow : Form, IWindow {
     else Game.Instance.Resume();
   }
 
-  public void Reset() {
-    Game.Instance?.Pause();
-    Controls.Clear();
-    glSurface.Dispose();
-    glSurface = null;
-  }
-
-  public void Run(Action onFrame) {
-    while (!isClosing) {
-      DoEvents();
-      onFrame();
-    }
-  }
-
-  void IView.Focus() => Focus();
+  #region IInputPlatform Members
+  public bool IsApplicable(Windowing.IView view) => view is GameWindow;
+  public IInputContext CreateInput(Windowing.IView view) => new InputAdapter(this);
+  #endregion
 
   private void GameWindow_GotFocus(object sender, EventArgs e) {
     var game = Game.Instance;

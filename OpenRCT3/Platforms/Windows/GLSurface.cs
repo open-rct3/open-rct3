@@ -6,26 +6,33 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using NLog;
+using OpenCobra.GDK.Numerics;
+using OpenCobra.GDK.Platform;
 using OpenRCT3.OpenGL;
+using Silk.NET.Core.Contexts;
 using Silk.NET.OpenGL;
 using System.ComponentModel;
-using System.Drawing;
 using System.Windows.Forms;
+using Drawing = System.Drawing;
 using static OpenRCT3.Platforms.Windows.Win32;
 
 namespace OpenRCT3.Platforms.Windows;
 
-public class GLSurface : Control, IGraphicsSurface {
+public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private readonly SurfaceSettings settings;
-  private SurfaceHandle? surface;
+  private Handle<IGraphicsSurface>? surface;
   private GL? gl;
   private Renderer? renderer;
 
+  /// <inheritdoc/>
+  /// <remarks>
+  /// It is safe to start the game only <i>after</i> this event.
+  /// </remarks>
   public event SurfaceCreated? SurfaceCreated;
   public event SurfaceChanged? SurfaceChanged;
 
-  public GLSurface() : this(null) { }
+  public GLSurface() : this(new SurfaceSettings()) { }
 
   public GLSurface(SurfaceSettings? settings) {
     SetStyle(ControlStyles.Opaque, true);
@@ -44,23 +51,25 @@ public class GLSurface : Control, IGraphicsSurface {
   public IRenderer Renderer => renderer
     ?? throw new InvalidOperationException("Renderer has not been initialized.");
 
-  [Browsable(false)]
   public SurfaceSettings Settings => settings;
+  ISurfaceSettings IGraphicsSurface.Settings => settings;
 
   [Browsable(false)]
   public bool IsValid => IsHandleCreated && Context.IsValid && gl != null;
 
   [Browsable(false)]
-  public Handle<nint> Surface => surface ?? throw new InvalidOperationException("Current surface is invalid!");
+  public Handle<IGraphicsSurface> Surface => surface ??
+    throw new InvalidOperationException("Current surface is invalid!");
 
   [Browsable(false)]
   public Silk.NET.Core.Contexts.IGLContext? GLContext => Context;
 
   [Browsable(false)]
-  public GL GL => gl ?? throw new InvalidOperationException("Current OpenGL context is invalid!");
+  public GL GL => gl ??
+    throw new InvalidOperationException("Current OpenGL context is invalid!");
 
   // FIXME: This doesn't take the pixel density into account
-  public Size FrameBufferSize => ClientSize;
+  public Size FrameBufferSize => new((uint)ClientSize.Width, (uint)ClientSize.Height);
 
   public float AspectRatio => (float)ClientSize.Width / ClientSize.Height;
 
@@ -160,9 +169,9 @@ public class GLSurface : Control, IGraphicsSurface {
 
   protected override void OnPaint(PaintEventArgs e) {
     if (DesignMode) {
-      e.Graphics.Clear(Color.FromArgb(45, 45, 48));
-      using var brush = new SolidBrush(Color.FromArgb(200, 200, 200));
-      using var font = new Font("Segoe UI", 9);
+      e.Graphics.Clear(Drawing.Color.FromArgb(45, 45, 48));
+      using var brush = new Drawing.SolidBrush(Drawing.Color.FromArgb(200, 200, 200));
+      using var font = new Drawing.Font("Segoe UI", 9);
       e.Graphics.DrawString($"[{GetType().Name}]", font, brush, 8, 8);
       return;
     }

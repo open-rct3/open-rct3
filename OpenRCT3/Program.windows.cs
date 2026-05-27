@@ -68,6 +68,7 @@ internal static class Program {
   }
 
   [STAThread]
+  // FIXME: Refactor to share common code among platforms, i.e. consolidate this, Program.macOS.cs, and Program.linux.cs
   public static void Main(string[] args) {
     AppDomain.CurrentDomain.UnhandledException += (sender, e) => HandleException(e.ExceptionObject as Exception);
     Application.ThreadException += (sender, e) => HandleException(e.Exception);
