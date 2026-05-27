@@ -178,7 +178,11 @@ public readonly struct GLState : IDisposable {
     gl.CheckError("GLState restore Program");
   }
 
-  public void Dispose() => Pop();
+  public void Dispose() {
+    // RAII; only pop if this instance is at the top of the stack
+    if (stack.TryPeek(out var top) && top.Equals(this))
+      Pop();
+  }
 
   private static void SetEnabled(GL gl, EnableCap cap, bool enabled) {
     if (enabled) gl.Enable(cap);
