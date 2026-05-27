@@ -5,7 +5,10 @@
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
+using DryIoc;
 using NLog;
+using OpenCobra.GDK;
+using OpenCobra.GDK.Game;
 using OpenCobra.OVL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.Windows;
@@ -83,7 +86,18 @@ internal static class Program {
     Application.EnableVisualStyles();
     Application.SetCompatibleTextRenderingDefault(false);
     LoadConfigAndFindInstall();
-    Application.Run(new GameWindow());
+
+    // Create the main window
+    var mainWindow = new GameWindow();
+    Scene.IoC.RegisterInstance<IWindow>(
+      mainWindow,
+      IfAlreadyRegistered.Replace,
+      // This Program manages the game window's lifetime
+      Setup.With(preventDisposal: true));
+
+    // Start the game
+    mainWindow.Start();
+    Application.Run(mainWindow);
 
     logger.Info("Application exited");
   }

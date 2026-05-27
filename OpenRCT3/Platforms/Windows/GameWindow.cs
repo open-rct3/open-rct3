@@ -206,6 +206,25 @@ internal partial class GameWindow : Form, IWindow {
   }
   #endregion
 
+  // FIXME: This method ought be extracted into a platform-idependent base-class.
+  public void Start() {
+    stopwatch.Start();
+    Debug.Assert(renderer != null, "Renderer should be created before starting the game.");
+    if (Game.Instance == null) {
+      logger.Trace("Starting game...");
+      Scene.IoC.Register<IInputContext>(
+        Reuse.Scoped,
+        Made.Of(r => ServiceInfo.Of<IWindow>(), window => window.CreateInput(Arg.Of<IWindow>())),
+        // The input abstraction is kida heavy, so let services dispose it
+        Setup.With(trackDisposableTransient: true, allowDisposableTransient: true)
+      );
+      var game = new Game(renderer);
+      Task.Run(game.Run);
+    } else {
+      logger.Trace("Resuming game...");
+      Game.Instance.Resume();
+    }
+  }
 
   #region IView Methods
   public void Initialize() {
@@ -252,19 +271,6 @@ internal partial class GameWindow : Form, IWindow {
     return new(pt.X, pt.Y);
   }
   #endregion
-
-  /// <summary>
-  /// Start the game.
-  /// </summary>
-  public void Start() {
-    InitializeComponent();
-    Initialize();
-
-    stopwatch.Start();
-    Debug.Assert(renderer != null, "Renderer should be created before starting the game.");
-    if (Game.Instance == null) Task.Run(() => new Game(renderer).Run());
-    else Game.Instance.Resume();
-  }
 
   #region IInputPlatform Members
   public bool IsApplicable(Windowing.IView view) => view is GameWindow;
