@@ -13,6 +13,28 @@ namespace OpenCobra.GDK.Game;
 /// Represents a self-contained game system.
 /// </summary>
 public interface ISystem : IDisposable {
+  /// <summary>
+  /// Occurs when this system is started. See <see cref="Start"/>.
+  /// </summary>
+  /// <remarks>
+  /// Perform any necessary setup procedures.
+  /// </remarks>
+  /// <seealso cref="Update(TimeSpan)"/>
+  public event Action? Started;
+  /// <summary>
+  /// Occurs when this system is stopped. See <see cref="Stop"/>.
+  /// </summary>
+  /// <remarks>
+  /// Perform any tear-down operations to conserve memory.
+  /// </remarks>
+  public event Action? Stopped;
+
+  /// <summary>
+  /// Whether this system is running.
+  /// </summary>
+  [Category("Behavior")]
+  bool IsRunning { get; }
+
   [Category("Behavior")]
   PipelinePhase Order { get; }
 
@@ -34,10 +56,6 @@ public interface ISystem : IDisposable {
   /// <summary>
   /// Start updating this system.
   /// </summary>
-  /// <remarks>
-  /// Perform any necessary setup procedures here.
-  /// </remarks>
-  /// <seealso cref="Update(TimeSpan)"/>
   void Start();
 
   /// <summary>
@@ -49,8 +67,5 @@ public interface ISystem : IDisposable {
   /// <summary>
   /// Stop updating this system.
   /// </summary>
-  /// <remarks>
-  /// Perform any tear-down operations here to conserve memory.
-  /// </remarks>
   void Stop();
 }
