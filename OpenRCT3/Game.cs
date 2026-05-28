@@ -97,7 +97,7 @@ public class Game : IGame {
   public bool VSync { get; set; } = false;
 
   public IRenderer Renderer { get; }
-  public World World { get; } = new();
+  public Simulation.World World { get; } = new();
   public Scene Scene { get; } = new();
 
   /// <param name="renderer">The game renderer.</param>
