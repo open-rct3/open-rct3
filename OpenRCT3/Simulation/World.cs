@@ -4,15 +4,18 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using OpenRCT3.Streaming;
+
+using OpenCobra.GDK.Game;
+using OpenCobra.GDK.Streaming;
 
 namespace OpenRCT3.Simulation;
 
 /// <summary>
 /// Represents the game world including the current park, terrain, objects, and people.
 /// </summary>
-public class World {
+public class World : IWorld {
   private Progress progress = Progress.COMPLETE;
+  private bool disposed;
 
   /// <summary>
   /// The current progress of the world loading.
@@ -26,6 +29,22 @@ public class World {
       new(() => Terrain = Terrain.Load(), "Loading terrain"),
     ]).Progress;
 
+  protected virtual void Dispose(bool disposing) {
+    if (disposed) return;
+    if (disposing) {
+      Terrain?.GrassTexture?.Dispose();
+    }
+
+    Terrain = null;
+    Park = null;
+    disposed = true;
+  }
+
+  public void Dispose() {
+    // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    Dispose(disposing: true);
+    GC.SuppressFinalize(this);
+  }
+
   // TODO: Use Task.Factory.StartNew to do slow async work in the background
-  // TODO: Implement IDisposable
 }

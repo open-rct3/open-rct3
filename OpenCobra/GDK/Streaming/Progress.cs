@@ -4,11 +4,10 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using System.Collections.Generic;
-using System.Linq;
+
 using Tasks = System.Threading.Tasks;
 
-namespace OpenRCT3.Streaming;
+namespace OpenCobra.GDK.Streaming;
 
 /// <summary>
 /// Represents a task to be executed during a progress measurement.
