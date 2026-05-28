@@ -7,6 +7,7 @@
 
 using NLog;
 using OpenCobra.GDK;
+using OpenCobra.GDK.ECS;
 using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Materials;
 using OpenCobra.GDK.Meshes;
@@ -14,9 +15,10 @@ using OpenCobra.GDK.Platform;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Simulation;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Threading;
-
+using ECS = OpenCobra.GDK.ECS;
 
 #if WINDOWS
 using System.Windows.Forms;
@@ -35,7 +37,6 @@ public class Game : IGame {
   /// <summary>The minimum time between lag warning messages.</summary>
   /// <remarks>This prevents spamming the log with warnings about lag.</remarks>
   private readonly TimeSpan lagWarningDebounceInterval = TimeSpan.FromSeconds(10);
-
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private bool isRunning = false;
   private bool isPaused = false;
@@ -45,6 +46,7 @@ public class Game : IGame {
 
   public static Game? Instance { get; private set; }
   public static bool IsRunning => Instance?.isRunning ?? false;
+
   /// <summary>
   /// Default frame rate of the game loop, in frames per second.
   /// </summary>
@@ -57,13 +59,41 @@ public class Game : IGame {
   /// The game is started via <see cref="Run"/>.
   /// </remarks>
   public event Action? Started;
+
   /// <summary>
   /// <para>Raised when the game ends, i.e. when the user quits.</para>
   /// <para>See <see cref="Quit"/>.</para>
   /// </summary>
   public event Action? Exited;
 
+  public Game(IRenderer renderer) {
+    Instance = this;
+    Renderer = renderer;
+
+    logger.Trace("Creating game world...");
+    logger.Warn("Simulation features are unimplemented!");
+
+    // Load the game world
+    // TODO: Show a progress bar while loading
+    World.Load();
+    logger.Trace("Game world loaded");
+
+    // Create a flat quad on the XY plane (Z-up)
+    var grass = Color.FromArgb(79, 129, 14).ToGl();
+    var ground = new Model(Primitives.Plane("Ground", color: grass)) {
+      Material = new Flat()
+    };
+    // Scale the mesh to ten (10) square meters
+    ground.Transform.Matrix *= 10;
+    Scene.Models.Add(ground);
+    logger.Trace("Added ground plane");
+  }
+
   public AppConfig Config { get; } = AppConfig.Instance;
+
+  public IRenderer Renderer { get; }
+  public World World { get; } = new();
+  public Scene Scene { get; } = new();
 
   public bool IsPaused => isPaused;
 
@@ -95,34 +125,6 @@ public class Game : IGame {
   /// Whether the game should use vertical sync (VSync) to limit the frame rate.
   /// </summary>
   public bool VSync { get; set; } = false;
-
-  public IRenderer Renderer { get; }
-  public World World { get; } = new();
-  public Scene Scene { get; } = new();
-
-  /// <param name="renderer">The game renderer.</param>
-  public Game(IRenderer renderer) {
-    Instance = this;
-    Renderer = renderer;
-
-    logger.Trace("Creating game world...");
-    logger.Warn("Simulation features are unimplemented!");
-
-    // Load the game world
-    // TODO: Show a progress bar while loading
-    World.Load();
-    logger.Trace("Game world loaded");
-
-    // Create a flat quad on the XY plane (Z-up)
-    var grass = Color.FromArgb(79, 129, 14).ToGl();
-    var ground = new Model(Primitives.Plane("Ground", color: grass)) {
-      Material = new Flat()
-    };
-    // Scale the mesh to ten (10) square meters
-    ground.Transform.Matrix *= 10;
-    Scene.Models.Add(ground);
-    logger.Trace("Added ground plane");
-  }
 
   /// <summary>
   /// Starts the game loop.
