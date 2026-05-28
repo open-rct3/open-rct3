@@ -123,9 +123,9 @@ public class Renderer : ThreadAffine, IRenderer {
 
     // Render the GUI
     using var imguiState = GLState.Push();
-    scene.GuiController.Render();
     foreach (var window in scene.Windows)
       window.Render();
+    scene.GuiController.Render();
 
     // FIXME: Apply VSync settings
     // if (Game.Instance!.VSync) gl.SwapInterval(1);
