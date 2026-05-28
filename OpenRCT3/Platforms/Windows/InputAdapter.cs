@@ -227,7 +227,7 @@ internal static class HidDeviceExtensions {
         items.SelectMany(item => item.Usages.GetAllValues()).ToArray()
       );
     } catch (Exception e) {
-      logger.Warn($"Could not determine {{device}} USB HID class: {e.Message}", deviceName.Trim());
+      logger.Warn($"Could not determine USB HID class for {{device}}: {e.Message}", deviceName.Trim());
       return null;
     }
   }
