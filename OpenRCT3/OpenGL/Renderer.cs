@@ -10,6 +10,7 @@ using DryIoc;
 using NLog;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Materials;
+using OpenCobra.GDK.Platform;
 using OpenCobra.GDK.Services;
 using OpenCobra.GDK.Shaders;
 using OpenRCT3.Platforms;
@@ -119,6 +120,12 @@ public class Renderer : ThreadAffine, IRenderer {
 
     gl.BindVertexArray(0);
     gl.UseProgram(0);
+
+    // Render the GUI
+    using var imguiState = GLState.Push();
+    scene.GuiController.Render();
+    foreach (var window in scene.Windows)
+      window.Render();
 
     // FIXME: Apply VSync settings
     // if (Game.Instance!.VSync) gl.SwapInterval(1);

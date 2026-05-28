@@ -6,16 +6,17 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using ImGuiNET;
+using OpenCobra.GDK.GUI;
 
 namespace OpenRCT3.Scenario;
 
-public class Editor {
-  private bool open = true;
-  public bool Open => open;
+public class Editor : IWindow {
+  public bool Open { get; private set; } = true;
 
   public void Render() {
-    if (!open) return;
+    if (!Open) return;
 
+    var open = Open;
     ImGui.Begin("Scenario Editor", ref open);
 
     // Row of icon buttons
@@ -41,5 +42,6 @@ public class Editor {
     }
 
     ImGui.End();
+    if (open != Open) Open = open;
   }
 }

@@ -160,7 +160,7 @@ imguiController.Update(delta.Seconds);
 Camera.Update(aspectRatio);
 ```
 
-Change `Game.Render`:
+Change `Renderer.Render`:
 
 ```csharp
 // ...
@@ -171,7 +171,6 @@ gl.UseProgram(0);
 // Save/restore OpenGL state around ImGui's GL mutations
 using var imguiState = GLState.Push();
 imguiController.Render();
+
 Rendered?.Invoke(this, EventArgs.Empty);
 ```
-
-> **Note**: If using multiple GL contexts with ImGui, call `imguiController.MakeCurrent()` before `Update`/`Render` to switch its context.
