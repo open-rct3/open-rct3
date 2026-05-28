@@ -11,7 +11,7 @@ namespace OpenCobra.GDK.Game;
 /// Represents a self-contained game system.
 /// </summary>
 /// <remarks>
-/// <h2>Multithreading</h2>
+/// <h2>Multi-threading</h2>
 /// <para>Parallel systems iterate over archetypes with internal chunk processing.
 /// See <see cref="Parallelizable"/>.</para>
 /// </remarks>
@@ -19,7 +19,7 @@ public abstract class System(PipelinePhase order) : ISystem {
   public PipelinePhase Order { get; } = order;
   public bool Parallelizable { get; protected set; } = false;
 
-  public virtual void Attach(IWorld world) { }
+  public virtual void Attach(WeakReference<IWorld> world) { }
   public virtual void Start() { }
   public virtual void Update(TimeSpan delta) { }
   public virtual void Stop() { }

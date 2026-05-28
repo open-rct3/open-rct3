@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -35,7 +35,7 @@ public class UnownedReferenceAnalyzer : DiagnosticAnalyzer {
   private const string Category = "Design";
 
   private static readonly DiagnosticDescriptor Rule =
-      new DiagnosticDescriptor("GDK001", Title, MessageFormat,
+      new("GDK001", Title, MessageFormat,
           Category, DiagnosticSeverity.Warning, isEnabledByDefault: true,
           description: Description);
 
@@ -85,10 +85,8 @@ public class UnownedReferenceAnalyzer : DiagnosticAnalyzer {
     }
   }
 
-  private bool HasUnownedAttribute(IFieldSymbol symbol) {
-    return symbol.GetAttributes()
-        .Any(attr => attr.AttributeClass?.Name == "UnownedAttribute");
-  }
+  private bool HasUnownedAttribute(IFieldSymbol symbol) => symbol.GetAttributes()
+    .Any(attr => attr.AttributeClass?.Name == "UnownedAttribute");
 
   private static bool IsWeakReferenceType(ITypeSymbol type) {
     if (type is INamedTypeSymbol namedType)

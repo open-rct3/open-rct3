@@ -6,35 +6,42 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using DryIoc.ImTools;
+using NLog;
 
 namespace OpenCobra.GDK.Game;
 
 public static class Scheduler {
-  private static TaskScheduler scheduler = Task.Factory.Scheduler;
+  private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
   /// <summary>
   /// Execute the given collection of <paramref name="systems"/> in order.
   /// </summary>
   /// <param name="systems"></param>
   /// <param name="delta">Amount of time since the last iteration of the game's update cycle</param>
+  /// <exception cref="AggregateException">Raised when one or more parallel systems failed to update</exception>
   /// <seealso cref="ISystem.Order"/>
   /// <seealso cref="ISystem.Update(TimeSpan)"/>
   /// <seealso cref="IGame.TargetUpdateRate"/>
   public static void Execute(IEnumerable<ISystem> systems, TimeSpan delta) {
-    var buckets = systems.ToDictionary(s => s.Order, s => s);
+    var buckets = systems.GroupBy(s => s.Order).ToDictionary(g => g.Key, g => g.ToList());
+    var phases = buckets.Keys.OrderBy(key => key.To<int>());
 
-    var orderedSystems =
-      from pair in buckets
-      orderby pair.Key.To<int>()
-      select pair.Value;
-    foreach (var system in orderedSystems) {
-      if (system.Parallelizable) {
-        // TODO: Use Task.Factory.StartNew to do slow async work in the background
-        // Schedule on thread pool
-        Task.Run(() => system.Update(delta));
-      } else {
-        system.Update(delta);
+    try {
+      foreach (var phase in phases) {
+        var parallelSystems = buckets[phase].Where(s => s.Parallelizable)
+          .AsParallel().WithDegreeOfParallelism(Environment.ProcessorCount)
+          .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
+          .WithMergeOptions(ParallelMergeOptions.NotBuffered);
+        var linearSystems = buckets[phase].Except(parallelSystems);
+
+        foreach (var system in parallelSystems) system.Update(delta);
+        foreach (var system in linearSystems) system.Update(delta);
       }
+    } catch (AggregateException ex) {
+      logger.Error("Could not update one or more parallel systems:", ex);
+      throw;
+    } catch (OperationCanceledException) {
+      logger.Trace("Parallel system execution was cancelled.");
     }
   }
 }

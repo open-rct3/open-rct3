@@ -19,6 +19,9 @@ public interface ISystem : IDisposable {
   /// <summary>
   /// Whether this system may be executed in parallel with other systems in its phase.
   /// </summary>
+  /// <remarks>
+  /// Use a parallel system for CPU-bound tasks with large datasets (> ~10,000 items).
+  /// </remarks>
   /// <seealso cref="Order"/>
   [Category("Behavior")]
   bool Parallelizable { get; }
@@ -26,7 +29,7 @@ public interface ISystem : IDisposable {
   /// <summary>
   /// Attach this system to the given game <paramref name="world"/>.
   /// </summary>
-  void Attach(IWorld world);
+  void Attach([Unowned("Systems may not retain references to the world.")] WeakReference<IWorld> world);
 
   /// <summary>
   /// Start updating this system.
