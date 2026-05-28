@@ -22,6 +22,13 @@ public abstract class World : IWorld {
 
   protected World() {
     systems.CollectionChanged += SystemsChanged;
+
+    // Provide the current load progress to systems
+    IWorld.IoC.Register<Progress>(
+      Reuse.Singleton,
+      Made.Of(() => Progress),
+      Setup.With(weaklyReferenced: true, preventDisposal: true)
+    );
   }
 
   public abstract void Load();
