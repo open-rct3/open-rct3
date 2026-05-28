@@ -2,6 +2,7 @@
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
+//   - Nicolas Vyčas Nery <vycasnicolas@gmail.com>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 

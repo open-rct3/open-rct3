@@ -1,7 +1,7 @@
 // GLContext (Linux)
 //
 // Authors:
-//   - OpenRCT3 Contributors
+//   - Nicolas Vyčas Nery <vycasnicolas@gmail.com>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 

@@ -89,9 +89,9 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
     return ovl;
   }
 
-  /// <summary>Find a resource by name and type.</summary>
-  public OvlFile? Find(string? name, FileType type = FileType.Texture) => entries.Keys.FirstOrDefault(key =>
-    key.Type == type &&
+  /// <summary>Find a resource by name.</summary>
+  public OvlFile? Find(string? name) => entries.Keys.FirstOrDefault(key =>
+    key.Type == FileType.Texture &&
     (name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
   );
 
