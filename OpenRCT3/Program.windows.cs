@@ -8,7 +8,7 @@
 using DryIoc;
 using NLog;
 using OpenCobra.GDK;
-using OpenCobra.GDK.Game;
+using OpenCobra.GDK.Platform;
 using OpenCobra.OVL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.Windows;

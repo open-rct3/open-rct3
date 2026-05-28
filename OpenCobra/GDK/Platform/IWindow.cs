@@ -9,7 +9,7 @@ using System.ComponentModel;
 using Silk.NET.Input;
 using Silk.NET.Windowing;
 
-namespace OpenCobra.GDK.Game;
+namespace OpenCobra.GDK.Platform;
 
 public record struct Dpi(float X, float Y);
 
@@ -26,7 +26,7 @@ public interface IWindow : IView, IInputPlatform {
   [Category("Behavior")]
   public string Title { get; set; }
   [Category("Behavior")]
-  // FIXME: The intent here is to supply the window's display's pixel density, not neccisarily the dots-per-inch
+  // FIXME: The intent here is to supply the window's display's pixel density, not necessarily the dots-per-inch
   public Dpi Dpi { get; }
 
   /// <summary>
@@ -35,6 +35,6 @@ public interface IWindow : IView, IInputPlatform {
   /// <remarks>
   /// Implementations are expected to create and manage the <c>Game</c> instance.
   /// </remarks>
-  // FIXME: Extract this into a platform-idependent base-class.
+  // FIXME: Extract this into a platform-independent base-class.
   public void Start();
 }

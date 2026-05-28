@@ -7,26 +7,28 @@
 
 using DryIoc;
 using ImGuiNET;
-using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Services;
 using Silk.NET.Input;
 using Silk.NET.OpenGL.Extensions.ImGui;
 
-namespace OpenCobra.GDK;
+namespace OpenCobra.GDK.GUI;
 
 /// <summary>
 /// ImGui rendering abstraction, initialized once per scene.
 /// </summary>
-public class GuiController : IDisposable {
-  private readonly IResolverContext scope = Scene.IoC.OpenScope(nameof(GuiController), trackInParent: true);
+public class Controller : IDisposable {
+  private readonly IResolverContext scope = Scene.IoC.OpenScope(typeof(Controller).FullName, trackInParent: true);
   private readonly IInputContext input;
   private readonly ImGuiController controller;
 
-  public GuiController() {
+  public static bool CaptureMouse => ImGui.GetIO().WantCaptureMouse;
+  public static bool CaptureKeyboard => ImGui.GetIO().WantCaptureKeyboard;
+
+  public Controller() {
     input = scope.Resolve<IInputContext>();
     controller = new(
       scope.Resolve<IContextSource>().Context,
-      scope.Resolve<IWindow>(),
+      scope.Resolve<Platform.IWindow>(),
       input
     );
   }
@@ -38,7 +40,6 @@ public class GuiController : IDisposable {
 
   public void Render() {
     Debug.Assert(!scope.IsDisposed);
-    ImGui.Render();
     controller.Render();
   }
 

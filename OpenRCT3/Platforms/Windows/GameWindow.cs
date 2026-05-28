@@ -9,7 +9,6 @@ using DryIoc;
 using DryIoc.ImTools;
 using NLog;
 using OpenCobra.GDK;
-using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Platform;
 using Silk.NET.Core.Contexts;
 using Silk.NET.Input;

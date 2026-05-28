@@ -17,7 +17,7 @@ public class Scene : IResource, IDisposable {
 
   public readonly Camera Camera = new();
   public List<Model> Models { get; } = [];
-  public readonly GuiController GuiController = new();
+  public readonly Controller GuiController = new();
   public List<IWindow> Windows { get; } = [];
 
   public IEnumerable<Model> UninitializedModels =>
