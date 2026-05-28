@@ -35,11 +35,13 @@ public class Controller : IDisposable {
 
   public void Update(float deltaSeconds) {
     Debug.Assert(!scope.IsDisposed);
+    // FIXME: Why does this sometimes throw an AccessViolatonException? Bug in the ImGui wrapper?
     controller.Update(deltaSeconds);
   }
 
   public void Render() {
     Debug.Assert(!scope.IsDisposed);
+    // FIXME: Why does this sometimes throw an AccessViolatonException? Bug in the ImGui wrapper?
     controller.Render();
   }
 
