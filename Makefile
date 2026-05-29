@@ -32,7 +32,7 @@ gui: ovl
 	deno task build:desktop
 
 .PHONY: website
-website: ovl
+website:
 	deno task build:website
 
 .PHONY: debug
