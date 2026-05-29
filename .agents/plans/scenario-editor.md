@@ -1,6 +1,6 @@
 # Scenario Editor
 
-**Issue**: TBD
+**Issue**: None
 
 **Status**: In progress
 
@@ -9,7 +9,9 @@
 Establish a basic Scenario Editor with a developer GUI and a placeholder grass-colored terrain mesh, without loading
 RCT3 texture files.
 
-## Phase 1: Bootstrap ImGui and Grass Mesh
+---
+
+## Bootstrap ImGui and Grass Mesh
 
 ### 1. ~~Add ImGui Package~~ (Done)
 
