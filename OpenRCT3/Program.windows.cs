@@ -78,12 +78,23 @@ internal static class Program {
     Application.ThreadException += (sender, e) => HandleException(e.Exception);
     Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
 
-    LogManager.Setup().LoadConfigurationFromFile("nlog.config");
-    logger.Info("Starting OpenRCT3 on Windows...");
+    // TODO: Extract this section to share code among platforms
+    var internalNlog = Path.Combine(AppConfig.LogsFolder, "internal-nlog.txt");
+    LogManager.Setup()
+      .LoadConfigurationFromFile("nlog.config")
+      .SetupInternalLogger(log => log
+        .LogToFile(internalNlog)
+#if DEBUG
+        .SetMinimumLogLevel(LogLevel.Debug)
+#else
+        .SetMinimumLogLevel(LogLevel.Warn)
+#endif
+      );
 
     // ‼ This order matters!
     // SetCompatibleTextRenderingDefault() must be called before any UI elements are created.
     // LoadConfigAndFindInstall may show a dialog to the user.
+    logger.Info("Starting OpenRCT3 on Windows...");
     Application.EnableVisualStyles();
     Application.SetCompatibleTextRenderingDefault(false);
     LoadConfigAndFindInstall();

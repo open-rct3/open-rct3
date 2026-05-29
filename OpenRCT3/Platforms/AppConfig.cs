@@ -1,4 +1,4 @@
-﻿// AppConfig
+// AppConfig
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
@@ -31,6 +31,14 @@ public record AppConfig {
   /// Whether to suppress unhandled exception alert modals.
   /// </summary>
   public bool SuppressCrashAlerts { get; set; }
+
+  public static string LogsFolder => Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+    "OpenRCT3",
+    "logs"
+  );
+
+  public static string LogPath => Path.Combine(LogsFolder, "app.log");
 
   private static string ConfigPath => Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
