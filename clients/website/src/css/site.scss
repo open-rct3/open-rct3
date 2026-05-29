@@ -4,6 +4,9 @@
 @import "./variables";
 
 :root {
+  // Colors
+  --skyblue: oklch(81.5% 0.082 225.5);
+  --skyblue-contrast: oklch(37.5% 0.082 45.5);
   // Gradients & Shadows
   --gray-gradient: rgba(lightgray, 50%), #fff;
   --box-shadow-lowest: 0 2px 4px rgba($shadowGray, 33%);
@@ -190,27 +193,47 @@ header.nav {
   }
   &.alert-info {
     color: #043944;
-    background-color: skyblue;
+    background-color: var(--skyblue);
+
+    a {
+      color: var(--skyblue-contrast);
+    }
+    a:hover, a:focus {
+      text-decoration: underline;
+    }
   }
   &.alert-danger {
     color: #290a0d;
     background-color: indianred;
   }
 
-  h1.title, p {
-    font-size: 0.875em;
+  &:has(p .context.icon) {
+    align-items: center;
   }
+
   h1.title {
+    font-size: 0.95em;
     font-weight: bold;
     margin-block: 0;
     margin-inline: 8px;
   }
   p {
     flex: 1;
+    display: inline-flex;
     margin: 0;
+    font-size: 0.875em;
+  }
+  p .icon {
+    position: relative;
+    top: -1px;
+    margin-inline-start: 2px;
   }
   .icon + p {
     margin-inline-start: 8px;
+  }
+  p:has(.context.icon) {
+    position: relative;
+    top: 2.5px;
   }
   .btn.btn-sm {
     padding-block: 0;
@@ -222,6 +245,7 @@ header.nav {
 
     &.btn-close {
       margin-inline-start: 4px;
+      cursor: pointer;
     }
   }
 }
@@ -237,9 +261,20 @@ main {
   flex: 1;
 }
 
+main #disclaimer {
+  margin-block-end: 8px;
+  margin-inline: 0;
+  padding-inline: 10px;
+
+  .btn.btn-close {
+    margin-inline-end: 4px;
+  }
+}
+
 .jumbotron {
   display: flex;
   flex-direction: column;
+  margin-inline: 8px;
   padding: 1rem 0.75rem;
   color: #f8f1f9;
   background-color: #4E5166;
@@ -257,6 +292,10 @@ main > .alert + .jumbotron {
 }
 .jumbotron .btn.call-to-action {
   align-self: end;
+}
+
+main > section {
+  margin-inline: 20px;
 }
 
 footer {

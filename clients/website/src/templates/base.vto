@@ -35,7 +35,11 @@
         <a class="btn btn-sm btn-outline-dark" href="https://enablejavascript.com">Enable JavaScript</a>
       </div>
     </noscript>
-    {{ include "partials/alert.vto" { id: "disclaimer", alertTitle: "Disclaimer", message: "This is a _volunteer-driven_ project. Please temper your expectations accordingly." } }}
+    {{ include "partials/alert.vto" {
+      id: "disclaimer",
+      alertTitle: "Disclaimer",
+      message: "This is a _community-driven_ project with a clear [roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap). Expect incremental releases as features are completed, not overnight results."
+    } }}
     {{ if notification }}{{ notification }}{{ /if }}
     {{ content }}
   </main>
