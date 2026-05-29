@@ -1,10 +1,11 @@
 @import "./variables";
 
-@mixin on-top {
+@mixin on-top() {
   & {
     z-index: $onTop;
   }
 }
+
 @mixin backdrop-blur($color: white, $opacity: 75%) {
   & {
     backdrop-filter: blur(8px);
@@ -12,6 +13,19 @@
     @media (prefers-reduced-transparency) {
       background-color: $color;
       backdrop-filter: none;
+    }
+  }
+}
+
+// FIXME: Why doesn't this work?
+@mixin underline-link() {
+  & {
+    text-decoration: underline 2px transparent;
+    transition: text-decoration-color 200ms ease;
+
+    &:hover, &:focus {
+      text-decoration: underline 2px var(--accent);
+      outline: none;
     }
   }
 }

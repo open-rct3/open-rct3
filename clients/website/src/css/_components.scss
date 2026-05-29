@@ -157,10 +157,6 @@ a.btn {
     display: flex;
     justify-content: center;
     align-items: center;
-    position: relative !important;
-    left: unset;
-    right: unset;
-    padding: unset;
     padding-inline: 4px;
     width: unset;
     height: fit-content;
@@ -170,7 +166,7 @@ a.btn {
     clip: initial;
     clip-path: initial;
     // TODO: Extract this into a mixin, i.e. `@include on-top-for-sr();`
-    z-index: $onTop * 200;
+    z-index: $onTop;
   }
   &.shown-on-focus:focus-visible {
     outline-color: var(--link);
