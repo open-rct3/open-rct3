@@ -103,9 +103,8 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
     Scene.IoC.RegisterInstance(new Controller(mainWindow.CreateInput()), IfAlreadyRegistered.Throw);
 
     // Initialize the scene renderer
-    renderer = new Renderer();
+    renderer = new Renderer { FramebufferSize = new(ClientSize.Width, ClientSize.Height) };
     renderer.Initialize();
-    renderer.SetViewport(ClientSize.Width, ClientSize.Height);
     Scene.IoC.RegisterInstance<IRenderer>(renderer);
     
     SurfaceCreated?.Invoke(this, renderer);
@@ -139,7 +138,7 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
     if (DesignMode || !IsValid) return;
 
     Context.MakeCurrent();
-    renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
+    renderer?.FramebufferSize = new(ClientSize.Width, ClientSize.Height);
     SurfaceChanged?.Invoke(this);
 
     base.OnResize(e);
@@ -155,15 +154,21 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
       return;
     }
 
+    // When you drag or resize a window, Windows enters a modal tracking loop that freezes the game loop.
+    // To keep the window from tearing, the OS forcefully injects <c>WM_PAINT</c> messages directly into
+    // a window's message procedure.
+    //
+    // The renderer does not support re-entrancy.
+    //
+    // Do NOT update the scene while processing Windows events, i.e. `Scene.Update` is banned in WM event handlers.
     base.OnPaint(e);
 
     // Render the scene
     // TODO: Extract the rest of this method to prevent duplication between platforms
     if (!IsValid) return;
     if (Game.Instance != null && renderer != null) {
-      var scene = Game.Instance.Scene;
-      scene.Update(TimeSpan.Zero);
-      renderer.Render(scene);
+      renderer.FramebufferSize = new(ClientSize.Width, ClientSize.Height);
+      renderer.Render(Game.Instance.Scene);
     } else {
       Context.MakeCurrent();
       Context.Clear();

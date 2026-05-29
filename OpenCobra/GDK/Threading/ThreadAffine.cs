@@ -5,9 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using System.Threading;
-
-namespace OpenRCT3.Threading;
+namespace OpenCobra.GDK.Threading;
 
 /// <summary>
 /// Represents an object which can only be safely used from its creation thread.

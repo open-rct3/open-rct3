@@ -9,6 +9,7 @@ using DryIoc;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImGui.Backends.OpenGL3;
 using NLog;
+using OpenCobra.GDK.Threading;
 using Silk.NET.Input;
 using System.Numerics;
 
@@ -17,7 +18,7 @@ namespace OpenCobra.GDK.GUI;
 /// <summary>
 /// ImGui rendering abstraction, initialized once per scene.
 /// </summary>
-public class Controller : IDisposable {
+public class Controller : ThreadAffine, IDisposable {
   private readonly Logger logger = LogManager.GetCurrentClassLogger();
   private readonly IResolverContext scope = Scene.IoC.OpenScope(typeof(Controller).FullName, trackInParent: true);
   private readonly Platform.IWindow window = Scene.IoC.Resolve<Platform.IWindow>();
@@ -52,12 +53,6 @@ public class Controller : IDisposable {
     // TODO: style.ScaleAllSizes(mainScale);
     // TODO: style.FontScaleDpi = mainScale;
     // TODO: io.ConfigDpiScaleFonts = true;
-    // TODO: io.ConfigDpiScaleViewports = true;
-
-    if (io.ConfigFlags.HasFlag(ImGuiConfigFlags.ViewportsEnable)) {
-      style.WindowRounding = 0.0f;
-      style.Colors[(int)ImGuiCol.WindowBg].W = 1.0f;
-    }
 
     // Initialize GUI renderer
     ImGuiImplOpenGL3.SetCurrentContext(context);
@@ -70,52 +65,43 @@ public class Controller : IDisposable {
     }
   }
 
-  private void Mouse_Move(IMouse mouse, Vector2 pos) => ImGui.GetIO().AddMousePosEvent(pos.X, pos.Y);
+  private void Mouse_Move(IMouse mouse, Vector2 pos) => Invoke(() => ImGui.GetIO().AddMousePosEvent(pos.X, pos.Y));
 
-  private void Mouse_Click(IMouse mouse, MouseButton button, Vector2 pos) {
+  private void Mouse_Click(IMouse mouse, MouseButton button, Vector2 pos) => Invoke(() => {
     var io = ImGui.GetIO();
     io.AddMouseButtonEvent(button == MouseButton.Right ? 1 : 0, down: true);
     io.AddMouseButtonEvent(button == MouseButton.Right ? 1 : 0, down: false);
-  }
+  });
 
-  public void Update(double deltaSeconds) {
+  public void Update(double deltaSeconds) => Invoke(() => {
     Debug.Assert(!scope.IsDisposed);
     Debug.Assert(context is not null);
 
     var io = ImGui.GetIO();
     io.DeltaTime = Convert.ToSingle(deltaSeconds);
+    var oldSize = io.DisplaySize;
+    if (oldSize != FramebufferSize) logger.Trace(FramebufferSize);
     io.DisplaySize = FramebufferSize;
     io.DisplayFramebufferScale = new Vector2(1);
-  }
+  });
 
-  public void StartFrame() {
+  public void StartFrame() => Invoke(() => {
     Debug.Assert(!scope.IsDisposed);
     Debug.Assert(context is not null);
 
     ImGuiImplOpenGL3.NewFrame();
     ImGui.NewFrame();
-  }
+  });
 
-  public void Render() {
+  public void Render() => Invoke(() => {
     Debug.Assert(!scope.IsDisposed);
     Debug.Assert(context is not null);
 
-    var open = true;
-    ImGui.Begin("Test", ref open, ImGuiWindowFlags.AlwaysAutoResize);
-    ImGui.Text("Resize test");
-    ImGui.End();
-
     ImGui.Render();
     ImGuiImplOpenGL3.RenderDrawData(ImGui.GetDrawData());
+  });
 
-    var io = ImGui.GetIO();
-    if ((io.ConfigFlags & ImGuiConfigFlags.ViewportsEnable) != 0) {
-      ImGui.UpdatePlatformWindows();
-      ImGui.RenderPlatformWindowsDefault();
-    }
-  }
-
-  public void Dispose() {
+  public void Dispose() => Invoke(() => {
     if (scope.IsDisposed) return;
     Debug.Assert(context is not null);
     GC.SuppressFinalize(this);
@@ -126,5 +112,5 @@ public class Controller : IDisposable {
     context = null;
 
     scope.Dispose();
-  }
+  });
 }

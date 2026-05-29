@@ -13,7 +13,7 @@ using OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Materials;
 using OpenCobra.GDK.Platform;
 using OpenCobra.GDK.Shaders;
-using OpenRCT3.Threading;
+using OpenCobra.GDK.Threading;
 using Silk.NET.Core.Contexts;
 using Silk.NET.OpenGL;
 using System.Collections.Concurrent;
@@ -34,6 +34,7 @@ public class Renderer : ThreadAffine, IRenderer {
 
   public State State { get; private set; } = State.Uninitialized;
   public Color ClearColor { get; set; } = Color.FromArgb(45, 45, 48);
+  public OpenCobra.GDK.Numerics.Size FramebufferSize { get; set; }
   public int MsaaSamples { get; } = 0;
 
   public void Initialize() => Invoke(() => {
@@ -68,6 +69,7 @@ public class Renderer : ThreadAffine, IRenderer {
     if (models.Length > 0) UploadChanges(scene.Camera, models);
 
     // Render the scene
+    gl.Viewport(0, 0, FramebufferSize.Width, FramebufferSize.Height);
     gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
     foreach (var item in BuildDisplayList(scene)) {
@@ -116,8 +118,6 @@ public class Renderer : ThreadAffine, IRenderer {
     // else gl.SwapInterval(0);
     context.SwapBuffers();
   });
-
-  public void SetViewport(int width, int height) => Invoke(() => gl.Viewport(0, 0, (uint)width, (uint)height));
 
   private void RenderGui(List<GUI.IWindow> windows) {
     using var _ = GLState.Push();

@@ -10,7 +10,9 @@ namespace OpenCobra.GDK.Numerics;
 /// <summary>
 /// Represents a two-dimensional (2D) size.
 /// </summary>
-public readonly record struct Size(uint Width, uint Height);
+public readonly record struct Size(uint Width, uint Height) {
+  public Size(int width, int height) : this((uint)width, (uint)height) { }
+}
 /// <summary>
 /// Represents a two-dimensional (2D) size, of unit <typeparamref name="T"/>.
 /// </summary>

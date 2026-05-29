@@ -7,7 +7,6 @@
 
 using DryIoc;
 using OpenCobra.GDK.GUI;
-using Platform = OpenCobra.GDK.Platform;
 
 namespace OpenCobra.GDK;
 
