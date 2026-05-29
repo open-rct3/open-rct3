@@ -6,6 +6,12 @@
     "cwd": "$ZED_WORKTREE_ROOT"
   },
   {
+    "label": "Build Website",
+    "command": "make",
+    "args": ["website"],
+    "cwd": "$ZED_WORKTREE_ROOT"
+  },
+  {
     "label": "Test",
     "command": "dotnet",
     "args": ["test"],
@@ -29,5 +35,11 @@
     "command": "dotnet",
     "args": ["run", "--project", "$ZED_WORKTREE_ROOT/OpenCobra/Tests/TestRunner/OvlTestBench.csproj"],
     "cwd": "$ZED_WORKTREE_ROOT"
+  },
+  {
+    "label": "Serve Website",
+    "command": "deno",
+    "args": ["run", "-A", "npm:serve", "--", "./_site"],
+    "cwd": "$ZED_WORKTREE_ROOT/clients/website"
   }
 ]
