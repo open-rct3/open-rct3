@@ -7,6 +7,7 @@
 
 using System.Collections.Concurrent;
 using DryIoc;
+using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Platform;
 using Silk.NET.OpenGL;
 
@@ -68,7 +69,7 @@ public readonly struct GLState : IDisposable {
   private readonly bool scissorTestEnabled;
   private readonly int frontAndBackPolygonMode;
 
-  // FIXME: This feels incorrect. See 
+  // FIXME: This feels incorrect. See
   public readonly bool IsCoreProfile =>
     contextFlags.HasFlag(ContextFlagMask.DebugBit) ||
     version.Major >= 3;
@@ -118,7 +119,7 @@ public readonly struct GLState : IDisposable {
   /// disposed.
   /// </returns>
   public static GLState Push() {
-    var gl = Scene.IoC.Resolve<GL>();
+    var gl = IGame.IoC.Resolve<GL>();
     var state = new GLState(gl);
     stack.Push(state);
     return state;
@@ -136,7 +137,7 @@ public readonly struct GLState : IDisposable {
   /// Restores every captured GL field to its pre-Push value.
   /// </summary>
   private void Restore() {
-    var gl = Scene.IoC.Resolve<GL>();
+    var gl = IGame.IoC.Resolve<GL>();
 
     SetEnabled(gl, EnableCap.Blend, blendEnabled);
     gl.CheckError("GLState restore Blend");

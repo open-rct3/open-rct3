@@ -101,7 +101,7 @@ internal static class Program {
 
     // Create the main window
     var mainWindow = new GameWindow();
-    Scene.IoC.RegisterInstance<IWindow>(
+    Game.IoC.RegisterInstance<IWindow>(
       mainWindow,
       IfAlreadyRegistered.Replace,
       // This Program manages the game window's lifetime

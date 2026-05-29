@@ -43,9 +43,10 @@ public class Game : IGame {
   private readonly ManualResetEvent resumeSignal = new(true);
   private readonly Stopwatch stopwatch = new();
   private DateTime lastLagWarning = DateTime.Now;
-  private readonly Renderer renderer = Scene.IoC.Resolve<IRenderer>() as Renderer ??
+  private readonly Renderer renderer = Game.IoC.Resolve<IRenderer>() as Renderer ??
     throw new InvalidOperationException();
 
+  public static Container IoC => IGame.IoC;
   public static Game? Instance { get; private set; }
   public static bool IsRunning => Instance?.isRunning ?? false;
   /// <summary>

@@ -5,11 +5,13 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using OpenCobra.GDK.Platform;
+using DryIoc;
 
 namespace OpenCobra.GDK.Game;
 
 public interface IGame : IDisposable {
+  public readonly static Container IoC = new();
+
   /// <summary>
   /// Raised once the game has started and the game loop is running.
   /// </summary>

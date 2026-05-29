@@ -6,8 +6,8 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using DryIoc;
+using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Memory;
-using OpenCobra.GDK.Platform;
 using Silk.NET.OpenGL;
 using System.ComponentModel;
 using System.Numerics;
@@ -51,7 +51,7 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
   // TODO: Extract this method into the renderer
   public void Upload(Shader shader) {
     if (State == State.Ready) return;
-    var gl = Scene.IoC.Resolve<GL>();
+    var gl = IGame.IoC.Resolve<GL>();
 
     // VAO
     Vao = gl.GenVertexArray();
@@ -144,7 +144,7 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
   public void Dispose() {
     if (State == State.Disposed) return;
 
-    var gl = Scene.IoC.Resolve<GL>();
+    var gl = IGame.IoC.Resolve<GL>();
     gl.DeleteVertexArray(Vao);
     Vao = 0;
     gl.DeleteBuffer(Vbo);

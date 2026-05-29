@@ -27,10 +27,10 @@ namespace OpenRCT3.OpenGL;
 
 public class Renderer : ThreadAffine, IRenderer {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
-  private readonly IGLContext context = Scene.IoC.Resolve<IGLContext>();
-  private readonly GL gl = Scene.IoC.Resolve<GL>();
+  private readonly IGLContext context = Game.IoC.Resolve<IGLContext>();
+  private readonly GL gl = Game.IoC.Resolve<GL>();
   private readonly ConcurrentDictionary<Material, ShaderProgram> shaders = new();
-  private readonly Controller gui = Scene.IoC.Resolve<Controller>();
+  private readonly Controller gui = Game.IoC.Resolve<Controller>();
 
   public State State { get; private set; } = State.Uninitialized;
   public Color ClearColor { get; set; } = Color.FromArgb(45, 45, 48);

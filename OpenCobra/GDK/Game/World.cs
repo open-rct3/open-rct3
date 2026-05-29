@@ -24,7 +24,7 @@ public abstract class World : IWorld {
     systems.CollectionChanged += SystemsChanged;
 
     // Provide the current load progress to systems
-    IWorld.IoC.Register<Progress>(
+    IGame.IoC.Register<Progress>(
       Reuse.Singleton,
       Made.Of(() => Progress),
       Setup.With(weaklyReferenced: true, preventDisposal: true)

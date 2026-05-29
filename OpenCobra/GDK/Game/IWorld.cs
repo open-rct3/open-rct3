@@ -5,14 +5,11 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using DryIoc;
 using OpenCobra.GDK.Streaming;
 
 namespace OpenCobra.GDK.Game;
 
 public interface IWorld : IDisposable {
-  public readonly static Container IoC = new();
-
   /// <summary>
   /// The current progress of the world loading.
   /// </summary>

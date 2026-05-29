@@ -94,19 +94,19 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
     Context.MakeCurrent();
 
     // TODO: Refactor to extract the rest of this method into the GDK
-    Scene.IoC.RegisterInstance<IGraphicsSurface>(this);
-    Scene.IoC.RegisterInstance(gl);
-    Scene.IoC.RegisterInstance<IGLContext>(Context);
+    Game.IoC.RegisterInstance<IGraphicsSurface>(this);
+    Game.IoC.RegisterInstance(gl);
+    Game.IoC.RegisterInstance<IGLContext>(Context);
 
     // Initialize the GUI controller first, renderer implementations depend on it
     var mainWindow = Parent as GameWindow ?? throw new InvalidOperationException();
-    Scene.IoC.RegisterInstance(new Controller(mainWindow.CreateInput()), IfAlreadyRegistered.Throw);
+    Game.IoC.RegisterInstance(new Controller(mainWindow.CreateInput()), IfAlreadyRegistered.Throw);
 
     // Initialize the scene renderer
     renderer = new Renderer { FramebufferSize = new(ClientSize.Width, ClientSize.Height) };
     renderer.Initialize();
-    Scene.IoC.RegisterInstance<IRenderer>(renderer);
-    
+    Game.IoC.RegisterInstance<IRenderer>(renderer);
+
     SurfaceCreated?.Invoke(this, renderer);
     base.OnHandleCreated(e);
     Invalidate();

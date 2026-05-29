@@ -6,7 +6,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using DryIoc;
-using OpenCobra.GDK.Platform;
+using OpenCobra.GDK.Game;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 using Silk.NET.OpenGL;
@@ -47,7 +47,7 @@ public class Texture(string name, int width, int height, Image<Rgba32> texture, 
   public uint Handle { get; private set; }
 
   public void Upload() {
-    var gl = Scene.IoC.Resolve<GL>();
+    var gl = IGame.IoC.Resolve<GL>();
     Handle = gl.GenTexture();
     gl.BindTexture(TextureTarget.Texture2D, Handle);
 

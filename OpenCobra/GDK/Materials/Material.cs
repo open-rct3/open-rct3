@@ -6,6 +6,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved
 
 using DryIoc;
+using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Shaders;
 using Silk.NET.OpenGL;
 using System.ComponentModel;
@@ -51,7 +52,7 @@ public abstract class Material : IResource, IDisposable {
     if (disposed) return;
     GC.SuppressFinalize(this);
 
-    var gl = Scene.IoC.Resolve<GL>();
+    var gl = IGame.IoC.Resolve<GL>();
     // FIXME: Dispose of shader sources
     Texture?[] textures = [AlbedoTexture, NormalMap, SpecularMap, EmissiveMap];
     foreach (var texture in textures.Where(t => t != null)) {

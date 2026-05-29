@@ -9,6 +9,7 @@ using DryIoc;
 using Hexa.NET.ImGui;
 using Hexa.NET.ImGui.Backends.OpenGL3;
 using NLog;
+using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Threading;
 using Silk.NET.Input;
 using System.Numerics;
@@ -20,9 +21,9 @@ namespace OpenCobra.GDK.GUI;
 /// </summary>
 public class Controller : ThreadAffine, IDisposable {
   private readonly Logger logger = LogManager.GetCurrentClassLogger();
-  private readonly IResolverContext scope = Scene.IoC.OpenScope(typeof(Controller).FullName, trackInParent: true);
-  private readonly Platform.IWindow window = Scene.IoC.Resolve<Platform.IWindow>();
+  private readonly Platform.IWindow window = IGame.IoC.Resolve<Platform.IWindow>();
   private ImGuiContextPtr? context;
+  private bool disposed;
 
   public static bool CaptureMouse => ImGui.GetIO().WantCaptureMouse;
   public static bool CaptureKeyboard => ImGui.GetIO().WantCaptureKeyboard;
@@ -74,7 +75,7 @@ public class Controller : ThreadAffine, IDisposable {
   });
 
   public void Update(double deltaSeconds) => Invoke(() => {
-    Debug.Assert(!scope.IsDisposed);
+    Debug.Assert(!disposed);
     Debug.Assert(context is not null);
 
     var io = ImGui.GetIO();
@@ -86,7 +87,7 @@ public class Controller : ThreadAffine, IDisposable {
   });
 
   public void StartFrame() => Invoke(() => {
-    Debug.Assert(!scope.IsDisposed);
+    Debug.Assert(!disposed);
     Debug.Assert(context is not null);
 
     ImGuiImplOpenGL3.NewFrame();
@@ -94,7 +95,7 @@ public class Controller : ThreadAffine, IDisposable {
   });
 
   public void Render() => Invoke(() => {
-    Debug.Assert(!scope.IsDisposed);
+    Debug.Assert(!disposed);
     Debug.Assert(context is not null);
 
     ImGui.Render();
@@ -102,7 +103,7 @@ public class Controller : ThreadAffine, IDisposable {
   });
 
   public void Dispose() => Invoke(() => {
-    if (scope.IsDisposed) return;
+    if (disposed) return;
     Debug.Assert(context is not null);
     GC.SuppressFinalize(this);
 
@@ -110,7 +111,6 @@ public class Controller : ThreadAffine, IDisposable {
     ImGuiImplOpenGL3.SetCurrentContext(null);
     ImGui.DestroyContext(context.Value);
     context = null;
-
-    scope.Dispose();
+    disposed = true;
   });
 }

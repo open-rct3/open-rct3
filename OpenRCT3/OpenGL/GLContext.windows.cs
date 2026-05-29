@@ -145,7 +145,7 @@ public partial class GLContext : IGLContext, INativeContext, IDisposable {
   }
 
   public void Clear() {
-    var gl = Scene.IoC.Resolve<GL>();
+    var gl = Game.IoC.Resolve<GL>();
     gl?.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
   }
 

@@ -43,8 +43,8 @@ internal partial class GameWindow : Form, IWindow {
 
     SystemMenu.AddItems(this);
 
-    Scene.IoC.RegisterInstance<IWindow>(this);
-    Scene.IoC.Register<IInputContext>(
+    Game.IoC.RegisterInstance<IWindow>(this);
+    Game.IoC.Register<IInputContext>(
       Reuse.Scoped,
       Made.Of(r => ServiceInfo.Of<IWindow>(), window => window.CreateInput(Arg.Of<IWindow>())),
       // The input abstraction is kinda heavy, so let services dispose it

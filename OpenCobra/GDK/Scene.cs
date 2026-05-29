@@ -6,15 +6,14 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using DryIoc;
+using OpenCobra.GDK.Game;
 using OpenCobra.GDK.GUI;
 
 namespace OpenCobra.GDK;
 
 public class Scene : IResource, IDisposable {
-  public readonly static Container IoC = new();
-
-  private readonly Platform.IGraphicsSurface surface = IoC.Resolve<Platform.IGraphicsSurface>();
-  private readonly Controller gui = IoC.Resolve<Controller>();
+  private readonly Platform.IGraphicsSurface surface = IGame.IoC.Resolve<Platform.IGraphicsSurface>();
+  private readonly Controller gui = IGame.IoC.Resolve<Controller>();
 
   public State State { get; private set; } = State.Uninitialized;
 
@@ -31,7 +30,7 @@ public class Scene : IResource, IDisposable {
   /// Updates the camera view and projection matrices.
   /// </summary>
   /// <param name="delta">The time since the last update.</param>
-  /// 
+  ///
   public void Update(TimeSpan delta) {
     Camera.Update(surface.AspectRatio);
     gui.Update(delta.TotalSeconds);

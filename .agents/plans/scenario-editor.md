@@ -104,7 +104,7 @@ public readonly struct GLState {
 }
 ```
 
-- `Push()` retrieves `GL` via `var gl = Scene.IoC.Resolve<IGL>().Context;`
+- `Push()` retrieves `GL` via `var gl = IGame.IoC.Resolve<IGL>().Context;`
 - Pushes returned `GLState` to a static `ConcurrentStack<GLState>`
 - `Pop()` pops from that stack and restores via `GL.CheckError` on every call
 - Use `using var guard = GLState.Push();` so the state is restored automatically at the end of the scope (RAII pattern)
