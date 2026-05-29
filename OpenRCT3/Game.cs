@@ -5,6 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using DryIoc;
 using NLog;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Game;
@@ -42,6 +43,7 @@ public class Game : IGame {
   private readonly ManualResetEvent resumeSignal = new(true);
   private readonly Stopwatch stopwatch = new();
   private DateTime lastLagWarning = DateTime.Now;
+  private Renderer renderer = Scene.IoC.Resolve<IRenderer>() as Renderer ?? throw new InvalidOperationException();
 
   public static Game? Instance { get; private set; }
   public static bool IsRunning => Instance?.isRunning ?? false;
@@ -96,14 +98,11 @@ public class Game : IGame {
   /// </summary>
   public bool VSync { get; set; } = false;
 
-  public IRenderer Renderer { get; }
   public Simulation.World World { get; } = new();
   public Scene Scene { get; } = new();
 
-  /// <param name="renderer">The game renderer.</param>
-  public Game(IRenderer renderer) {
+  public Game() {
     Instance = this;
-    Renderer = renderer;
 
     logger.Trace("Creating game world...");
     logger.Warn("Simulation features are unimplemented!");
@@ -184,7 +183,8 @@ public class Game : IGame {
 
       // Rendering can happen at arbitrary points between updates, and frames can
       // be dropped if the machine is slow.
-      Renderer.Render(Scene);
+      Scene.Update(delta: elapsed);
+      renderer.Render(Scene);
 
       // Reduce CPU usage by sleeping when ahead of schedule
       var remaining = TargetFrameTime - lag;
@@ -232,9 +232,8 @@ public class Game : IGame {
   /// <param name="delta">The time between ticks.</param>
   /// <param name="interpolation">The interpolation fraction.</param>
   private void Tick(TimeSpan delta, double interpolation) {
-    Scene.Update(delta, Renderer.Surface.AspectRatio);
     // TODO: Advance the simulation logic by a fixed time step
-    // TODO: foreach (var system in orderedSystems) system.Update(delta);
+    // TODO: Scheduler.Execute(delta);
   }
 
   [Conditional("DEBUG")]

@@ -23,7 +23,8 @@ namespace OpenRCT3.Platforms.Windows {
       glSurface.Name = "glSurface";
       glSurface.Size = new System.Drawing.Size(624, 381);
       glSurface.TabIndex = 0;
-      glSurface.SurfaceCreated += GlSurface_RendererCreated;
+      glSurface.Resize += GlSurface_Resize;
+      glSurface.SurfaceCreated += GlSurface_SurfaceCreated;
       //
       // GameWindow
       //
@@ -39,7 +40,6 @@ namespace OpenRCT3.Platforms.Windows {
       GotFocus += GameWindow_GotFocus;
       LostFocus += GameWindow_LostFocus;
       FormClosing += GameWindow_FormClosing;
-      Resize += GameWindow_Resize;
       ResumeLayout(false);
     }
 

@@ -1,4 +1,4 @@
-// OpenGL Interfaces
+// OpenGL API Extensions
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
@@ -7,17 +7,11 @@
 
 // ReSharper disable InconsistentNaming
 using NLog;
-using Silk.NET.Core.Contexts;
 using Silk.NET.OpenGL;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Contexts = Silk.NET.Core.Contexts;
 
 namespace OpenRCT3.OpenGL;
-
-public interface IGLContext : Contexts.IGLContext, INativeContext, IDisposable {
-  nint GetProcAddress(string procName);
-}
 
 public static class GLExtensions {
   [Conditional("DEBUG")]

@@ -36,6 +36,17 @@ internal partial class GameWindow : Form, IWindow {
   public GameWindow() {
     logger.Trace("Initializing game window...");
     InitializeComponent();
+
+    Scene.IoC.RegisterInstance<IWindow>(this);
+    Scene.IoC.Register<IInputContext>(
+      Reuse.Scoped,
+      Made.Of(r => ServiceInfo.Of<IWindow>(), window => window.CreateInput(Arg.Of<IWindow>())),
+      // The input abstraction is kinda heavy, so let services dispose it
+      Setup.With(trackDisposableTransient: true, allowDisposableTransient: true)
+    );
+    InputWindowExtensions.Add(this);
+
+    // Required: The OpenGL surface is not created otherwise
     if (!Visible) Show();
     Initialize();
     logger.Trace("Game window created");
@@ -205,19 +216,13 @@ internal partial class GameWindow : Form, IWindow {
   }
   #endregion
 
-  // FIXME: This method ought be extracted into a platform-idependent base-class.
+  // FIXME: This method ought be extracted into a platform-independent base-class.
   public void Start() {
     stopwatch.Start();
     Debug.Assert(renderer != null, "Renderer should be created before starting the game.");
     if (Game.Instance == null) {
       logger.Trace("Starting game...");
-      Scene.IoC.Register<IInputContext>(
-        Reuse.Scoped,
-        Made.Of(r => ServiceInfo.Of<IWindow>(), window => window.CreateInput(Arg.Of<IWindow>())),
-        // The input abstraction is kida heavy, so let services dispose it
-        Setup.With(trackDisposableTransient: true, allowDisposableTransient: true)
-      );
-      var game = new Game(renderer);
+      var game = new Game();
       Task.Run(game.Run);
     } else {
       logger.Trace("Resuming game...");
@@ -289,9 +294,6 @@ internal partial class GameWindow : Form, IWindow {
     FocusChanged?.Invoke(false);
   }
 
-  private void GameWindow_Resize(object sender, EventArgs e) =>
-    FramebufferResize?.Invoke(FramebufferSize);
-
   private void GameWindow_FormClosing(object sender, FormClosingEventArgs e) {
     var wasGameStopped = Game.Instance?.Quit() ?? false;
     // Cancel the closure if the game is still running
@@ -299,8 +301,10 @@ internal partial class GameWindow : Form, IWindow {
     isClosing = e.Cancel == false;
   }
 
-  private void GlSurface_RendererCreated(IGraphicsSurface _, IRenderer renderer) {
+  private void GlSurface_SurfaceCreated(IGraphicsSurface surface, IRenderer renderer) {
     this.renderer = renderer;
     rendererCreated.Set();
   }
+
+  private void GlSurface_Resize(object sender, EventArgs e) => FramebufferResize?.Invoke(FramebufferSize);
 }

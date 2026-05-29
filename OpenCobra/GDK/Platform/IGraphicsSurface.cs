@@ -6,6 +6,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using OpenCobra.GDK.Numerics;
+using Silk.NET.OpenGL;
 using System.ComponentModel;
 
 namespace OpenCobra.GDK.Platform;
@@ -17,15 +18,12 @@ public interface IGraphicsSurface {
   /// <summary>
   /// Raised when this window has finished creating its GPU surface.
   /// </summary>
-  public event SurfaceCreated? SurfaceCreated;
+  event SurfaceCreated? SurfaceCreated;
 
   /// <summary>
-  /// Raised whenever the backing GPU surface changes, e.g. when the framebuffer is resized.
+  /// Raised whenever the backing GPU surface changes, e.g. when the frame-buffer is resized.
   /// </summary>
-  public event SurfaceChanged? SurfaceChanged;
-
-  [Browsable(false)]
-  IRenderer Renderer { get; }
+  event SurfaceChanged? SurfaceChanged;
 
   [Category("GPU")]
   ISurfaceSettings Settings { get; }
@@ -33,17 +31,12 @@ public interface IGraphicsSurface {
   /// <summary>
   /// Whether this graphics surface is valid.
   /// </summary>
-  /// <remarks>
-  /// Generally, this is <c>true</c> when the surface has finished initializing its underlying GPU resources.
-  /// </remarks>
+  /// <value>
+  /// <c>true</c> when the surface has finished initializing its underlying GPU
+  /// resources, <c>false</c> otherwise
+  /// </value>
   [Category("GPU")]
-  public bool IsValid { get; }
-
-  /// <summary>
-  /// A safe handle to the underlying native GPU surface.
-  /// </summary>
-  [Browsable(false)]
-  public Handle<IGraphicsSurface> Surface { get; }
+  bool IsValid { get; }
 
   [Category("GPU")]
   Size FrameBufferSize { get; }

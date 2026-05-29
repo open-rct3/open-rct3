@@ -9,46 +9,34 @@ using CommunityToolkit.HighPerformance;
 using DryIoc;
 using NLog;
 using OpenCobra.GDK;
+using OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Materials;
 using OpenCobra.GDK.Platform;
-using OpenCobra.GDK.Services;
 using OpenCobra.GDK.Shaders;
-using OpenRCT3.Platforms;
 using OpenRCT3.Threading;
+using Silk.NET.Core.Contexts;
 using Silk.NET.OpenGL;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using GUI = OpenCobra.GDK.GUI;
 using Materials = OpenCobra.GDK.Materials;
-using Services = OpenCobra.GDK.Services;
 
 namespace OpenRCT3.OpenGL;
 
 public class Renderer : ThreadAffine, IRenderer {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
-  private readonly GL gl;
+  private readonly IGLContext context = Scene.IoC.Resolve<IGLContext>();
+  private readonly GL gl = Scene.IoC.Resolve<GL>();
   private readonly ConcurrentDictionary<Material, ShaderProgram> shaders = new();
+  private readonly Controller gui = Scene.IoC.Resolve<Controller>();
 
   public State State { get; private set; } = State.Uninitialized;
-  public IGraphicsSurface Surface { get; init; }
   public Color ClearColor { get; set; } = Color.FromArgb(45, 45, 48);
   public int MsaaSamples { get; } = 0;
 
-  public event EventHandler? ContextRequested;
-  public event EventHandler? Rendered;
-
-  public Renderer(IGraphicsSurface surface, GL gl) {
-    Surface = surface;
-    this.gl = gl;
-    Scene.IoC.Register<IContextSource>(
-      Reuse.Singleton,
-      Made.Of(() => new Services.GLContext(gl)),
-      ifAlreadyRegistered: IfAlreadyRegistered.Replace
-    );
-  }
-
-  public void Initialize(IGraphicsSurface surface) => Invoke(() => {
+  public void Initialize() => Invoke(() => {
     gl.HookupDebugCallback();
 
     var clearColor = ClearColor.ToGl();
@@ -63,13 +51,13 @@ public class Renderer : ThreadAffine, IRenderer {
     GC.SuppressFinalize(this);
 
     foreach (var program in shaders.Values) gl.DeleteProgram(program.Shader.Handle);
-    Scene.IoC.Unregister<IContextSource>();
     State = State.Disposed;
   });
 
   public void Render(Scene scene) => Invoke(() => {
     if (!Game.IsRunning) return;
-    ContextRequested?.Invoke(this, EventArgs.Empty);
+    context.MakeCurrent();
+    Debug.Assert(context.IsCurrent);
 
     // Cannot render scene without a camera
     var viewProj = scene.Camera.Value;
@@ -121,19 +109,22 @@ public class Renderer : ThreadAffine, IRenderer {
     gl.BindVertexArray(0);
     gl.UseProgram(0);
 
-    // Render the GUI
-    using var imguiState = GLState.Push();
-    foreach (var window in scene.Windows)
-      window.Render();
-    scene.GuiController.Render();
+    RenderGui(scene.Windows);
 
     // FIXME: Apply VSync settings
     // if (Game.Instance!.VSync) gl.SwapInterval(1);
     // else gl.SwapInterval(0);
-    Rendered?.Invoke(this, EventArgs.Empty);
+    context.SwapBuffers();
   });
 
   public void SetViewport(int width, int height) => Invoke(() => gl.Viewport(0, 0, (uint)width, (uint)height));
+
+  private void RenderGui(List<GUI.IWindow> windows) {
+    using var _ = GLState.Push();
+    gui.StartFrame();
+    foreach (var window in windows) window.Render();
+    gui.Render();
+  }
 
   private IEnumerable<DrawNode> BuildDisplayList(Scene scene) {
     foreach (var model in scene.Models) {

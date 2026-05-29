@@ -7,7 +7,7 @@
 
 using System.Collections.Concurrent;
 using DryIoc;
-using OpenCobra.GDK.Services;
+using OpenCobra.GDK.Platform;
 using Silk.NET.OpenGL;
 
 namespace OpenCobra.GDK;
@@ -118,7 +118,7 @@ public readonly struct GLState : IDisposable {
   /// disposed.
   /// </returns>
   public static GLState Push() {
-    var gl = Scene.IoC.Resolve<IContextSource>().Context;
+    var gl = Scene.IoC.Resolve<GL>();
     var state = new GLState(gl);
     stack.Push(state);
     return state;
@@ -136,7 +136,7 @@ public readonly struct GLState : IDisposable {
   /// Restores every captured GL field to its pre-Push value.
   /// </summary>
   private void Restore() {
-    var gl = Scene.IoC.Resolve<IContextSource>().Context;
+    var gl = Scene.IoC.Resolve<GL>();
 
     SetEnabled(gl, EnableCap.Blend, blendEnabled);
     gl.CheckError("GLState restore Blend");

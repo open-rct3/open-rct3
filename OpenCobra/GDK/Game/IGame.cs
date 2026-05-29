@@ -60,8 +60,6 @@ public interface IGame : IDisposable {
   /// </summary>
   TimeSpan TargetUpdateRate { get; }
 
-  IRenderer Renderer { get; }
-
   Scene Scene { get; }
 
   void Run();

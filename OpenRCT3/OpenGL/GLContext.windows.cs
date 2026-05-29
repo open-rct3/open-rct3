@@ -7,7 +7,7 @@
 
 using DryIoc;
 using OpenCobra.GDK;
-using OpenCobra.GDK.Services;
+using OpenCobra.GDK.Platform;
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.Windows;
 using Silk.NET.Core.Contexts;
@@ -20,7 +20,7 @@ using static OpenRCT3.Platforms.Windows.Win32;
 
 namespace OpenRCT3.OpenGL;
 
-public partial class GLContext : IGLContext {
+public partial class GLContext : IGLContext, INativeContext, IDisposable {
   public const string CreateContextError =
     "Could not create an OpenGL context. Please upgrade your graphics drivers.";
 
@@ -76,7 +76,7 @@ public partial class GLContext : IGLContext {
 
       // Create a customized OpenGL context
       if (wgl.TryGetExtension<ArbCreateContext>(out var ext) == false)
-        throw new PlatformNotSupportedException("OpenGL wglCreateContextAttribsARB extension is unavilable.");
+        throw new PlatformNotSupportedException("OpenGL wglCreateContextAttribsARB extension is unavailable.");
       var arbCreateContext = ext ?? throw new Exception(CreateContextError);
       context = arbCreateContext.CreateContextAttrib(hdc, nint.Zero, [
         (int)ContextAttribute.MajorVersion, Settings.Version.Major,
@@ -145,7 +145,7 @@ public partial class GLContext : IGLContext {
   }
 
   public void Clear() {
-    var gl = Scene.IoC.Resolve<IContextSource>().Context;
+    var gl = Scene.IoC.Resolve<GL>();
     gl?.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
   }
 

@@ -7,17 +7,20 @@
 
 using DryIoc;
 using OpenCobra.GDK.GUI;
+using Platform = OpenCobra.GDK.Platform;
 
 namespace OpenCobra.GDK;
 
 public class Scene : IResource, IDisposable {
   public readonly static Container IoC = new();
 
+  private readonly Platform.IGraphicsSurface surface = IoC.Resolve<Platform.IGraphicsSurface>();
+  private readonly Controller gui = IoC.Resolve<Controller>();
+
   public State State { get; private set; } = State.Uninitialized;
 
   public readonly Camera Camera = new();
   public List<Model> Models { get; } = [];
-  public readonly Controller GuiController = new();
   public List<IWindow> Windows { get; } = [];
 
   public IEnumerable<Model> UninitializedModels =>
@@ -29,10 +32,10 @@ public class Scene : IResource, IDisposable {
   /// Updates the camera view and projection matrices.
   /// </summary>
   /// <param name="delta">The time since the last update.</param>
-  /// <param name="aspectRatio">The aspect ratio of the viewport.</param>
-  public void Update(TimeSpan delta, float aspectRatio) {
-    GuiController?.Update((float)delta.TotalSeconds);
-    Camera.Update(aspectRatio);
+  /// 
+  public void Update(TimeSpan delta) {
+    Camera.Update(surface.AspectRatio);
+    gui.Update(delta.TotalSeconds);
   }
 
   public void Dispose() {

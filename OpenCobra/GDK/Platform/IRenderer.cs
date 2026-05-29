@@ -12,10 +12,8 @@ namespace OpenCobra.GDK.Platform;
 public interface IRenderer : IResource, IDisposable {
   [Category("GPU")]
   int MsaaSamples { get; }
-  [Browsable(false)]
-  IGraphicsSurface Surface { get; }
 
-  void Initialize(IGraphicsSurface surface);
+  void Initialize();
   void Render(Scene scene);
   void SetViewport(int width, int height);
 }

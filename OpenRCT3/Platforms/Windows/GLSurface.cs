@@ -5,23 +5,26 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using DryIoc;
 using NLog;
+using OpenCobra.GDK;
+using OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Numerics;
 using OpenCobra.GDK.Platform;
 using OpenRCT3.OpenGL;
 using Silk.NET.Core.Contexts;
+using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using System.ComponentModel;
 using System.Windows.Forms;
-using Drawing = System.Drawing;
 using static OpenRCT3.Platforms.Windows.Win32;
+using Drawing = System.Drawing;
 
 namespace OpenRCT3.Platforms.Windows;
 
 public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
   private readonly SurfaceSettings settings;
-  private Handle<IGraphicsSurface>? surface;
   private GL? gl;
   private Renderer? renderer;
 
@@ -47,10 +50,6 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
   [Browsable(false)]
   public readonly GLContext Context;
 
-  [Browsable(false)]
-  public IRenderer Renderer => renderer
-    ?? throw new InvalidOperationException("Renderer has not been initialized.");
-
   public SurfaceSettings Settings => settings;
   ISurfaceSettings IGraphicsSurface.Settings => settings;
 
@@ -58,15 +57,7 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
   public bool IsValid => IsHandleCreated && Context.IsValid && gl != null;
 
   [Browsable(false)]
-  public Handle<IGraphicsSurface> Surface => surface ??
-    throw new InvalidOperationException("Current surface is invalid!");
-
-  [Browsable(false)]
-  public Silk.NET.Core.Contexts.IGLContext? GLContext => Context;
-
-  [Browsable(false)]
-  public GL GL => gl ??
-    throw new InvalidOperationException("Current OpenGL context is invalid!");
+  public IGLContext? GLContext => Context;
 
   // FIXME: This doesn't take the pixel density into account
   public Size FrameBufferSize => new((uint)ClientSize.Width, (uint)ClientSize.Height);
@@ -84,16 +75,6 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
     }
   }
 
-  public void MakeCurrent() {
-    if (DesignMode || !IsValid) return;
-    Context.MakeCurrent();
-  }
-
-  public void SwapBuffers() {
-    if (DesignMode || !IsValid) return;
-    Context.SwapBuffers();
-  }
-
   protected override void OnHandleCreated(EventArgs e) {
     if (DesignMode) return;
 
@@ -107,28 +88,27 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
     Context.Hdc = GetDC(Handle);
 
     // Load Silk.NET OpenGL with the current context
-    gl = GL.GetApi(Context!.GetProcAddress) ??
-      throw new Exception(OpenGL.GLContext.CreateContextError);
+    gl = GL.GetApi(Context.GetProcAddress);
+    Debug.Assert(gl is not null);
     logger.Info("Created OpenGL context: {ctxSettings}", settings);
-    surface = new(Handle, ownsHandle: false);
+    Context.MakeCurrent();
 
-    // Create the scene renderer
-    renderer = new Renderer(this, gl);
-    renderer.ContextRequested += (_, _) => {
-      if (!IsValid) return;
-      Invoke(() => MakeCurrent());
-    };
-    renderer.Rendered += (_, _) => {
-      if (!IsValid) return;
-      Invoke(() => SwapBuffers());
-    };
+    // TODO: Refactor to extract the rest of this method into the GDK
+    Scene.IoC.RegisterInstance<IGraphicsSurface>(this);
+    Scene.IoC.RegisterInstance(gl);
+    Scene.IoC.RegisterInstance<IGLContext>(Context);
+
+    // Initialize the GUI controller first, renderer implementations depend on it
+    var mainWindow = Parent as GameWindow ?? throw new InvalidOperationException();
+    Scene.IoC.RegisterInstance(new Controller(mainWindow.CreateInput()), IfAlreadyRegistered.Throw);
 
     // Initialize the scene renderer
-    MakeCurrent();
-    renderer.Initialize(this);
+    renderer = new Renderer();
+    renderer.Initialize();
     renderer.SetViewport(ClientSize.Width, ClientSize.Height);
+    Scene.IoC.RegisterInstance<IRenderer>(renderer);
+    
     SurfaceCreated?.Invoke(this, renderer);
-
     base.OnHandleCreated(e);
     Invalidate();
   }
@@ -158,13 +138,12 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
   protected override void OnResize(EventArgs e) {
     if (DesignMode || !IsValid) return;
 
-    MakeCurrent();
+    Context.MakeCurrent();
     renderer?.SetViewport(ClientSize.Width, ClientSize.Height);
     SurfaceChanged?.Invoke(this);
-    Game.Instance?.Scene.Update(TimeSpan.Zero, AspectRatio);
-    Invalidate();
 
     base.OnResize(e);
+    Invalidate();
   }
 
   protected override void OnPaint(PaintEventArgs e) {
@@ -183,12 +162,12 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
     if (!IsValid) return;
     if (Game.Instance != null && renderer != null) {
       var scene = Game.Instance.Scene;
-      scene.Update(TimeSpan.Zero, AspectRatio);
+      scene.Update(TimeSpan.Zero);
       renderer.Render(scene);
     } else {
-      MakeCurrent();
+      Context.MakeCurrent();
       Context.Clear();
-      SwapBuffers();
+      Context.SwapBuffers();
     }
   }
 }
