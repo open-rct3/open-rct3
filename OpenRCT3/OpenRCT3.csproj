@@ -94,9 +94,10 @@
       <PropertyGroup>
         <ProfileName>Windows</ProfileName>
         <OutputType>WinExe</OutputType>
-        <TargetFramework>net8.0-windows</TargetFramework>
+        <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
         <UseWindowsForms>true</UseWindowsForms>
-        <TargetPlatformVersion>8.0</TargetPlatformVersion>
+        <UseWindowsDesktopSdk>true</UseWindowsDesktopSdk>
+        <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
       </PropertyGroup>
       <ItemGroup>
         <PackageReference Include="Silk.NET.WGL" Version="2.23.0" />

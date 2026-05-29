@@ -1,3 +1,10 @@
+// Win32 Wrappers
+//
+// Authors:
+//   - Chance Snow <git@chancesnow.me>
+//
+// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+
 using System.Runtime.InteropServices;
 
 namespace OpenRCT3.Platforms.Windows;
@@ -110,4 +117,22 @@ internal static partial class Win32 {
 
   [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
   private static partial IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+  [LibraryImport("user32.dll")]
+  public static partial IntPtr GetSystemMenu(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool bRevert);
+
+  [LibraryImport("user32.dll", EntryPoint = "InsertMenuW", StringMarshalling = StringMarshalling.Utf16)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool InsertMenu(IntPtr hMenu, uint uPosition, uint uFlags, uint uIDNewItem, string lpNewItem);
+
+  [LibraryImport("user32.dll", EntryPoint = "InsertMenuW")]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool InsertMenu(IntPtr hMenu, uint uPosition, uint uFlags, uint uIDNewItem, nint lpNewItem);
+
+  [LibraryImport("user32.dll", EntryPoint = "AppendMenuW", StringMarshalling = StringMarshalling.Utf16)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool AppendMenu(IntPtr hMenu, uint uFlags, uint uIDNewItem, string? lpNewItem);
+
+  [LibraryImport("user32.dll")]
+  public static partial int GetMenuItemCount(IntPtr hMenu);
 }

@@ -19,6 +19,8 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Windows.Storage;
+using Windows.System;
 using Windowing = Silk.NET.Windowing;
 
 namespace OpenRCT3.Platforms.Windows;
@@ -30,12 +32,16 @@ internal partial class GameWindow : Form, IWindow {
   private readonly ManualResetEvent rendererCreated = new(false);
   private readonly Stopwatch stopwatch = new();
   private IRenderer? renderer;
+  private CancellationTokenSource closing = new();
   private bool isClosing = false;
+
   private event Action<double>? UpdateView;
 
   public GameWindow() {
     logger.Trace("Initializing game window...");
     InitializeComponent();
+
+    SystemMenu.AddItems(this);
 
     Scene.IoC.RegisterInstance<IWindow>(this);
     Scene.IoC.Register<IInputContext>(
@@ -281,6 +287,28 @@ internal partial class GameWindow : Form, IWindow {
   public IInputContext CreateInput(Windowing.IView view) => new InputAdapter(this);
   #endregion
 
+  protected override void WndProc(ref Message m) {
+    var hasCommand = SystemMenu.TryGetCommand(ref m, out var command);
+    if (!hasCommand) {
+      base.WndProc(ref m);
+      return;
+    }
+
+    // Handle custom system menu command
+    switch (command) {
+      case Command.OpenLog:
+        var log = AppConfig.LogPath;
+        if (Path.Exists(log)) Task.Run(async () => {
+          var file = await StorageFile.GetFileFromPathAsync(log);
+          await Launcher.LaunchFileAsync(file);
+        }).Wait(cancellationToken: closing.Token);
+        break;
+      default:
+        base.WndProc(ref m);
+        break;
+    }
+  }
+
   private void GameWindow_GotFocus(object sender, EventArgs e) {
     var game = Game.Instance;
     if (game?.IsPaused ?? false) game.Resume();
@@ -299,6 +327,7 @@ internal partial class GameWindow : Form, IWindow {
     // Cancel the closure if the game is still running
     e.Cancel = wasGameStopped == false || Game.IsRunning;
     isClosing = e.Cancel == false;
+    if (isClosing) closing.Cancel();
   }
 
   private void GlSurface_SurfaceCreated(IGraphicsSurface surface, IRenderer renderer) {
