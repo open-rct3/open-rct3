@@ -28,6 +28,7 @@ internal static class Program {
       ? $"{e.Message}\n\n{e.InnerException.Message}"
       : e.Message;
     logger.Fatal(e, "An unhandled exception occurred.");
+    Debug.Assert(false);
 
     // TODO: Refactor to custom modal with "Restart" label in place of "Retry".
     var result = MessageBox.Show(

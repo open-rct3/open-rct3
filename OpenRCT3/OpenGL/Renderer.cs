@@ -121,9 +121,14 @@ public class Renderer : ThreadAffine, IRenderer {
 
   private void RenderGui(List<GUI.IWindow> windows) {
     using var _ = GLState.Push();
+    gl.CheckError("Before GUI render");
+
     gui.StartFrame();
+    gl.CheckError("Begin ImGui frame");
     foreach (var window in windows) window.Render();
+    gl.CheckError("Rendered GUI windows");
     gui.Render();
+    gl.CheckError("Rendered ImGui");
   }
 
   private IEnumerable<DrawNode> BuildDisplayList(Scene scene) {
