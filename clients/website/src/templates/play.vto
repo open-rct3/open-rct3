@@ -2,17 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <base href="{{ baseUrl }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{- title ? title + " " + siteTitle : siteTitle }}</title>
   <!-- CSS -->
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/solid.css" integrity="sha384-Tv5i09RULyHKMwX0E8wJUqSOaXlyu3SQxORObAI08iUwIalMmN5L6AvlPX2LMoSE" crossorigin="anonymous">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/fontawesome.css" integrity="sha384-jLKHWM3JRmfMU0A5x5AkjWkw/EYfGUAGagvnfryNV3F9VqM98XiIH7VBGVoxVSc7" crossorigin="anonymous">
   <link rel="stylesheet" href="https://unpkg.com/devicons@2.0.1/dist/devicons.css" crossorigin="anonymous" />
-  <link rel="stylesheet" href="css/site.css">
-  <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="{{ baseUrl }}css/site.css">
+  <link rel="stylesheet" href="{{ baseUrl }}css/game.css">
   <!-- Icons & Theme -->
-  <link rel="icon" href="favicon.png">
+  <link rel="icon" href="{{ baseUrl }}favicon.png">
 </head>
 <body>
   <header class="nav">
@@ -22,7 +21,7 @@
     <nav>
       <a href="{{ baseUrl }}" target="_blank">Website</a>
       <a href="{{ wikiUrl }}" target="_blank">Wiki</a>
-      <a href="https://github.com/open-rct3/open-rct3/discussions" target="_blank">Forum</a>
+      <a href="{{ forumUrl }}" target="_blank">Forum</a>
       <a href="#help">
         <i class="icon fas fa-question" title="Get Help"></i>
       </a>
