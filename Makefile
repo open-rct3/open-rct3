@@ -44,7 +44,7 @@ gui: ovl
 # Website
 
 WEBSITE_DIR := clients/website
-WEBSITE_SRC := $(wildcard clients/website/src/*.md) $(wildcard clients/website/src/*.vto) $(wildcard clients/website/src/css/*.scss) $(wildcard clients/website/src/templates/*.vto) $(wildcard clients/website/src/templates/partials/*.vto)
+WEBSITE_SRC := $(wildcard clients/website/*.ts) $(wildcard clients/website/src/*.*) $(wildcard clients/website/src/css/*.scss) $(wildcard clients/website/src/templates/*.vto) $(wildcard clients/website/src/templates/partials/*.vto)
 
 .PHONY: website
 website: $(WEBSITE_DIR)/_site

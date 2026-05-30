@@ -8,8 +8,11 @@ const site = lume({
   src: "./src",
   includes: "templates"
 });
-// TODO: https://deno.land/x/lume@v2.2.4/plugins/sass.ts
+
+// Static data
 site.data("siteTitle", "OpenRCT3");
+site.data("copyright", `2024-${new Date().getFullYear()}`);
+
 site.copy("public", ".");
 
 // Plugins
