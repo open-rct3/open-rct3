@@ -2,8 +2,12 @@
 @import "./mixins";
 @import "./reset";
 @import "./variables";
+@import "./components";
 
 :root {
+  // Colors
+  --skyblue: oklch(81.5% 0.082 225.5);
+  --skyblue-contrast: oklch(37.5% 0.082 45.5);
   // Gradients & Shadows
   --gray-gradient: rgba(lightgray, 50%), #fff;
   --box-shadow-lowest: 0 2px 4px rgba($shadowGray, 33%);
@@ -25,10 +29,8 @@ body {
   /* See https://css-tricks.com/snippets/css/system-font-stack/ */
   font-family: system-ui, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   color: var(--black);
-  display: flex;
-  flex-direction: column;
   height: auto;
-  min-height: 100%;
+  min-height: 100vh;
   overscroll-behavior-x: none;
 
   @media (max-width: 720px) {
@@ -38,10 +40,11 @@ body {
 
 a {
   color: var(--link);
-  text-decoration: none;
 
-  &:hover:not(.btn) {
-    text-decoration: underline;
+  &:focus {
+    outline: 2px var(--link-outline) solid;
+    border-radius: 2px;
+    outline-offset: 1px;
   }
 }
 
@@ -76,7 +79,7 @@ header.nav {
   display: flex;
   align-items: center;
   position: sticky;
-  top: -1px;
+  top: 0;
   padding-block-start: 8px;
   padding-inline: 8px;
   box-shadow: var(--box-shadow-lowest);
@@ -89,9 +92,15 @@ header.nav {
   }
 
   .logo {
-    &, &:hover, &:active {
+    display: flex;
+    align-items: center;
+    align-self: end;
+    margin-inline-end: 24px;
+    border-bottom: none;
+
+    &, &:hover, &:focus {
       color: inherit;
-      text-decoration: none;
+      @include underline-link();
     }
 
     img {
@@ -106,6 +115,13 @@ header.nav {
     }
   }
 
+  a.sr-only.shown-on-focus {
+    top: $headerHeight + 4px;
+    left: -4px;
+    background: white;
+    z-index: 20;
+  }
+
   a {
     color: inherit;
 
@@ -115,23 +131,9 @@ header.nav {
       text-decoration: none;
     }
   }
-  a:not(:has(.icon:first-child:last-child)) {
+  a:not(.logo):not(.sr-only):not(:has(.icon:first-child:last-child)) {
     font-weight: 500;
-    border-bottom: solid 2px transparent;
-    outline: none;
-    transition: border-bottom-color 200ms ease;
-
-    &:focus {
-      border-bottom-color: var(--accent);
-      border-radius: 4px;
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
-      @include backdrop-blur();
-
-      &:hover {
-        text-decoration: none;
-      }
-    }
+    @include underline-link();
   }
   a:has(.icon) {
     align-self: center;
@@ -156,163 +158,120 @@ header.nav {
   }
 }
 
-.alert {
-  position: sticky;
-  top: $headerHeight + 8px;
-  display: flex;
-  align-items: baseline;
-  margin-inline: 8px;
-  margin-block: 8px 0;
-  padding: 8px;
-  height: min-content;
-  border-color: currentcolor;
-  transform: translateY(0);
-  transform-origin: top center;
-  opacity: 1;
-  transition: margin-block 350ms ease-out, padding-block 350ms ease-out, height 350ms ease-out, transform 250ms ease-out, opacity 200ms ease-out;
-  transition-delay: 0ms, 0ms, 50ms, 0ms, 0ms;
-  overflow: hidden;
-  @include on-top();
-
-  &.dismissed {
-    margin-block: 0;
-    padding-block: 0;
-    height: 0;
-    transform: translateY(-100%);
-    opacity: 0;
-    transition-timing-function: ease-out, ease-in, ease-out;
-    transition-delay: 0ms, 0ms, 0ms, 0ms, 0ms;
-    overflow-y: hidden;
-  }
-
-  &.alert-warning {
-    background-color: lightgoldenrodyellow;
-  }
-  &.alert-info {
-    color: #043944;
-    background-color: skyblue;
-  }
-  &.alert-danger {
-    color: #290a0d;
-    background-color: indianred;
-  }
-
-  h1.title, p {
-    font-size: 0.875em;
-  }
-  h1.title {
-    font-weight: bold;
-    margin-block: 0;
-    margin-inline: 8px;
-  }
-  p {
-    flex: 1;
-    margin: 0;
-  }
-  .icon + p {
-    margin-inline-start: 8px;
-  }
-  .btn.btn-sm {
-    padding-block: 0;
-    padding-inline: 0.25em;
-    align-self: center;
-  }
-  p + .btn {
-    margin-inline-start: 8px;
-
-    &.btn-close {
-      margin-inline-start: 4px;
-    }
-  }
-}
-.alert.notification {
-  display: inline-flex;
-
-  button.btn-close {
-    margin-inline-start: 8px;
-  }
-}
-
 main {
   flex: 1;
+  z-index: 0;
+}
+
+main #disclaimer {
+  margin-block: 0 14px;
+  margin-inline: 0;
+  padding-inline: 10px;
+
+  .btn.btn-close {
+    margin-inline-end: 4px;
+  }
 }
 
 .jumbotron {
-  display: flex;
-  flex-direction: column;
-  padding: 1rem 0.75rem;
-  color: #f8f1f9;
-  background-color: #4E5166;
-  border-radius: 0.3rem;
-  transition: margin-block-start 0.3s ease-out;
+  @include content-container($responsive-margin: 12px);
+}
+// Ensure the jumbotron is properly spaced when the alert is not present.
+main > noscript + script + .jumbotron {
+  margin-block-start: 16px;
+}
+.jumbotron h1, .jumbotron p {
+  display: inline;
+}
+.jumbotron h1 {
+  white-space: nowrap;
+  width: min-content;
 
-  &:focus-within {
-    outline: 2px var(--link) solid;
-    outline-offset: 2px;
+  @media (max-width: $breakpointMobile) {
+    font-size: 28px;
   }
 }
-/* Factor difference of the alert, if any, including it's border. */
-main > .alert + .jumbotron {
-  margin-block-start: calc(3em - #{$headerHeight - 2px} + 16px);
+.jumbotron p {
+  @media (max-width: $breakpointMobile) {
+    white-space: normal;
+  }
 }
 .jumbotron .btn.call-to-action {
   align-self: end;
 }
 
+main > section {
+  margin-inline: 20px;
+
+  &.container {
+    @include content-container();
+  }
+}
+
+section.features.container {
+  @media (max-width: $breakpointMobile) {
+    padding-inline: 14px;
+  }
+}
+section.features {
+  font-size: 16px;
+}
+ul:has(.feature.card) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  justify-content: center;
+  gap: 1rem;
+  padding: 0;
+
+  $columns: 2;
+  $totalColumns: $columns * 2;
+	$span: calc($totalColumns / $columns);
+	$nth-child: if($columns % 2 == 0, 'odd', 'even');
+  & > * {
+    grid-column: auto;
+    align-items: center;
+
+    @media (min-width: $breakpointMobile) {
+      // Center the last item if it's alone
+  		&:last-child:nth-child(#{$nth-child}) {
+  			grid-column: auto / span $span;
+        justify-self: center;
+        max-width: max-content;
+  		}
+    }
+	}
+
+  // Nested lists
+  ul {
+    list-style-type: disc;
+    padding-inline-start: 16px;
+  }
+}
+section.features ul .feature.c2a {
+  align-self: center;
+}
+
 footer {
   display: flex;
   justify-content: space-between;
-  margin-block: 8px;
-  margin-inline: 8px;
-  padding-block-start: 0;
+  margin-block-start: 8px;
+  margin-inline: 12px;
+  padding-block: 0 12px;
 
   p {
     font-size: small;
     margin: 0;
-  }
-}
 
-.sr-only {
-	position: absolute !important;
-	margin: 0;
-	padding: 0;
-	width: 1px;
-	height: 1px;
-	border: 0;
-	overflow: hidden;
-	// IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box
-	clip: rect(1px 1px 1px 1px);
-	// Maybe deprecated, but we try to support legacy browsers
-	clip: rect(1px, 1px, 1px, 1px);
-	// Modern browsers, clip-path works inwards from each corner
-	clip-path: inset(50%);
-	// Added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space
-	white-space: nowrap;
-
-  &.shown-on-focus:focus {
-    font-size: 1.5rem;
-    font-weight: 500;
-    text-decoration: underline;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative !important;
-    left: unset;
-    right: unset;
-    padding: unset;
-    padding-inline: 4px;
-    width: unset;
-    height: fit-content;
-    border: unset;
-    border-radius: 4px;
-    overflow: visible;
-    clip: initial;
-    clip-path: initial;
-    // TODO: Extract this into a mixin, i.e. `@include on-top-for-sr();`
-    z-index: $onTop * 200;
+    :dir(ltr) &:last-child {
+      text-align: right;
+    }
+    :dir(rtl) &:last-child {
+      text-align: left;
+    }
   }
-  &.shown-on-focus:focus-visible {
-    outline-color: var(--link);
+
+  @media (max-width: $breakpointMobile) {
+    flex-wrap: wrap;
   }
 }
 

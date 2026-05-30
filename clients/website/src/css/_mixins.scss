@@ -1,10 +1,11 @@
 @import "./variables";
 
-@mixin on-top {
+@mixin on-top() {
   & {
     z-index: $onTop;
   }
 }
+
 @mixin backdrop-blur($color: white, $opacity: 75%) {
   & {
     backdrop-filter: blur(8px);
@@ -12,6 +13,56 @@
     @media (prefers-reduced-transparency) {
       background-color: $color;
       backdrop-filter: none;
+    }
+  }
+}
+
+// FIXME: Why doesn't this work?
+@mixin underline-link() {
+  & {
+    text-decoration: underline 2px transparent;
+    transition: text-decoration-color 200ms ease;
+
+    &:hover, &:focus {
+      text-decoration: underline 2px var(--accent);
+      outline: none;
+    }
+  }
+}
+
+// Buttons
+
+@mixin btn-outline($color: var(--accent)) {
+  color: $color;
+  background-color: transparent;
+  border-color: $color;
+
+  &:hover:not(:disabled) {
+    color: #fff;
+    background-color: $color;
+  }
+}
+
+// Containers
+
+$container-margin-x: 15%;
+$container-padding-x: 24px;
+:root {
+  --container-margin-x: #{$container-margin-x};
+}
+
+@mixin make-container($padding-x: $container-padding-x) {
+  width: auto;
+  margin-inline: auto;
+  padding-inline: $padding-x;
+}
+
+@mixin content-container($responsive-margin: 0) {
+  margin-inline: var(--container-margin-x);
+
+  @if $responsive-margin != $container-margin-x {
+    @media (max-width: $breakpointMobile) {
+      margin-inline: $responsive-margin;
     }
   }
 }

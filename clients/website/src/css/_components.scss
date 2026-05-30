@@ -1,0 +1,284 @@
+// Flixible Boxes
+
+.fill {
+  flex-grow: 1;
+}
+
+// Buttons
+
+a.btn {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+
+  &:disabled,
+  &.disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  &, &.btn-primary {
+    color: #1a1a1a;
+    background-color: var(--accent);
+    border-color: var(--accent);
+
+    &:hover:not(:disabled) {
+      background-color: var(--accent-dark);
+      border-color: var(--accent-dark);
+    }
+
+    &.btn-outline {
+      @include btn-outline(var(--accent));
+    }
+  }
+
+  &.btn-secondary {
+    color: #fff;
+    background-color: var(--gray-dark);
+    border-color: var(--gray-dark);
+
+    &:hover:not(:disabled) {
+      background-color: var(--shadow-gray);
+      border-color: var(--shadow-gray);
+    }
+
+    &.btn-outline {
+      @include btn-outline(var(--gray-dark));
+    }
+  }
+
+  &.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+// Screen reader only
+
+.sr-only {
+	position: absolute !important;
+	margin: 0;
+	padding: 0;
+	width: 1px;
+	height: 1px;
+	border: 0;
+	overflow: hidden;
+	// IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box
+	clip: rect(1px 1px 1px 1px);
+	// Maybe deprecated, but we try to support legacy browsers
+	clip: rect(1px, 1px, 1px, 1px);
+	// Modern browsers, clip-path works inwards from each corner
+	clip-path: inset(50%);
+	// Added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space
+	white-space: nowrap;
+
+  &.shown-on-focus:focus {
+    font-size: 1.5rem;
+    font-weight: 500;
+    text-decoration: underline;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-inline: 4px;
+    width: unset;
+    height: fit-content;
+    border: unset;
+    border-radius: 4px;
+    overflow: visible;
+    clip: initial;
+    clip-path: initial;
+    // TODO: Extract this into a mixin, i.e. `@include on-top-for-sr();`
+    z-index: $onTop;
+  }
+  &.shown-on-focus:focus-visible {
+    outline-color: var(--link);
+  }
+}
+
+// Alerts
+
+.alert {
+  position: sticky;
+  top: $headerHeight;
+  display: flex;
+  align-items: baseline;
+  margin-inline: 8px;
+  margin-block: 8px 0;
+  padding: 8px;
+  height: min-content;
+  border-color: currentcolor;
+  transform: translateY(0);
+  transform-origin: top center;
+  opacity: 1;
+  transition: margin-block 350ms ease-out, padding-block 350ms ease-out, height 350ms ease-out, transform 250ms ease-out, opacity 200ms ease-out;
+  transition-delay: 0ms, 0ms, 50ms, 0ms, 0ms;
+  overflow: hidden;
+  @include on-top();
+
+  &.dismissed {
+    margin-block: 0;
+    padding-block: 0;
+    height: 0;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition-timing-function: ease-out, ease-in, ease-out;
+    transition-delay: 0ms, 0ms, 0ms, 0ms, 0ms;
+    overflow-y: hidden;
+  }
+
+  &.alert-warning {
+    background-color: lightgoldenrodyellow;
+  }
+  &.alert-info {
+    color: #043944;
+    background-color: var(--skyblue);
+
+    a {
+      color: var(--skyblue-contrast);
+    }
+    a:hover, a:focus {
+      text-decoration: underline;
+    }
+  }
+  &.alert-danger {
+    color: #290a0d;
+    background-color: indianred;
+  }
+
+  &:has(p .context.icon) {
+    align-items: center;
+  }
+
+  h1.title {
+    font-size: 0.95em;
+    font-weight: bold;
+    margin-block: 0;
+    margin-inline: 8px;
+  }
+  p {
+    flex: 1;
+    display: inline-flex;
+    margin: 0;
+    font-size: 0.875em;
+  }
+  p .icon {
+    position: relative;
+    top: -1px;
+    margin-inline-start: 2px;
+  }
+  .icon + p {
+    margin-inline-start: 8px;
+  }
+  p:has(.context.icon) {
+    position: relative;
+    top: 2.5px;
+  }
+  .btn.btn-sm {
+    padding-block: 0;
+    padding-inline: 0.25em;
+    align-self: center;
+  }
+  p + .btn {
+    margin-inline-start: 8px;
+
+    &.btn-close {
+      margin-inline-start: 4px;
+      cursor: pointer;
+    }
+  }
+}
+.alert.notification {
+  display: inline-flex;
+
+  button.btn-close {
+    margin-inline-start: 8px;
+  }
+}
+
+// Containers
+
+.container {
+  @include make-container();
+}
+
+// Jumbotron
+
+.jumbotron {
+  display: flex;
+  flex-direction: column;
+  margin-inline: 12px;
+  padding-block: 1rem;
+  padding-inline: 0.75rem;
+  color: #f8f1f9;
+  background-color: #4E5166;
+  border-radius: 0.3rem;
+  transition: margin-block-start 0.3s ease-out;
+
+  // TODO: mx-sm-auto
+  // TODO: mx-3 my-3;
+
+  &:focus-within {
+    outline: 2px #4E5166 solid;
+    outline-offset: 2px;
+  }
+
+  a {
+    color: white;
+  }
+
+  .btn {
+    color: #1a1a1a;
+
+    &:focus {
+      outline: 2px var(--gray-light) solid;
+      outline-offset: 2px;
+    }
+  }
+
+  .btn.call-to-action {
+    background-color: var(--gray-light);
+    border-color: var(--gray-light);
+  }
+}
+
+// Cards
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  box-shadow: var(--box-shadow-lowest);
+}
+
+.feature.card {
+  h3 {
+    margin-block: 0 0.5rem;
+  }
+
+  & > :not(a):not(h2):not(h3):not(h4):not(h5):not(h6) {
+    color: #6c757d;
+  }
+
+  p {
+    margin: 0;
+  }
+}

@@ -8,8 +8,13 @@ const site = lume({
   src: "./src",
   includes: "templates"
 });
-// TODO: https://deno.land/x/lume@v2.2.4/plugins/sass.ts
+
+// Static data
 site.data("siteTitle", "OpenRCT3");
+site.data("copyright", `2024-${new Date().getFullYear()}`);
+site.data("forumUrl", "https://github.com/open-rct3/open-rct3/discussions");
+site.data("wikiUrl", "https://github.com/open-rct3/open-rct3/wiki");
+
 site.copy("public", ".");
 
 // Plugins
