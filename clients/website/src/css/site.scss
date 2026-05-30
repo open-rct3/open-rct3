@@ -51,7 +51,7 @@ a {
 a, button, button:focus, input {
   outline-color: var(--link-outline);
 
-  &:has(.icon:first-child:last-child) {
+  &:has(.icon:first-child:last-child):not(.btn-close) {
     color: inherit;
     line-height: 1;
 
@@ -138,8 +138,9 @@ header.nav {
   a:has(.icon) {
     align-self: center;
 
-    &:focus {
+    &:hover, &:focus {
       color: var(--link);
+      outline-offset: 2px;
     }
 
     &:has(.icon.fas) {
@@ -148,6 +149,9 @@ header.nav {
     &:has(.icon.devicons) {
       font-size: 24px;
     }
+  }
+  a:has(.icon:first-child:last-child) {
+    border-radius: 50%;
   }
 
   nav {

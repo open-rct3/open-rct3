@@ -11,7 +11,9 @@
   {{ if action }}
   {{ action }}
   {{ else }}
-  <button class="btn btn-sm btn-close" title="Dismiss" aria-label="Dismiss this alert"></button>
+  <button class="btn btn-sm btn-close" title="Dismiss" aria-label="Dismiss this alert">
+    <i class="icon fas fa-times"></i>
+  </button>
   {{ /if }}
 </div>
 {{ if id }}

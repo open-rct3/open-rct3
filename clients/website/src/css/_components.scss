@@ -16,7 +16,8 @@ a.btn {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
+  padding-block: 0.375rem;
+  padding-inline: 0.75rem;
   font-family: inherit;
   font-size: 1rem;
   font-weight: 600;
@@ -25,7 +26,14 @@ a.btn {
   border: 1px solid transparent;
   border-radius: 0.25rem;
   cursor: pointer;
-  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    outline-offset 0.15s ease-in-out;
+
+  &:focus {
+    outline: 2px solid var(--accent);
+  }
 
   &:disabled,
   &.disabled {
@@ -33,7 +41,7 @@ a.btn {
     cursor: not-allowed;
   }
 
-  &, &.btn-primary {
+  &:not(.btn-close), &.btn-primary {
     color: #1a1a1a;
     background-color: var(--accent);
     border-color: var(--accent);
@@ -53,6 +61,10 @@ a.btn {
     background-color: var(--gray-dark);
     border-color: var(--gray-dark);
 
+    &:focus {
+      outline: 2px solid var(--accent-dark);
+    }
+
     &:hover:not(:disabled) {
       background-color: var(--shadow-gray);
       border-color: var(--shadow-gray);
@@ -64,8 +76,22 @@ a.btn {
   }
 
   &.btn-sm {
-    padding: 0.25rem 0.5rem;
+    padding-block: 0.25rem;
+    padding-inline: 0.5rem;
     font-size: 0.875rem;
+  }
+
+  &.btn-close {
+    padding: 0;
+    background-color: transparent !important;
+    border-color: transparent;
+    border-radius: 8px;
+
+    &:hover:not(:disabled),
+    &:has(.icon:first-child:last-child):hover {
+      border: 1px solid rgba(0, 0, 0, 0.33);
+      outline-offset: 2px;
+    }
   }
 }
 
@@ -189,7 +215,7 @@ a.btn {
     position: relative;
     top: 2.5px;
   }
-  .btn.btn-sm {
+  .btn.btn-sm:not(.btn-close) {
     padding-block: 0;
     padding-inline: 0.25em;
     align-self: center;
