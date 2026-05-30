@@ -18,8 +18,8 @@
     {{ include "partials/logo.vto" }}
     <nav>
       <a href="/play">Play</a>
-      <a href="https://github.com/open-rct3/open-rct3/discussions">Forum</a>
-      <a href="https://github.com/open-rct3/open-rct3/wiki">Help</a>
+      <a href="{{ forumUrl }}">Forum</a>
+      <a href="{{ wikiUrl }}">Help</a>
     </nav>
     <div class="fill"></div>
     <nav class="social">
@@ -39,7 +39,7 @@
     {{ include "partials/alert.vto" {
       id: "disclaimer",
       alertTitle: "Disclaimer",
-      message: "This is a _community-driven_ project with a clear [roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap). Expect incremental releases as features are completed, not overnight results."
+      message: "This is a _community-driven_ project with a clear [roadmap]({{ wikiUrl }}/Roadmap). Expect incremental releases as features are completed, not overnight results."
     } }}
     {{ if notification }}{{ notification }}{{ /if }}
     {{ content }}
