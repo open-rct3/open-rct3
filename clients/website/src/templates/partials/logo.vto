@@ -1,5 +1,5 @@
 <{{ if onGamePage }}div{{ else }}a{{ /if }} {{ if !onGamePage }}href="#"{{ /if }} class="logo">
-  <img src="/logo.png" alt="{{ siteTitle }} Logo">
+  <img src="{{ baseUrl }}/logo.png" alt="{{ siteTitle }} Logo">
   {{ if onGamePage }}
   <button class="nub" title="Toggle {{ toggleTitle || `${siteTitle} Navigation` }}"><i class="icon fas fa-bars"></i></button>
   {{ else }}
