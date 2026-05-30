@@ -42,6 +42,12 @@ body {
 
 a {
   color: var(--link);
+
+  &:focus {
+    outline: 2px var(--link-outline) solid;
+    border-radius: 2px;
+    outline-offset: 1px;
+  }
 }
 
 a, button, button:focus, input {

@@ -30,6 +30,19 @@
   }
 }
 
+// Buttons
+
+@mixin btn-outline($color: var(--accent)) {
+  color: $color;
+  background-color: transparent;
+  border-color: $color;
+
+  &:hover:not(:disabled) {
+    color: #fff;
+    background-color: $color;
+  }
+}
+
 // Containers
 
 $container-margin-x: 15%;
