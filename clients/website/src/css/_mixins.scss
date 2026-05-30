@@ -34,6 +34,10 @@
 
 $container-margin-x: 15%;
 $container-padding-x: 24px;
+:root {
+  --container-margin-x: #{$container-margin-x};
+}
+
 @mixin make-container($padding-x: $container-padding-x) {
   width: auto;
   margin-inline: auto;
@@ -41,7 +45,7 @@ $container-padding-x: 24px;
 }
 
 @mixin content-container($responsive-margin: 0) {
-  margin-inline: $container-margin-x;
+  margin-inline: var(--container-margin-x);
 
   @if $responsive-margin != $container-margin-x {
     @media (max-width: $breakpointMobile) {

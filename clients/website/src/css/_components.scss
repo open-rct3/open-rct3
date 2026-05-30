@@ -178,9 +178,9 @@ a.btn {
   }
 }
 
-// Feature Cards
+// Cards
 
-.feature.card {
+.card {
   display: flex;
   flex-direction: column;
   padding: 1rem;
@@ -188,13 +188,18 @@ a.btn {
   border: 1px solid #dee2e6;
   border-radius: 0.25rem;
   box-shadow: var(--box-shadow-lowest);
+}
 
+.feature.card {
   h3 {
     margin-block: 0 0.5rem;
   }
 
+  & > :not(a):not(h2):not(h3):not(h4):not(h5):not(h6) {
+    color: #6c757d;
+  }
+
   p {
     margin: 0;
-    color: #6c757d;
   }
 }

@@ -204,21 +204,47 @@ main > section {
   }
 }
 
-main > section .c2a {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 section.features.container {
-  padding-inline: 20px;
+  @media (max-width: $breakpointMobile) {
+    padding-inline: 14px;
+  }
 }
-section.features ul:has(.feature.card) {
+section.features {
+  font-size: 16px;
+}
+ul:has(.feature.card) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  justify-content: center;
   gap: 1rem;
   padding: 0;
-  list-style: none;
+
+  $columns: 2;
+  $totalColumns: $columns * 2;
+	$span: calc($totalColumns / $columns);
+	$nth-child: if($columns % 2 == 0, 'odd', 'even');
+  & > * {
+    grid-column: auto;
+    align-items: center;
+
+    @media (min-width: $breakpointMobile) {
+      // Center the last item if it's alone
+  		&:last-child:nth-child(#{$nth-child}) {
+  			grid-column: auto / span $span;
+        justify-self: center;
+        max-width: max-content;
+  		}
+    }
+	}
+
+  // Nested lists
+  ul {
+    list-style-type: disc;
+    padding-inline-start: 16px;
+  }
+}
+section.features ul .feature.c2a {
+  align-self: center;
 }
 
 footer {
