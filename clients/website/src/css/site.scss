@@ -186,6 +186,12 @@ main > section {
   margin-inline: 20px;
 }
 
+main > section .c2a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 footer {
   display: flex;
   justify-content: space-between;
