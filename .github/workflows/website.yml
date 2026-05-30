@@ -1,0 +1,41 @@
+name: OpenRCT3 Website
+
+on: push
+
+jobs:
+  Website:
+    name: Build Website
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          cache: true
+      - name: Build
+        run: make website
+      # FIXME: See `make percy`
+      # - name: Visual Diff with Percy
+      #   if: success()
+      #   run: make percy
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "clients/website/_site"
+      # TODO: Deploy PRs for testing
+      - name: Deploy to GitHub Pages
+        id: deployment
+        if: success() && github.ref == 'refs/heads/main'
+        uses: actions/deploy-pages@v5
