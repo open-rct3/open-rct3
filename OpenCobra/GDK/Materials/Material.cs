@@ -9,8 +9,6 @@ using System.ComponentModel;
 
 namespace OpenCobra.GDK.Materials;
 
-using Texture = Texture<Rgba32>;
-
 public class Material {
   [Category("Appearance")]
   public Texture? AlbedoTexture { get; set; }
@@ -20,8 +18,4 @@ public class Material {
   public Texture? SpecularMap { get; set; }
   [Category("Appearance")]
   public Texture? EmissiveMap { get; set; }
-  [Browsable(false)]
-  public bool TransparencyEnabled { get => Opacity < 1; }
-  [Category("Appearance")]
-  public float Opacity { get; set; } = 1.0f;
 }

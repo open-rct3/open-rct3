@@ -1,6 +1,7 @@
 /// <reference no-default-lib="true" />
 /// <reference types="assemblyscript/types" />
 import { Host } from "@extism/as-pdk";
+import { renderHexView } from "../lib/hexViewer.ts";
 
 export function name(): i32 {
   Host.outputString("Spline Viewer");
@@ -13,15 +14,6 @@ export function version(): i32 {
 export function file_types(): i32 {
   Host.outputString('["spl"]');
   return 0;
-}
-
-function toHex(value: u32, width: i32 = 8): string {
-  let hex = value.toString(16).toUpperCase();
-  let padding = "";
-  for (let j = 0; j < width - hex.length; j++) {
-    padding += "0";
-  }
-  return "0x" + padding + hex;
 }
 
 function toHexByte(value: u32): string {
@@ -38,41 +30,6 @@ function readU32LE(data: Uint8Array, offset: i32): u32 {
 function readF32LE(data: Uint8Array, offset: i32): f32 {
   let bits = readU32LE(data, offset);
   return f32.reinterpret_i32(i32(bits));
-}
-
-function renderHexView(data: Uint8Array): string {
-  let html = "<div class='hex-view'><table><thead><tr><th>Offset</th>";
-  for (let h = 0; h < 16; h++) {
-    html += "<th>" + h.toString(16).toUpperCase() + "</th>";
-  }
-  html += "<th>ASCII</th></tr></thead><tbody>";
-
-  let rowCount = data.length / 16;
-  for (let r = 0; r < rowCount; r++) {
-    let offset = r * 16;
-    html += "<tr><td>" + toHex(offset, 4) + "</td>";
-
-    let ascii = "";
-    for (let i = 0; i < 16; i++) {
-      let idx = offset + i;
-      if (idx < data.length) {
-        let byte = data[idx];
-        html += "<td>" + toHexByte(byte) + "</td>";
-        if (byte >= 32 && byte < 127) {
-          ascii += String.fromCharCode(byte);
-        } else {
-          ascii += ".";
-        }
-      } else {
-        html += "<td></td>";
-      }
-    }
-
-    html += "<td>" + ascii + "</td></tr>";
-  }
-
-  html += "</tbody></table></div>";
-  return html;
 }
 
 function renderSpline(data: Uint8Array): string {

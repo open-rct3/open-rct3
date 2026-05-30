@@ -57,9 +57,13 @@ This is a _volunteer-driven_ project. **Please** temper your expectations accord
 The software is provided "as is", without warranty of any kind. Use of this software may require original RollerCoaster
 Tycoon 3 game assets, which are not provided by this project.
 
-### Trademarks and Copyright
+### Trademarks
 
 RollerCoaster Tycoon is a registered trademark of Chris Sawyer. Frontier and the Frontier logo are trademarks of
 Frontier Developments plc, variably registered around the world. All rights reserved.
 
 This project is not affiliated with, endorsed by, or sponsored by Chris Sawyer or Frontier Developments.
+
+## License
+
+Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.

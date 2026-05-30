@@ -4,80 +4,60 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+using System.Diagnostics;
+using CommunityToolkit.HighPerformance;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.OVL.Files;
 
-/// <summary>Decodes a Flexi-Texture (FTX) resource blob into an <see cref="Image{Rgba32}"/>.</summary>
-public static class FlexiTexture {
-  /// <summary>
-  /// Decode raw FTX resource bytes into an image.
-  /// </summary>
-  /// <remarks>
-  /// <see cref="Ovl.GetResourceBytes"/>
-  /// <para>Layout:</para>
-  /// <ul>
-  /// <li>scale(u32), width(u32)
-  /// <li>height(u32)</li>
-  /// <li>recolorable(u32)</li>
-  /// <li>hasPalette(u32)</li>
-  /// <li>[palette: 256×COLOURQUAD(RGBA) if hasPalette≠0]</li>
-  /// <li>pixels[width×height]</li>
-  /// <li>[alpha[width×height]]</li>
-  /// </ul>
-  /// </remarks>
-  public static Image<Rgba32> ToBitmap(byte[] bytes) {
-    if (bytes.Length < 20)
-      throw new ArgumentException("FTX data too short to contain a valid header.", nameof(bytes));
+public record struct FlexiTexture(Recolorable Recolorable, Image<Rgba32> Texture);
 
-    var width       = (int) BitConverter.ToUInt32(bytes, 4);
-    var height      = (int) BitConverter.ToUInt32(bytes, 8);
-    var hasPalette  = BitConverter.ToUInt32(bytes, 16) != 0;
+public record struct FlexiTextureList(uint Fps, FlexiTexture[] Frames) {
+  public readonly int Width => Frames[0].Texture.Width;
+  public readonly int Height => Frames[0].Texture.Height;
+  public readonly Recolorable Recolorable => Frames[0].Recolorable;
+  public readonly int Length => Frames.Length;
+  public readonly FlexiTexture this[int index] => Frames[index];
 
-    var offset = 20;
-    const int paletteBytes = 256 * 4; // COLOURQUAD: R, G, B, A
+  public static FlexiTextureList Load(Ovl ovl, OvlFile file) {
+    var bytes = ovl.ReadResource(file) ??
+      throw new InvalidOperationException($"Resource '{file.Name}' not found in OVL.");
 
-    byte[]? palette = null;
-    if (hasPalette) {
-      if (bytes.Length < offset + paletteBytes)
-        throw new ArgumentException("FTX data too short to contain the palette.", nameof(bytes));
-      palette = bytes[offset..(offset + paletteBytes)];
-      offset += paletteBytes;
+    using var ms = new ReadOnlyMemory<byte>(bytes).AsStream();
+    using var reader = new BinaryReader(ms);
+
+    var scale = reader.ReadUInt32();
+    var width = reader.ReadUInt32();
+    var height = reader.ReadUInt32();
+    var fps = reader.ReadUInt32();
+    var recolorable = (Recolorable)reader.ReadUInt32();
+    var offsetCount = reader.ReadUInt32();
+    var offsets = new uint[offsetCount];
+    for (var i = 0; i < offsetCount; i++) {
+      offsets[i] = reader.ReadUInt32();
+    }
+    var frameCount = reader.ReadUInt32();
+    _ = reader.ReadUInt32();
+    _ = reader.ReadUInt32();
+    var frames = new FlexiTexture[frameCount];
+    for (var i = 0; i < frameCount; i++) {
+      Debug.Assert(scale == reader.ReadUInt32());
+      Debug.Assert(width == reader.ReadUInt32());
+      Debug.Assert(height == reader.ReadUInt32());
+      Debug.Assert(Convert.ToUInt32(recolorable) == reader.ReadUInt32());
+      var palette = reader.ReadBytes(Convert.ToInt32(256 * 4)); // 256 × 4 (BGRA)
+      var texture = reader.ReadBytes(Convert.ToInt32(width * height));
+      // FIXME: var alpha = reader.ReadBytes(Convert.ToInt32(width * height));
+      var alpha = new byte[width * height];
+      Array.Fill(alpha, (byte) 255);
+
+      var rgbaTexture = PaletteConverter.ConvertIndexedBgraToRgba(width, height, palette, texture, alpha);
+      frames[i] = new FlexiTexture(
+        recolorable, Image.LoadPixelData<Rgba32>(rgbaTexture, Convert.ToInt32(width), Convert.ToInt32(height))
+      );
     }
 
-    var pixelCount = width * height;
-    if (bytes.Length < offset + pixelCount)
-      throw new ArgumentException("FTX data too short to contain pixel data.", nameof(bytes));
-    var pixels = bytes[offset..(offset + pixelCount)];
-    offset += pixelCount;
-
-    byte[]? alpha = null;
-    if (bytes.Length >= offset + pixelCount)
-      alpha = bytes[offset..(offset + pixelCount)];
-
-    var img = new Image<Rgba32>(Math.Max(width, 1), Math.Max(height, 1));
-    if (width == 0 || height == 0) return img;
-
-    img.ProcessPixelRows(accessor => {
-      for (var y = 0; y < height; y++) {
-        var row = accessor.GetRowSpan(y);
-        for (var x = 0; x < width; x++) {
-          var i = y * width + x;
-          byte r = 0, g = 0, b = 0, a = 255;
-          if (palette != null) {
-            var p = pixels[i] * 4;
-            r = palette[p];
-            g = palette[p + 1];
-            b = palette[p + 2];
-            a = palette[p + 3];
-          }
-          if (alpha != null) a = alpha[i];
-          row[x] = new Rgba32(r, g, b, a);
-        }
-      }
-    });
-
-    return img;
+    return new FlexiTextureList(fps, frames);
   }
 }

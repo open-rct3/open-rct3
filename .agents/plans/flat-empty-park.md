@@ -1,312 +1,87 @@
 # Plan: Render a Flat, Empty Park
 
-**Issue**: https://github.com/open-rct3/open-rct3/issues/4
+**Issue**: [#4](https://github.com/open-rct3/open-rct3/issues/4) (GitHub)
 
-**Cost Estimate**: [.opencode/costs/flat-empty-park.md](../costs/flat-empty-park.md)
+**Status**: Phases 1–5 complete. Phase 6 remains.
 
-## Overview
+## Completed Phases
 
-Implement rendering of a flat, empty park in the native C# OpenRCT3 client using the existing OpenGL foundation via
-Silk.NET. Work through three stages: solid color → nullbmp texture → actual grass from terrain OVLs.
-
----
-
-## ~~Phase 1: Scaffold GDK Project~~ (Done)
-
-- **Purpose**: Game Data (GDK = "Game Development Kit" / "Graphics Development Kit")
-- **Path**: `OpenCobra/GDK/GDK.csproj`
-- **Dependencies**: `OpenCobra/OVL/`
-- **Target**: net8.0
-
-**Design Pattern**: Follow the existing `IGraphicsSurface` abstraction pattern — GDK primitives are pure C# data
-structures without rendering backend dependencies. The `OpenRCT3/OpenGL` layer provides the translation to Silk.NET.
-
----
-
-## ~~Phase 2: GDK Backend-Agnostic Primitives~~ (Done)
-
-Create rendering-agnostic data structures in `OpenCobra/GDK/`:
-
-| Primitive         | Description                                                                               |
-| ----------------- | ----------------------------------------------------------------------------------------- |
-| **Material**      | Rendering properties — albedo texture, normal map, specular, emissive, transparency flags |
-| **Mesh**          | Geometry — vertex buffer (positions, normals, UVs, colors), index buffer, bounding box    |
-| **ShaderProgram** | Vertex + fragment source code, uniform/attribute definitions, parameter bindings          |
-
-### Resource Disposal Pattern
-
-All GDK resources that map to GPU resources must implement `IDisposable`:
-
-```csharp
-public class Texture : IDisposable {
-    private bool _disposed;
-    public void Dispose() {
-        if (_disposed) return;
-        _disposed = true;
-        // Release GPU memory via Silk.NET (GL.DeleteTexture, etc.)
-    }
-}
-```
-
-The `OpenGLRenderer` must dispose all created resources on shutdown to prevent GPU memory leaks.
-
----
-
-## ~~Phase 3: Detect RCT3 Installation~~ (Done)
-
-Add configuration primitives to `OpenRCT3/Platforms/` (instead of separate project):
-
-| Primitive         | Description                                          |
-| ----------------- | ---------------------------------------------------- |
-| **InstallFinder** | Platform-specific RCT3 install path discovery        |
-| **AppConfig**     | JSON config storage (install path, user preferences) |
-
-### Implementation
-
-1. **Path Discovery** (`InstallFinder.cs`):
-   - Follow platform-specific paths from `src/paths.d`:
-     - **macOS**: `/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets`
-     - **Windows**: `C:\Program Files\RollerCoaster Tycoon 3 Platinum` + variants (Steam, GOG, Platinum)
-   - Validate by checking for required files (e.g., `terrain/RCT3/Terrain_RCT3.common.ovl`)
-   - **Error handling**: Throw `InstallNotFoundException` with user-friendly message; fallback to folder picker dialog
-     if validation fails
-
-2. **Configuration Storage** (`AppConfig.cs`):
-   - Save discovered path to `config.json` in app data directory
-   - Fallback: folder picker dialog if validation fails
-   - Load on startup before rendering
-   - **Error handling**: Log warnings if config missing; prompt user to locate RCT3
-
----
-
-## ~~Phase 4: Render Solid Color Plane~~ (Done)
-
-> **⚠️ This is a prototype.** The implementation is intentionally minimal to validate the rendering pipeline. Expect
-> significant refactoring in future phases as more features are added. Do not invest in polished error handling or
-> optimization here — those will be addressed as the prototype matures.
-
-1. **Add `Platform/IRenderer.cs` interface** (following `IGraphicsSurface` pattern):
-   ```csharp
-   public interface IRenderer {
-     void Initialize(IGraphicsSurface surface);
-     void Render(Scene scene);
-     void SetViewport(int width, int height);
-   }
-   ```
-
-2. **Implement `Renderer`** in `OpenRCT3/OpenGL/`:
-   - `class Renderer(Silk.Silk.NET.OpenGL.GL gl) : IRenderer`
-   - Render quad in an implementation of `IRenderer`, named `OpenGL/Renderer.cs`
-
-3. **Implement `class Transform : Uniform`** in `GDK/Transform.cs`:
-   - `Matrix4x4 Matrix { get; set; }` from `System.Numerics`
-   - `public object? Value => this.Matrix;`
-
-4. **Implement `class Model`** in `GDK/Model.cs`:
-   - `Mesh Mesh { get; set; }`
-   - `Material Material { get; set; }`
-   - `Transform Transform { get; set; }`, and
-   - `ShaderProgram Shader { get; set; }`
-
-5. **Implement `Scene`** in `GDK/Scene.cs`:
-   - Add a `Model` instance:
-     - Set perspective projection matrix + view matrix (camera looking down at park)
-     - With `Mesh` for flat quad (2 triangles)
-     - Embed simple GLSL vertex/fragment shaders as static text in a `ShaderProgram` instance
-   - Add `public Scene Scene { get; init; }` in `Game.cs`
-
-6. **Integrate Renderer**:
-   - Initialize `Renderer` with the GL context
-   - Call `IRenderer.Render` each frame in `MainForm.cs:RenderFrame` and `OpenGLLayer.cs:DrawInCGLContext`
-
-**Camera Setup**:
-
-- Position: Elevated, looking down at ~30-45° angle
-- Field of view: ~60°
-- Near: 0.1, Far: 1000
-
-**Milestone**: Colored rectangle in 3D perspective view (no textures yet)
-
----
-
-## Phase 5: Render Textured Plane with `nullbmp`
-
-### `OpenCobra/GDK/`
-
-1. **Create `plugins/ftx-viewer/`** — New plugin to decode flexi-textures (ftx loader type)
-
-2. **Texture Loader** (`GDK/Textures/TextureLoader.cs`):
-   - Load `nullbmp.common.ovl` from RCT3 Assets
-   - Parse flexi-textures (see `OVL.cs:252-284` for `FlexiTextureData`)
-   - Extract raw pixel data + palette
-   - **Error handling**: Throw `TextureLoadException` if OVL not found or invalid
-
-3. **Texture Conversion**:
-   - Convert flexi-texture to GDK `Material` with albedo texture
-   - Handle palette indexing (indexed color → RGBA)
-   - **Decision needed**: Evaluate palette conversion approaches:
-     - **Option A**: **KGy SOFT Drawing Libraries** (NuGet: `KGySoft.Drawing`) — provides `Palette` class and
-       `ConvertPixelFormat` method; verify it handles custom palettes (not just system defaults)
-     - **Option B**: Manual lookup using `FlexiTextureData.palette` — no extra deps, full control, requires more code
-     - **Option C**: **ImageSharp** — modern, but requires quantization (designed for RGBA→indexed, not reverse)
-   - **Recommendation**: Prototype both KGySoft and manual lookup; choose based on code complexity and maintainability
-
-### `OpenRCT3/OpenGL/`
-
-4. **Update `OpenGLRenderer`**:
-   - Bind texture to GL via Silk.NET
-   - Enable texturing in shader
-   - Render quad with texture coordinates
-
-**Assets**:
-
-- Path: `/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets/nullbmp.common.ovl`
-- Size: 6,081 bytes
-
-**Milestone**: Plane textured with nullbmp (placeholder/blank texture)
-
----
-
-## Phase 5b: Prototype Palette Conversion
-
-> **ℹ️️ Dependent on decisions made in Phase 5.**
-
-Before full nullbmp/grass rendering, prototype palette handling:
-
-1. **Load `nullbmp.common.ovl`** and extract `FlexiTextureData` (palette + pixel data)
-2. **Test KGySoft approach**: Use `KGySoft.Drawing.Palette` with custom palette bytes; verify `ConvertPixelFormat`
-   produces correct RGBA
-3. **Test manual approach**: Write simple index→palette lookup; compare output to KGySoft
-4. **Decision**: Select approach based on code clarity and correctness
-5. **Document findings** in code comments for future maintainers
-
----
+See [completed-work/flat-empty-park.md](../summaries/completed-work/flat-empty-park.md) for a summary of completed phases.
 
 ## Phase 6: Render Grass from Terrain OVL
 
+Phase 6 is not a simple texture swap. Loading grass requires navigating the full texture ingestion pipeline: the `tex` → `flic` → `btbl` hierarchy, each with distinct binary layouts and load-order requirements.
+
+For detailed binary layouts and ingestion workflows, see [Parsing Texture Data](../summaries/Parsing%20Texture%20Data.md).
+
+### Understanding the Texture Pipeline
+
+The Cobra engine manages terrain textures via three cooperating resource types:
+
+| Tag | Name | C# Representation | Role |
+| :--- | :--- | :--- | :--- |
+| `btbl` | Bitmap Table | [BitmapTable](../../OpenCobra/OVL/Files/Textures.cs) | Aggregates shared textures into a continuous block; must be loaded first |
+| `flic` | Flic | [Flic](../../OpenCobra/OVL/Files/Textures.cs) | Contains image dimensions, format, mip headers, and raw pixel data |
+| `tex` | Texture | [Tex](../../OpenCobra/OVL/Files/Textures.cs) | Holds style mappings and pointers to flic definitions |
+
+**Key constraint**: If a terrain OVL contains a `btbl` resource, all `flic` entries in that archive live inside it. The `flic` symbols store only a 4-byte table index, not full payloads. Therefore, `btbl` must be parsed first to build the texture pool before resolving `flic` index references.
+
 ### `OpenCobra/GDK/`
 
-1. **Identify Grass Resources**:
-   - Load `terrain/RCT3/Terrain_RCT3.common.ovl` (1,191,981 bytes)
-   - Search for terrain texture resources (flexi-textures with "grass" or similar names)
-   - Per user: "grass" is in the terrain OVLs, likely indexed by terrain type loader
+1. **Load Terrain OVL Archives**:
+   - Load `terrain/RCT3/Terrain_RCT3.common.ovl`
+   - Load `terrain/RCT3/Terrain_RCT3.unique.ovl` (31,037 bytes)
+   - The virtual address space spans both files transparently via relocations
 
-2. **Load Grass Texture**:
-   - Extract the default grass flexi-texture
-   - Convert to GDK `Material` with albedo texture
+1. **Parse Bitmap Table (`btbl` i.e. [`BitmapTable`](../../OpenCobra/OVL/Files/Textures.cs#L278)) First**:
+   - Extract all texture entries from the `btbl` resource if present
+   - Build a texture pool keyed by table index
+
+2. **Parse Flic (`flic` i.e. [`Flic`](../../OpenCobra/OVL/Files/Textures.cs#L278)) Resources**:
+   - Resolve each `flic` against the texture pool (standalone vs. table-indexed)
+   - Extract `FlicHeader` (16 bytes): Format, Width, Height, MipCount
+   - Extract `FlicMipHeader` (16 bytes per mip): Width, Height, Pitch, Blocks
+   - Decode raw pixel data (pitch × blocks bytes per mip)
+
+3. **Parse Texture (`tex` i.e. [`Tex`](../../OpenCobra/OVL/Files/Textures.cs#L301)) Resource**:
+   - Locate `Terrain_xx` entries (where xx is terrain type index 0–25)
+   - Map texture style reference (TXS) via `TexExtra` struct
+   - Retrieve associated `FlicStruct` array via `Flic` pointer
+
+5. **Select Default Grass Texture**:
+   - Identify grass terrain type index from RCT3 data
+   - Return the corresponding `Flic` pixel data and dimensions
 
 ### `OpenRCT3/OpenGL/`
 
-3. **Update `OpenGLRenderer`**:
-   - Replace nullbmp with grass texture
+6. **Convert to GDK `Material`**:
+   - Upload decoded pixel data as OpenGL texture
+   - Configure albedo texture sampler
+   - Apply any needed format conversion (BTX → RGBA)
+
+7. **Update `OpenGLRenderer`**:
+   - Replace nullbmp with grass material
 
 **Assets**:
 
-- Path: `/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets/terrain/RCT3/Terrain_RCT3.common.ovl`
+- Path: `$RCT3_PATH/terrain/RCT3/Terrain_RCT3.common.ovl`
 - Paired with: `Terrain_RCT3.unique.ovl` (31,037 bytes)
+
+**Binary structures** (see [Textures.cs](../../OpenCobra/OVL/Files/Textures.cs)):
+
+- [`Tex`](../../OpenCobra/OVL/Files/Textures.cs#L301): 60 bytes, `Count` at offset 32, `Unk12` at offset 44
+- [`Flic`](../../OpenCobra/OVL/Files/Textures.cs#L278): 12 bytes, `DataRelocation`, `Unk1`, `Unk2`
+- [`FlicHeader`](../../OpenCobra/OVL/Files/Textures.cs#L285): 16 bytes, Format/Width/Height/MipCount
+- [`FlicMipHeader`](../../OpenCobra/OVL/Files/Textures.cs#L293): 16 bytes per mip level
+- [`BitmapTable`](../../OpenCobra/OVL/Files/Textures.cs#L278): 8 bytes, `Unk`, `Length`
 
 **Milestone**: Flat plane textured with RCT3's default grass
 
----
-
-## Architecture Summary
-
-```
-OpenCobra/
-├── GDK/                     # NEW: Backend-agnostic primitives
-│   ├── Materials/
-│   │   └── Material.cs      # Albedo, normal, specular, etc.
-│   ├── Meshes/
-│   │   └── MeshData.cs     # Vertices, indices, bounds
-│   ├── Shaders/
-│   │   └── ShaderProgram.cs # Source + uniforms
-│   └── Textures/
-│       └── TextureLoader.cs # Load flexi-textures from OVL
-└── OVL/                     # EXISTING: OVL parsing
-
-OpenRCT3/
-├── Platforms/
-│   ├── IGraphicsSurface.cs  # EXISTING: Graphics surface abstraction
-│   ├── Rct3InstallFinder.cs # NEW: RCT3 path discovery
-│   ├── AppConfig.cs         # NEW: App configuration
-│   ├── IRenderer.cs         # NEW: Rendering interface
-│   └── OpenGL/
-│       └── OpenGLRenderer.cs # NEW: GDK → GL translation
-└── Platforms/macOS/
-    └── GameOpenGLLayer.cs   # Update to use IRenderer
-
-plugins/
-└── ftx-viewer/             # NEW: Decode flexi-textures
-```
-
----
-
-## Dependencies
-
-- **Silk.NET.OpenGL** — Already in `OpenRCT3/OpenRCT3.csproj` (v2.22.0)
-- **OVL Library** — Already exists in `OpenCobra/OVL/OVL.csproj`
-- **KGySoft.Drawing** — Add to `OpenCobra/GDK/GDK.csproj` for palette-to-RGBA conversion
-
----
-
-## Testing
-
-Add GDK primitive tests to `OpenCobra/Tests/`:
-
-1. **Material Tests**: Verify properties serialize/deserialize correctly
-2. **Mesh Tests**: Validate vertex buffer creation, bounding box calculation
-3. **ShaderProgram Tests**: Validate uniform/attribute bindings
-4. **TextureLoader Tests**: Test palette loading from `FlexiTextureData`
-
-Example NUnit test pattern (see `ListResources.cs`):
-
-```csharp
-using NUnit.Framework;
-using OpenCobra.GDK.Materials;
-
-[TestFixture]
-public class MaterialTests {
-  [SetUp]
-  public void SetUp() { }
-
-  [Test]
-  public void MaterialCreation_DefaultAlbedoIsNull() {
-    var mat = new Material();
-    Assert.That(mat.AlbedoTexture, Is.Null);
-  }
-
-  [Test]
-  public void MaterialCreation_SetsTransparencyFalseByDefault() {
-    var mat = new Material();
-    Assert.That(mat.TransparencyEnabled, Is.False);
-  }
-}
-```
-
-Add a new NUnit test project `OpenCobra/Tests/GDK/GDKTests.csproj` for GDK data structure unit tests.
-
-Extend existing `IntegrationTests.csproj` in future work.
-
----
-
-## Staged Tasks
-
-Each phase is a separate task:
-
-1. [x] **Scaffold GDK project** — Create `OpenCobra/GDK/`, Material, Mesh, ShaderProgram primitives
-2. [x] **RCT3 installation detection** — Add Rct3InstallFinder, AppConfig to `OpenRCT3/Platforms/`
-3. [x] **Render solid color plane** — Quad in perspective with solid color
-4. [x] **Create ftx-viewer plugin** — Decode flexi-textures
-5. [ ] **Prototype palette conversion** — Test KGySoft vs manual lookup for OVL texture palettes
-6. [ ] **Render nullbmp texture** — Plane with nullbmp texture
-7. [ ] **Render grass texture** — Plane with grass from terrain OVL
-
----
-
 ## References
 
-- **Issue**: https://github.com/open-rct3/open-rct3/issues/4
-- **Path lookup**: `src/paths.d`
-- **OVL structures**: `OpenCobra/OVL/OVL.cs` (FlexiTextureData at line 252)
-- **File types**: `OpenCobra/OVL/Files/FileTypes.cs` (FlexibleTexture = "ftx")
-- **Existing abstractions**: `OpenRCT3/Platforms/IGraphicsSurface.cs`, `IWindow.cs`
+- **Path lookup**: [InstallFinder.cs](../../OpenCobra/OVL/InstallFinder.cs)
+- **OVL structures**: [OVL.cs](../../OpenCobra/OVL/OVL.cs) (`FlexiTextureData`)
+- **File types**: [FileTypes.cs](../../OpenCobra/OVL/Files/FileTypes.cs) (`FlexibleTexture`/`ftx`)
+- **Texture resources**: [Textures.cs](../../OpenCobra/OVL/Files/Textures.cs) (`Tex`, `Flic`, `BitmapTable`)
+- **Existing abstractions**: [IGraphicsSurface.cs](../../OpenRCT3/Platforms/IGraphicsSurface.cs), [IWindow.cs](../../OpenRCT3/Platforms/IWindow.cs)
+- **Texture pipeline**: [Parsing Texture Data](../summaries/Parsing%20Texture%20Data.md)
