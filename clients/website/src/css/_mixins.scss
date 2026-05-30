@@ -30,9 +30,22 @@
   }
 }
 
+// Containers
+
+$container-margin-x: 15%;
 $container-padding-x: 24px;
 @mixin make-container($padding-x: $container-padding-x) {
   width: auto;
   margin-inline: auto;
   padding-inline: $padding-x;
+}
+
+@mixin content-container($responsive-margin: 0) {
+  margin-inline: $container-margin-x;
+
+  @if $responsive-margin != $container-margin-x {
+    @media (max-width: $breakpointMobile) {
+      margin-inline: $responsive-margin;
+    }
+  }
 }

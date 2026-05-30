@@ -4,6 +4,48 @@ a.btn {
 
 // TODO: Extract the other buttons (.btn) here
 
+// Screen reader only
+
+.sr-only {
+	position: absolute !important;
+	margin: 0;
+	padding: 0;
+	width: 1px;
+	height: 1px;
+	border: 0;
+	overflow: hidden;
+	// IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box
+	clip: rect(1px 1px 1px 1px);
+	// Maybe deprecated, but we try to support legacy browsers
+	clip: rect(1px, 1px, 1px, 1px);
+	// Modern browsers, clip-path works inwards from each corner
+	clip-path: inset(50%);
+	// Added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space
+	white-space: nowrap;
+
+  &.shown-on-focus:focus {
+    font-size: 1.5rem;
+    font-weight: 500;
+    text-decoration: underline;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-inline: 4px;
+    width: unset;
+    height: fit-content;
+    border: unset;
+    border-radius: 4px;
+    overflow: visible;
+    clip: initial;
+    clip-path: initial;
+    // TODO: Extract this into a mixin, i.e. `@include on-top-for-sr();`
+    z-index: $onTop;
+  }
+  &.shown-on-focus:focus-visible {
+    outline-color: var(--link);
+  }
+}
+
 // Alerts
 
 .alert {
@@ -136,44 +178,23 @@ a.btn {
   }
 }
 
-// Screen reader only
+// Feature Cards
 
-.sr-only {
-	position: absolute !important;
-	margin: 0;
-	padding: 0;
-	width: 1px;
-	height: 1px;
-	border: 0;
-	overflow: hidden;
-	// IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box
-	clip: rect(1px 1px 1px 1px);
-	// Maybe deprecated, but we try to support legacy browsers
-	clip: rect(1px, 1px, 1px, 1px);
-	// Modern browsers, clip-path works inwards from each corner
-	clip-path: inset(50%);
-	// Added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space
-	white-space: nowrap;
+.feature.card {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  box-shadow: var(--box-shadow-lowest);
 
-  &.shown-on-focus:focus {
-    font-size: 1.5rem;
-    font-weight: 500;
-    text-decoration: underline;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding-inline: 4px;
-    width: unset;
-    height: fit-content;
-    border: unset;
-    border-radius: 4px;
-    overflow: visible;
-    clip: initial;
-    clip-path: initial;
-    // TODO: Extract this into a mixin, i.e. `@include on-top-for-sr();`
-    z-index: $onTop;
+  h3 {
+    margin-block: 0 0.5rem;
   }
-  &.shown-on-focus:focus-visible {
-    outline-color: var(--link);
+
+  p {
+    margin: 0;
+    color: #6c757d;
   }
 }

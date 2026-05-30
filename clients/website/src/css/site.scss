@@ -169,14 +169,28 @@ main #disclaimer {
   }
 }
 
+.jumbotron {
+  @include content-container($responsive-margin: 12px);
+}
 // Ensure the jumbotron is properly spaced when the alert is not present.
 main > noscript + script + .jumbotron {
   margin-block-start: 16px;
 }
 .jumbotron h1, .jumbotron p {
-  white-space: nowrap;
   display: inline;
+}
+.jumbotron h1 {
+  white-space: nowrap;
   width: min-content;
+
+  @media (max-width: $breakpointMobile) {
+    font-size: 28px;
+  }
+}
+.jumbotron p {
+  @media (max-width: $breakpointMobile) {
+    white-space: normal;
+  }
 }
 .jumbotron .btn.call-to-action {
   align-self: end;
@@ -184,12 +198,27 @@ main > noscript + script + .jumbotron {
 
 main > section {
   margin-inline: 20px;
+
+  &.container {
+    @include content-container();
+  }
 }
 
 main > section .c2a {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+section.features.container {
+  padding-inline: 20px;
+}
+section.features ul:has(.feature.card) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
 }
 
 footer {
