@@ -2,22 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <base href="{{ baseUrl }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{- title ? title + " " + siteTitle : siteTitle }}</title>
   <!-- CSS -->
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/solid.css" integrity="sha384-Tv5i09RULyHKMwX0E8wJUqSOaXlyu3SQxORObAI08iUwIalMmN5L6AvlPX2LMoSE" crossorigin="anonymous">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/fontawesome.css" integrity="sha384-jLKHWM3JRmfMU0A5x5AkjWkw/EYfGUAGagvnfryNV3F9VqM98XiIH7VBGVoxVSc7" crossorigin="anonymous">
   <link rel="stylesheet" href="https://unpkg.com/devicons@2.0.1/dist/devicons.css" crossorigin="anonymous" />
-  <link rel="stylesheet" href="/css/site.css">
+  <link rel="stylesheet" href="css/site.css">
   <!-- Icons & Theme -->
-  <link rel="icon" href="/favicon.png">
+  <link rel="icon" href="favicon.png">
 </head>
 <body>
   <header class="nav">
     <a class="sr-only shown-on-focus" href="#main">Skip to main content.</a>
     {{ include "partials/logo.vto" }}
     <nav>
-      <a href="/play">Play</a>
+      <a href="play">Play</a>
       <a href="{{ forumUrl }}">Forum</a>
       <a href="{{ wikiUrl }}">Help</a>
     </nav>
@@ -39,7 +40,7 @@
     {{ include "partials/alert.vto" {
       id: "disclaimer",
       alertTitle: "Disclaimer",
-      message: "This is a _community-driven_ project with a clear [roadmap]({{ wikiUrl }}/Roadmap). Expect incremental releases as features are completed, not overnight results."
+      message: "This is a _community-driven_ project with a clear [roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap). Expect incremental releases as features are completed, not overnight results."
     } }}
     {{ if notification }}{{ notification }}{{ /if }}
     {{ content }}
