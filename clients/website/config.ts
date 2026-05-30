@@ -14,7 +14,7 @@ const site = lume({
 // Static data
 site.data("siteTitle", "OpenRCT3");
 site.data("copyright", `2024-${new Date().getFullYear()}`);
-site.data("baseUrl", isGitHubActions ? "https://open-rct3.github.io/open-rct3" : "/");
+site.data("baseUrl", isGitHubActions ? "https://open-rct3.github.io/open-rct3/" : "/");
 site.data("forumUrl", "https://github.com/open-rct3/open-rct3/discussions");
 site.data("wikiUrl", "https://github.com/open-rct3/open-rct3/wiki");
 
