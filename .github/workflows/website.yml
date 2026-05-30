@@ -1,6 +1,12 @@
-name: OpenRCT3 Website
+name: Website
 
-on: push
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   Website:
@@ -34,7 +40,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: "clients/website/_site"
-      # TODO: Deploy PRs for testing
+      # TODO: Deploy pull requests for testing
       - name: Deploy to GitHub Pages
         id: deployment
         if: success() && github.ref == 'refs/heads/main'
