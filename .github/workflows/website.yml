@@ -9,14 +9,9 @@ on:
       - main
 
 jobs:
-  Website:
+  build:
     name: Build Website
-
     runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -36,12 +31,26 @@ jobs:
       # - name: Visual Diff with Percy
       #   if: success()
       #   run: make percy
-      - name: Upload artifact
+      - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: "clients/website/_site"
-      # TODO: Deploy pull requests for testing
+
+  deploy:
+    name: Deploy Website
+    needs: build
+    runs-on: ubuntu-latest
+    # TODO: Deploy pull requests for testing
+    if: github.ref == 'refs/heads/main'
+
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        if: success() && github.ref == 'refs/heads/main'
         uses: actions/deploy-pages@v5
