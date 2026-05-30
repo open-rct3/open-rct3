@@ -29,3 +29,10 @@
     }
   }
 }
+
+$container-padding-x: 24px;
+@mixin make-container($padding-x: $container-padding-x) {
+  width: auto;
+  margin-inline: auto;
+  padding-inline: $padding-x;
+}

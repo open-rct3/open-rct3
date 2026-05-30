@@ -173,6 +173,11 @@ main #disclaimer {
 main > noscript + script + .jumbotron {
   margin-block-start: 16px;
 }
+.jumbotron h1, .jumbotron p {
+  white-space: nowrap;
+  display: inline;
+  width: min-content;
+}
 .jumbotron .btn.call-to-action {
   align-self: end;
 }

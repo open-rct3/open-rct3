@@ -104,6 +104,12 @@ a.btn {
   }
 }
 
+// Containers
+
+.container {
+  @include make-container();
+}
+
 // Jumbotron
 
 .jumbotron {
@@ -115,7 +121,6 @@ a.btn {
   color: #f8f1f9;
   background-color: #4E5166;
   border-radius: 0.3rem;
-  width: auto;
   transition: margin-block-start 0.3s ease-out;
 
   // TODO: mx-sm-auto

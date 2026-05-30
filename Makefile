@@ -27,19 +27,35 @@ endif
 release: gui
 	dotnet build OpenRCT3/OpenRCT3.csproj -c Release
 
-.PHONY: gui
-gui: ovl
-	deno task build:desktop
-
-.PHONY: website
-website:
-	deno task build:website
+# Debug the Game
 
 .PHONY: debug
 debug:
 	deno task build:plugins
 	deno task build:desktop
 	dotnet run --project OpenRCT3/OpenRCT3.csproj
+
+# Game GUI
+
+.PHONY: gui
+gui: ovl
+	deno task build:desktop
+
+# Website
+
+WEBSITE_DIR := clients/website
+WEBSITE_SRC := $(wildcard clients/website/src/*.md) $(wildcard clients/website/src/*.vto) $(wildcard clients/website/src/css/*.scss) $(wildcard clients/website/src/templates/*.vto) $(wildcard clients/website/src/templates/partials/*.vto)
+
+.PHONY: website
+website: $(WEBSITE_DIR)/_site
+
+$(WEBSITE_DIR)/_site: $(WEBSITE_SRC)
+	deno task build:website
+
+# FIXME: ParseError: Unexpected argument 'snapshot'
+.PHONY: percy
+percy: website
+	deno run -A npm:@percy/cli snapshot -b "https://rct3.chancesnow.me" $(WEBSITE_DIR)/_site
 
 .PHONY: ovl
 ovl:
