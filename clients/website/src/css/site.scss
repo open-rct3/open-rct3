@@ -97,6 +97,7 @@ header.nav {
     align-self: end;
     margin-inline-end: 24px;
     border-bottom: none;
+    overflow-y: hidden;
 
     &, &:hover, &:focus {
       color: inherit;
