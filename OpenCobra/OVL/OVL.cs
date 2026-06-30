@@ -119,6 +119,57 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     return bytes;
   }
 
+  /// <summary>
+  /// Resolves a relocated data pointer to its absolute block data.
+  /// </summary>
+  /// <param name="dataPtr">Relative offset pointer from OVL block data</param>
+  /// <param name="data">The resolved block's full data, or null if unresolved</param>
+  /// <param name="offset">Offset within the resolved data where the pointer refers</param>
+  /// <returns>True if resolution succeeded.</returns>
+  public bool TryResolveRelocation(uint dataPtr, [MaybeNullWhen(false)] out byte[] data, out uint offset) {
+    var resolvedBlock = allFileTypeBlocks
+      .SelectMany(ftb => ftb.SelectMany(b => b.Blocks))
+      .FirstOrDefault(fb => fb.Data != null && dataPtr >= fb.RelativeOffset && dataPtr < fb.RelativeOffset + fb.Size);
+
+    if (resolvedBlock == null || resolvedBlock.Data == null) {
+      data = null;
+      offset = 0;
+      return false;
+    }
+
+    data = resolvedBlock.Data;
+    offset = dataPtr - resolvedBlock.RelativeOffset;
+    return true;
+  }
+
+  /// <summary>
+  /// Resolves a relocated string pointer to its text value.
+  /// </summary>
+  /// <param name="ptr">Relative offset pointer to a null-terminated ASCII string in OVL block data</param>
+  /// <param name="value">The resolved string, or null if unresolved</param>
+  /// <returns>True if resolution succeeded.</returns>
+  public bool TryResolveString(uint ptr, [MaybeNullWhen(false)] out string value) {
+    if (ptr == 0) {
+      value = null;
+      return false;
+    }
+
+    var resolvedBlock = allFileTypeBlocks
+      .SelectMany(ftb => ftb.SelectMany(b => b.Blocks))
+      .FirstOrDefault(fb => fb.Data != null && ptr >= fb.RelativeOffset && ptr < fb.RelativeOffset + fb.Size);
+
+    if (resolvedBlock == null || resolvedBlock.Data == null) {
+      value = null;
+      return false;
+    }
+
+    var offset = Convert.ToInt32(ptr - resolvedBlock.RelativeOffset);
+    var end = Array.IndexOf(resolvedBlock.Data, (byte)0, offset);
+    if (end < 0) end = resolvedBlock.Data.Length;
+    value = Encoding.ASCII.GetString(resolvedBlock.Data, offset, end - offset);
+    return true;
+  }
+
   private Version IngestArchive(string ovlPath) {
     var version = Version.Unknown;
     var basePath = Path.GetDirectoryName(ovlPath) ?? "";

@@ -74,7 +74,7 @@ public static class Textures {
         .WithMergeOptions(ParallelMergeOptions.NotBuffered)
       let data = ovl.ReadResource(file)
       where data != null
-      select new OvlData(ovl.Name, ovl.Version, file, data);
+      select new OvlData(ovl.Name, file, data);
 
     // Decode texture data in parallel
     var bag = new ConcurrentBag<Texture>();
@@ -101,15 +101,14 @@ public static class Textures {
     Parallel.ForEach(otherTextureData, fileData => {
       try {
         var name = fileData.File.ToString();
-        var version = fileData.Version;
         var data = fileData.Data;
         var bitmapTable = bitmapTables.GetValueOrDefault(fileData.OvlName);
 
         // ReSharper disable once ConvertIfStatementToSwitchStatement
         if (fileData.File.Type == FileType.Texture)
-          bag.Add(ReadTexture(name, data));
+          bag.Add(ReadTexture(name, ovl, data));
         else if (fileData.File.Type == FileType.Flic)
-          bag.Add(ReadFlic(name, data, version, bitmapTable));
+          bag.Add(ReadFlic(name, data, ovl.Version, bitmapTable));
       } catch {
         logger.Error("Failed to decode {FileName}", fileData.File.ToString());
         failures.Add(fileData.File);
@@ -128,7 +127,7 @@ public static class Textures {
   }
 
   // See ManagerTEX.cpp
-  private static Texture ReadTexture(string name, ReadOnlyMemory<byte> bytes) {
+  private static Texture ReadTexture(string name, Ovl ovl, ReadOnlyMemory<byte> bytes) {
     using var ms = bytes.AsStream();
     using var reader = new BinaryReader(ms);
 
@@ -145,14 +144,24 @@ public static class Textures {
       // See https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/src/libOVLng/LodSymRefManager.cpp#L161
     }
 
-    _ = new Texture(name, TextureFormat.A8R8G8B8, 0, 0);
+    // Resolve the first flic entry's DataRelocation
+    if (flics.Length > 0 && flics[0].DataRelocation != 0) {
+      if (ovl.TryResolveRelocation(flics[0].DataRelocation, out var blockData, out var relOffset)) {
+        var offset = Convert.ToInt32(relOffset);
+        var length = Convert.ToInt32(blockData.Length - offset);
+        var texture = ReadFlic(name, new Memory<byte>(blockData, offset, length), ovl.Version, null);
 
-    // Ugh, ManagerTEX.cpp:109-123 is hella confusing
-    // TODO: Read textures from TEX flics
-    throw new NotImplementedException("How the hell do you read a \"flicman\" image?");
+        // Default style to GUI icon for icon textures
+        if (tex.Type == TextureType.Icon)
+          texture.Style = "GUIIcon";
+        // Try to resolve the texture style from the string table, removing the texture type suffix
+        else if (tex.Data != 0 && ovl.TryResolveString(tex.Data, out var styleName))
+          texture.Style = styleName.Split(':')[0];
+      }
+    }
+    throw new InvalidOperationException($"Failed to resolve flic data for {name}");
   }
 
-  // See ManagerFLIC.cpp
   private static Texture ReadFlic(
     string name, ReadOnlyMemory<byte> bytes, Version ovlVersion, Texture[]? table = null
   ) {
@@ -174,14 +183,26 @@ public static class Textures {
     }
 
     var header = reader.ReadFlicHeader();
+    Debug.Assert(header.Format != 0);
+    Debug.Assert(header.Width > 0 && header.Height > 0);
+
     var format = header.Format;
     var texture = new Texture(name, format, header.Width, header.Height, header.MipCount);
+    // FIXME: Reference computes mip count by right-shifting width until 0, then loops while checking (width != 0) && (height != 0) && (mh.Pitch != 0) && (mh.Blocks != 0). OpenCobra blindly reads header.MipCount times without validating that `mipHeader.Width` and `mipHeader.Height` match expected downsampled dimensions.
     for (var i = 0; i < header.MipCount; i++) {
       read = reader.Read<FlicMipHeader>(out var mipHeader);
       Debug.Assert(read == Marshal.SizeOf<FlicMipHeader>());
-      // QUESTION: What is the purpose of `mipHeader.pitch`?
-      // QUESTION: Ought `mipHeader.blocks` be used to calculate the size?
-      var size = Convert.ToInt32(mipHeader.Width * mipHeader.Height * (format.BlockSize() / 8));
+
+      Debug.Assert(mipHeader.Width == Math.Max(1u, header.Width >> i),
+        $"Mip {i} width mismatch: expected {Math.Max(1u, header.Width >> i)}, got {mipHeader.Width}");
+      Debug.Assert(mipHeader.Height == Math.Max(1u, header.Height >> i),
+        $"Mip {i} height mismatch: expected {Math.Max(1u, header.Height >> i)}, got {mipHeader.Height}");
+      Debug.Assert(mipHeader.Pitch > 0, $"Mip {i} has zero pitch");
+      Debug.Assert(mipHeader.Blocks > 0, $"Mip {i} has zero blocks");
+
+      // QUESTION: What is the purpose of `mipHeader.Pitch`?
+      var size = Convert.ToInt32(mipHeader.Pitch * mipHeader.Blocks);
+      Debug.Assert(reader.BaseStream.Position + size <= reader.BaseStream.Length, $"Mip {i} data exceeds file size");
       ReadOnlySpan<byte> data = reader.ReadBytes(size);
       texture.MipLevels[i] = data.ToImage(format);
     }
@@ -247,7 +268,7 @@ public class TextureCollection : IReadOnlyList<Texture> {
   }
 }
 
-internal record struct OvlData(string OvlName, Version Version, OvlFile File, ReadOnlyMemory<byte> Data);
+internal record struct OvlData(string OvlName, OvlFile File, ReadOnlyMemory<byte> Data);
 
 [StructLayout(LayoutKind.Sequential, Size = 14)]
 internal readonly struct ExtraDataInfoV5 {
@@ -264,7 +285,7 @@ internal readonly struct ExtraDataInfoV5 {
 
 [StructLayout(LayoutKind.Sequential, Size = 8)]
 internal readonly struct BitmapTable {
-  [SeenInGame(Value = 0)]
+  [SeenInGame(Values = [0])]
   public readonly uint Unk;
   /// <summary>
   /// Number of textures stored in the table.
@@ -274,11 +295,11 @@ internal readonly struct BitmapTable {
 
 [StructLayout(LayoutKind.Sequential, Size = 12)]
 internal readonly struct Flic {
-  [SeenInGame(Value = 0)]
+  [SeenInGame(Values = [0])]
   public readonly uint DataRelocation;
-  [SeenInGame(Value = 1)]
+  [SeenInGame(Values = [1])]
   public readonly uint Unk1;
-  [SeenInGame(Value = 1)]
+  [SeenInGame(Values = [1])]
   public readonly float Unk2;
 }
 
@@ -331,16 +352,20 @@ internal struct Tex {
   public uint Count;
 
   [FieldOffset(36)]
-  [SeenInGame(Value = 8)]
+  [SeenInGame(Values = [8])]
   public readonly uint Unk10;
 
   [FieldOffset(40)]
-  [SeenInGame(Value = 0x10)]
+  [SeenInGame(Values = [0x0D, 0x10])]
   public readonly uint Unk11;
+  public readonly TextureType Type => (TextureType)Unk11;
 
   [FieldOffset(44)]
-  [SeenInGame(Value = 1)]
+  [SeenInGame(Values = [1])]
   public readonly uint Unk12;
+
+  [FieldOffset(48)]
+  public uint Data;
 }
 
 internal static class BinaryReaderExtensions {
@@ -373,6 +398,8 @@ internal static class BinaryReaderExtensions {
 
 internal static class ReadOnlySpanExtensions {
   public static Image<Rgba32> ToImage(this ReadOnlySpan<byte> span, TextureFormat format) {
+    // QUESTION: Add support for TextureFormat.P8?
+    // Reference's `ReadTexture2` shows P8 needs palette lookup to convert indexed colors to RGBA.
     if (format == TextureFormat.A8R8G8B8) {
       using var image = Image.Load<Argb32>(span);
       return image.CloneAs<Rgba32>();

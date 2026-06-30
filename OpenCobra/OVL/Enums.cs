@@ -235,6 +235,13 @@ public enum SidType {
 
 /// <remarks>TODO: Tracked rides. See <see href="https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/include/rct3constants.h#L505"/>.</remarks>
 
+public enum TextureType : uint {
+  /// <summary>Regular uncompressed texture.</summary>
+  Regular = 0x0D,
+  /// <summary>Icon texture, e.g. a GUI icon.</summary>
+  Icon = 0x10
+}
+
 public enum TextureFormat : uint {
   /// <summary>RGB, no alpha</summary>
   R8G8B8 = 0x01,
@@ -292,7 +299,7 @@ public enum TextureFormat : uint {
 /// </summary>
 [AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field | AttributeTargets.Property)]
 public class SeenInGameAttribute : Attribute {
-  public long Value { get; init; }
+  public long[] Values { get; init; } = [];
 }
 
 public static class TextureFormatExtensions {
@@ -332,7 +339,7 @@ public static class TextureFormatExtensions {
   }
 
   public static bool IsCompressed(this TextureFormat format) => format switch {
-    TextureFormat.A8R8G8B8 or TextureFormat.Dxt1 or TextureFormat.Dxt3 or TextureFormat.Dxt5 => true,
+    TextureFormat.Dxt1 or TextureFormat.Dxt3 or TextureFormat.Dxt5 => true,
     _ => false,
   };
 
@@ -341,7 +348,7 @@ public static class TextureFormatExtensions {
   /// Thrown when the format is not supported.
   /// </exception>
   public static int BlockSize(this TextureFormat format) => format switch {
-    TextureFormat.A8R8G8B8 => 64,
+    TextureFormat.A8R8G8B8 => 32,
     TextureFormat.Dxt1 => 8,
     TextureFormat.Dxt3 => 16,
     TextureFormat.Dxt5 => 16,
