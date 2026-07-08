@@ -101,10 +101,10 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
     // If a name is given, return true if the name matches.
     // If a name and type is given, return true if both match.
-    // Otherwise, return true if either the name or type matches.
+    // Otherwise, return true if the type matches.
     return nameProvided
       ? nameMatch && (type == null || typeMatch)
-      : nameMatch || typeMatch;
+      : typeMatch;
   });
 
   /// <summary>Read the resource data for a given file.</summary>
