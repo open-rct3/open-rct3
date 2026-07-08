@@ -4,12 +4,14 @@
 
 ### OVL Decoding
 
-- [ ] Confirm LODs relation in OVL enums (`OpenCobra/OVL/Enums.cs:36`) — see
-      [.opencode/plans/ovl-enum-verification.md](.opencode/plans/ovl-enum-verification.md)
-- [ ] Verify NoShadow duplicate value (`OpenCobra/OVL/Enums.cs:49`) — see
-      [.opencode/plans/ovl-enum-verification.md](.opencode/plans/ovl-enum-verification.md)
+- [x] Confirm LODs relation in OVL enums (`OpenCobra/OVL/Enums.cs:36`) — see
+      [.agents/summaries/ovl-enum-verification.md](.agents/summaries/ovl-enum-verification.md)
+- [x] Verify NoShadow duplicate value (`OpenCobra/OVL/Enums.cs:49`) — see
+      [.agents/summaries/ovl-enum-verification.md](.agents/summaries/ovl-enum-verification.md)
 - [ ] Implement tracked rides support (`OpenCobra/OVL/Enums.cs:235`) — **deferred**; will implement after OVL decoder is
       ready
+- [ ] Fix `Ovl` resource pointer/relocation resolution returning wrong bytes for some resources — see
+      [.agents/bugs/ovl-resource-relocation.md](.agents/bugs/ovl-resource-relocation.md)
 - [x] Create data model for inspector items (`OpenRCT3/ViewModels/Inspector.cs:14`)
 - [ ] Handle OS-dependent and game-store-dependent game paths (`src/paths.d:34,49`)
 

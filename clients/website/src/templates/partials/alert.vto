@@ -2,11 +2,18 @@
 <div id="{{ if id }}{{ id }}{{ /if }}" class="alert alert-{{ type || 'info' }}" role="alert">
   <i class="icon fas {{ icon || 'fa-info-circle' }}"></i>
   {{ if alertTitle }}<h1 class="title">{{ alertTitle }}</h1>{{ /if }}
-  <p class="message">{{ message |> md(true) }}</p>
+  <p class="message">
+    <span class="body">{{ message |> md(true) }}</span>
+    {{ if context }}
+    <i class="context icon fas fa-question-circle" title="{{ context }}"></i>
+    {{ /if }}
+  </p>
   {{ if action }}
   {{ action }}
   {{ else }}
-  <button class="btn btn-sm btn-close" title="Dismiss" aria-label="Dismiss this alert"></button>
+  <button class="btn btn-sm btn-close" title="Dismiss" aria-label="Dismiss this alert">
+    <i class="icon fas fa-times"></i>
+  </button>
   {{ /if }}
 </div>
 {{ if id }}

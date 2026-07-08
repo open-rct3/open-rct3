@@ -63,6 +63,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
+  private readonly List<uint> allVersions = [];
   private uint relocationOffset;
   private bool disposed = false;
 
@@ -176,6 +177,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
       }
     }
     allLoaderHeaders.Add([.. loaderHeaders]);
+    allVersions.Add(version);
 
     var blocks = ReadFileTypeBlocks(filePath, reader, version, subVersionFlag);
     allFileTypeBlocks.Add(blocks);
@@ -329,59 +331,62 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
       var symbolBlock = blocks[2].Blocks[0];
       if (symbolBlock.Size == 0) continue;
 
-      var symbolSize = 0;
-      var blockOffset = 0;
-      if (symbolBlock.Size % 16 == 0) {
-        symbolSize = 16;
-      }
-      else if (symbolBlock.Size > 4 && (symbolBlock.Size - 4) % 16 == 0) {
-        symbolSize = 16;
-        blockOffset = 4;
-      }
-      else if (symbolBlock.Size % 12 == 0) {
-        symbolSize = 12;
-      }
-      else if (symbolBlock.Size > 4 && (symbolBlock.Size - 4) % 12 == 0) {
-        symbolSize = 12;
-        blockOffset = 4;
-      }
-      else continue;
+      // Symbol record layout is fixed by archive version, never guessed: v1 uses the 12-byte
+      // SymbolStruct (Symbol, data, IsPointer); v4/v5 use the 16-byte SymbolStruct2, which adds a
+      // 2-byte IsPointer/2-byte unknown/4-byte name hash in place of the 4-byte IsPointer. Neither
+      // layout has a header before the symbol table. Guessing the stride from the block size (e.g.
+      // any size that is a multiple of 48 divides evenly by both 12 and 16) silently misaligns every
+      // name/data pointer read for the rest of the file once it picks wrong.
+      var version = fileIndex < allVersions.Count ? allVersions[fileIndex] : 0u;
+      var symbolSize = version == 1 ? 12 : 16;
+      if (symbolBlock.Size % symbolSize != 0) continue;
 
       var loaderHeaders = fileIndex < allLoaderHeaders.Count ? allLoaderHeaders[fileIndex] : [];
       var loaderIdx = 0;
       var loaderSymbolRemaining = loaderHeaders.Length > 0 ? loaderHeaders[0].SymbolCount : 0u;
 
-      foreach (var symOffset in Enumerable.Range(0, (Convert.ToInt32(symbolBlock.Size) - blockOffset) / symbolSize)
-                 .Select(i => blockOffset + i * symbolSize)) {
+      foreach (var symOffset in Enumerable.Range(0, Convert.ToInt32(symbolBlock.Size) / symbolSize)
+                 .Select(i => i * symbolSize)) {
         var namePtr = BitConverter.ToUInt32(symbolBlock.Data!, symOffset);
-        var name = ReadString(allBlocks, namePtr);
-        if (name == null) continue;
+        var rawName = ReadString(allBlocks, namePtr);
+        if (rawName == null) continue;
 
         var dataPtr = BitConverter.ToUInt32(symbolBlock.Data!, symOffset + 4);
-        var size = symbolSize == 16 ? BitConverter.ToUInt32(symbolBlock.Data!, symOffset + 12) : 0u;
+
+        // Every symbol name is written as "Name:Tag" (e.g. "RomPil_1H:svd") regardless of version,
+        // so the tag suffix is the authoritative source for FileType and the real resource name.
+        // The loader-header/SymbolCount walk below only groups symbols contiguously by tag for v5
+        // archives; v1/v4 archives carry no per-loader symbol count at all, so it can only serve as
+        // a fallback when a name is somehow missing its tag suffix.
+        var colonIndex = rawName.LastIndexOf(':');
+        var name = rawName;
+        var fileType = FileType.Unknown;
+        if (colonIndex >= 0) {
+          var candidateType = rawName[(colonIndex + 1)..].ToFileType();
+          if (candidateType != FileType.Unknown) {
+            name = rawName[..colonIndex];
+            fileType = candidateType;
+          }
+        }
 
         if (loaderIdx < loaderHeaders.Length && loaderSymbolRemaining == 0) {
           loaderIdx = Math.Min(loaderIdx + 1, loaderHeaders.Length - 1);
           loaderSymbolRemaining = loaderHeaders[loaderIdx].SymbolCount;
         }
-
-        var fileType = loaderIdx < loaderHeaders.Length
-            ? loaderHeaders[loaderIdx].Tag.ToFileType()
-            : FileType.Unknown;
-        if (fileType == FileType.Unknown && name.Contains(':'))
-          fileType = name.Split(':')[0].ToFileType();
+        if (fileType == FileType.Unknown && loaderIdx < loaderHeaders.Length)
+          fileType = loaderHeaders[loaderIdx].Tag.ToFileType();
 
         var resolvedBlock = allBlocks.FirstOrDefault(fb => dataPtr >= fb.RelativeOffset && dataPtr < fb.RelativeOffset + fb.Size);
-        if (resolvedBlock == null) continue;
-
-        var relOffset = dataPtr - resolvedBlock.RelativeOffset;
-        var effectiveSize = size == 0
-            ? resolvedBlock.Size - relOffset
-            : Math.Min(size, resolvedBlock.Size - relOffset);
-        entries[new OvlFile(name, fileType, resolvedBlock.Path)] = new OvlEntry(
-          Convert.ToUInt32(resolvedBlock.Offset + relOffset),
-          effectiveSize
-        );
+        if (resolvedBlock != null) {
+          var relOffset = dataPtr - resolvedBlock.RelativeOffset;
+          // Neither SymbolStruct nor SymbolStruct2 stores a resource byte size; the archive
+          // format has no reliable per-entry length, so read to the end of the resolved block.
+          var effectiveSize = resolvedBlock.Size - relOffset;
+          entries[new OvlFile(name, fileType, resolvedBlock.Path)] = new OvlEntry(
+            Convert.ToUInt32(resolvedBlock.Offset + relOffset),
+            effectiveSize
+          );
+        }
 
         if (loaderSymbolRemaining > 0) loaderSymbolRemaining--;
       }

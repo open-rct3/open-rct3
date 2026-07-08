@@ -12,9 +12,11 @@ strong, b {
 }
 a {
 	color: var(--accent);
+	text-decoration: none;
 
   &:hover {
     color: var(--accent);
+    text-decoration: underline;
   }
 }
 p {

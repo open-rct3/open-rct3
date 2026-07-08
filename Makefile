@@ -34,6 +34,25 @@ endif
 .PHONY: release
 release: gui
 	dotnet build OpenRCT3/OpenRCT3.csproj -c Release
+  
+
+# ==========
+# Debugging
+# ==========
+
+# Debug the Game
+
+.PHONY: debug
+debug:
+	deno task build:plugins
+	deno task build:desktop
+	dotnet run --project OpenRCT3/OpenRCT3.csproj
+
+# =============
+# Web Platform
+# =============
+
+# Game GUI
 
 .PHONY: gui
 gui: ovl
@@ -43,19 +62,25 @@ gui: ovl
 ovl:
 	dotnet build OpenCobra/OVL/OVL.csproj -c Release
 
-# ==========
-# Debugging
-# ==========
-
 .PHONY: dumper
 dumper:
 	dotnet run --project Dumper/Dumper.csproj
 
-.PHONY: debug
-debug:
-	deno task build:plugins
-	deno task build:desktop
-	dotnet run --project OpenRCT3/OpenRCT3.csproj
+# Website
+
+WEBSITE_DIR := clients/website
+WEBSITE_SRC := $(wildcard clients/website/*.ts) $(wildcard clients/website/src/*.*) $(wildcard clients/website/src/css/*.scss) $(wildcard clients/website/src/templates/*.vto) $(wildcard clients/website/src/templates/partials/*.vto)
+
+.PHONY: website
+website: $(WEBSITE_DIR)/_site
+
+$(WEBSITE_DIR)/_site: $(WEBSITE_SRC)
+	deno task build:website
+
+# FIXME: ParseError: Unexpected argument 'snapshot'
+.PHONY: percy
+percy: website
+	deno run -A npm:@percy/cli snapshot -b "https://rct3.chancesnow.me" $(WEBSITE_DIR)/_site
 
 # =========================================================
 # Tests
