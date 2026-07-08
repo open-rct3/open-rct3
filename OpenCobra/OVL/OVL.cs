@@ -130,6 +130,14 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// <param name="offset">Offset within the resolved data where the pointer refers</param>
   /// <returns>True if resolution succeeded.</returns>
   public bool TryResolveRelocation(uint dataPtr, [MaybeNullWhen(false)] out byte[] data, out uint offset) {
+    // A null (zero) pointer never resolves - without this guard it spuriously "resolves" to
+    // whatever block happens to start at RelativeOffset 0 (see TryResolveString's matching guard).
+    if (dataPtr == 0) {
+      data = null;
+      offset = 0;
+      return false;
+    }
+
     var resolvedBlock = allFileTypeBlocks
       .SelectMany(ftb => ftb.SelectMany(b => b.Blocks))
       .FirstOrDefault(fb => fb.Data != null && dataPtr >= fb.RelativeOffset && dataPtr < fb.RelativeOffset + fb.Size);
