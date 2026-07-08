@@ -61,9 +61,11 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
   private Version version;
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
+  private readonly Dictionary<OvlFile, uint> entryDataPtrs = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
   private readonly List<Version> allVersions = [];
+  private readonly List<Dictionary<uint, List<byte[]>>> allExtraData = [];
   private uint relocationOffset;
   private bool disposed = false;
 
@@ -141,6 +143,40 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     data = resolvedBlock.Data;
     offset = dataPtr - resolvedBlock.RelativeOffset;
     return true;
+  }
+
+  /// <summary>
+  /// Reads the "extra data" chunks attached to a loader, e.g. Flic pixel data or a bitmap-table
+  /// index. This data is written after the relocation-fixup table and is not part of any
+  /// relocatable block, so it cannot be reached via <see cref="TryResolveRelocation"/>: it must be
+  /// looked up by the raw data-pointer value of the *loader* that owns it (see LoaderStruct.data
+  /// in ManagerFLIC.cpp/OVLDump.cpp's MakeLoaders), not the pointer of the symbol that references it.
+  /// </summary>
+  /// <param name="dataPtr">Relative offset pointer identifying the owning loader</param>
+  /// <param name="chunks">The loader's extra-data chunks, in on-disk order, or null if none exist</param>
+  /// <returns>True if any extra data chunks were found for this loader.</returns>
+  public bool TryReadExtraData(uint dataPtr, [MaybeNullWhen(false)] out IReadOnlyList<byte[]> chunks) {
+    foreach (var extraData in allExtraData) {
+      if (!extraData.TryGetValue(dataPtr, out var found)) continue;
+      chunks = found;
+      return true;
+    }
+
+    chunks = null;
+    return false;
+  }
+
+  /// <summary>
+  /// Reads the "extra data" chunks attached to the loader for a named resource. See the
+  /// <see cref="TryReadExtraData(uint, out IReadOnlyList{byte[]})"/> overload for why this data
+  /// cannot be reached via <see cref="TryResolveRelocation"/>.
+  /// </summary>
+  public bool TryReadExtraData(OvlFile file, [MaybeNullWhen(false)] out IReadOnlyList<byte[]> chunks) {
+    if (entryDataPtrs.TryGetValue(file, out var dataPtr))
+      return TryReadExtraData(dataPtr, out chunks);
+
+    chunks = null;
+    return false;
   }
 
   /// <summary>
@@ -237,10 +273,49 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     ReadBlockData(reader, blocks, version);
     SkipRelocations(reader);
 
-    if (version < Version.Four || reader.BaseStream.Position + 4 > reader.BaseStream.Length) return version;
-    if (version == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
+    if (version >= Version.Four && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
+      if (version == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
+    }
+
+    allExtraData.Add(ReadLoaderExtraData(reader, blocks, version));
 
     return version;
+  }
+
+  /// <summary>
+  /// Reads the per-loader "extra data" chunk stream that immediately follows the relocation-fixup
+  /// table, keyed by each loader's own (unresolved) data pointer. See LoaderStruct in ovlstructs.h
+  /// and the HasExtraData/ExtraChunk handling in OVLDump.cpp's MakeLoaders.
+  /// </summary>
+  private static Dictionary<uint, List<byte[]>> ReadLoaderExtraData(BinaryReader reader, FileTypeBlock[] blocks, Version version) {
+    var extraData = new Dictionary<uint, List<byte[]>>();
+    if (blocks.Length <= 2 || blocks[2].Blocks.Count <= 1) return extraData;
+
+    var loaderBlock = blocks[2].Blocks[1];
+    if (loaderBlock.Data == null || loaderBlock.Size == 0) return extraData;
+
+    // LoaderStruct: LoaderType(4), data(ptr, 4), HasExtraData(4), Sym(ptr, 4), SymbolsToResolve(4)
+    const int loaderStructSize = 20;
+    var loaderCount = Convert.ToInt32(loaderBlock.Size) / loaderStructSize;
+    for (var i = 0; i < loaderCount; i++) {
+      var offset = i * loaderStructSize;
+      var dataPtr = BitConverter.ToUInt32(loaderBlock.Data, offset + 4);
+      var hasExtraDataRaw = BitConverter.ToUInt32(loaderBlock.Data, offset + 8);
+      // v5 packs a 16-bit extra-data count and a 16-bit unknown into this field; v1/v4 use it whole.
+      var hasExtraData = version == Version.Five ? hasExtraDataRaw & 0xFFFF : hasExtraDataRaw;
+
+      for (var c = 0; c < hasExtraData; c++) {
+        if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) break;
+        var chunkSize = reader.ReadUInt32();
+        if (reader.BaseStream.Position + chunkSize > reader.BaseStream.Length) break;
+        var chunk = reader.ReadBytes(Convert.ToInt32(chunkSize));
+
+        if (!extraData.TryGetValue(dataPtr, out var chunks))
+          extraData[dataPtr] = chunks = [];
+        chunks.Add(chunk);
+      }
+    }
+    return extraData;
   }
 
   private static uint ReadV5References(BinaryReader reader, out uint subVersionFlag) {
@@ -433,10 +508,12 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
           // Neither SymbolStruct nor SymbolStruct2 stores a resource byte size; the archive
           // format has no reliable per-entry length, so read to the end of the resolved block.
           var effectiveSize = resolvedBlock.Size - relOffset;
-          entries[new OvlFile(name, fileType, resolvedBlock.Path)] = new OvlEntry(
+          var file = new OvlFile(name, fileType, resolvedBlock.Path);
+          entries[file] = new OvlEntry(
             Convert.ToUInt32(resolvedBlock.Offset + relOffset),
             effectiveSize
           );
+          entryDataPtrs[file] = dataPtr;
         }
 
         if (loaderSymbolRemaining > 0) loaderSymbolRemaining--;
@@ -472,8 +549,10 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     // Empty large fields
     if (disposing) {
       entries.Clear();
+      entryDataPtrs.Clear();
       allFileTypeBlocks.Clear();
       allLoaderHeaders.Clear();
+      allExtraData.Clear();
     }
 
     disposed = true;
