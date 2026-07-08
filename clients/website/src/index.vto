@@ -2,26 +2,76 @@
 layout: base.vto
 ---
 
-<div class="jumbotron container mx-3 mx-sm-auto my-3 w-auto">
-  <h1>20 Years Later</h1>
+<div class="jumbotron container">
+  <h1>Nostalgia Reimagined</h1>
   <p class="lead">Open source re-implementation of RollerCoaster Tycoon 3©.</p>
-  <a href="/play" class="btn btn-info call-to-action">Play Now</a>
+  <!--<a href="{{ baseUrl }}/play" class="btn call-to-action">Play Now</a>-->
 </div>
 
-<section class="container">
-  <h2>Features</h2>
+<section id="features" class="features container">
+  <h2 class="sr-only">Features</h2>
   <ul>
-    <li>Multiplayer</li>
-    <li>UI Improvements, e.g.</li>
-    <ul>
-      <li>Freeform, off-grid scenery placement</li>
-      <li>Resizable Attractions, Structures, and Scenery windows</li>
-      <li>etc.</li>
-    </ul>
-    <li>Enhanced Performance</li>
+    <li class="feature card">
+      <h3>Enhanced Performance</h3>
+      <p>Optimized for modern hardware and larger maps</p>
+    </li>
+    <li class="feature card">
+      <h3>Cross Platform</h3>
+      <p>Modern C# engine with web-based UI</p>
+    </li>
+    <li class="feature card">
+      <h3>Full Gameplay</h3>
+      <p>Base game including Soaked, & Wild expansions</p>
+    </li>
+    <li class="feature card">
+      <h3>Community Extensions</h3>
+      <p>Plugins for mods and enhancements</p>
+    </li>
+    <li class="feature card">
+      <h3>UI Improvements</h3>
+      <ul>
+        <li>Freeform, off-grid scenery placement</li>
+        <li>Resizable Attractions, Structures, and Scenery windows</li>
+        <li>etc.</li>
+      </ul>
+    </li>
+    <li class="feature card c2a">
+      <h3 class="m-0">More Coming Soon</h3>
+      <a class="btn btn-sm btn-secondary call-to-action" href="{{ wikiUrl }}/Roadmap">Roadmap</a>
+    </li>
   </ul>
-  <div class="d-flex justify-content-between align-items-center">
-    <h2 class="m-0">More coming soon.</h2>
-    <a class="btn btn-secondary call-to-action" href="https://github.com/open-rct3/open-rct3/wiki/Roadmap">Roadmap</a>
-  </div>
+</section>
+
+<section id="screenshots" class="container">
+  <h2>Screenshots</h2>
+  <figure>
+    <img src="/screenshots/nullbmp.png" alt="Screenshot 1">
+    <figcaption>Rendering the <c>nullbmp</c>.</figcaption>
+  </figure>
+  <!-- TODO: Add more screenshots -->
+</section>
+
+<section id="goals" class="features container">
+  <h2>Future Goals</h2>
+  <ul>
+    <li class="feature card">
+      <h3>Multiplayer</h3>
+      <p>Online multiplayer with matchmaking and park-level security</p>
+    </li>
+    <li class="feature card">
+      <h3>Independent Graphics</h3>
+      <p>Eliminate the need for a copy of the game</p>
+    </li>
+  </ul>
+</section>
+
+<section id="get-involved" class="container">
+  <h2>Get Involved</h2>
+  <p>
+    Please feel free to share your ideas with us on the <a href="{{ forumUrl }}">forum</a> or on <a href="https://parkcrafters.com">ParkCrafters</a>.
+  </p>
+  <p>
+    Check out and comment on the <a href="{{ wikiUrl }}/Roadmap">Roadmap</a>, open <a href="{{ forumUrl }}/new/choose">new discussion</a>, or <a href="https://github.com/sponsors/chances">buy us a coffee</a>.
+    Every bit of your support helps us make this <abbr title="Some say pipe-dream...">dream</abbr> a reality!
+  </p>
 </section>
