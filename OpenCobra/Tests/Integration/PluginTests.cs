@@ -47,7 +47,7 @@ public static class PluginTests {
       Assert.That(instance.FunctionExists("file_types"), "Plugin must export file_types() function");
       Assert.That(instance.FunctionExists("render"), "Plugin must export render() function");
       instance.Dispose();
-      compiled?.Dispose();
+      compiled.Dispose();
     }),
     new("Has Name", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
