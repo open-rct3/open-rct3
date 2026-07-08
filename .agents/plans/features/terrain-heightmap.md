@@ -41,13 +41,20 @@ placement, and building will all read from — data model only, no texture paint
 - Tile index `(0, 0)` aligns 1:1 with the existing OOB-inclusive bounds math already used by `Terrain.Width`/
   `Terrain.Height` — no separate coordinate system for buildable vs. OOB area. `Park.BuildableBounds` continues
   to describe the buildable sub-rectangle within that same index space.
-- Height unit: 1 meter per corner step, matching RCT3's ramp rise (see
-  `.agents/plans/features/terrain/tools.md`). Store as `short` (or `byte`, TBD on max map height) corner-height
-  count, not raw meters — convert to world-space Z via `count * 1.0f` (or a `HeightStep` const) at render/query
-  time.
-- Slope classification per tile derived from its own four corner heights (flat, single-corner-up, diagonal,
-  etc.) — unaffected by whether neighboring tiles are smooth-joined or detached, since classification only
-  looks at one tile's four corners at a time.
+- Height unit: 1 cm per corner step (`Terrain.HeightStep = 0.01f`), finer than RCT3's 1 m ramp-rise snap (see
+  `.agents/plans/features/terrain/tools.md`) so freeform sculpting tools can render smoothly instead of
+  stair-stepping to whole meters. Store as a `ushort` corner-height count, not raw meters — convert to
+  world-space Z via `Terrain.CornerHeightToWorldZ(count) = count * HeightStep`. Grid-based tools that snap to
+  the 1 m ramp rise should snap their edits to 100-unit increments through this same API, not introduce a
+  separate unit.
+- No discrete slope classification (flat/single-corner-up/diagonal/etc.). That taxonomy exists in the classic
+  RCT engine because rendering picks from a finite set of pre-baked slope meshes/sprites — it's a rendering
+  constraint, not a property of the terrain itself. This model stores exact corner heights at 1cm granularity,
+  so slope is just derived math (e.g. the two triangle normals of the tile's quad, or per-edge rise/run between
+  a corner pair) computed on demand wherever it's needed, not classified and stored. It's also not a single
+  value per tile: the rise along the North edge and the rise along the West edge can differ independently
+  (each is just the height delta between its two corners), so a tile doesn't have "a slope," it has up to four
+  independent edge slopes plus whatever the diagonal split of its quad implies for the interior.
 - Surface blending: the OVL `TerrainType.type` field distinguishes Ground Unblended (0), Cliff (1), and
   Ground Blended (2) — "Blended" implies the renderer smoothly interpolates texture between corners with
   differing `SurfaceIndex` values across a tile (classic RCT-style terrain blending), rather than a hard edge
@@ -75,13 +82,54 @@ placement, and building will all read from — data model only, no texture paint
     than assuming terrain edits are always unconstrained.
 - Water level as a separate horizontal plane value, independent of terrain height.
 
+## Implementation Notes
+
+Implemented in [`Terrain.cs`](../../../OpenRCT3/Simulation/Terrain.cs),
+[`TerrainCorner.cs`](../../../OpenRCT3/Simulation/TerrainCorner.cs),
+[`TerrainCornerSlot.cs`](../../../OpenRCT3/Simulation/TerrainCornerSlot.cs), and
+[`TerrainEdge.cs`](../../../OpenRCT3/Simulation/TerrainEdge.cs). Two deviations from the Goals above, both
+deliberate:
+
+- **`Terrain.HeightStep = 0.01f` (1 cm), not the 1 m ramp-rise step originally planned.** The 1 m figure is
+  the grid-tool snap increment, but the freeform sculpting tools (Hill/Mountain/Mesa/Ridge/etc., see
+  `terrain/tools.md`) are continuous-drag and need a finer resolution to render smoothly — a 1 m corner grid
+  would make hills/valleys look stair-stepped. `TerrainCorner.Height` stores a count of `HeightStep` units;
+  world-space Z is `Terrain.CornerHeightToWorldZ(height) = height * HeightStep`. Grid-based tools should snap
+  their edits to 100-unit increments (1 m) when this plan's raise/lower API gets a UI in front of it.
+- **`TerrainCorner.Height` is `ushort`, not `short`.** With the finer 1 cm unit, a `short`'s ~327 m range was
+  judged too small a safety margin; `ushort` gives 0–655.35 m, covering any plausible theme-park terrain height
+  above the Z=0 floor, while keeping `TerrainCorner` at 4 bytes (`ushort` + 2 `byte`s, `[StructLayout(Pack = 1,
+  Size = 4)]`). Terrain height is never negative in this model (no below-floor terrain), so unsigned is a
+  natural fit rather than a compromise.
+
+Corner addressing (`TerrainCornerSlot`: SouthWest/SouthEast/NorthWest/NorthEast) and edges (`TerrainEdge`:
+South/West/East/North) got their own small enums rather than raw ints, mirroring `Park.cs`'s existing style.
+`Terrain.RaiseCorner`/`LowerCorner` take an optional `Func<int, int, TerrainCornerSlot, ushort>` height-ceiling
+(or floor) query per corner, satisfying the ride-constrained-edit API-shape requirement from Goals without
+implementing ride placement itself. `SetCornerHeight` writes one corner copy without propagating, which is how
+a caller explicitly produces or maintains a detached cliff edge; `RaiseCorner`/`LowerCorner` propagate to every
+tile that shares the touched corner, which is how a previously-detached edge automatically rejoins once the
+matching corner heights agree again — implementing the confirmed auto-rejoin behavior from Goals with no
+separate "rejoin" operation needed.
+
+**Bug caught by testing and fixed**: `IsEdgeDetached`'s corner-pairing was wrong. It compared each of a tile's
+two edge corners to the neighbor's *diagonally opposite* corner (e.g., for the North edge, this tile's
+NorthWest was compared to the neighbor's SouthEast) instead of the corner occupying the *same world-space
+point* across that edge (NorthWest should compare to the neighbor's SouthWest). This produced false positives
+whenever only one corner along an edge had a distinct height from its neighbor tile — exactly the case a
+raise/lower edit produces. Replaced the diagonal `OppositeCorner` helper with an edge-aware `MirrorAcrossEdge`
+that flips only the axis the edge crosses (X for East/West, Y for North/South). Covered by
+`RaiseCorner_RejoinsPreviouslyDetachedEdge` in the test project below, which failed before the fix.
+
 ## Resolved
 
 - **Max map height**: not documented anywhere (manual, forums) — only per-scenario designer caps exist (e.g.
   "no paths above 49 feet" in one park's editor settings), which is scenario config, not an engine limit.
-  Decision: store `TerrainCorner.Height` as `short` and move on — the struct is still only 4 bytes/corner
-  (trivial at 138x138x4), so there's no cost to picking the safe upper bound now. If a real max height turns
-  up later that would fit in a `byte`, downsizing is a mechanical follow-up, not a design change.
+  Decision: store the height as a safe upper bound and move on rather than block on finding a real number — as
+  implemented this is `TerrainCorner.Height` (`ushort`, 1 cm units, 0–655.35 m; see Implementation Notes for why
+  `ushort` replaced the originally-planned `short`), still only 4 bytes/corner (trivial at 138x138x4). If a real
+  max height turns up later that would fit in fewer bits, downsizing is a mechanical follow-up, not a design
+  change.
 
 ## Deferred (out of scope for this plan)
 
@@ -100,6 +148,10 @@ make sure the corner/tile API shape doesn't foreclose them, not to resolve them.
 
 ## Status
 
-Not started — stub only. Data-model decisions (ownership, storage layout, indexing, height units, per-tile
-corners vs. shared grid, `TerrainCorner` struct with surface/cliff paint indices, max-height storage) are
-fully settled. Nothing blocks starting the grid storage and slope-classification implementation.
+Implemented: `TerrainCorner`/`TerrainCornerSlot`/`TerrainEdge` types, per-tile corner storage, edge-detach
+detection, and the raise/lower/`SetCornerHeight` API with external height-ceiling/floor query hooks, all in
+`OpenRCT3/Simulation/`. Covered by unit tests in `OpenRCT3.Tests/Simulation/TerrainTests.cs` (12 tests,
+passing). `SurfaceIndex`/`CliffIndex` are stored per the plan but nothing writes them yet (no paint tool) —
+storage-only, as scoped. No discrete slope classification is planned (see Goals); mesh-gen/path/ride-placement
+code that needs slope info should derive it directly from corner heights rather than looking up a stored
+classification.

@@ -4,6 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+using System.Collections.Generic;
 using OpenCobra.GDK.Materials;
 using OpenCobra.OVL;
 using OpenRCT3.Platforms;
@@ -25,20 +26,54 @@ namespace OpenRCT3.Simulation;
 /// <para>
 /// The world origin (0, 0, 0) is located at the middle of the South edge of the park.
 /// </para>
+/// <para>
+/// Each tile owns four <see cref="TerrainCorner"/> records (one per corner) stored in a flat array
+/// sized <c>Width * Height * 4</c>. Corners are <i>not</i> shared between tiles: a tile and the tile
+/// across an edge each have their own <see cref="TerrainCorner"/> for the same world-space point.
+/// An edge presents a smooth slope where the matching corner heights are equal, and a sheer cliff
+/// where they differ.
+/// </para>
 /// </remarks>
 public class Terrain {
-  public int Width { get; }
-  public int Height { get; }
-  public Texture? GrassTexture { get; private set; }
+  /// <summary>
+  /// The height of one corner step, in meters. One corner-height unit = 1 cm; the freeform sculpting
+  /// tools in <c>.agents/plans/features/terrain/tools.md</c> are continuous drag-based, so the
+  /// corner grid has to be finer than the 1m "ramp rise" snap granularity to let gentle hills and
+  /// valleys resolve smoothly.
+  /// </summary>
+  public const float HeightStep = 0.01f;
 
   /// <summary>
-  /// Initializes a new instance of the <see cref="Terrain"/> class.
+  /// The number of corners owned by a single tile.
+  /// </summary>
+  public const int CornersPerTile = 4;
+
+  /// <summary>The width of the terrain grid in tiles, including the OOB border.</summary>
+  public int Width { get; }
+  /// <summary>The height of the terrain grid in tiles, including the OOB border.</summary>
+  public int Height { get; }
+  /// <summary>The water level in <see cref="HeightStep"/> units.</summary>
+  public ushort WaterLevel { get; set; }
+
+  public Texture? GrassTexture { get; private set; }
+
+  private readonly TerrainCorner[] _corners;
+
+  /// <summary>
+  /// Initializes a new instance of the <see cref="Terrain"/> class with all corners at the given
+  /// initial height.
   /// </summary>
   /// <param name="width">The buildable width in tiles.</param>
   /// <param name="height">The buildable height in tiles.</param>
-  public Terrain(int width = Park.DefaultMapSize, int height = Park.DefaultMapSize) {
+  /// <param name="initialHeight">
+  /// The starting corner height in <see cref="HeightStep"/> units applied to every corner.
+  /// </param>
+  public Terrain(int width = Park.DefaultMapSize, int height = Park.DefaultMapSize, ushort initialHeight = 0) {
     Width = width + (Park.OutOfBoundsBorder * 2);
     Height = height + (Park.OutOfBoundsBorder * 2);
+    _corners = new TerrainCorner[Width * Height * CornersPerTile];
+    for (var i = 0; i < _corners.Length; i++)
+      _corners[i] = new TerrainCorner { Height = initialHeight };
   }
 
   /// <summary>
@@ -55,5 +90,236 @@ public class Terrain {
     var ovl = Ovl.Load(terrainOvl);
 
     return terrain;
+  }
+
+  /// <summary>
+  /// Computes the flat-array index for a tile's corner.
+  /// </summary>
+  /// <param name="tileX">The tile's X index in the OOB-inclusive grid.</param>
+  /// <param name="tileY">The tile's Y index in the OOB-inclusive grid.</param>
+  /// <param name="slot">Which corner of the tile to address.</param>
+  /// <returns>The flat-array offset of the requested corner.</returns>
+  public int GetCornerIndex(int tileX, int tileY, TerrainCornerSlot slot)
+    => ((tileY * Width) + tileX) * CornersPerTile + (int)slot;
+
+  /// <summary>
+  /// Returns the <see cref="TerrainCorner"/> at the given tile corner.
+  /// </summary>
+  /// <param name="tileX">The tile's X index in the OOB-inclusive grid.</param>
+  /// <param name="tileY">The tile's Y index in the OOB-inclusive grid.</param>
+  /// <param name="slot">Which corner of the tile to read.</param>
+  public TerrainCorner GetCorner(int tileX, int tileY, TerrainCornerSlot slot)
+    => _corners[GetCornerIndex(tileX, tileY, slot)];
+
+  /// <summary>
+  /// Stores the <see cref="TerrainCorner"/> at the given tile corner.
+  /// </summary>
+  /// <param name="tileX">The tile's X index in the OOB-inclusive grid.</param>
+  /// <param name="tileY">The tile's Y index in the OOB-inclusive grid.</param>
+  /// <param name="slot">Which corner of the tile to write.</param>
+  /// <param name="corner">The corner data to store.</param>
+  public void SetCorner(int tileX, int tileY, TerrainCornerSlot slot, TerrainCorner corner)
+    => _corners[GetCornerIndex(tileX, tileY, slot)] = corner;
+
+  /// <summary>
+  /// Returns a span over the four corners of the tile at <paramref name="tileX"/>, <paramref name="tileY"/>,
+  /// in <see cref="TerrainCornerSlot"/> order.
+  /// </summary>
+  public Span<TerrainCorner> GetCorners(int tileX, int tileY)
+    => _corners.AsSpan(GetCornerIndex(tileX, tileY, TerrainCornerSlot.SouthWest), CornersPerTile);
+
+  /// <summary>
+  /// Whether a tile's edge presents a cliff (vertical face) — i.e. the matching corner heights on
+  /// both sides of the edge differ.
+  /// </summary>
+  /// <param name="tileX">The tile's X index in the OOB-inclusive grid.</param>
+  /// <param name="tileY">The tile's Y index in the OOB-inclusive grid.</param>
+  /// <param name="edge">The edge to inspect.</param>
+  /// <returns>
+  /// <c>true</c> if the edge has at least one corner pair with differing heights, <c>false</c> if
+  /// both corner pairs are equal (smooth slope) or the tile is missing a neighbor across
+  /// <paramref name="edge"/>.
+  /// </returns>
+  public bool IsEdgeDetached(int tileX, int tileY, TerrainEdge edge) {
+    var (c1, c2, dx, dy) = GetEdgeCornerPair(edge);
+    var nx = tileX + dx;
+    var ny = tileY + dy;
+    if (!HasTile(nx, ny)) return false;
+    if (!HasTile(tileX, tileY)) return false;
+
+    var thisC1 = GetCorner(tileX, tileY, c1);
+    var thisC2 = GetCorner(tileX, tileY, c2);
+    var thatC1 = GetCorner(nx, ny, MirrorAcrossEdge(c1, edge));
+    var thatC2 = GetCorner(nx, ny, MirrorAcrossEdge(c2, edge));
+    return thisC1.Height != thatC1.Height || thisC2.Height != thatC2.Height;
+  }
+
+  /// <summary>
+  /// Raises a corner by <paramref name="delta"/> corner-steps, snapping to the matching corner on
+  /// every neighbor that shares it (so the shared edge stays smooth-joined).
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  /// The <paramref name="maxHeightQuery"/> lets a caller cap a corner's height — for example, a
+  /// placed ride's foundation or track segment footprint caps how far corners under/adjacent to it
+  /// can be raised. The cap is read for the editing tile's corner first, then per shared-corner
+  /// copy; the resulting corner height is the minimum across all caps.
+  /// </para>
+  /// <para>
+  /// To produce a cliff, call <see cref="SetCornerHeight"/> instead: that stores a height for one
+  /// copy of the corner without propagating, which detaches the edge.
+  /// </para>
+  /// </remarks>
+  /// <param name="tileX">The tile's X index in the OOB-inclusive grid.</param>
+  /// <param name="tileY">The tile's Y index in the OOB-inclusive grid.</param>
+  /// <param name="slot">Which corner of the tile to raise.</param>
+  /// <param name="delta">The amount in corner-steps to raise (negative to lower).</param>
+  /// <param name="maxHeightQuery">
+  /// Optional per-corner ceiling. Receives the (tileX, tileY, slot) for each shared-corner copy and
+  /// returns the maximum allowed height; if the cap is below the requested raise, the raise is
+  /// clamped. <c>null</c> (default) means unconstrained (<see cref="ushort.MaxValue"/>).
+  /// </param>
+  public void RaiseCorner(
+    int tileX,
+    int tileY,
+    TerrainCornerSlot slot,
+    int delta,
+    Func<int, int, TerrainCornerSlot, ushort>? maxHeightQuery = null) {
+    if (delta == 0) return;
+    if (!HasTile(tileX, tileY)) return;
+
+    var current = GetCorner(tileX, tileY, slot);
+    var ceiling = maxHeightQuery?.Invoke(tileX, tileY, slot) ?? ushort.MaxValue;
+    var newHeight = ClampHeight((int)current.Height + delta, upper: ceiling);
+
+    foreach (var (nx, ny, neighborSlot) in EnumerateSharedCorners(tileX, tileY, slot)) {
+      var neighborCeiling = maxHeightQuery?.Invoke(nx, ny, neighborSlot) ?? ushort.MaxValue;
+      var clamped = ClampHeight(newHeight, upper: neighborCeiling);
+      var neighborCorner = GetCorner(nx, ny, neighborSlot);
+      neighborCorner.Height = clamped;
+      SetCorner(nx, ny, neighborSlot, neighborCorner);
+    }
+
+    current.Height = newHeight;
+    SetCorner(tileX, tileY, slot, current);
+  }
+
+  /// <summary>Alias for <see cref="RaiseCorner"/> with a negative delta.</summary>
+  public void LowerCorner(
+    int tileX,
+    int tileY,
+    TerrainCornerSlot slot,
+    int delta,
+    Func<int, int, TerrainCornerSlot, ushort>? minHeightQuery = null) {
+    if (delta == 0) return;
+    if (!HasTile(tileX, tileY)) return;
+
+    var current = GetCorner(tileX, tileY, slot);
+    var floor = minHeightQuery?.Invoke(tileX, tileY, slot) ?? ushort.MinValue;
+    var newHeight = ClampHeight((int)current.Height - delta, lower: floor);
+
+    foreach (var (nx, ny, neighborSlot) in EnumerateSharedCorners(tileX, tileY, slot)) {
+      var neighborFloor = minHeightQuery?.Invoke(nx, ny, neighborSlot) ?? ushort.MinValue;
+      var clamped = ClampHeight(newHeight, lower: neighborFloor);
+      var neighborCorner = GetCorner(nx, ny, neighborSlot);
+      neighborCorner.Height = clamped;
+      SetCorner(nx, ny, neighborSlot, neighborCorner);
+    }
+
+    current.Height = newHeight;
+    SetCorner(tileX, tileY, slot, current);
+  }
+
+  /// <summary>
+  /// Stores a height for one copy of a corner without propagating to neighbors — i.e. explicitly
+  /// detaches every shared edge at that corner. The edge re-joins automatically if a later
+  /// raise/lower brings the matching neighbor corner back to the same height.
+  /// </summary>
+  public void SetCornerHeight(int tileX, int tileY, TerrainCornerSlot slot, ushort height) {
+    if (!HasTile(tileX, tileY)) return;
+    var corner = GetCorner(tileX, tileY, slot);
+    corner.Height = height;
+    SetCorner(tileX, tileY, slot, corner);
+  }
+
+  /// <summary>True if <c>(tileX, tileY)</c> lies within the OOB-inclusive grid.</summary>
+  public bool HasTile(int tileX, int tileY)
+    => tileX >= 0 && tileX < Width && tileY >= 0 && tileY < Height;
+
+  /// <summary>Converts a corner-height count to world-space Z, in meters.</summary>
+  public static float CornerHeightToWorldZ(ushort cornerHeight) => cornerHeight * HeightStep;
+
+  private static ushort ClampHeight(int value, int lower = ushort.MinValue, int upper = ushort.MaxValue)
+    => (ushort)Math.Max(lower, Math.Min(upper, value));
+
+  private static (TerrainCornerSlot c1, TerrainCornerSlot c2, int dx, int dy) GetEdgeCornerPair(TerrainEdge edge) => edge switch {
+    TerrainEdge.South => (TerrainCornerSlot.SouthWest, TerrainCornerSlot.SouthEast, 0, -1),
+    TerrainEdge.West  => (TerrainCornerSlot.SouthWest, TerrainCornerSlot.NorthWest, -1, 0),
+    TerrainEdge.East  => (TerrainCornerSlot.SouthEast, TerrainCornerSlot.NorthEast, 1, 0),
+    TerrainEdge.North => (TerrainCornerSlot.NorthWest, TerrainCornerSlot.NorthEast, 0, 1),
+    _ => throw new ArgumentOutOfRangeException(nameof(edge), edge, null),
+  };
+
+  /// <summary>
+  /// Returns the corner slot on the neighboring tile across <paramref name="edge"/> that occupies the
+  /// same world-space point as <paramref name="slot"/> on this tile.
+  /// </summary>
+  /// <remarks>
+  /// East/West edges are crossed by flipping the corner's West/East (X) side; North/South edges are
+  /// crossed by flipping the corner's South/North (Y) side. This is <i>not</i> the diagonally-opposite
+  /// corner — e.g. across the North edge, NorthWest mirrors to SouthWest (same X side), not
+  /// SouthEast.
+  /// </remarks>
+  private static TerrainCornerSlot MirrorAcrossEdge(TerrainCornerSlot slot, TerrainEdge edge) => (edge, slot) switch {
+    (TerrainEdge.East or TerrainEdge.West, TerrainCornerSlot.SouthWest) => TerrainCornerSlot.SouthEast,
+    (TerrainEdge.East or TerrainEdge.West, TerrainCornerSlot.SouthEast) => TerrainCornerSlot.SouthWest,
+    (TerrainEdge.East or TerrainEdge.West, TerrainCornerSlot.NorthWest) => TerrainCornerSlot.NorthEast,
+    (TerrainEdge.East or TerrainEdge.West, TerrainCornerSlot.NorthEast) => TerrainCornerSlot.NorthWest,
+    (TerrainEdge.North or TerrainEdge.South, TerrainCornerSlot.SouthWest) => TerrainCornerSlot.NorthWest,
+    (TerrainEdge.North or TerrainEdge.South, TerrainCornerSlot.NorthWest) => TerrainCornerSlot.SouthWest,
+    (TerrainEdge.North or TerrainEdge.South, TerrainCornerSlot.SouthEast) => TerrainCornerSlot.NorthEast,
+    (TerrainEdge.North or TerrainEdge.South, TerrainCornerSlot.NorthEast) => TerrainCornerSlot.SouthEast,
+    _ => throw new ArgumentOutOfRangeException(nameof(slot), slot, null),
+  };
+
+  /// <summary>
+  /// Enumerates every (tileX, tileY, slot) that owns a copy of the world-space corner that
+  /// <c>(tileX, tileY).slot</c> addresses, excluding the source entry itself.
+  /// </summary>
+  private IEnumerable<(int x, int y, TerrainCornerSlot slot)> EnumerateSharedCorners(int tileX, int tileY, TerrainCornerSlot slot) {
+    // For tile (x, y), the slot's world position is:
+    //   SouthWest -> (x,   y)
+    //   SouthEast -> (x+1, y)
+    //   NorthWest -> (x,   y+1)
+    //   NorthEast -> (x+1, y+1)
+    // A neighbor shares this corner when its own tile contains that world position.
+    var (wx, wy) = slot switch {
+      TerrainCornerSlot.SouthWest => (tileX, tileY),
+      TerrainCornerSlot.SouthEast => (tileX + 1, tileY),
+      TerrainCornerSlot.NorthWest => (tileX, tileY + 1),
+      TerrainCornerSlot.NorthEast => (tileX + 1, tileY + 1),
+      _ => throw new ArgumentOutOfRangeException(nameof(slot), slot, null),
+    };
+
+    // The four tiles that can own this corner are those with the corner's world position as one of
+    // their four (SW, SE, NW, NE) world positions. Concretely, those are the (x', y') tiles where
+    // x' ∈ {wx, wx - 1} and y' ∈ {wy, wy - 1} — but only those tiles that also have the corner as
+    // one of their four slots. Each (x', y') can own the corner as exactly one of:
+    //   (x', y')       owns the world position (x', y')     as SW
+    //   (x'-1, y')     owns the world position (x', y')     as SE
+    //   (x', y'-1)     owns the world position (x', y')     as NW
+    //   (x'-1, y'-1)   owns the world position (x', y')     as NE
+    // The source tile (tileX, tileY) is excluded.
+    var candidates = new (int x, int y, TerrainCornerSlot slot)[] {
+      (wx,     wy,     TerrainCornerSlot.SouthWest),
+      (wx - 1, wy,     TerrainCornerSlot.SouthEast),
+      (wx,     wy - 1, TerrainCornerSlot.NorthWest),
+      (wx - 1, wy - 1, TerrainCornerSlot.NorthEast),
+    };
+    foreach (var (x, y, s) in candidates) {
+      if (x == tileX && y == tileY && s == slot) continue;
+      if (!HasTile(x, y)) continue;
+      yield return (x, y, s);
+    }
   }
 }
