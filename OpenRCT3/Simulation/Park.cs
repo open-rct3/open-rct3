@@ -8,6 +8,8 @@ using System.Numerics;
 
 namespace OpenRCT3.Simulation;
 
+// TODO: Tile grid, terrain height data, and ride/path placement models
+
 /// <summary>
 /// Represents a park within the game world.
 /// </summary>

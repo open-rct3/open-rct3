@@ -134,17 +134,23 @@ public class InputAdapter : InputContext {
       };
       control.MouseUp += (_, e) => {
         mouse = mouse.WithButton(e.Button.ToMouseButton(), false);
-        lastClickedButton = null;
         MouseUp?.Invoke(this, e.Button.ToMouseButton());
       };
-      control.Click += (_, e) => Click?.Invoke(this, lastClickedButton!.Value, mouse.Position);
-      control.DoubleClick += (_, e) => DoubleClick?.Invoke(this, lastClickedButton!.Value, mouse.Position);
+      control.Click += (_, e) => {
+        if (lastClickedButton is not { } button) return;
+        Click?.Invoke(this, button, mouse.Position);
+        lastClickedButton = null;
+      };
+      control.DoubleClick += (_, e) => {
+        if (lastClickedButton is not { } button) return;
+        DoubleClick?.Invoke(this, button, mouse.Position);
+        lastClickedButton = null;
+      };
       control.MouseMove += (_, e) => {
         mouse = mouse.WithPosition(new(e.Location.X, e.Location.Y));
         MouseMove?.Invoke(this, mouse.Position);
       };
-      // FIXME: Get the real scroll deltas from the Win32 API
-      control.MouseWheel += (_, e) => Scroll?.Invoke(this, new ScrollWheel(0, e.Delta));
+      control.MouseWheel += (_, e) => Scroll?.Invoke(this, new ScrollWheel(0, (float)e.Delta / SystemInformation.MouseWheelScrollDelta));
     }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
 

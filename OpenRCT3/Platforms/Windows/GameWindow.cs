@@ -284,7 +284,9 @@ internal partial class GameWindow : Form, IWindow {
 
   #region IInputPlatform Members
   public bool IsApplicable(Windowing.IView view) => view is GameWindow;
-  public IInputContext CreateInput(Windowing.IView view) => new InputAdapter(this);
+  // The GL surface (not the form) is the control that actually receives mouse input,
+  // since it is docked to fill the form's entire client area.
+  public IInputContext CreateInput(Windowing.IView view) => new InputAdapter(glSurface);
   #endregion
 
   protected override void WndProc(ref Message m) {

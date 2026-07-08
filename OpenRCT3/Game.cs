@@ -14,6 +14,7 @@ using OpenCobra.GDK.Meshes;
 using OpenCobra.GDK.Platform;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
+using OpenRCT3.Scenario;
 using OpenRCT3.Simulation;
 using System.Drawing;
 using System.Threading;
@@ -123,6 +124,9 @@ public class Game : IGame {
     ground.Transform.Matrix *= 10;
     Scene.Models.Add(ground);
     logger.Trace("Added ground plane");
+
+    // Add the scenario editor window
+    Scene.Windows.Add(new Editor());
   }
 
   /// <summary>

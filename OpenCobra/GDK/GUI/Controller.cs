@@ -38,7 +38,7 @@ public class Controller : ThreadAffine, IDisposable {
     var io = ImGui.GetIO();
     io.DisplaySize = FramebufferSize;
     io.DisplayFramebufferScale = new Vector2(1);
-    io.WantSaveIniSettings = false;
+    unsafe { io.IniFilename = null; }
     io.ConfigFlags |= ImGuiConfigFlags.NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags.NavEnableGamepad;
     io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
@@ -46,7 +46,9 @@ public class Controller : ThreadAffine, IDisposable {
 
     var mouse = input.Mice[0];
     mouse.MouseMove += Mouse_Move;
-    mouse.Click += Mouse_Click;
+    mouse.MouseDown += Mouse_Down;
+    mouse.MouseUp += Mouse_Up;
+    mouse.Scroll += Mouse_Scroll;
 
     // Setup GUI theme
     ImGui.StyleColorsDark();
@@ -68,11 +70,24 @@ public class Controller : ThreadAffine, IDisposable {
 
   private void Mouse_Move(IMouse mouse, Vector2 pos) => Invoke(() => ImGui.GetIO().AddMousePosEvent(pos.X, pos.Y));
 
-  private void Mouse_Click(IMouse mouse, MouseButton button, Vector2 pos) => Invoke(() => {
-    var io = ImGui.GetIO();
-    io.AddMouseButtonEvent(button == MouseButton.Right ? 1 : 0, down: true);
-    io.AddMouseButtonEvent(button == MouseButton.Right ? 1 : 0, down: false);
+  private void Mouse_Down(IMouse mouse, MouseButton button) => Invoke(() => {
+    var index = ToImGuiButton(button);
+    if (index is int i) ImGui.GetIO().AddMouseButtonEvent(i, down: true);
   });
+
+  private void Mouse_Up(IMouse mouse, MouseButton button) => Invoke(() => {
+    var index = ToImGuiButton(button);
+    if (index is int i) ImGui.GetIO().AddMouseButtonEvent(i, down: false);
+  });
+
+  private void Mouse_Scroll(IMouse mouse, ScrollWheel wheel) => Invoke(() => ImGui.GetIO().AddMouseWheelEvent(wheel.X, wheel.Y));
+
+  private static int? ToImGuiButton(MouseButton button) => button switch {
+    MouseButton.Left => 0,
+    MouseButton.Right => 1,
+    MouseButton.Middle => 2,
+    _ => null,
+  };
 
   public void Update(double deltaSeconds) => Invoke(() => {
     Debug.Assert(!disposed);

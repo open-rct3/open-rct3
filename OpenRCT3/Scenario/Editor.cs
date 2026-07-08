@@ -5,7 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using ImGuiNET;
+using Hexa.NET.ImGui;
 using OpenCobra.GDK.GUI;
 
 namespace OpenRCT3.Scenario;

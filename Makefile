@@ -48,9 +48,7 @@ dumper:
 	dotnet run --project Dumper/Dumper.csproj
 
 .PHONY: debug
-debug:
-	deno task build:plugins
-	deno task build:desktop
+debug: plugins
 	dotnet run --project OpenRCT3/OpenRCT3.csproj
 
 # Website
