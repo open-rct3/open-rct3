@@ -1,5 +1,24 @@
 # Plan: Resolve OVL Enum TODOs (Items 1 & 2)
 
+## Status: Done
+
+Both enum changes landed in `OpenCobra/OVL/Enums.cs` (`SvdType` → `SvdLodType` with renamed members;
+`NoShadow`/`Flower` FIXME replaced with a `<remarks>` explaining the intentional dual semantics). No
+other `.cs` call sites referenced the old `SvdType` name. Both projects build clean.
+
+Added test coverage:
+- `OpenCobra/Tests/OVL/EnumsTests.cs` — unit tests pinning `SvdLodType` values and the
+  `NoShadow`/`Flower` bit alias.
+- `OpenCobra/Tests/EnumCoverage.cs` — a real-data integration test (`RCT3_PATH`) that smoke-tests SVD
+  resource readability across the full game install.
+
+A full byte-offset `SvdFlags`/`SvdLodType` enum-coverage test against real data was attempted but
+shelved: it surfaced that `Ovl.ReadResource`'s resource pointer/relocation resolution returns wrong
+bytes for a class of resources (evidenced by real SVD entries decoding to ASCII fragments of their own
+names instead of flag data), unrelated to whether the enums themselves are complete. That's written up
+separately in `.agents/bugs/ovl-resource-relocation.md`, with a follow-up task filed to fix it. Once
+fixed, re-enabling the byte-offset coverage check is the natural next step.
+
 ## Context
 
 Two outstanding TODOs in `OpenCobra/OVL/Enums.cs` required cross-referencing the original C++ source in the

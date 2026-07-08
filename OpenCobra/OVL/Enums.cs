@@ -32,11 +32,15 @@ public enum Recolorable : uint {
   Third = 4
 }
 
-/// <summary>Static vs. dynamic viewport descriptor type.</summary>
-/// <remarks>TODO: Confirm whether this relates to LODs.</remarks>
-public enum SvdType {
-  Static = 0,
-  Animated = 3,
+/// <summary>Mesh type for a single LOD entry within a Scenery Item Visual (SVD).</summary>
+/// <remarks>
+/// Corresponds to <c>SVD::LOD_Type</c> in the original C++ source (rct3constants.h).
+/// Each <c>SceneryItemVisualLOD</c> struct contains a <c>meshtype</c> field using these values.
+/// A single SVD may contain multiple LODs, each with a different mesh type.
+/// </remarks>
+public enum SvdLodType {
+  StaticShape = 0,
+  BoneShape = 3,
   Billboard = 4
 }
 
@@ -46,7 +50,12 @@ public enum SvdFlags : uint {
   /// </remarks>
   Greenery = 0x00000001,
   NoShadow = 0x00000002,
-  /// <remarks>FIXME: Has the same value as <see cref="NoShadow"/>.</remarks>
+  /// <remarks>
+  /// Alias for <see cref="NoShadow"/>. Both are explicitly <c>0x00000002</c> in the original
+  /// C++ source (rct3constants.h). On flower-type objects (<see cref="SidType.Flowers"/>),
+  /// this bit identifies the object as a flower; on all other object types, it suppresses
+  /// shadow casting. The functional effect (no shadow) is the same in both contexts.
+  /// </remarks>
   Flower = 0x00000002,
   Rotation = 0x00000004,
   Unknown01 = 0x00000010,
