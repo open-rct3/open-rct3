@@ -1,10 +1,11 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 using Silk.NET.Core.Contexts;
 
 namespace OpenRCT3.OpenGL;
 
-public class GLContext : IGLContext, INativeContext {
+public partial class GLContext : IGLContext, INativeContext {
   private const int RTLD_LAZY = 1;
   private readonly nint openglLib = dlopen("/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY);
 
@@ -28,18 +29,18 @@ public class GLContext : IGLContext, INativeContext {
     CGLSetParameter(context, kCGLCPSwapInterval, ref interval);
   }
 
-  [DllImport("/System/Library/Frameworks/OpenGL.framework/OpenGL")]
-  private extern static nint CGLGetCurrentContext();
+  [LibraryImport("/System/Library/Frameworks/OpenGL.framework/OpenGL")]
+  private static partial nint CGLGetCurrentContext();
 
-  [DllImport("/System/Library/Frameworks/OpenGL.framework/OpenGL")]
-  private extern static int CGLSetParameter(nint ctx, int parameter, ref int value);
+  [LibraryImport("/System/Library/Frameworks/OpenGL.framework/OpenGL")]
+  private static partial int CGLSetParameter(nint ctx, int parameter, ref int value);
 
-  [DllImport("libSystem.dylib")]
-  private extern static nint dlopen(string path, int mode);
+  [LibraryImport("libSystem.dylib", StringMarshalling = StringMarshalling.Utf8)]
+  private static partial nint dlopen(string path, int mode);
 
-  [DllImport("libSystem.dylib")]
-  private extern static nint dlsym(nint handle, string symbol);
+  [LibraryImport("libSystem.dylib", StringMarshalling = StringMarshalling.Utf8)]
+  private static partial nint dlsym(nint handle, string symbol);
 
-  [DllImport("libSystem.dylib")]
-  private extern static int dlclose(nint handle);
+  [LibraryImport("libSystem.dylib")]
+  private static partial int dlclose(nint handle);
 }
