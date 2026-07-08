@@ -2,6 +2,10 @@
 
 **Status**: Research complete. Implementation blocked on locating the terrain bitmap table.
 
+**Used by**: [`terrain-heightmap.md`](../plans/features/terrain-heightmap.md) — the Terrain Heightmap Data
+Model plan, whose `TerrainCorner.SurfaceIndex`/`CliffIndex` fields reference the `ter` entries and `type`
+field (Ground Unblended / Cliff / Ground Blended) described here.
+
 ## Goal
 
 Replace the solid `Color.FromArgb(79, 129, 14)` ground plane in [OpenRCT3/Game.cs:117](OpenRCT3/Game.cs) with a real grass texture loaded from the RCT3 install via the OVL pipeline.
