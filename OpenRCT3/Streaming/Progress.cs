@@ -30,7 +30,7 @@ public record struct Progress(string Task, float Loaded = 0.0f) {
   public readonly float LoadedPercent => Loaded * 100.0f;
   public readonly float LoadedPercentRounded => Convert.ToSingle(Math.Round(LoadedPercent, 2));
   public readonly bool IsLoading => Loaded < 1;
-  public readonly bool IsLoaded => Loaded == 1;
+  public readonly bool IsLoaded => Loaded >= 1.0f;
 
   public static Progress operator +(Progress a, Progress b) => new(a.Task, a.Loaded + b.Loaded);
 
