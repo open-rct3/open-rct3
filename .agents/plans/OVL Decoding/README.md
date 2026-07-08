@@ -46,7 +46,7 @@ implementation difficulty.
 - **Task**: Decode texture entries (TEX/FLIC/BTBL system)
 - **Complexity**: 386 lines of spec
 - **Key work**: 22 texture formats, BTBL vs direct FLIC layouts, mipmap parsing, DXT compression detection
-- **Dependencies**: `System.Drawing`, relocation resolution, format-specific block size calculations
+- **Dependencies**: `SixLabors.ImageSharp.Image`, relocation resolution, format-specific block size calculations
 - **Verdict**: Most research-intensive plan, extensive format table, multiple code paths
 
 ## Unranked Plans

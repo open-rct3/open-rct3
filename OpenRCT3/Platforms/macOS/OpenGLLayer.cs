@@ -32,7 +32,7 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
       // Start the game
       _renderer = new Renderer(_gl);
       _renderer.Initialize(this);
-      _ = new Game(new WeakReference<IRenderer>(_renderer));
+      _ = new Game(_renderer);
 
       _initialized = true;
     }

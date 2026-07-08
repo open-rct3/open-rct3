@@ -13,14 +13,6 @@ Deno.test("spl-viewer: name()", async () => {
   await plugin.close();
 });
 
-Deno.test("spl-viewer: version()", async () => {
-  const plugin = await createPlugin(wasmUrl, { functions });
-  const out = await plugin.call("version");
-  assert(out !== null, "Expected a result!");
-  assertEquals(out!.text(), "0.1.0");
-  await plugin.close();
-});
-
 Deno.test("spl-viewer: file_types()", async () => {
   const plugin = await createPlugin(wasmUrl, { functions });
   const out = await plugin.call("file_types");

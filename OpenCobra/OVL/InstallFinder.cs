@@ -1,15 +1,11 @@
-﻿// InstallFinder
+// InstallFinder
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-
-namespace OpenRCT3.Platforms;
+namespace OpenCobra.OVL;
 
 public class InstallNotFoundException(string message) : Exception(message);
 
@@ -20,9 +16,8 @@ public static class InstallFinder {
     public const string Platinum = "RollerCoaster Tycoon 3";
   }
 
-  public static bool Validate(string path) {
-    return Directory.Exists(path) && File.Exists(Path.Combine(path, "terrain", "RCT3", "Terrain_RCT3.common.ovl"));
-  }
+  public static bool Validate(string path) =>
+    Directory.Exists(path) && File.Exists(Path.Combine(path, "terrain", "RCT3", "Terrain_RCT3.common.ovl"));
 
   public static string Find(string[]? extraPaths = null) {
     var potentialPaths = new List<string>();
@@ -34,9 +29,11 @@ public static class InstallFinder {
       @"C:\Program Files (x86)\RollerCoaster Tycoon 3 Complete Edition",
       @"C:\Program Files (x86)\RollerCoaster Tycoon 3 Platinum",
       // Good Old Games (GOG)
+      // TODO: Discover GOG path automatically (from the registry or other means?)
       @"C:\GOG Games\RollerCoaster Tycoon 3 Complete Edition",
       @"C:\GOG Games\RollerCoaster Tycoon 3 Platinum",
       // Steam
+      // TODO: Discover Steam's `steamapps` path automatically (from the registry or other means?)
       $"C:\\Steam\\steamapps\\common\\{SteamIds.Complete}",
       $"C:\\Steam\\steamapps\\common\\{SteamIds.Platinum}",
 #elif OSX

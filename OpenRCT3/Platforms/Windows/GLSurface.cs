@@ -149,7 +149,7 @@ public class GLSurface : Control, IWindow, IGraphicsSurface {
     // Start the game
     _renderer = new Renderer(gl);
     _renderer.Initialize(this);
-    _ = new Game(new WeakReference<IRenderer>(_renderer));
+    _ = new Game(_renderer);
 
     base.OnHandleCreated(e);
 

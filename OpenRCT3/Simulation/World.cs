@@ -4,6 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+using OpenRCT3.Streaming;
 
 namespace OpenRCT3.Simulation;
 
@@ -11,10 +12,20 @@ namespace OpenRCT3.Simulation;
 /// Represents the game world including the current park, terrain, objects, and people.
 /// </summary>
 public class World {
-  // TODO: private Park Park { get; init; }
-  // TODO: private Terrain Terrain { get; init; }
-  // TODO: private List<Peep> Peeps { get; init; }
-  // TODO: private Network<Path> Paths { get; init; }
-  // TODO: private List<Attraction> Attractions { get; init; }
-  // TODO: private List<Stall> Stalls { get; init; }
+  private Progress progress = Progress.COMPLETE;
+
+  /// <summary>
+  /// The current progress of the world loading.
+  /// </summary>
+  public Progress Progress => progress;
+  public Terrain? Terrain { get; private set; }
+  public Park? Park { get; private set; }
+
+  public void Load() => progress = Progress.MeasureTasks([
+      new(() => Park = new Park(), "Loading park"),
+      new(() => Terrain = Terrain.Load(), "Loading terrain"),
+    ]).Progress;
+
+  // TODO: Use Task.Factory.StartNew to do slow async work in the background
+  // TODO: Implement IDisposable
 }

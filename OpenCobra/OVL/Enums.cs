@@ -4,12 +4,12 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
-using System;
 
 namespace OpenCobra.OVL;
 
 /// <summary>OVL archive format version.</summary>
 public enum Version : uint {
+  Unknown = 0,
   One = 1,
   Four = 4,
   Five = 5
@@ -27,6 +27,7 @@ public enum Addon : uint {
 /// <summary>Combinable recolorability flags for flexi-textures.</summary>
 [Flags]
 public enum Recolorable : uint {
+  None = 0,
   First = 1,
   Second = 2,
   Third = 4
@@ -242,3 +243,117 @@ public enum SidType {
 }
 
 /// <remarks>TODO: Tracked rides. See <see href="https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/include/rct3constants.h#L505"/>.</remarks>
+
+public enum TextureFormat : uint {
+  /// <summary>RGB, no alpha</summary>
+  R8G8B8 = 0x01,
+  /// <summary>Full RGBA, primary uncompressed target</summary>
+  [SeenInGame]
+  A8R8G8B8 = 0x02,
+  /// <summary>RGB with unused alpha byte</summary>
+  X8R8G8B8 = 0x03,
+  /// <summary>5-6-5 RGB</summary>
+  R5G6B5 = 0x04,
+  /// <summary>RGB with 1 unused bit</summary>
+  X1R5G5B5 = 0x05,
+  /// <summary>8-bit palette index</summary>
+  P8 = 0x07,
+  /// <summary>1-bit alpha + 15-bit RGB</summary>
+  A1R5G5B5 = 0x08,
+  /// <summary>4-4-4 RGB with 4 unused bits</summary>
+  X4R4G4B4 = 0x09,
+  /// <summary>4-bit alpha + 12-bit RGB</summary>
+  A4R4G4B4 = 0x0A,
+  /// <summary>8-bit luminance (grayscale)</summary>
+  L8 = 0x0B,
+  /// <summary>8-bit alpha + 8-bit luminance</summary>
+  A8L8 = 0x0C,
+  /// <summary>Normal map format</summary>
+  V8U8 = 0x0E,
+  /// <summary>YUV 4:2:2 packed</summary>
+  Uyvy = 0x10,
+  /// <summary>YUV 4:2:2 packed</summary>
+  Yuy2 = 0x11,
+  /// <summary>S3TC/DXT1 compression</summary>
+  [SeenInGame]
+  Dxt1 = 0x12,
+  /// <summary>S3TC/DXT3 compression</summary>
+  [SeenInGame]
+  Dxt3 = 0x13,
+  /// <summary>S3TC/DXT5 compression</summary>
+  Dxt5 = 0x14,
+  /// <summary>3-3-2 RGB</summary>
+  R3G3B2 = 0x15,
+  /// <summary>Alpha-only</summary>
+  A8 = 0x16,
+  /// <summary>Depth buffer</summary>
+  D16 = 0x100,
+  /// <summary>Depth buffer</summary>
+  D32 = 0x101,
+  /// <summary>Depth + stencil</summary>
+  D15S1 = 0x102,
+  /// <summary>Depth + stencil</summary>
+  D24S8 = 0x103,
+}
+
+/// <summary>
+/// Whether a the thing annotated has been observed in-game.
+/// </summary>
+[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field | AttributeTargets.Property)]
+public class SeenInGameAttribute : Attribute {
+  public long Value { get; init; }
+}
+
+public static class TextureFormatExtensions {
+  public static int BitsPerPixel(this TextureFormat format) {
+    switch (format) {
+      case TextureFormat.Dxt1:
+        return 4;
+      case TextureFormat.Dxt3:
+      case TextureFormat.Dxt5:
+      case TextureFormat.R3G3B2:
+      case TextureFormat.A8:
+      case TextureFormat.L8:
+      case TextureFormat.P8:
+        return 8;
+      case TextureFormat.R5G6B5:
+      case TextureFormat.X1R5G5B5:
+      case TextureFormat.A1R5G5B5:
+      case TextureFormat.X4R4G4B4:
+      case TextureFormat.A4R4G4B4:
+      case TextureFormat.A8L8:
+      case TextureFormat.V8U8:
+      case TextureFormat.Uyvy:
+      case TextureFormat.Yuy2:
+      case TextureFormat.D15S1:
+      case TextureFormat.D16:
+        return 16;
+      case TextureFormat.R8G8B8:
+        return 24;
+      case TextureFormat.A8R8G8B8:
+      case TextureFormat.X8R8G8B8:
+      case TextureFormat.D32:
+      case TextureFormat.D24S8:
+        return 32;
+      default:
+        throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown texture format");
+    }
+  }
+
+  public static bool IsCompressed(this TextureFormat format) => format switch {
+    TextureFormat.A8R8G8B8 or TextureFormat.Dxt1 or TextureFormat.Dxt3 or TextureFormat.Dxt5 => true,
+    _ => false,
+  };
+
+  /// <returns>Size of a single pixel, in bits.</returns>
+  /// <exception cref="ArgumentOutOfRangeException">
+  /// Thrown when the format is not supported.
+  /// </exception>
+  public static int BlockSize(this TextureFormat format) => format switch {
+    TextureFormat.A8R8G8B8 => 64,
+    TextureFormat.Dxt1 => 8,
+    TextureFormat.Dxt3 => 16,
+    TextureFormat.Dxt5 => 16,
+    _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Unsupported texture format"),
+  };
+}

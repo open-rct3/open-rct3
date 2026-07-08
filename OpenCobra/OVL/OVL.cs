@@ -14,7 +14,7 @@ namespace OpenCobra.OVL;
 
 /// <summary>OVL archive entry (resource) identifier.</summary>
 public record OvlFile(string Name, FileType Type, string Path) {
-  public override string ToString() => $"{Name}.{Type}";
+  public override string ToString() => $"{Name}.{Type.ToTagString()}";
   public override int GetHashCode() => HashCode.Combine(Name, Type, Path);
 }
 
@@ -53,9 +53,13 @@ internal class FileTypeBlock {
 }
 
 /// <summary>Represents an OVL archive, providing methods to load and extract resource entries.</summary>
-public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
+public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposable {
   public const string UnnamedOvl = "Untitled OVL";
 
+  public readonly string Name = name;
+  public Version Version => version;
+
+  private Version version;
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
@@ -85,16 +89,24 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
 
   /// <summary>Load an OVL archive and extract all resource entries.</summary>
   public static Ovl Load(string ovlPath) {
-    var ovl = new Ovl();
-    ovl.IngestArchive(ovlPath);
+    var ovl = new Ovl(Path.GetFileName(ovlPath));
+    ovl.version = ovl.IngestArchive(ovlPath);
     return ovl;
   }
 
   /// <summary>Find a resource by name.</summary>
-  public OvlFile? Find(string? name) => entries.Keys.FirstOrDefault(key =>
-    key.Type == FileType.Texture &&
-    (name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
-  );
+  public OvlFile? Find(string? name, FileType? type = null) => entries.Keys.FirstOrDefault(key => {
+    var nameProvided = name != null;
+    var nameMatch = name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase);
+    var typeMatch = type == null || key.Type == type;
+
+    // If a name is given, return true if the name matches.
+    // If a name and type is given, return true if both match.
+    // Otherwise, return true if the type matches.
+    return nameProvided
+      ? nameMatch && (type == null || typeMatch)
+      : typeMatch;
+  });
 
   /// <summary>Read the resource data for a given file.</summary>
   public byte[]? ReadResource(OvlFile file) {
@@ -108,37 +120,44 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
     return bytes;
   }
 
-  private void IngestArchive(string ovlPath) {
+  private Version IngestArchive(string ovlPath) {
+    var version = Version.Unknown;
     var basePath = Path.GetDirectoryName(ovlPath) ?? "";
     var fileName = Path.GetFileNameWithoutExtension(ovlPath).Split('.')[0];
 
     var commonPath = Path.Combine(basePath, $"{fileName}.common.ovl");
-    if (File.Exists(commonPath)) ProcessFile(commonPath);
+    if (File.Exists(commonPath))
+      version = ProcessFile(commonPath);
 
     var uniquePath = Path.Combine(basePath, $"{fileName}.unique.ovl");
-    if (File.Exists(uniquePath)) ProcessFile(uniquePath);
+    if (File.Exists(uniquePath)) {
+      var v = ProcessFile(uniquePath);
+      version = version == Version.Unknown ? v : version;
+    }
 
     ExtractResources();
+
+    return version;
   }
 
-  private void ProcessFile(string filePath) {
+  private Version ProcessFile(string filePath) {
     using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
     using var reader = new BinaryReader(stream, Encoding.UTF8, false);
 
     var magic = reader.ReadUInt32();
     Debug.Assert(magic == 0x4b524746, "Invalid OVL magic");
     var reserved = reader.ReadUInt32();
-    var version = reader.ReadUInt32();
+    var version = (Version) reader.ReadUInt32();
     var headerRefs = reader.ReadUInt32();
 
     Debug.WriteLine($"[OVL] Loading {Path.GetFileName(filePath)} (v{version})");
 
     var subVersionFlag = 0u;
-    uint referenceCount = 0;
-
-    if (version == 5) referenceCount = ReadV5References(reader, out subVersionFlag);
-    else if (version == 4) referenceCount = reader.ReadUInt32();
-    else referenceCount = headerRefs;
+    var referenceCount = version switch {
+      Version.Five => ReadV5References(reader, out subVersionFlag),
+      Version.Four => reader.ReadUInt32(),
+      _ => headerRefs
+    };
 
     Debug.WriteLine($"[OVL] subVersionFlag: {subVersionFlag}, referenceCount: {referenceCount}");
 
@@ -154,7 +173,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
       var fileTypeCount = reader.ReadUInt32();
       if (fileTypeCount > 0 && fileTypeCount < 1024) {
         loaderHeaders = ReadLoaderHeaders(reader, (int)fileTypeCount);
-        if (version == 5) ReadV5SymbolCounts(reader, loaderHeaders);
+        if (version == Version.Five) ReadV5SymbolCounts(reader, loaderHeaders);
       }
     }
     allLoaderHeaders.Add([.. loaderHeaders]);
@@ -167,21 +186,20 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
     ReadBlockData(reader, blocks, version);
     SkipRelocations(reader);
 
-    if (version >= 4 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
-      if (version == 4 || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
-    }
+    if (version < Version.Four || reader.BaseStream.Position + 4 > reader.BaseStream.Length) return version;
+    if (version == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
+
+    return version;
   }
 
   private static uint ReadV5References(BinaryReader reader, out uint subVersionFlag) {
     subVersionFlag = reader.ReadUInt32();
-    if (subVersionFlag != 0) {
-      if (reader.BaseStream.Position + 12 <= reader.BaseStream.Length) {
-        reader.ReadBytes(12);
-        while (reader.BaseStream.Position < reader.BaseStream.Length && reader.ReadByte() != 0) { }
-        while (reader.BaseStream.Position < reader.BaseStream.Length && reader.BaseStream.Position % 4 != 0)
-          reader.ReadByte();
-      }
-    }
+    if (subVersionFlag == 0 || reader.BaseStream.Position + 12 > reader.BaseStream.Length)
+      return reader.BaseStream.Position + 4 <= reader.BaseStream.Length ? reader.ReadUInt32() : 0;
+    reader.ReadBytes(12);
+    while (reader.BaseStream.Position < reader.BaseStream.Length && reader.ReadByte() != 0) { }
+    while (reader.BaseStream.Position < reader.BaseStream.Length && reader.BaseStream.Position % 4 != 0)
+      reader.ReadByte();
     return reader.BaseStream.Position + 4 <= reader.BaseStream.Length ? reader.ReadUInt32() : 0;
   }
 
@@ -222,7 +240,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
   }
 
   private static FileTypeBlock[] ReadFileTypeBlocks(
-    string filePath, BinaryReader reader, uint version, uint subVersionFlag
+    string filePath, BinaryReader reader, Version version, uint subVersionFlag
   ) {
     var blocks = new FileTypeBlock[9];
     for (var i = 0; i < blocks.Length; i++) {
@@ -231,9 +249,9 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
         continue;
       }
       blocks[i] = new FileTypeBlock { Count = reader.ReadUInt32() };
-      if (version > 1 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
+      if (version > Version.One && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
         reader.ReadUInt32();
-        if (version == 5 && (subVersionFlag & 1) != 0 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length)
+        if (version == Version.Five && (subVersionFlag & 1) != 0 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length)
           blocks[i].UnknownV5Extra = reader.ReadUInt32();
       }
 
@@ -241,7 +259,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
         .Select(_ => new FileBlock() { Path = filePath})];
 
       // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
-      if (version > 1) foreach (var block in blocks[i].Blocks) {
+      if (version > Version.One) foreach (var block in blocks[i].Blocks) {
         if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) break;
         block.Size = reader.ReadUInt32();
         blocks[i].Size += block.Size;
@@ -253,27 +271,29 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
     return blocks;
   }
 
-  private static void ReadPostBlockUnknowns(BinaryReader reader, uint version) {
-    if (version == 4 && reader.BaseStream.Position + 8 <= reader.BaseStream.Length) {
-      reader.ReadBytes(8);
-    }
-    else if (version >= 5 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
-      var bytesCount = reader.ReadUInt32();
-      if (bytesCount > 0 && bytesCount <= reader.BaseStream.Length - reader.BaseStream.Position)
-        reader.ReadBytes(Convert.ToInt32(bytesCount));
+  private static void ReadPostBlockUnknowns(BinaryReader reader, Version version) {
+    switch (version) {
+      case Version.Four when reader.BaseStream.Position + 8 <= reader.BaseStream.Length:
+        reader.ReadBytes(8);
+        break;
+      case >= Version.Five when reader.BaseStream.Position + 4 <= reader.BaseStream.Length: {
+        var bytesCount = reader.ReadUInt32();
+        if (bytesCount > 0 && bytesCount <= reader.BaseStream.Length - reader.BaseStream.Position)
+          reader.ReadBytes(Convert.ToInt32(bytesCount));
 
-      if (reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
+        if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
         var longCount = reader.ReadUInt32();
         if (Convert.ToInt64(longCount * 4) <= reader.BaseStream.Length - reader.BaseStream.Position)
           reader.ReadBytes(Convert.ToInt32(longCount * 4));
+        break;
       }
     }
   }
 
-  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, uint version) {
+  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, Version version) {
     for (var i = 0; i < blocks.Length; i++) {
       foreach (var block in blocks[i].Blocks) {
-        if (version == 1 && block.Size == 0) {
+        if (version == Version.One && block.Size == 0) {
           if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
           block.Size = reader.ReadUInt32();
         }
@@ -281,11 +301,11 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
         block.RelativeOffset = relocationOffset;
         block.TypeIndex = i;
         relocationOffset += block.Size;
-        if (block.Size > 0 && reader.BaseStream.Position + block.Size <= reader.BaseStream.Length) {
-          block.Offset = Convert.ToUInt64(reader.BaseStream.Position);
-          block.Data = reader.ReadBytes(Convert.ToInt32(block.Size));
-          Debug.WriteLine($"[OVL] Seek past block {i} size {block.Size} at relOffset 0x{block.RelativeOffset:X}");
-        }
+
+        if (block.Size <= 0 || reader.BaseStream.Position + block.Size > reader.BaseStream.Length) continue;
+        block.Offset = Convert.ToUInt64(reader.BaseStream.Position);
+        block.Data = reader.ReadBytes(Convert.ToInt32(block.Size));
+        Debug.WriteLine($"[OVL] Seek past block {i} size {block.Size} at relOffset 0x{block.RelativeOffset:X}");
       }
     }
   }
@@ -395,7 +415,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
     return null;
   }
 
-  protected virtual void Dispose(bool disposing) {
+  private void Dispose(bool disposing) {
     if (disposed) return;
 
     // Empty large fields
@@ -411,6 +431,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
   public void Dispose() {
     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
     Dispose(disposing: true);
+    // ReSharper disable once GCSuppressFinalizeForTypeWithoutDestructor because this class doesn't use unamanged data
     GC.SuppressFinalize(this);
   }
 }

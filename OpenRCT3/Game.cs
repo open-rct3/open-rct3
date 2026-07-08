@@ -5,11 +5,12 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using NLog;
 using System;
-using System.Diagnostics;
 using OpenCobra.GDK;
 using OpenRCT3.Simulation;
 using OpenRCT3.Platforms;
+
 #if WINDOWS
 using System.Windows.Forms;
 #elif OSX
@@ -22,6 +23,8 @@ namespace OpenRCT3;
 /// The game world.
 /// </summary>
 public class Game : IDisposable {
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
+
   public static Game? Instance { get; private set; }
   public static bool IsRunning => Instance != null;
   /// <summary>
@@ -41,26 +44,27 @@ public class Game : IDisposable {
   /// Target frame time of the game loop.
   /// </summary>
   public TimeSpan TargetFrameTime { get; private set; } = TimeSpan.FromSeconds(1.0 / 60.0);
-  [Unowned("The renderer is owned by the platform abstraction layer.")]
-  public WeakReference<IRenderer> Renderer { get; }
+  public IRenderer Renderer { get; }
   public World World { get; }
   public Scene Scene { get; } = new();
 
   private readonly Stopwatch _stopwatch = new();
 
   /// <param name="renderer">The game renderer.</param>
-  public Game(WeakReference<IRenderer> renderer) {
+  public Game(IRenderer renderer) {
     Instance = this;
     Renderer = renderer;
     World = new World();
 
-    if (!string.IsNullOrEmpty(Config.InstallPath)) {
-      var nullbmpPath = System.IO.Path.Combine(Config.InstallPath, "nullbmp.common.ovl");
-      Scene.LoadTexture(nullbmpPath);
-    }
+    logger.Info("Simulation features are unimplemented");
 
-    _stopwatch.Start();
-    // TODO: Log with the info severity: "Simulation features are unimplemented"
+    // Load the game world
+    // TODO: Show a progress bar while loading
+    World.Load();
+    if (!string.IsNullOrEmpty(Config.InstallPath)) {
+      var nullbmpPath = Path.Combine(Config.InstallPath, "nullbmp.common.ovl");
+      Scene.LoadTexture(nullbmpPath, "nullbmp");
+    }
   }
 
   /// <summary>
@@ -73,6 +77,9 @@ public class Game : IDisposable {
   /// <seealso cref="TargetFrameTime"/>
   /// <see href="https://gameprogrammingpatterns.com/game-loop.html"/>
   public void Run() {
+    _stopwatch.Start();
+
+    // Run the game loop
     var previousTime = _stopwatch.Elapsed;
     var lag = TimeSpan.Zero;
     var msPerUpdate = TargetFrameTime;
@@ -83,7 +90,7 @@ public class Game : IDisposable {
       previousTime = currentTime;
       lag += elapsed;
 
-      // Process any pending window events (e.g. input events)
+      // Process any pending window events, e.g. input events
 #if WINDOWS
       Application.DoEvents();
 #elif OSX
@@ -123,8 +130,7 @@ public class Game : IDisposable {
   /// </summary>
   /// <param name="interpolation">The interpolation fraction.</param>
   private void Render(float interpolation) {
-    if (Renderer.TryGetTarget(out var renderer))
-      renderer.Render(Scene);
+    Renderer.Render(Scene);
   }
 
   public void Dispose() {

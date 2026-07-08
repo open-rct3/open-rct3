@@ -1,6 +1,8 @@
 /// <reference no-default-lib="true" />
-import "../types.ts";
 import { Host } from "@extism/as-pdk";
+import { encodeBase64 } from "../lib/base64.ts";
+import { renderHexView } from "../lib/hexViewer.ts";
+import "../types.ts";
 
 export function name(): i32 {
   Host.outputString("Sound Player");
@@ -82,28 +84,6 @@ function constructWavFile(waveformatex: Uint8Array, extraSize: u16, formatTag: u
   return wavFile;
 }
 
-function base64Encode(data: Uint8Array): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  let result = "";
-  let i = 0;
-  while (i < data.length) {
-    const byte1 = data[i++];
-    const byte2 = i < data.length ? data[i++] : -1;
-    const byte3 = i < data.length ? data[i++] : -1;
-
-    const enc1 = byte1 >> 2;
-    const enc2 = ((byte1 & 3) << 4) | (byte2 != -1 ? byte2 >> 4 : 0);
-    const enc3 = byte2 != -1 ? ((byte2 & 15) << 2) | (byte3 != -1 ? byte3 >> 6 : 0) : 64;
-    const enc4 = byte3 != -1 ? byte3 & 63 : 64;
-
-    result += chars.charAt(enc1);
-    result += chars.charAt(enc2);
-    result += enc3 != 64 ? chars.charAt(enc3) : "=";
-    result += enc4 != 64 ? chars.charAt(enc4) : "=";
-  }
-  return result;
-}
-
 function getFormatName(formatTag: u16): string {
   if (formatTag == 1) return "PCM";
   if (formatTag == 2) return "ADPCM";
@@ -136,7 +116,7 @@ function renderSound(data: Uint8Array): string {
     audioData.set(data.subarray(headerSize));
     const fmtData = data.subarray(0, 18 + i32(extraSize));
     const wavFile = constructWavFile(fmtData, extraSize, formatTag, audioData);
-    const base64Audio = base64Encode(wavFile);
+    const base64Audio = encodeBase64(wavFile);
     html += `<audio controls volume="0.5"><source src='data:audio/wav;base64,${base64Audio}'></audio>`;
     html += `<script>document.querySelector('audio').volume = 0.5;</script>`;
   } else if (formatTag != 1) {
@@ -166,6 +146,7 @@ function renderSound(data: Uint8Array): string {
     }
   }
 
+  html += renderHexView(data);
   html += "</div>";
   return html;
 }

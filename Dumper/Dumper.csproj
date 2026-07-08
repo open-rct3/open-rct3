@@ -6,7 +6,6 @@
     <ProjectTypeGuids>{A3F8F2AB-B479-4A4A-A458-A89E7DC349F1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <RootNamespace>Dumper</RootNamespace>
     <AssemblyName>OVL Dumper</AssemblyName>
@@ -24,12 +23,14 @@
     <ApplicationIcon>Dumper.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+  <PropertyGroup>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <StartupObject>Dumper.Program</StartupObject>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Suppress warning about unnecessary WPF conflict: -->
-    <!-- There was a conflict between "WindowsBase, Version=4" and "WindowsBase, Version=5" -->
-    <NoWarn>$(NoWarn);MSB3277</NoWarn>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugType>full</DebugType>
@@ -60,11 +61,12 @@
     <PackageReference Include="Extism.runtime.all" Version="*" />
     <PackageReference Include="Extism.Sdk" Version="*" />
     <PackageReference Include="HtmlTags" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="*" />
     <PackageReference Include="Rop.Winforms8.DuotoneIcons.MaterialDesign" Version="1.0.33" />
-    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
+    <PackageReference Include="System.Linq.Async" Version="7.0.1" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
-    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
+    <PackageReference Include="System.Resources.Extensions" Version="10.0.8" />
   </ItemGroup>
   <!-- WinForms resources -->
   <ItemGroup>
@@ -95,20 +97,22 @@
   <!-- Bundle built-in plugins -->
   <Target Name="BuildPlugins" BeforeTargets="BeforeBuild">
     <!-- FIXME: Why can't we use $(SolutionDir) here? -->
-    <Exec Command="deno task build:plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
+    <Exec Command="make plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
   </Target>
   <ItemGroup>
     <Folder Include="Plugins\Artifacts\" />
   </ItemGroup>
   <ItemGroup>
+    <!-- FIXME: Plugins are not _always_ copied to output directory -->
     <Content Include="$(SolutionDir)bin\plugins\*.wasm">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Link>Plugins\Artifacts\%(Filename).wasm</Link>
       <TargetPath>plugins\%(Filename).wasm</TargetPath>
     </Content>
   </ItemGroup>
   <ItemGroup>
     <Using Include="System.Diagnostics" />
+    <Using Include="System.IO" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Properties\Settings.settings">
