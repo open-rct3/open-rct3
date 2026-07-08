@@ -1,7 +1,7 @@
 # FLIC Decode Gaps — Reference vs. Current Implementation
 
 Analysis of the ~320 texture-extract failures still produced after the
-[fix to the standalone flic decoder](./../bugs/ovl-texture-flic-decoding.md),
+[fix to the standalone flic decoder](./../bugs/ovl-texture-decoding.md),
 based on cross-referencing OpenCobra's `Textures.Extract` against
 [`rct3tex.cpp`](file:///C:/Users/enigm/Applications/RCT3/Dumper/rct3tex.cpp) (Jonathan Wilson's working
 RCT3 flic dumper). All six failure categories turn out to be the same root

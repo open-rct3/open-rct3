@@ -101,7 +101,19 @@ public enum FileType : ushort {
   TrackedRide,
   /// <summary>Wild Animal Item (wai)</summary>
   [Description("Wild Animal Item")]
-  WildAnimalItem
+  WildAnimalItem,
+  /// <summary>Character Skin Texture Set (mms)</summary>
+  [Description("Character Skin Texture Set")]
+  CharacterSkinSet,
+  /// <summary>Character Skin Part Texture (prt)</summary>
+  [Description("Character Skin Part Texture")]
+  CharacterSkinPart,
+  /// <summary>Particle Sprite Item (psi)</summary>
+  [Description("Particle Sprite Item")]
+  ParticleSpriteItem,
+  /// <summary>Font Character Table (fct)</summary>
+  [Description("Font Character Table")]
+  FontCharacterTable
 }
 
 /// <summary>Extension methods for working with <see cref="FileType"/>.</summary>
@@ -138,6 +150,10 @@ public static class FileTypeExtensions {
     "tks" => FileType.TrackSection,
     "trr" => FileType.TrackedRide,
     "wai" => FileType.WildAnimalItem,
+    "mms" => FileType.CharacterSkinSet,
+    "prt" => FileType.CharacterSkinPart,
+    "psi" => FileType.ParticleSpriteItem,
+    "fct" => FileType.FontCharacterTable,
     _ => FileType.Unknown,
   };
 
@@ -177,6 +193,10 @@ public static class FileTypeExtensions {
       FileType.TrackSection => "tks",
       FileType.TrackedRide => "trr",
       FileType.WildAnimalItem => "wai",
+      FileType.CharacterSkinSet => "mms",
+      FileType.CharacterSkinPart => "prt",
+      FileType.ParticleSpriteItem => "psi",
+      FileType.FontCharacterTable => "fct",
       _ => "",
     };
 
@@ -226,6 +246,10 @@ public static class FileTypeExtensions {
     FileType.TrackSection => "Train",
     FileType.TrackedRide => "Train",
     FileType.WildAnimalItem => "Paw",
+    FileType.CharacterSkinSet => "Image",
+    FileType.CharacterSkinPart => "Image",
+    FileType.ParticleSpriteItem => "Image",
+    FileType.FontCharacterTable => "FormatFont",
     _ => "FileQuestion",
   };
 
@@ -252,6 +276,9 @@ public static class FileTypeExtensions {
     FileType.WildAnimalItem => "Paw",
     FileType.ChangingRoom => "Door",
     FileType.Integer => "Numeric",
+    FileType.CharacterSkinSet or FileType.CharacterSkinPart => "ImageMultiple",
+    FileType.ParticleSpriteItem => "ImageMultiple",
+    FileType.FontCharacterTable => "FormatFont",
     _ => "FileMultipleOutline",
   };
 }
