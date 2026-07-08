@@ -53,9 +53,10 @@ public class Controller : ThreadAffine, IDisposable {
     // Setup GUI theme
     ImGui.StyleColorsDark();
     var style = ImGui.GetStyle();
-    // TODO: style.ScaleAllSizes(mainScale);
-    // TODO: style.FontScaleDpi = mainScale;
-    // TODO: io.ConfigDpiScaleFonts = true;
+    var mainScale = window.Dpi.X;
+    style.ScaleAllSizes(mainScale);
+    style.FontScaleDpi = mainScale;
+    io.ConfigDpiScaleFonts = true;
 
     // Initialize GUI renderer
     ImGuiImplOpenGL3.SetCurrentContext(context);

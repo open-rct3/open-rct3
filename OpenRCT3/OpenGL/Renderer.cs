@@ -31,6 +31,7 @@ public class Renderer : ThreadAffine, IRenderer {
   private readonly GL gl = Game.IoC.Resolve<GL>();
   private readonly ConcurrentDictionary<Material, ShaderProgram> shaders = new();
   private readonly Controller gui = Game.IoC.Resolve<Controller>();
+  private bool? appliedVSync;
 
   public State State { get; private set; } = State.Uninitialized;
   public Color ClearColor { get; set; } = Color.FromArgb(45, 45, 48);
@@ -113,9 +114,11 @@ public class Renderer : ThreadAffine, IRenderer {
 
     RenderGui(scene.Windows);
 
-    // FIXME: Apply VSync settings
-    // if (Game.Instance!.VSync) gl.SwapInterval(1);
-    // else gl.SwapInterval(0);
+    var vsync = Game.Instance!.VSync;
+    if (appliedVSync != vsync) {
+      context.SwapInterval(vsync ? 1 : 0);
+      appliedVSync = vsync;
+    }
     context.SwapBuffers();
   });
 

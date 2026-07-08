@@ -14,6 +14,7 @@ using Silk.NET.Core.Contexts;
 using Silk.NET.OpenGL;
 using Silk.NET.WGL;
 using Silk.NET.WGL.Extensions.ARB;
+using Silk.NET.WGL.Extensions.EXT;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using static OpenRCT3.Platforms.Windows.Win32;
@@ -131,7 +132,14 @@ public partial class GLContext : IGLContext, INativeContext, IDisposable {
     FreeLibrary(openglLib);
   }
 
-  public void SwapInterval(int interval) => throw new NotImplementedException();
+  public void SwapInterval(int interval) {
+    if (!wgl.TryGetExtension<ExtSwapControl>(out var ext) || ext == null) {
+      // WGL_EXT_swap_control is unavailable; VSync cannot be controlled on this system.
+      return;
+    }
+
+    ext.SwapInterval(interval);
+  }
 
   public void MakeCurrent() {
     if (Hdc == nint.Zero) throw new Exception("Could not make the GL context current.");

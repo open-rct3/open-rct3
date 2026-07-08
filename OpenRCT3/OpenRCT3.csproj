@@ -101,6 +101,7 @@
       <ItemGroup>
         <PackageReference Include="Silk.NET.WGL" Version="2.23.0" />
         <PackageReference Include="Silk.NET.WGL.Extensions.ARB" Version="2.23.0" />
+        <PackageReference Include="Silk.NET.WGL.Extensions.EXT" Version="2.23.0" />
       </ItemGroup>
       <ItemGroup>
         <Compile Remove="OpenGL\GLContext.macOS.cs" />

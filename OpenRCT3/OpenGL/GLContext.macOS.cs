@@ -21,6 +21,19 @@ public class GLContext : IGLContext, INativeContext {
     if (openglLib != nint.Zero) dlclose(openglLib);
   }
 
+  public void SwapInterval(int interval) {
+    const int kCGLCPSwapInterval = 222;
+    var context = CGLGetCurrentContext();
+    if (context == nint.Zero) return;
+    CGLSetParameter(context, kCGLCPSwapInterval, ref interval);
+  }
+
+  [DllImport("/System/Library/Frameworks/OpenGL.framework/OpenGL")]
+  private extern static nint CGLGetCurrentContext();
+
+  [DllImport("/System/Library/Frameworks/OpenGL.framework/OpenGL")]
+  private extern static int CGLSetParameter(nint ctx, int parameter, ref int value);
+
   [DllImport("libSystem.dylib")]
   private extern static nint dlopen(string path, int mode);
 
