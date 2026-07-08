@@ -1,5 +1,64 @@
 # Bug: `OVL.cs` resource relocation is unreliable — wrong bytes returned for a class of resources
 
+## Status: Fixed
+
+Root-caused and fixed in `Ovl.ExtractResources()` (`OpenCobra/OVL/OVL.cs`) by cross-referencing the
+real archive format against the reference C++ implementation
+(`D:\Users\enigm\GitHub\rct3-importer\RCT3 Importer\src\libOVLng\OVLClasses.cpp`'s `ReadFile`/`MakeSymbols`
+and `LodSymRefManager.cpp`'s `cSymbol::fill`). Three concrete bugs, all downstream of **Suspect 1**:
+
+1. **Symbol record stride was guessed, not derived from version (Suspect 1).** The real format has no
+   ambiguity: v1 archives use the 12-byte `SymbolStruct`; v4/v5 use the 16-byte `SymbolStruct2`. Neither
+   layout has a 4-byte header before the table — the `blockOffset` branches in the old code were
+   fictional. Guessing from `symbolBlock.Size % 12/16` meant any block whose size was a multiple of 48
+   (divisible by both) silently locked onto the wrong stride, misaligning every `namePtr`/`dataPtr` read
+   for the rest of that file. This was the actual cause of unrelated entries "colliding" on the same
+   garbage bytes — fixed by selecting the stride directly from the OVL header version instead
+   (`version == 1 ? 12 : 16`, no offset, ever).
+2. **A bogus "size" field (related to Suspect 1).** The old code read the 4 bytes at offset+12 of a
+   16-byte record as a resource byte size. That offset is actually the symbol's djb2 name hash
+   (`SymbolStruct2.hash`) — neither struct stores a size at all. Removed; size now always falls back to
+   "read to the end of the resolved block," the only value the format supports.
+3. **Inverted, fragile tag resolution (the "top-level vs. colon-suffixed sub-resource" framing, related
+   to Suspects 3 and 6).** Every symbol name is written as `"Name:Tag"` (e.g. `RomPil_1H:svd`)
+   *regardless of version* — confirmed via `FindSymbolString(name, tag)` in the reference writer. The old
+   fallback split on `:` and used segment `[0]` (the name) instead of the tag, and only ran when the
+   loader/tag countdown walk (Suspect 3) had already failed — which it reliably does for v1/v4 archives,
+   since those versions carry no per-loader symbol count at all (that field is v5-only). Fixed by making
+   the name's own embedded tag suffix the *primary* source of `FileType`, stripped from the returned
+   name so `OvlFile.Name` is clean (`RomPil_1H`, not `RomPil_1H:svd`); the loader/tag walk is now only a
+   fallback for the (should-not-happen) case of a name with no recognized tag suffix.
+
+Suspect 5 (shared relocation address space across `common.ovl`/`unique.ovl`) was investigated and found
+to be **correct as originally written** — confirmed via `cOvlFileClass::MakeRelOffsets` in
+`OVLClasses.cpp`, which explicitly chains the unique file's base offset from the common file's end
+(`OpenFiles[OVLT_UNIQUE].MakeRelOffsets(OpenFiles[OVLT_COMMON].MakeRelOffsets(0))`). No change needed
+there.
+
+### Verification
+
+- `EnumCoverage.SvdResources_AreReadable` against the full real RCT3 asset library: 12,114 SVD reads
+  across 14,980 archives, all passing.
+- Manual spot-check of the exact entries from the table below, re-read after the fix:
+
+  | Resource | Before | After |
+  |---|---|---|
+  | RomPilBot_1H | `0x69506D6F` ("omPi") | `0x00000001` (`SvdFlags.Greenery`) |
+  | RomPilTop_1H | `0x69506D6F` | `0x00000001` |
+  | RomPil_1H | `0x69506D6F` | `0x00000001` |
+  | RomPil_4H | `0x69506D6F` | `0x00000001` |
+  | RomPilBotShort_1H | (untested before) | `0x00000000` |
+
+  Each resource now reads a distinct, plausible `sivflags` value instead of an identical ASCII fragment
+  of its own name.
+- `ExtractResources.Load_NullbmpFtx_ExtractsFlexibleTexture` (the pre-existing FTX-side workaround/guard
+  for this same bug) passes without needing its defensive assertion to catch anything — real texture
+  data comes back instead of the `"nullbmp:ftx"` symbol-name string.
+- Full solution test suite: 19,608 passed, 0 failed.
+
+The analysis below is kept as-written for historical context; it correctly identified the failure mode
+and pointed at the right region of code even before the root cause was pinned down exactly.
+
 ## Summary
 
 `Ovl.ReadResource` (`OpenCobra/OVL/OVL.cs`) sometimes returns bytes that belong to a *different*
