@@ -9,19 +9,50 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
+using DryIoc;
+using DryIoc.ImTools;
+using NLog;
+using OpenCobra.GDK.Platform;
+using OpenRCT3.OpenGL;
+using Silk.NET.Core.Contexts;
+using Silk.NET.Input;
+using Silk.NET.Maths;
+using Silk.NET.OpenGL;
 
 using Foundation;
 using AppKit;
 using CoreAnimation;
 using ObjCRuntime;
+using Windowing = Silk.NET.Windowing;
 
 namespace OpenRCT3.Platforms.macOS;
 
 public partial class MainWindow : NSWindow, IWindow {
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
+  private readonly Stopwatch stopwatch = new();
+  private readonly Dictionary<Delegate, NSObject> observerTokens = [];
+  private Action? loadHandlers;
+  private Action<double>? updateHandlers;
+  private bool isClosing;
+
+  public event Action<Vector2D<int>>? FramebufferResize;
+  public event Action<bool>? FocusChanged;
+  public event Action<double>? Render;
+
   public MainWindow(NativeHandle handle) : base(handle) {
     NSApplication.SharedApplication.ActivateIgnoringOtherApps(true);
     MakeKeyAndOrderFront(this);
+
+    // This Program manages the game window's lifetime, same as GameWindow does on Windows.
+    Game.IoC.RegisterInstance<IWindow>(this, IfAlreadyRegistered.Replace, Setup.With(preventDisposal: true));
+
+    NSNotificationCenter.DefaultCenter.AddObserver(NSWindow.WillCloseNotification, _ => isClosing = true, this);
+    NSNotificationCenter.DefaultCenter.AddObserver(NSWindow.DidBecomeKeyNotification, _ => FocusChanged?.Invoke(true), this);
+    NSNotificationCenter.DefaultCenter.AddObserver(NSWindow.DidResignKeyNotification, _ => FocusChanged?.Invoke(false), this);
+
+    loadHandlers?.Invoke();
   }
 
   public uint FrameBufferWidth => (uint) Math.Round(
@@ -38,4 +69,228 @@ public partial class MainWindow : NSWindow, IWindow {
   public new AppKit.NSObjectPredicate? WindowShouldClose => GameViewController.ShouldClose;
 
   private GameViewController? Controller => ContentViewController as GameViewController;
+
+  // The game view (right pane of the split view) hosts the OpenGL layer; its own frame, not the
+  // whole window's, is what determines the actual rendered framebuffer size.
+  private OpenGLLayer? Layer => Controller?.Game.Layer as OpenGLLayer;
+
+  public void Start() {
+    stopwatch.Start();
+    Debug.Assert(Layer?.IsValid == true, "Renderer should be created before starting the game.");
+    if (Game.Instance == null) {
+      logger.Trace("Starting game...");
+      var game = new Game();
+      Task.Run(game.Run);
+    } else {
+      logger.Trace("Resuming game...");
+      Game.Instance.Resume();
+    }
+  }
+
+  internal void NotifyFramebufferResize(OpenCobra.GDK.Numerics.Size size) =>
+    FramebufferResize?.Invoke(new Vector2D<int>((int)size.Width, (int)size.Height));
+
+  #region IView Properties
+  [Browsable(false)]
+  public Vector2D<int> FramebufferSize => Layer is { IsValid: true }
+    ? new((int)Layer.FrameBufferSize.Width, (int)Layer.FrameBufferSize.Height)
+    : default;
+
+  [Browsable(false)]
+  public bool IsClosing => isClosing;
+
+  [Browsable(false)]
+  public double Time => stopwatch.Elapsed.TotalSeconds;
+
+  [Browsable(false)]
+  public bool IsInitialized => Layer?.IsValid ?? false;
+
+  [Browsable(false)]
+  public bool ShouldSwapAutomatically {
+    get => false;
+    set {}
+  }
+
+  [Browsable(false)]
+  public bool IsEventDriven {
+    get => true;
+    set {}
+  }
+
+  [Browsable(false)]
+  public bool IsContextControlDisabled {
+    get => false;
+    set {}
+  }
+
+  [Browsable(false)]
+  public double FramesPerSecond {
+    get => Game.Instance?.TargetFrameRate ?? 60;
+    set => Game.Instance?.TargetFrameRate = Convert.ToInt32(
+      Math.Round(value, 0, MidpointRounding.AwayFromZero)
+    );
+  }
+
+  [Browsable(false)]
+  public double UpdatesPerSecond {
+    get => Game.Instance?.TargetUpdateRate.TotalSeconds ?? 60;
+    set => Game.Instance?.TargetUpdateRate = TimeSpan.FromSeconds(value);
+  }
+
+  [Browsable(false)]
+  public Windowing.GraphicsAPI API {
+    get {
+      if (Layer is not { IsValid: true }) return new Windowing.GraphicsAPI {
+        API = Windowing.ContextAPI.OpenGL,
+        Profile = Windowing.ContextProfile.Core,
+        Flags = Windowing.ContextFlags.Default,
+        Version = new Windowing.APIVersion(SurfaceSettings.DefaultVersion.Major, SurfaceSettings.DefaultVersion.Minor)
+      };
+
+      var settings = Layer.Settings;
+      var flags = Windowing.ContextFlags.Default;
+      if (settings.Flags.HasFlag(ContextFlagMask.ForwardCompatibleBit))
+        flags |= Windowing.ContextFlags.ForwardCompatible;
+      if (settings.Flags.HasFlag(ContextFlagMask.DebugBit))
+        flags |= Windowing.ContextFlags.Debug;
+
+      return new Windowing.GraphicsAPI {
+        API = Windowing.ContextAPI.OpenGL,
+        Profile = settings.Profile switch {
+          ContextProfileMask.CompatibilityProfileBit => Windowing.ContextProfile.Compatability,
+          ContextProfileMask.CoreProfileBit => Windowing.ContextProfile.Core,
+          _ => throw new InvalidOperationException()
+        },
+        Flags = flags,
+        Version = new Windowing.APIVersion(settings.Version.Major, settings.Version.Minor)
+      };
+    }
+  }
+
+  [Browsable(false)]
+  public bool VSync {
+    get => Game.Instance?.VSync ?? false;
+    set => Game.Instance?.VSync = value;
+  }
+
+  [Browsable(false)]
+  public Windowing.VideoMode VideoMode => new(FramebufferSize, Game.Instance?.TargetFrameRate ?? 60);
+
+  [Browsable(false)]
+  public int? PreferredDepthBufferBits => OpenGL.GLContext.PreferredDepthBufferBits;
+
+  [Browsable(false)]
+  public int? PreferredStencilBufferBits => OpenGL.GLContext.PreferredStencilBufferBits;
+
+  [Browsable(false)]
+  public Vector4D<int>? PreferredBitDepth => new(OpenGL.GLContext.PreferredColorDepth);
+
+  [Browsable(false)]
+  public int? Samples => Layer is { IsValid: true } ? Layer.Renderer.MsaaSamples : null;
+
+  [Browsable(false)]
+  public IGLContext? GLContext => Layer?.GLContext;
+
+  [Browsable(false)]
+  public IVkSurface? VkSurface => null;
+
+  [Browsable(false)]
+  public INativeWindow? Native => null;
+
+  [Browsable(false)]
+  Vector2D<int> Windowing.IViewProperties.Size => FramebufferSize;
+  #endregion
+
+  #region IView Events
+  event Action<Vector2D<int>>? Windowing.IView.Resize {
+    add {
+      if (value == null) return;
+      var token = NSNotificationCenter.DefaultCenter.AddObserver(NSWindow.DidResizeNotification, _ => value(FramebufferSize), this);
+      observerTokens[value] = token;
+    }
+    remove {
+      if (value == null || !observerTokens.Remove(value, out var token)) return;
+      NSNotificationCenter.DefaultCenter.RemoveObserver(token);
+    }
+  }
+
+  event Action? Windowing.IView.Closing {
+    add {
+      if (value == null) return;
+      var token = NSNotificationCenter.DefaultCenter.AddObserver(NSWindow.WillCloseNotification, _ => value(), this);
+      observerTokens[value] = token;
+    }
+    remove {
+      if (value == null || !observerTokens.Remove(value, out var token)) return;
+      NSNotificationCenter.DefaultCenter.RemoveObserver(token);
+    }
+  }
+
+  event Action? Windowing.IView.Load {
+    add => loadHandlers += value;
+    remove => loadHandlers -= value;
+  }
+
+  event Action<double>? Windowing.IView.Update {
+    add => updateHandlers += value;
+    remove => updateHandlers -= value;
+  }
+  #endregion
+
+  // FIXME: This method ought be extracted into a platform-independent base-class.
+  nint Windowing.IView.Handle => Handle;
+
+  #region IView Methods
+  public void Initialize() {
+    // No-op: macOS's Cocoa/AppKit lifecycle (AwakeFromNib + the first CAOpenGLLayer draw
+    // callback) already sequences renderer creation correctly, unlike Windows where this method
+    // blocks the caller until the designer-created GL surface finishes initializing.
+  }
+
+  public void Reset() {
+    Game.Instance?.Pause();
+    OrderOut(this);
+  }
+
+  public void Run(Action onFrame) {
+    while (!isClosing) {
+      DoEvents();
+      onFrame();
+    }
+  }
+
+  void Windowing.IView.Focus() => MakeKeyAndOrderFront(this);
+
+  public void ContinueEvents() => Invoke(DoEvents);
+  public void DoEvents() => NSApplication.EnsureUIThread();
+  public void DoRender() => Render?.Invoke(Game.Instance!.FrameTime.TotalMilliseconds);
+  public void DoUpdate() => updateHandlers?.Invoke(Game.Instance!.FrameTime.TotalMilliseconds);
+
+  public Vector2D<int> PointToClient(Vector2D<int> point) {
+    var pt = ConvertPointFromScreen(new CoreGraphics.CGPoint(point.X, point.Y));
+    return new((int)pt.X, (int)pt.Y);
+  }
+
+  public Vector2D<int> PointToScreen(Vector2D<int> point) {
+    var pt = ConvertPointToScreen(new CoreGraphics.CGPoint(point.X, point.Y));
+    return new((int)pt.X, (int)pt.Y);
+  }
+
+  public Vector2D<int> PointToFramebuffer(Vector2D<int> point) {
+    if (Controller?.Game == null) return point;
+    var pt = Controller.Game.ConvertPointFromView(new CoreGraphics.CGPoint(point.X, point.Y), null);
+    return new((int)pt.X, (int)pt.Y);
+  }
+
+  public object Invoke(Delegate d, params object[] args) {
+    object? result = null;
+    NSApplication.SharedApplication.InvokeOnMainThread(() => result = d.DynamicInvoke(args));
+    return result!;
+  }
+  #endregion
+
+  #region IInputPlatform Members
+  public bool IsApplicable(Windowing.IView view) => view is MainWindow;
+  public IInputContext CreateInput(Windowing.IView view) => new MacInputContext(Handle);
+  #endregion
 }

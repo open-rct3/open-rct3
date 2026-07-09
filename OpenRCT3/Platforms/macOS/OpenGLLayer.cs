@@ -6,11 +6,17 @@
 // Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
 
 using System.ComponentModel;
-using System.Drawing;
+using OpenCobra.GDK.Numerics;
 using System.Runtime.InteropServices;
 using Silk.NET.OpenGL;
 using CoreAnimation;
 using CoreVideo;
+using OpenCobra.GDK.Platform;
+using OpenCobra.GDK.GUI;
+using Silk.NET.Core.Contexts;
+using Silk.NET.Input;
+using DryIoc;
+using DryIoc.ImTools;
 using OpenGL;
 using OpenRCT3.OpenGL;
 // ReSharper disable InconsistentNaming
@@ -22,6 +28,7 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
   private const CGLPixelFormatAttribute CglPfaOpenGLProfile = (CGLPixelFormatAttribute) 0x63;
 
   private bool initialized;
+  private bool faulted;
   private SurfaceSettings? settings;
   private GL? gl;
   private readonly GLContext glContext = new();
@@ -35,10 +42,18 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
     ?? throw new InvalidOperationException("Renderer has not been initialized.");
 
   [Browsable(false)]
-  public SurfaceSettings Settings => settings!;
+  public SurfaceSettings Settings => settings
+    ?? throw new InvalidOperationException("Surface settings have not been initialized.");
+  ISurfaceSettings IGraphicsSurface.Settings => Settings;
 
   [Browsable(false)]
   public bool IsValid => initialized;
+
+  /// <summary>
+  /// The native GL context backing this surface.
+  /// </summary>
+  [Browsable(false)]
+  public IGLContext GLContext => glContext;
 
   [Browsable(false)]
   public Handle<IntPtr> Surface {
@@ -78,8 +93,19 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
   }
 
   public override void DrawInCGLContext(CGLContext context, CGLPixelFormat pixelFormat, double timeInterval, ref CVTimeStamp timeStamp) {
-    if (!initialized) InitializeRenderer(context);
-    if (renderer != null) RenderScene();
+    if (!faulted) {
+      try {
+        glContext.SetCurrentContext(context.Handle.Handle);
+
+        if (!initialized) InitializeRenderer(context);
+        if (renderer != null) RenderScene();
+      } catch (Exception e) {
+        // Latch so a failure during init/render doesn't re-throw (and re-alert) on every
+        // subsequent frame while the CVDisplayLink keeps calling us at up to 60fps.
+        faulted = true;
+        Program.HandleException(e);
+      }
+    }
 
     base.DrawInCGLContext(context, pixelFormat, timeInterval, ref timeStamp);
   }
@@ -96,18 +122,24 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
       Version = version
     };
 
-    // Create the scene renderer
-    renderer = new Renderer(this, gl);
-    renderer.Initialize(this);
-    renderer.ContextRequested += (_, _) => {
-      CGLContext.CurrentContext = context;
-    };
-    renderer.Rendered += (_, _) => {
-      // Execution gets here after DrawInCGLContext > RenderScene > Renderer.Render (raises this event)
-      // Also via Game.Run > Renderer.Render (raises this event)
-      CGLFlushDrawable(context.Handle.Handle);
-    };
-    Surface = new OpenGLSurface(context.Handle.Handle, false);
+    // Register surface and GL context so other services can resolve them
+    Game.IoC.RegisterInstance<IGraphicsSurface>(this);
+    Game.IoC.RegisterInstance(gl);
+    Game.IoC.RegisterInstance<IGLContext>(glContext);
+
+    // Provide a minimal input context and GUI controller used by the renderer
+    var input = new MacInputContext(context.Handle.Handle);
+    Game.IoC.RegisterInstance<IInputContext>(input);
+    Game.IoC.RegisterInstance(new Controller(input));
+
+    // Create and initialize the scene renderer
+    renderer = new Renderer { FramebufferSize = new((int)Frame.Width, (int)Frame.Height) };
+    renderer.Initialize();
+    Game.IoC.RegisterInstance<IRenderer>(renderer);
+
+    // Create a platform surface handle (opaque) for consumers
+    Surface = new Handle<IntPtr>((nint)context.Handle.Handle, false);
+
     SurfaceCreated?.Invoke(this, renderer);
     SetNeedsDisplay();
 
@@ -116,7 +148,7 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
 
   private void RenderScene() {
     if (renderer == null || Game.Instance == null) return;
-    renderer.SetViewport((int)Frame.Width, (int)Frame.Height);
+    renderer.FramebufferSize = new((int)Frame.Width, (int)Frame.Height);
     Game.Instance.Scene.Camera.Update((float)Frame.Width / (float)Frame.Height);
     renderer.Render(Game.Instance.Scene);
   }

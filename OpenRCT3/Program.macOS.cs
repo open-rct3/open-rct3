@@ -17,11 +17,14 @@ namespace OpenRCT3;
 internal static class Program {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
-  private static void HandleException(Exception? e) {
+  internal static void HandleException(Exception? e) {
     if (e == null) return;
     logger.Fatal(e, "An unhandled exception occurred.");
 
-    NSApplication.SharedApplication.InvokeOnMainThread(() => {
+    // Must be deferred (not InvokeOnMainThread's synchronous waitUntilDone:YES): this can be
+    // reached from inside a CATransaction commit (e.g. a CAOpenGLLayer draw callback), and
+    // NSAlert.RunModal cannot run a nested run loop while a transaction is mid-commit.
+    NSApplication.SharedApplication.BeginInvokeOnMainThread(() => {
       using var alert = new CrashAlert(e);
       alert.RunAndHandle();
     });
@@ -65,7 +68,6 @@ internal static class Program {
     // LoadConfigAndFindInstall may show a dialog to the user.
     NSApplication.Init();
     LoadConfigAndFindInstall();
-    InstallFinder.Find(AppConfig.Instance.ExtraPaths);
     NSApplication.SharedApplication.Delegate = new AppDelegate();
     NSApplication.Main(args);
   }

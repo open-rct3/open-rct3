@@ -76,6 +76,7 @@
         <ImplicitUsings>true</ImplicitUsings>
         <TargetPlatformVersion>15.0</TargetPlatformVersion>
         <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+        <LinkerBehavior>LinkFrameworkSDKsOnly</LinkerBehavior>
       </PropertyGroup>
       <ItemGroup>
         <Compile Remove="OpenGL\GLContext.windows.cs" />
