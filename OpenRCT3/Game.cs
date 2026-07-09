@@ -115,15 +115,16 @@ public class Game : IGame {
     World.Load();
     logger.Trace("Game world loaded");
 
-    // Create a flat quad on the XY plane (Z-up)
+    // Build a mesh from the loaded terrain's corner-height grid (solid-colored prototype;
+    // surface painting isn't wired up yet)
     var grass = Color.FromArgb(79, 129, 14).ToGl();
-    var ground = new Model(Primitives.Plane("Ground", color: grass)) {
+    Debug.Assert(World.Terrain != null);
+    var terrainMesh = TerrainMeshBuilder.Build(World.Terrain, grass);
+    var ground = new Model(terrainMesh) {
       Material = new Flat()
     };
-    // Scale the mesh to ten (10) square meters
-    ground.Transform.Matrix *= 10;
     Scene.Models.Add(ground);
-    logger.Trace("Added ground plane");
+    logger.Trace("Added terrain mesh");
 
     // Add the scenario editor window
     Scene.Windows.Add(new Editor());
