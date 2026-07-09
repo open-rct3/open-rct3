@@ -4,11 +4,13 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+using System.Collections.Generic;
 using DotNetEnv;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
+using OVL.Tests;
 
-namespace OVL.Tests;
+namespace OpenCobra.Tests.Integration;
 
 /// <summary>
 /// Smoke-tests that Scenery Item Visual (svd) resources in real RCT3 archives are discoverable and

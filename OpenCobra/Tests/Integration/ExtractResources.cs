@@ -4,12 +4,14 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+using System.Collections.Generic;
 using DotNetEnv;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
+using OVL.Tests;
 using SixLabors.ImageSharp.PixelFormats;
 
-namespace OVL.Tests;
+namespace OpenCobra.Tests.Integration;
 
 [TestFixture]
 public class ExtractResources {
