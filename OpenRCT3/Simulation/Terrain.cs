@@ -52,8 +52,6 @@ public class Terrain {
   public int Width { get; }
   /// <summary>The height of the terrain grid in tiles, including the OOB border.</summary>
   public int Height { get; }
-  /// <summary>The water level in <see cref="HeightStep"/> units.</summary>
-  public ushort WaterLevel { get; set; }
 
   public Texture? GrassTexture { get; private set; }
 
@@ -245,6 +243,21 @@ public class Terrain {
   /// <summary>True if <c>(tileX, tileY)</c> lies within the OOB-inclusive grid.</summary>
   public bool HasTile(int tileX, int tileY)
     => tileX >= 0 && tileX < Width && tileY >= 0 && tileY < Height;
+
+  /// <summary>
+  /// Enumerates every tile that owns a copy of the corner at <c>(tileX, tileY).slot</c>, including
+  /// <paramref name="tileX"/>, <paramref name="tileY"/> itself.
+  /// </summary>
+  /// <remarks>
+  /// Exposed so callers that need to know which tiles were actually affected by a
+  /// <see cref="RaiseCorner"/>/<see cref="LowerCorner"/> edit (e.g. to invalidate a <see cref="WaterPool"/>
+  /// covering any of them) don't have to re-derive the shared-corner relationship themselves.
+  /// </remarks>
+  public IEnumerable<(int X, int Y)> GetTilesSharingCorner(int tileX, int tileY, TerrainCornerSlot slot) {
+    yield return (tileX, tileY);
+    foreach (var (x, y, _) in EnumerateSharedCorners(tileX, tileY, slot))
+      yield return (x, y);
+  }
 
   /// <summary>
   /// Returns the heights of the two corners of the tile at <paramref name="tileX"/>,

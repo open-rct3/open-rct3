@@ -66,6 +66,19 @@ public class Park {
   /// </summary>
   public Dictionary<(int X, int Y), PathTile> Paths { get; } = [];
 
+  /// <summary>
+  /// Every placed <see cref="WaterPool"/>. Prefer <see cref="WaterTiles"/> for tile-based lookups; this
+  /// list exists for iteration (e.g. rendering every pool) and O(1) removal by reference.
+  /// </summary>
+  public List<WaterPool> WaterPools { get; } = [];
+
+  /// <summary>
+  /// Maps each tile a <see cref="WaterPool"/> covers to that pool, so a tile query resolves its pool
+  /// (if any) in O(1) without scanning <see cref="WaterPools"/>. Multiple tiles alias the same
+  /// <see cref="WaterPool"/> reference.
+  /// </summary>
+  public Dictionary<(int X, int Y), WaterPool> WaterTiles { get; } = [];
+
   public Park(int buildableWidth = DefaultMapSize, int buildableHeight = DefaultMapSize) {
     float halfWidth = (buildableWidth * TileSize) / 2.0f;
     float borderOffset = OutOfBoundsBorder * TileSize;
@@ -142,5 +155,105 @@ public class Park {
     var (thatC1, thatC2) = terrain.GetEdgeCornerHeights(neighborX, neighborY, edge.Opposite());
     var diff = Math.Max(Math.Abs(thisC1 - thatC1), Math.Abs(thisC2 - thatC2));
     return diff <= AtGradePathMaxRise / 2;
+  }
+
+  /// <summary>
+  /// Places a <see cref="WaterPool"/> covering exactly <paramref name="tiles"/>, at a flat surface
+  /// height of <paramref name="height"/>.
+  /// </summary>
+  /// <remarks>
+  /// Terrain height is untouched by this call; a pool is a separate overlay traced over existing
+  /// terrain shape at creation time (see <c>.agents/plans/features/terrain-heightmap.md</c>, "Water is
+  /// per-pool"). Perimeter-tracing/flood-fill from a seed tile is not implemented here — the caller
+  /// supplies the already-decided tile set, the same way <see cref="TryPlacePath"/> takes an
+  /// already-decided <see cref="PathTile"/> rather than routing one.
+  /// </remarks>
+  /// <returns>
+  /// <c>true</c> if the pool was placed; <c>false</c> if <paramref name="tiles"/> is empty, any tile is
+  /// off-grid, or any tile already belongs to another pool.
+  /// </returns>
+  public bool TryPlaceWaterPool(IEnumerable<(int X, int Y)> tiles, ushort height, Terrain terrain, bool isOcean = false) {
+    var tileList = tiles as ICollection<(int X, int Y)> ?? [.. tiles];
+    if (tileList.Count == 0) return false;
+
+    foreach (var tile in tileList) {
+      if (!terrain.HasTile(tile.X, tile.Y)) return false;
+      if (WaterTiles.ContainsKey(tile)) return false;
+    }
+
+    var pool = new WaterPool(height, tileList, isOcean);
+    WaterPools.Add(pool);
+    foreach (var tile in tileList) WaterTiles[tile] = pool;
+    return true;
+  }
+
+  /// <summary>
+  /// Removes the <see cref="WaterPool"/> covering <c>(tileX, tileY)</c>, if any, along with every other
+  /// tile it covers.
+  /// </summary>
+  /// <remarks>
+  /// A terrain edit invalidates the whole pool it touches, not just the edited tile — see
+  /// <c>.agents/plans/features/terrain-heightmap.md</c>, "Terrain edits invalidate whole pools, not
+  /// partial regions." Re-creating a pool after an edit means re-running placement, not reshaping this
+  /// one.
+  /// </remarks>
+  /// <returns><c>true</c> if a pool was found and removed.</returns>
+  public bool InvalidateWaterPoolAt(int tileX, int tileY) {
+    if (!WaterTiles.TryGetValue((tileX, tileY), out var pool)) return false;
+
+    WaterPools.Remove(pool);
+    foreach (var tile in pool.Tiles) WaterTiles.Remove(tile);
+    return true;
+  }
+
+  /// <summary>
+  /// Raises a terrain corner via <see cref="Terrain.RaiseCorner"/>, then invalidates any
+  /// <see cref="WaterPool"/> covering a tile whose height actually changed as a result (the edited tile
+  /// and every neighbor sharing that corner).
+  /// </summary>
+  public void RaiseTerrainCorner(
+    Terrain terrain,
+    int tileX,
+    int tileY,
+    TerrainCornerSlot slot,
+    int delta,
+    Func<int, int, TerrainCornerSlot, ushort>? maxHeightQuery = null) {
+    terrain.RaiseCorner(tileX, tileY, slot, delta, maxHeightQuery);
+    InvalidateWaterPoolsSharingCorner(terrain, tileX, tileY, slot);
+  }
+
+  /// <summary>
+  /// Lowers a terrain corner via <see cref="Terrain.LowerCorner"/>, then invalidates any
+  /// <see cref="WaterPool"/> covering a tile whose height actually changed as a result (the edited tile
+  /// and every neighbor sharing that corner).
+  /// </summary>
+  public void LowerTerrainCorner(
+    Terrain terrain,
+    int tileX,
+    int tileY,
+    TerrainCornerSlot slot,
+    int delta,
+    Func<int, int, TerrainCornerSlot, ushort>? minHeightQuery = null) {
+    terrain.LowerCorner(tileX, tileY, slot, delta, minHeightQuery);
+    InvalidateWaterPoolsSharingCorner(terrain, tileX, tileY, slot);
+  }
+
+  /// <summary>
+  /// Sets a terrain corner height via <see cref="Terrain.SetCornerHeight"/> (detaching the edge, unlike
+  /// <see cref="RaiseTerrainCorner"/>/<see cref="LowerTerrainCorner"/>), then invalidates any
+  /// <see cref="WaterPool"/> covering <c>(tileX, tileY)</c>.
+  /// </summary>
+  /// <remarks>
+  /// Only the edited tile's own pool is invalidated: unlike raise/lower, this doesn't propagate to
+  /// neighboring tiles, so no other tile's height actually changed.
+  /// </remarks>
+  public void SetTerrainCornerHeight(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot, ushort height) {
+    terrain.SetCornerHeight(tileX, tileY, slot, height);
+    InvalidateWaterPoolAt(tileX, tileY);
+  }
+
+  private void InvalidateWaterPoolsSharingCorner(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot) {
+    foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot))
+      InvalidateWaterPoolAt(x, y);
   }
 }

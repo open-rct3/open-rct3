@@ -183,6 +183,15 @@ make sure the corner/tile API shape doesn't foreclose them, not to resolve them.
 - **Blended rendering**: how the renderer resolves texture across a tile whose corners have differing
   `SurfaceIndex` values ("Ground Blended", `TerrainType.type == 2`) is a rendering-plan concern, additionally
   blocked on the BTBL bitmap-table question in `grass-texture-from-terrain-ovl.md`.
+- **Water pool perimeter tracing (flood-fill placement)**: the water tool traces a pool's boundary by
+  flood-filling a connected low region from a seed tile and snapping the result to 1 m increments (see Goals,
+  "Water is per-pool"). That tracing/placement algorithm is not implemented — `Park.TryPlaceWaterPool` takes an
+  already-decided tile set, the same way `Park.TryPlacePath` takes an already-decided `PathTile` rather than
+  routing one. A future tool layer needs: a flood-fill/connected-component walk from a seed tile over tiles
+  below a candidate water height, height snapping to `Park.AtGradePathMaxRise`-style 100-unit (1 m) increments,
+  and running `IsAtGradePathPlaceable`-style terrain queries per tile rather than inventing new ones. The
+  ocean special case (traced region reaches the grid edge) also needs its edge-reachability check implemented
+  as part of this same tracing step, rather than only being settable via the `isOcean` parameter as it is now.
 
 ## Status
 
@@ -194,8 +203,14 @@ storage-only, as scoped. No discrete slope classification is planned (see Goals)
 code that needs slope info should derive it directly from corner heights rather than looking up a stored
 classification.
 
-**Water pools not yet implemented / needs rework.** The existing `Terrain.WaterLevel` (a single `ushort`
-field) predates the per-pool amendment above and no longer matches the intended design — it models one
-map-wide flat water plane, not the pool-tracing/whole-pool-invalidation/ocean-special-case behavior now
-scoped in Goals. Replacing it with the `WaterPool` model is unimplemented follow-up work, not a completed
-part of this plan.
+**Water pools implemented.** `Terrain.WaterLevel` (the single map-wide `ushort` field) is removed; replaced
+by [`WaterPool.cs`](../../../OpenRCT3/Simulation/WaterPool.cs) (height + tile set + `IsOcean` flag) and
+`Park.WaterPools`/`Park.WaterTiles` (list + tile-to-pool index, mirroring `Park.Paths`'s ownership pattern —
+`Terrain` itself stays pool-agnostic). `Park.TryPlaceWaterPool` places a pool over a caller-supplied tile set
+(rejecting empty, off-grid, or already-covered tiles). Whole-pool invalidation on terrain edit is implemented
+via `Park.RaiseTerrainCorner`/`LowerTerrainCorner`/`SetTerrainCornerHeight`, which wrap the corresponding
+`Terrain` methods and then invalidate every pool covering a tile whose height actually changed — using the new
+`Terrain.GetTilesSharingCorner` to find every tile a raise/lower propagated to, not just the directly-edited
+one. Covered by 12 tests in `OpenRCT3.Tests/Simulation/WaterPoolTests.cs` (40 tests total across the test
+project, all passing). Perimeter-tracing/flood-fill placement and ocean edge-detection are not implemented —
+see Deferred.
