@@ -1,4 +1,4 @@
-// Terrain Edge
+// Edge
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
@@ -13,7 +13,7 @@ namespace OpenRCT3.Simulation;
 /// Each edge is defined by the two corners that bound it on the owning tile and the matching pair
 /// of corners on the neighboring tile across the edge.
 /// </remarks>
-public enum TerrainEdge {
+public enum Edge {
   /// <summary>The edge running West-to-East along the tile's South side.</summary>
   South = 0,
   /// <summary>The edge running South-to-North along the tile's West side.</summary>

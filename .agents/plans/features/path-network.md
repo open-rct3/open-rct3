@@ -56,7 +56,53 @@ tile connectivity and graph structure — independent of any texture/mesh render
   behavior is deferred to a future ride/gameplay plan.
 - **Support-post rendering**: mesh/texture concern, not data model.
 
+## Implementation Notes
+
+Implemented in [`PathTile.cs`](../../../OpenRCT3/Simulation/PathTile.cs),
+[`PathRaisedSlope.cs`](../../../OpenRCT3/Simulation/PathRaisedSlope.cs), and additions to
+[`Park.cs`](../../../OpenRCT3/Simulation/Park.cs); reuses
+[`Terrain.GetEdgeCornerHeights`](../../../OpenRCT3/Simulation/Terrain.cs) (added for this plan) and
+[`Edge`](../../../OpenRCT3/Simulation/Edge.cs)/[`EdgeExtensions`](../../../OpenRCT3/Simulation/EdgeExtensions.cs)
+(renamed from `TerrainEdge` to be reusable here — see `terrain-heightmap.md`'s Implementation Notes).
+
+- **Ownership**: `Park.Paths` is a `Dictionary<(int X, int Y), PathTile>`. No `TileCoord` type exists anywhere
+  in the codebase (terrain indexing is raw `(int tileX, int tileY)` parameter pairs), so the dictionary key is
+  a plain `(int X, int Y)` value tuple, matching that existing convention rather than introducing a new type.
+- **Placement enforcement**: `Park.TryPlacePath`/`IsAtGradePathPlaceable` enforce the <1m at-grade rise
+  constraint in the data layer itself (reads `Terrain.GetCorners` and rejects placement if `max - min >=
+  AtGradePathMaxRise`), rather than trusting a UI/tool layer — a deliberate divergence from `Terrain`'s own
+  permissive raise/lower primitives, decided explicitly for this plan since path placement has a hard legal/
+  illegal distinction that terrain sculpting doesn't.
+- **Raised-path height/slope encoding**: `PathTile.RaisedHeight` (the low-edge height, in
+  `Terrain.HeightStep` units for unit consistency) + `PathRaisedSlope` (`Flat`/`Sloped`/`SteepStair`) +
+  `RaisedSlopeDirection` (an `Edge` naming the high side). `PathRaisedSlopeExtensions.RiseInHeightStepUnits()`
+  maps `Sloped`/`SteepStair` to 200/400 units (2m/4m). `PathTile.GetRaisedEdgeHeight(Edge)` derives each edge's
+  height from these three fields: full rise on the facing edge, none on the opposite edge, half-rise on the
+  two side edges. The facing-direction field (`RaisedSlopeDirection`) was a gap the plan's Goals didn't
+  cover — added during implementation since connectivity math needs a way to compute per-edge height for a
+  sloped raised tile.
+- **Connectivity** (`Park.IsPathConnected`): both tiles must have a placed path and agree on `Raised`
+  (raised never auto-connects to at-grade, confirmed during planning). At-grade connectivity compares the two
+  tiles' shared-edge terrain corner heights via `Terrain.GetEdgeCornerHeights` and passes if the max
+  per-corner difference is `<= AtGradePathMaxRise / 2` (0.5m). Raised connectivity passes on an exact
+  `GetRaisedEdgeHeight` match across the shared edge — confirmed during planning as "shared edge matches,
+  just like at-grade connections," interpreted as exact equality since raised heights are discrete-encoded,
+  not continuous terrain.
+- **Queue direction**: `PathTile.QueueFlowDirection` is a single `Edge?` (one flow direction per tile, not
+  per-edge state) — confirmed during planning once "direction per edge" turned out to mean "the edge this
+  queue tile's flow points toward," not independent state on all four edges.
+- Removed the stale `// TODO: Tile grid, terrain height data, and ride/path placement models` comment from
+  `Park.cs`, which predated `Terrain`'s actual implementation and no longer described a real gap.
+
+Covered by unit tests in
+[`OpenRCT3.Tests/Simulation/PathNetworkTests.cs`](../../../OpenRCT3.Tests/Simulation/PathNetworkTests.cs)
+(13 tests, passing): at-grade placement accept/reject (steepness, off-grid), raised placement ignoring
+terrain steepness, at-grade connectivity at/beyond the half-rise threshold, raised connectivity on
+matching/mismatched edge heights, raised-never-connects-to-at-grade, and `GetRaisedEdgeHeight` for both
+`Sloped` and `Flat`.
+
 ## Status
 
-Not started — stub only, but all data-model decisions (ownership, at-grade vs. raised distinction, height
-encoding, queue direction storage) are settled. Nothing blocks starting implementation.
+Implemented: `PathTile`/`PathRaisedSlope` types, `Park.Paths` sparse storage, at-grade placement validation,
+and at-grade/raised connectivity, all in `OpenRCT3/Simulation/`. Attachment points and queue flow/routing
+remain out of scope per the Goals above, pending the ride/scenery data models.

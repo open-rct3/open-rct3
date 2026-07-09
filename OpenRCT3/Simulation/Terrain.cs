@@ -140,7 +140,7 @@ public class Terrain {
   /// both corner pairs are equal (smooth slope) or the tile is missing a neighbor across
   /// <paramref name="edge"/>.
   /// </returns>
-  public bool IsEdgeDetached(int tileX, int tileY, TerrainEdge edge) {
+  public bool IsEdgeDetached(int tileX, int tileY, Edge edge) {
     var (c1, c2, dx, dy) = GetEdgeCornerPair(edge);
     var nx = tileX + dx;
     var ny = tileY + dy;
@@ -246,17 +246,33 @@ public class Terrain {
   public bool HasTile(int tileX, int tileY)
     => tileX >= 0 && tileX < Width && tileY >= 0 && tileY < Height;
 
+  /// <summary>
+  /// Returns the heights of the two corners of the tile at <paramref name="tileX"/>,
+  /// <paramref name="tileY"/> that bound <paramref name="edge"/>.
+  /// </summary>
+  /// <remarks>
+  /// The pair is ordered so that comparing it against the neighboring tile's pair for the
+  /// <see cref="EdgeExtensions.Opposite"/> edge lines up matching world-space corners
+  /// index-for-index (e.g. this tile's South-edge pair is (SouthWest, SouthEast); the neighbor's
+  /// North-edge pair is (NorthWest, NorthEast), and SouthWest/NorthWest share a world position, as do
+  /// SouthEast/NorthEast).
+  /// </remarks>
+  public (ushort c1, ushort c2) GetEdgeCornerHeights(int tileX, int tileY, Edge edge) {
+    var (c1, c2, _, _) = GetEdgeCornerPair(edge);
+    return (GetCorner(tileX, tileY, c1).Height, GetCorner(tileX, tileY, c2).Height);
+  }
+
   /// <summary>Converts a corner-height count to world-space Z, in meters.</summary>
   public static float CornerHeightToWorldZ(ushort cornerHeight) => cornerHeight * HeightStep;
 
   private static ushort ClampHeight(int value, int lower = ushort.MinValue, int upper = ushort.MaxValue)
     => (ushort)Math.Max(lower, Math.Min(upper, value));
 
-  private static (TerrainCornerSlot c1, TerrainCornerSlot c2, int dx, int dy) GetEdgeCornerPair(TerrainEdge edge) => edge switch {
-    TerrainEdge.South => (TerrainCornerSlot.SouthWest, TerrainCornerSlot.SouthEast, 0, -1),
-    TerrainEdge.West  => (TerrainCornerSlot.SouthWest, TerrainCornerSlot.NorthWest, -1, 0),
-    TerrainEdge.East  => (TerrainCornerSlot.SouthEast, TerrainCornerSlot.NorthEast, 1, 0),
-    TerrainEdge.North => (TerrainCornerSlot.NorthWest, TerrainCornerSlot.NorthEast, 0, 1),
+  private static (TerrainCornerSlot c1, TerrainCornerSlot c2, int dx, int dy) GetEdgeCornerPair(Edge edge) => edge switch {
+    Edge.South => (TerrainCornerSlot.SouthWest, TerrainCornerSlot.SouthEast, 0, -1),
+    Edge.West  => (TerrainCornerSlot.SouthWest, TerrainCornerSlot.NorthWest, -1, 0),
+    Edge.East  => (TerrainCornerSlot.SouthEast, TerrainCornerSlot.NorthEast, 1, 0),
+    Edge.North => (TerrainCornerSlot.NorthWest, TerrainCornerSlot.NorthEast, 0, 1),
     _ => throw new ArgumentOutOfRangeException(nameof(edge), edge, null),
   };
 
@@ -270,15 +286,15 @@ public class Terrain {
   /// corner — e.g. across the North edge, NorthWest mirrors to SouthWest (same X side), not
   /// SouthEast.
   /// </remarks>
-  private static TerrainCornerSlot MirrorAcrossEdge(TerrainCornerSlot slot, TerrainEdge edge) => (edge, slot) switch {
-    (TerrainEdge.East or TerrainEdge.West, TerrainCornerSlot.SouthWest) => TerrainCornerSlot.SouthEast,
-    (TerrainEdge.East or TerrainEdge.West, TerrainCornerSlot.SouthEast) => TerrainCornerSlot.SouthWest,
-    (TerrainEdge.East or TerrainEdge.West, TerrainCornerSlot.NorthWest) => TerrainCornerSlot.NorthEast,
-    (TerrainEdge.East or TerrainEdge.West, TerrainCornerSlot.NorthEast) => TerrainCornerSlot.NorthWest,
-    (TerrainEdge.North or TerrainEdge.South, TerrainCornerSlot.SouthWest) => TerrainCornerSlot.NorthWest,
-    (TerrainEdge.North or TerrainEdge.South, TerrainCornerSlot.NorthWest) => TerrainCornerSlot.SouthWest,
-    (TerrainEdge.North or TerrainEdge.South, TerrainCornerSlot.SouthEast) => TerrainCornerSlot.NorthEast,
-    (TerrainEdge.North or TerrainEdge.South, TerrainCornerSlot.NorthEast) => TerrainCornerSlot.SouthEast,
+  private static TerrainCornerSlot MirrorAcrossEdge(TerrainCornerSlot slot, Edge edge) => (edge, slot) switch {
+    (Edge.East or Edge.West, TerrainCornerSlot.SouthWest) => TerrainCornerSlot.SouthEast,
+    (Edge.East or Edge.West, TerrainCornerSlot.SouthEast) => TerrainCornerSlot.SouthWest,
+    (Edge.East or Edge.West, TerrainCornerSlot.NorthWest) => TerrainCornerSlot.NorthEast,
+    (Edge.East or Edge.West, TerrainCornerSlot.NorthEast) => TerrainCornerSlot.NorthWest,
+    (Edge.North or Edge.South, TerrainCornerSlot.SouthWest) => TerrainCornerSlot.NorthWest,
+    (Edge.North or Edge.South, TerrainCornerSlot.NorthWest) => TerrainCornerSlot.SouthWest,
+    (Edge.North or Edge.South, TerrainCornerSlot.SouthEast) => TerrainCornerSlot.NorthEast,
+    (Edge.North or Edge.South, TerrainCornerSlot.NorthEast) => TerrainCornerSlot.SouthEast,
     _ => throw new ArgumentOutOfRangeException(nameof(slot), slot, null),
   };
 

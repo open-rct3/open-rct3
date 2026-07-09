@@ -87,8 +87,8 @@ placement, and building will all read from — data model only, no texture paint
 Implemented in [`Terrain.cs`](../../../OpenRCT3/Simulation/Terrain.cs),
 [`TerrainCorner.cs`](../../../OpenRCT3/Simulation/TerrainCorner.cs),
 [`TerrainCornerSlot.cs`](../../../OpenRCT3/Simulation/TerrainCornerSlot.cs), and
-[`TerrainEdge.cs`](../../../OpenRCT3/Simulation/TerrainEdge.cs). Two deviations from the Goals above, both
-deliberate:
+[`Edge.cs`](../../../OpenRCT3/Simulation/Edge.cs) (renamed from `TerrainEdge` once path-network code needed the
+same edge concept — see `path-network.md`). Two deviations from the Goals above, both deliberate:
 
 - **`Terrain.HeightStep = 0.01f` (1 cm), not the 1 m ramp-rise step originally planned.** The 1 m figure is
   the grid-tool snap increment, but the freeform sculpting tools (Hill/Mountain/Mesa/Ridge/etc., see
@@ -102,7 +102,7 @@ deliberate:
   Size = 4)]`). Terrain height is never negative in this model (no below-floor terrain), so unsigned is a
   natural fit rather than a compromise.
 
-Corner addressing (`TerrainCornerSlot`: SouthWest/SouthEast/NorthWest/NorthEast) and edges (`TerrainEdge`:
+Corner addressing (`TerrainCornerSlot`: SouthWest/SouthEast/NorthWest/NorthEast) and edges (`Edge`:
 South/West/East/North) got their own small enums rather than raw ints, mirroring `Park.cs`'s existing style.
 `Terrain.RaiseCorner`/`LowerCorner` take an optional `Func<int, int, TerrainCornerSlot, ushort>` height-ceiling
 (or floor) query per corner, satisfying the ride-constrained-edit API-shape requirement from Goals without
@@ -111,6 +111,16 @@ a caller explicitly produces or maintains a detached cliff edge; `RaiseCorner`/`
 tile that shares the touched corner, which is how a previously-detached edge automatically rejoins once the
 matching corner heights agree again — implementing the confirmed auto-rejoin behavior from Goals with no
 separate "rejoin" operation needed.
+
+**Namespace considered, deferred**: after the `TerrainEdge` → `Edge` rename (see `path-network.md`), considered
+whether the remaining terrain-prefixed types (`Terrain`, `TerrainCorner`, `TerrainCornerSlot`) should move into
+a nested `OpenRCT3.Simulation.Terrain` namespace, dropping the prefix. Deferred: the class `Terrain` sharing a
+name with that namespace makes references from other namespaces awkward (the class shadows the namespace,
+forcing extra qualification), so this would also require renaming the `Terrain` class itself — a bigger,
+more disruptive change than the prefix currently justifies. Only 3 terrain files exist in the flat
+`OpenRCT3.Simulation` namespace today; revisit if that count grows enough that the prefix is doing the
+namespace's job, and rename `Terrain` at the same time to avoid the collision. A plain `Simulation/Terrain/`
+subfolder without a namespace change is the lower-friction intermediate step if organization is needed sooner.
 
 **Bug caught by testing and fixed**: `IsEdgeDetached`'s corner-pairing was wrong. It compared each of a tile's
 two edge corners to the neighbor's *diagonally opposite* corner (e.g., for the North edge, this tile's
@@ -148,7 +158,7 @@ make sure the corner/tile API shape doesn't foreclose them, not to resolve them.
 
 ## Status
 
-Implemented: `TerrainCorner`/`TerrainCornerSlot`/`TerrainEdge` types, per-tile corner storage, edge-detach
+Implemented: `TerrainCorner`/`TerrainCornerSlot`/`Edge` types, per-tile corner storage, edge-detach
 detection, and the raise/lower/`SetCornerHeight` API with external height-ceiling/floor query hooks, all in
 `OpenRCT3/Simulation/`. Covered by unit tests in `OpenRCT3.Tests/Simulation/TerrainTests.cs` (12 tests,
 passing). `SurfaceIndex`/`CliffIndex` are stored per the plan but nothing writes them yet (no paint tool) —

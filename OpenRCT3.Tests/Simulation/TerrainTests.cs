@@ -55,8 +55,8 @@ public class TerrainTests {
   public void IsEdgeDetached_FalseForFlatTerrain() {
     var terrain = NewTerrain();
 
-    Assert.That(terrain.IsEdgeDetached(0, 0, TerrainEdge.North), Is.False);
-    Assert.That(terrain.IsEdgeDetached(0, 0, TerrainEdge.East), Is.False);
+    Assert.That(terrain.IsEdgeDetached(0, 0, Edge.North), Is.False);
+    Assert.That(terrain.IsEdgeDetached(0, 0, Edge.East), Is.False);
   }
 
   [Test]
@@ -68,23 +68,23 @@ public class TerrainTests {
 
     Assert.That(terrain.GetCorner(0, 0, TerrainCornerSlot.NorthEast).Height, Is.EqualTo(9));
     Assert.That(terrain.GetCorner(1, 1, TerrainCornerSlot.SouthWest).Height, Is.EqualTo(0));
-    Assert.That(terrain.IsEdgeDetached(0, 0, TerrainEdge.North), Is.True);
-    Assert.That(terrain.IsEdgeDetached(0, 0, TerrainEdge.East), Is.True);
+    Assert.That(terrain.IsEdgeDetached(0, 0, Edge.North), Is.True);
+    Assert.That(terrain.IsEdgeDetached(0, 0, Edge.East), Is.True);
   }
 
   [Test]
   public void RaiseCorner_RejoinsPreviouslyDetachedEdge() {
     var terrain = NewTerrain();
     terrain.SetCornerHeight(0, 0, TerrainCornerSlot.NorthEast, height: 9);
-    Assert.That(terrain.IsEdgeDetached(0, 0, TerrainEdge.North), Is.True);
+    Assert.That(terrain.IsEdgeDetached(0, 0, Edge.North), Is.True);
 
     // Raising the shared corner through the normal API brings every copy back into agreement.
     terrain.RaiseCorner(1, 1, TerrainCornerSlot.SouthWest, delta: 9);
 
     Assert.That(terrain.GetCorner(0, 0, TerrainCornerSlot.NorthEast).Height, Is.EqualTo(9));
     Assert.That(terrain.GetCorner(1, 1, TerrainCornerSlot.SouthWest).Height, Is.EqualTo(9));
-    Assert.That(terrain.IsEdgeDetached(0, 0, TerrainEdge.North), Is.False);
-    Assert.That(terrain.IsEdgeDetached(0, 0, TerrainEdge.East), Is.False);
+    Assert.That(terrain.IsEdgeDetached(0, 0, Edge.North), Is.False);
+    Assert.That(terrain.IsEdgeDetached(0, 0, Edge.East), Is.False);
   }
 
   [Test]
