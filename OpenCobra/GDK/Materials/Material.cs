@@ -67,24 +67,31 @@ public abstract class Material : IResource, IDisposable {
 
 public class Flat : Material {
   public Flat() {
-    var vertexSource = @"#version 120
-attribute vec3 a_Position;
-attribute vec4 a_Color;
+    // Core-profile GLSL matching SurfaceSettings' CoreProfileBit | ForwardCompatibleBit context: no
+    // `attribute`/`varying`/`gl_FragColor`, all removed from core profile. Mixing #version 120
+    // compatibility syntax with a forward-compatible core context is driver-dependent — some drivers
+    // compile it without error but silently fail to wire up the deprecated built-ins (notably
+    // gl_FragColor), which was rendering every fragment black regardless of vertex color.
+    var vertexSource = @"#version 410 core
+in vec3 a_Position;
+in vec4 a_Color;
 
 uniform mat4 u_Model;
 uniform mat4 u_ViewProj;
 
-varying vec4 v_Color;
+out vec4 v_Color;
 
 void main() {
     gl_Position = u_ViewProj * u_Model * vec4(a_Position, 1.0);
     v_Color = a_Color;
 }";
-    var fragmentSource = @"#version 120
-varying vec4 v_Color;
+    var fragmentSource = @"#version 410 core
+in vec4 v_Color;
+
+out vec4 FragColor;
 
 void main() {
-    gl_FragColor = v_Color;
+    FragColor = v_Color;
 }";
 
     Shaders = new(vertexSource, fragmentSource);
@@ -93,31 +100,32 @@ void main() {
 
 public class Textured : Material {
   public Textured() {
-    var vertexSource = @"#version 120
-attribute vec3 a_Position;
-attribute vec2 a_TexCoord;
-attribute vec4 a_Color;
+    var vertexSource = @"#version 410 core
+in vec3 a_Position;
+in vec2 a_TexCoord;
+in vec4 a_Color;
 
 uniform mat4 u_Model;
 uniform mat4 u_ViewProj;
 
-varying vec2 v_TexCoord;
-varying vec4 v_Color;
+out vec2 v_TexCoord;
+out vec4 v_Color;
 
 void main() {
     gl_Position = u_ViewProj * u_Model * vec4(a_Position, 1.0);
-    v_TexCoord = v_TexCoord; // FIXME: Flip Y if needed for texture orientation
-    v_TexCoord = a_TexCoord;
+    v_TexCoord = a_TexCoord; // FIXME: Flip Y if needed for texture orientation
     v_Color = a_Color;
 }";
-    var fragmentSource = @"#version 120
+    var fragmentSource = @"#version 410 core
 uniform sampler2D u_Texture;
-varying vec2 v_TexCoord;
-varying vec4 v_Color;
+in vec2 v_TexCoord;
+in vec4 v_Color;
+
+out vec4 FragColor;
 
 void main() {
-    vec4 texColor = texture2D(u_Texture, v_TexCoord);
-    gl_FragColor = texColor * v_Color;
+    vec4 texColor = texture(u_Texture, v_TexCoord);
+    FragColor = texColor * v_Color;
 }";
 
     Shaders = new(vertexSource, fragmentSource);

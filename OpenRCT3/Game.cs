@@ -17,6 +17,7 @@ using OpenRCT3.Platforms;
 using OpenRCT3.Scenario;
 using OpenRCT3.Simulation;
 using System.Drawing;
+using System.Numerics;
 using System.Threading;
 
 
@@ -125,6 +126,26 @@ public class Game : IGame {
     };
     Scene.Models.Add(ground);
     logger.Trace("Added terrain mesh");
+
+    // Frame the camera on the loaded park's buildable area. Camera's default framing (a small fixed
+    // offset from the origin) only suits a toy scene — it doesn't scale to the actual, much larger,
+    // map, so most or all of the terrain ends up outside the view frustum entirely.
+    //
+    // `distance = diagonal` alone isn't enough margin: Camera's default view direction sits at an
+    // exact 45° azimuth (equal X/Y offset), so a square/rectangular map's corners land exactly on its
+    // diagonals and render as a rotated "diamond" rather than an upright rectangle. Perspective then
+    // foreshortens the near corner (closest to the eye) more than the sine-of-half-FOV bounding-sphere
+    // formula accounts for, pushing it outside the frustum before the far corner even reaches the
+    // frustum's edge. FramingDistanceMargin was picked empirically (see CameraFramingTests) to keep
+    // every corner — including the OOB border outside BuildableBounds, which the diagonal alone
+    // doesn't cover either — comfortably on-screen.
+    const float FramingDistanceMargin = 1.8f;
+    Debug.Assert(World.Park != null);
+    var bounds = World.Park.BuildableBounds;
+    var parkCenter = new Vector3((bounds.Min.X + bounds.Max.X) / 2f, (bounds.Min.Y + bounds.Max.Y) / 2f, 0f);
+    var parkDiagonal = Vector2.Distance(bounds.Min, bounds.Max);
+    Scene.Camera.Frame(parkCenter, parkDiagonal * FramingDistanceMargin);
+    logger.Trace("Framed camera on park");
 
     // Add the scenario editor window
     Scene.Windows.Add(new Editor());
