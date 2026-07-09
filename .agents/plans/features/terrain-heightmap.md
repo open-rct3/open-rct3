@@ -80,7 +80,35 @@ placement, and building will all read from — data model only, no texture paint
     of scope to design in full here (it depends on ride/building data models that don't exist yet), but the
     corner edit API shape must leave room for a per-corner height ceiling supplied by an external query rather
     than assuming terrain edits are always unconstrained.
-- Water level as a separate horizontal plane value, independent of terrain height.
+- **Water is per-pool, not a single map-wide level** (amended from the original single `WaterLevel` value below,
+  per user recollection of the original tool's behavior — not yet re-verified against the reference
+  implementation the way the corner/cliff model was):
+  - The water tool detects a pool's perimeter by tracing the boundary of a connected low region and snaps that
+    perimeter to 1 m increments — the same grid-tool snap granularity already used for height edits (100
+    `HeightStep` units). A pool's water surface is a single flat height (also 1 m-snapped), not per-corner data.
+  - Placing a pool creates a bounded water-surface mesh covering the traced region, not a modification to
+    `TerrainCorner` itself — terrain height underneath a pool is unaffected; the pool is a separate overlay
+    that happens to be bounded by terrain shape at creation time.
+  - **Ownership/representation**: a `WaterPool` (or similar) is a flat water height plus the set of tiles it
+    covers — the same sparse "set of tiles keyed by tile coordinate" shape `Park.Paths` already uses for path
+    tiles (see `path-network.md`), rather than a bounding polygon: since the perimeter is grid-snapped, a tile
+    set is exact and reuses an established pattern instead of inventing boundary-polygon geometry.
+  - **Terrain edits invalidate whole pools, not partial regions.** Modifying the terrain height of any tile a
+    pool covers deletes that entire connected pool outright, rather than attempting to reshape/re-trace its
+    boundary. This is presumed to be a deliberate 2004-era performance tradeoff (avoiding a boundary re-trace
+    on every terrain edit near water) rather than a technical necessity — noted here as inherited behavior to
+    replicate, not re-derived from first principles. A future placement/tool layer re-creates the pool (or a
+    new one) by re-running the same perimeter-detection step, same as the original placement flow.
+  - **Ocean special case**: if a placed pool's traced region reaches the edge of the playable/OOB-inclusive
+    grid (the "island map" case), the pool is treated as an ocean and its water surface extends to the skybox
+    horizon in every direction instead of stopping at a traced tile-set boundary. Data-model-wise this is
+    naturally an `IsOcean`/similar flag on the pool rather than actually storing an unbounded tile set — the
+    tile-set representation above still identifies which of the map's own tiles are "wet" for gameplay/terrain
+    purposes, but rendering treats an ocean pool's mesh as unbounded rather than clipped to that tile set.
+  - Water height storage unit/encoding (presumably `HeightStep`-unit `ushort`, matching corner height) and the
+    exact tile-set data structure (dictionary keyed like `Park.Paths`, vs. a dedicated per-pool structure) are
+    left to implementation-time judgment — the shape above (pool = height + tile set + ocean flag,
+    whole-pool invalidation on edit) is the part actually being decided here.
 
 ## Implementation Notes
 
@@ -165,3 +193,9 @@ passing). `SurfaceIndex`/`CliffIndex` are stored per the plan but nothing writes
 storage-only, as scoped. No discrete slope classification is planned (see Goals); mesh-gen/path/ride-placement
 code that needs slope info should derive it directly from corner heights rather than looking up a stored
 classification.
+
+**Water pools not yet implemented / needs rework.** The existing `Terrain.WaterLevel` (a single `ushort`
+field) predates the per-pool amendment above and no longer matches the intended design — it models one
+map-wide flat water plane, not the pool-tracing/whole-pool-invalidation/ocean-special-case behavior now
+scoped in Goals. Replacing it with the `WaterPool` model is unimplemented follow-up work, not a completed
+part of this plan.

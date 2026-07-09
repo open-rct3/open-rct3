@@ -48,6 +48,53 @@ tile connectivity and graph structure — independent of any texture/mesh render
   computed from presence + slope-compatibility rather than stored explicitly, mirroring terrain's
   compute-don't-store approach to cliff detection.
 
+## Rendering Model
+
+Confirmed against the installed game's `Path/` asset tree (`D:\Steam\steamapps\common\RollerCoaster Tycoon 3
+Complete Edition\Path`): each path theme (Asphalt, Tarmac, Dirt, Crazy, Sand, Leafy, Marble, Ornate, Steel,
+UnderWater) ships two distinct OVL families per piece set, which maps directly onto the at-grade/raised split
+already in this plan's data model:
+
+- **At-grade pieces are decals painted onto terrain geometry, not separate 3D models.** The `Flat`, `Straight_A`/
+  `_B`, `Corner_A`–`_D`, `Turn_L_A`/`_B`, `Turn_T_A`–`_C`, `Turn_U`, `Turn_X`, and `Stub` OVLs per theme are
+  textures (a shared `*_Texture`/`*Texture` OVL backs the whole set) applied as a decal over the existing
+  terrain mesh built by [`TerrainMeshBuilder`](../../../OpenRCT3/Simulation/TerrainMeshBuilder.cs) — consistent
+  with the at-grade placement rule already in this plan (rise `< 1m`, slope derived live from `Terrain`
+  corners): a path piece that never needs its own slope geometry is exactly a piece that can be a flat texture
+  layer over whatever terrain shape is already there, rather than a mesh with its own vertices.
+- **Raised paths are separate models**, not decals: the `Slope`, `Slope_Mid`, `Slope_Straight`,
+  `Slope_Straight_Right`/`_left` OVLs are true 3D geometry for the raised connector pieces, and `*_Scenery`
+  OVLs supply the railings/support posts that render alongside them. This matches `PathRaisedSlope`'s discrete
+  `Flat`/`Sloped`/`SteepStair` encoding — each enum value corresponds to picking a specific piece model from
+  this set, not computing geometry from stored heights the way terrain/at-grade decals do.
+- **`UnderWater` is a themed decal skin like the other nine for its at-grade pieces** — `WaterFlat`,
+  `WaterFlatFC`, `WaterCornerA`–`D`, `WaterStraightA`/`B`, `WaterTurn*`, and `WaterPaving` fill the same
+  at-grade-decal role as e.g. Asphalt's `Flat`/`Corner_A`–`D`/`Straight_A`/`B`/`Turn_*`, just under a `Water*`
+  naming convention instead of `UnderWater_*`. Where it actually diverges is the raised pieces: the
+  `WaterSlope*` family (`BC`/`FC`/`TC` suffix variants) provides **two distinct raised-piece model sets for
+  the same slope shape** — one for a raised path segment that's in open air, and a separate one for a segment
+  that's submerged — rather than the single raised-piece set every other theme has. For this plan's data
+  model, this doesn't add a new `PathTile` field: `Raised` + the existing `PathRaisedSlope` shape already
+  identify *which slope*; whether a given raised segment resolves to the open-air or underwater model variant
+  is a per-segment rendering-time lookup against `Terrain.WaterLevel` (is this segment's height above or below
+  the water plane), not additional stored state. At-grade `UnderWater` tiles need no special handling at all —
+  they're an ordinary decal placement like any other theme, contingent on the open question below of whether
+  at-grade paths are even placeable below `Terrain.WaterLevel`.
+- **Consequence for this plan's data model**: no changes needed to `PathTile`/`PathRaisedSlope` themselves —
+  this confirms the existing raised/at-grade split is the right one to hang a renderer off of, and clarifies
+  that "at-grade path rendering" belongs with the terrain mesh/texturing pipeline (a decal pass, likely paired
+  with `TerrainCorner.SurfaceIndex` painting), while "raised path rendering" belongs with a piece-model loader
+  similar in shape to whatever eventually loads ride track pieces. Both remain out of scope for this plan (see
+  below) — this section only records the split so the future rendering plan doesn't have to re-derive it from
+  the OVL layout again.
+
+## Open Questions
+
+- Whether at-grade paths are placeable below `Terrain.WaterLevel` at all, or whether an underwater tile is
+  always forced into the `Raised` model (using the submerged `WaterSlope*` variant even for a "flat" segment)
+  so it always has real geometry instead of a decal sitting under the water plane. Affects whether
+  `IsAtGradePathPlaceable` needs a water-level check.
+
 ## Explicitly Out of Scope
 
 - **Attachment points** (path tile ↔ ride entrance/exit, path tile ↔ scenery footprint): dropped from this
@@ -55,6 +102,9 @@ tile connectivity and graph structure — independent of any texture/mesh render
 - **Queue flow/routing logic**: the directional edge flag is stored now; actual capacity/routing/merge
   behavior is deferred to a future ride/gameplay plan.
 - **Support-post rendering**: mesh/texture concern, not data model.
+- **Path rendering itself** (decal pass for at-grade, piece-model loading for raised — see Rendering Model
+  above): both are texture/mesh-loading concerns for a future rendering plan to pick up, not this data-model
+  plan.
 
 ## Implementation Notes
 
