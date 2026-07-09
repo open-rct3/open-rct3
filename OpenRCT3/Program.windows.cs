@@ -20,6 +20,26 @@ internal static class Program {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
   /// <summary>
+  /// Bridges failed <see cref="Debug.Assert"/> calls into NLog. Without this, a failed assert falls
+  /// through to the CLR's <see cref="DefaultTraceListener"/>, which calls <see cref="Environment.FailFast"/>
+  /// and kills the process immediately — bypassing <see cref="AppDomain.UnhandledException"/> and NLog
+  /// alike, so the failure is otherwise invisible in the log. This listener logs first (and flushes
+  /// synchronously) so the assertion message survives; the default listener still runs afterward and
+  /// still fails the process, since that's the correct behavior for a Debug build.
+  /// </summary>
+  private sealed class NLogAssertListener : TraceListener {
+    public override void Fail(string? message) => Fail(message, null);
+
+    public override void Fail(string? message, string? detailMessage) {
+      logger.Fatal($"Assertion failed: {message} {detailMessage}");
+      LogManager.Flush();
+    }
+
+    public override void Write(string? message) { }
+    public override void WriteLine(string? message) { }
+  }
+
+  /// <summary>
   /// Safely handles all unhandled exceptions.
   /// </summary>
   private static void HandleException(Exception? e) {
@@ -85,11 +105,24 @@ internal static class Program {
       .SetupInternalLogger(log => log
         .LogToFile(internalNlog)
 #if DEBUG
-        .SetMinimumLogLevel(LogLevel.Debug)
+        .SetMinimumLogLevel(LogLevel.Trace)
 #else
         .SetMinimumLogLevel(LogLevel.Warn)
 #endif
       );
+
+#if DEBUG
+    // Raise every rule to Trace (nlog.config's file/console rule otherwise floors at Debug) and bridge
+    // failed Debug.Assert calls into NLog — see NLogAssertListener. Debug builds only: Debug.Assert
+    // itself is already [Conditional("DEBUG")] and compiles out entirely in Release.
+    foreach (var rule in LogManager.Configuration!.LoggingRules)
+      rule.SetLoggingLevels(LogLevel.Trace, LogLevel.Fatal);
+    LogManager.ReconfigExistingLoggers();
+    // Insert (not Add) at index 0: TraceListenerCollection runs Fail() on listeners in order, and
+    // the CLR's default DefaultTraceListener.Fail calls Environment.FailFast synchronously — if it
+    // ran first, the process would die before our listener ever got a turn to log anything.
+    Trace.Listeners.Insert(0, new NLogAssertListener());
+#endif
 
     // ‼ This order matters!
     // SetCompatibleTextRenderingDefault() must be called before any UI elements are created.
