@@ -7,7 +7,7 @@ solid-colored terrain mesh described below. Phase 6 (real grass texture) is defe
 milestone — tracked separately, blocked on the OVL texture-decoding pipeline
 ([`ovl-texture-decoding.md`](../../bugs/ovl-texture-decoding.md)).
 
-## Completed Phases
+## Phases
 
 | Phase | Status | Description |
 |-------|--------|-------------|
@@ -16,6 +16,7 @@ milestone — tracked separately, blocked on the OVL texture-decoding pipeline
 | 3. RCT3 Install Detection | ✅ | `InstallFinder` + `AppConfig` in `OpenRCT3/Platforms/` |
 | 4. Solid Color Plane | ✅ | `IRenderer` interface, `Renderer` implementation, `Transform`, `Model`, `Scene` |
 | 5. Textured Plane (nullbmp) | ✅ | `TextureLoader`, palette conversion, WebGL texture binding |
+| 6. Textured Plane (grass) | Deferred | Blocked on the `tex`/`flic`/`btbl` OVL texture-decoding bug; see below |
 
 Since Phases 4/5 landed, the flat quad they produced was superseded by a real terrain mesh: the park now
 renders a height-accurate, solid-colored mesh generated from the `Terrain` corner-height grid via
@@ -23,6 +24,15 @@ renders a height-accurate, solid-colored mesh generated from the `Terrain` corne
 [`terrain-heightmap.md`](../../plans/features/terrain-heightmap.md)), not a static single quad. This exceeds
 the original Phase 4/5 scope (a flat plane) and is the basis for calling the "flat, empty park" milestone
 itself done — the park terrain renders and reflects real height data; it just isn't grass-textured yet.
+
+## Phase 5
+
+- Palette conversion: `OpenCobra/Tests/GDK/PaletteConverterTests.cs`, covering the empty-vs-provided
+  `alphaPixels` case.
+- `TextureLoader`: `LoadTextureFromOvl`/`LoadFlexiTextureFromOvl` read the 768-byte (256×RGB) palette;
+  `ConvertFlexiToGdkTexture` uses the correct pixel stride.
+- `Scene`/`Renderer`: texture bound to `u_Texture` (unit 0), correct UVs, `Rgba32`/`UnsignedByte` upload.
+- Verified via `make test` and a live app launch showing the `nullbmp` texture on the ground plane.
 
 ## Phase 6 (Deferred): Render Grass from Terrain OVL
 

@@ -1,47 +1,50 @@
-# Phase 6: Render Grass Plane
+# Phase 6: Render Grass Terrain
 
-Implement the terrain loading and rendering of a flat grass-covered park map.
+**Status**: Deferred — blocked on the open OVL texture-decoding bug
+([`ovl-texture-decoding.md`](../../bugs/ovl-texture-decoding.md), `mms`/`prt`/`psi`/`fct` symbol-resolution
+issue). Not required for the "flat, empty park" milestone, which is already complete — see
+[`completed-work/flat-empty-park.md`](../../summaries/completed-work/flat-empty-park.md). This doc is rewritten
+to match the terrain architecture actually implemented since it was first drafted; revisit once the texture
+pipeline is fixed.
 
-## Overview
+## What's already done (superseding the original per-tile-quad plan below)
 
-This phase transitions from a simple quad to a full-sized park grid. It involves loading terrain textures from the RCT3 installation and setting up the initial `World` state.
+The original version of this plan described building `Terrain` from scratch as a grid of textured quads. That
+architecture no longer matches reality — terrain is now a real data model with its own design doc and
+implementation:
 
-## Tasks
+- **`Terrain`/`TerrainCorner`/`TerrainCornerSlot`/`Edge`**: per-tile corner-height storage (not per-tile quads),
+  with cliff detection via corner-height mismatch across edges. See
+  [`features/terrain-heightmap.md`](../features/terrain-heightmap.md).
+- **`TerrainMeshBuilder`**: generates a single mesh for the whole grid (top faces + cliff side-faces) from the
+  corner data — not one quad per tile with an individually-applied texture. Currently solid-colored; see
+  [`OpenRCT3/Simulation/TerrainMeshBuilder.cs`](../../../OpenRCT3/Simulation/TerrainMeshBuilder.cs).
+- **`World`/`Park` integration**: `World` already owns `Park` and `Terrain` (`OpenRCT3/Simulation/World.cs`),
+  loaded during `Game` startup — the "World Integration" task below is done, just not the way originally
+  described (no separate `OpenRCT3/Terrain` namespace was created; `Terrain` lives in
+  `OpenRCT3/Simulation/` alongside `Park`).
+- **`TerrainCorner.SurfaceIndex`/`CliffIndex`**: storage for per-corner paint-type indices already exists
+  (see `terrain-heightmap.md`), but nothing writes them yet (no paint tool) and nothing reads them for
+  rendering — this is the actual remaining gap, not a from-scratch `Terrain` class.
 
-### 1. OVL Texture Loading Improvements
-- Add unit tests for `OpenCobra.OVL.Files.Textures` to ensure robust decoding of `TEX`, `FLIC`, and `BTBL` files.
-- Add integration tests for `OpenCobra.GDK` to verify ingestion of OVL textures into GDK-compatible formats.
+## What's actually left (once the texture pipeline is fixed)
 
-### 2. Terrain Module (`OpenRCT3/Terrain`)
-- Create `Terrain` class to represent the park's land.
-- Implement `Terrain.Load()` to:
-    - Locate `terrain/RCT3/Terrain_RCT3.common.ovl`.
-    - Extract the default grass texture (index 0).
-    - Initialize a grid representing the park.
-
-### 3. World Integration
-- Update `OpenRCT3.Simulation.World` to contain a `Park` and `Terrain`.
-- Ensure the `World` is initialized during `Game` startup.
-
-### 4. Rendering the Grid
-- Update `Scene` to generate a mesh for the entire park grid (e.g., 128x128 tiles).
-- Apply the grass texture to all tiles.
-
-## Technical Details
-
-- **Coordinate System**: Z-up.
-    - **X**: West to East (East is +X)
-    - **Y**: South to North (North is +Y)
-    - **Z**: Down to Up (Up is +Z)
-- **World Origin**: (0, 0, 0) at the middle of the South edge of the park map.
-- **Tile Size**: 4x4 meters.
-- **Map Structure**:
-    - **Buildable Area**: 128x128 tiles.
-    - **Out-of-Bounds (OOB)**: 5-tile wide strip around the edge.
-    - **Total Map Size**: 138x138 tiles ($552\text{m} \times 552\text{m}$).
-- **Orientation**: Park entrance is on the South edge (Y-minimum of buildable area).
+1. **Load `Terrain_RCT3.common.ovl`/`Terrain_RCT3.unique.ovl`** and decode the `Terrain_00`..`Terrain_25` /
+   `Cliff_00`..`Cliff_05` texture entries (32 entries, per
+   [`grass-texture-from-terrain-ovl.md`](../../research/grass-texture-from-terrain-ovl.md)) — this is the
+   part actually blocked on the open texture bug.
+2. **Extend `TerrainMeshBuilder`** (or a follow-on renderer) to sample `TerrainCorner.SurfaceIndex` per vertex
+   and resolve it to the matching decoded texture/UV, instead of the current flat solid color. Blending across
+   a tile for "Ground Blended" (`TerrainType.type == 2`) surfaces is an open question already tracked in
+   `terrain-heightmap.md`'s Deferred section.
+3. **A paint tool** to actually write `SurfaceIndex`/`CliffIndex` — none exists yet; until then every corner's
+   `SurfaceIndex` defaults to `0` (whatever `Terrain_00` turns out to be, presumably grass), so a texture-aware
+   renderer would currently paint the whole map with one texture regardless of blending logic.
 
 ## Dependencies
-- `OpenCobra/OVL/Files/Textures.cs`
+
+- `OpenCobra/OVL/Files/Textures.cs` (`Tex`/`Flic`/`BitmapTable` — blocked on `ovl-texture-decoding.md`)
 - `OpenCobra/GDK/Assets/TextureLoader.cs`
-- `OpenRCT3/Simulation/World.cs`
+- `OpenRCT3/Simulation/Terrain.cs`, `TerrainCorner.cs`, `TerrainMeshBuilder.cs`
+- [`features/terrain-heightmap.md`](../features/terrain-heightmap.md) — current terrain data model and open
+  blending question
