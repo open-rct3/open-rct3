@@ -121,6 +121,19 @@ SChinese}.common.ovl` partial failures), and `Particles/Particles.common.ovl` (4
 plain `tex`, out of scope pending the `psi` caveat above). None can become embedded test
 fixtures (Frontier's copyrighted base-game data) — verify against a local `RCT3_PATH` install.
 
+## Known bug: unchecked short-read in `BinaryReaderExtensions.Read<T>`
+
+`TextureDecoding.cs` (~line 151-165): `Read<T>` calls `reader.ReadBytes(Marshal.SizeOf(typeof(T)))`,
+pins the result, and passes it to `Marshal.PtrToStructure`. `BinaryReader.ReadBytes` silently
+returns fewer bytes than requested when the stream is short/truncated rather than throwing — so
+a malformed or truncated OVL file can make the pinned array smaller than `sizeof(T)`, and
+`PtrToStructure` reads past the end of that heap allocation. Affects every fixed-size struct
+read on this path (`Tex`, `FlicHeader`, `FlicMipHeader`, `BitmapTable`). Fix: validate
+`bytes.Length == Marshal.SizeOf(typeof(T))` before pinning/casting, return 0/throw otherwise.
+Also has a dead `if (structure == null) data = default!;` branch immediately overwritten by an
+unconditional `data = structure!;` right after — should instead `return 0` in that branch,
+matching the fallback used in the `Read...Header` wrappers.
+
 ## Next steps
 
 1. Debug `ReadBitmapTableAt` against one of the 10 failing BTBLs (e.g. `btbl@54B54` or
