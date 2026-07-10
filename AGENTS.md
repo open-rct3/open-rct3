@@ -5,6 +5,7 @@
 - Do NOT remove extant code comments. Move and reword them, if absolutely necessary.
 - Do NOT create summary documents, unless explicitly requested.
 - Adapt working examples end-to-end, rather than inferring or deriving file formats from scratch. Reference implementations (e.g. `rct3-importer`'s `libOVLng`, `rct3tex.cpp`) already solve these formats correctly - port their logic directly instead of reverse-engineering it from raw byte dumps.
+- Read reference implementations FIRST. Do NOT guess at clumsy changes or trial-and-error before understanding a problem. If a reference implementation exists for the code you're touching, read the relevant source before writing a single line - not after a guess fails.
 - Links in any markdown file MUST work both locally and on GitHub. Use relative paths for links.
 - All references (file paths, documentation, online resources) MUST be hyperlinked when relevant to the context.
 
