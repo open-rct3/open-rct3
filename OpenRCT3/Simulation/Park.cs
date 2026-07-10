@@ -79,6 +79,12 @@ public class Park {
   /// </summary>
   public Dictionary<(int X, int Y), WaterPool> WaterTiles { get; } = [];
 
+  /// <summary>
+  /// Every placed <see cref="SceneryPlacement"/>. Placement data lives directly on <see cref="Park"/>,
+  /// not a separate "scenery layer" type — see <c>.agents/plans/features/scenery-placement-registry.md</c>.
+  /// </summary>
+  public List<SceneryPlacement> SceneryPlacements { get; } = [];
+
   public Park(int buildableWidth = DefaultMapSize, int buildableHeight = DefaultMapSize) {
     float halfWidth = (buildableWidth * TileSize) / 2.0f;
     float borderOffset = OutOfBoundsBorder * TileSize;
@@ -255,5 +261,102 @@ public class Park {
   private void InvalidateWaterPoolsSharingCorner(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot) {
     foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot))
       InvalidateWaterPoolAt(x, y);
+  }
+
+  /// <summary>
+  /// Attempts to place a scenery instance per <paramref name="placement"/>.
+  /// </summary>
+  /// <remarks>
+  /// A multi-tile <see cref="Simulation.Placement.FullTile"/> footprint (see
+  /// <see cref="SceneryDefinition.FootprintWidth"/>/<see cref="SceneryDefinition.FootprintHeight"/>)
+  /// requires a level pad: every corner across the rotated footprint's covered tiles must agree, or
+  /// placement is rejected outright — mirroring the "Flatten for Scenery and Rides" terrain tool and
+  /// the same flatness-gate shape <see cref="IsAtGradePathPlaceable"/> uses for paths, rather than
+  /// averaging or picking an anchor corner. Single-tile footprints and edge-mounted/sub-tile
+  /// placements (which conform to slope, see <see cref="GetSceneryHeight"/>) have no such constraint.
+  /// </remarks>
+  /// <returns>
+  /// <c>true</c> if the placement was recorded; <c>false</c> if <see cref="SceneryPlacement.ObjectKey"/>
+  /// isn't registered, the anchor tile is off-grid, or a multi-tile footprint isn't level.
+  /// </returns>
+  public bool TryPlaceScenery(SceneryPlacement placement, SceneryRegistry registry, Terrain terrain) {
+    if (!registry.TryGetDefinition(placement.ObjectKey, out var definition)) return false;
+    if (!terrain.HasTile(placement.TileX, placement.TileY)) return false;
+
+    if (definition.Placement == Placement.FullTile) {
+      var (width, height) = GetRotatedFootprint(definition, placement.Rotation);
+      if ((width > 1 || height > 1) && !IsFootprintLevel(placement.TileX, placement.TileY, width, height, terrain))
+        return false;
+    }
+
+    SceneryPlacements.Add(placement);
+    return true;
+  }
+
+  /// <summary>
+  /// Returns the terrain height(s) a placed scenery instance should render at, per the sampling rule
+  /// its <see cref="Simulation.Placement"/> implies.
+  /// </summary>
+  /// <remarks>
+  /// <see cref="Simulation.Placement.FullTile"/>/<see cref="Simulation.Placement.Quarter"/>/
+  /// <see cref="Simulation.Placement.Half"/>/<see cref="Simulation.Placement.Corner"/>/
+  /// <see cref="Simulation.Placement.PathCenter"/> are single-sample: both returned values are the
+  /// average height across the anchor tile's four corners (exactly the anchor corner's height when the
+  /// tile is flat, which a multi-tile <c>FullTile</c> footprint is guaranteed to be by
+  /// <see cref="TryPlaceScenery"/>). <see cref="Simulation.Placement.PathEdgeInner"/>/
+  /// <see cref="Simulation.Placement.PathEdgeOuter"/>/<see cref="Simulation.Placement.PathEdgeJoin"/>/
+  /// <see cref="Simulation.Placement.Wall"/> are edge-conforming: the two returned values are the
+  /// heights of the two corners bounding <see cref="SceneryPlacement.Rotation"/>'s edge, so the
+  /// object's mesh can follow the terrain's slope along that edge instead of sitting at one flat
+  /// height.
+  /// </remarks>
+  public static (ushort Near, ushort Far) GetSceneryHeight(SceneryPlacement placement, SceneryDefinition definition, Terrain terrain) {
+    switch (definition.Placement) {
+      case Placement.PathEdgeInner:
+      case Placement.PathEdgeOuter:
+      case Placement.PathEdgeJoin:
+      case Placement.Wall: {
+        var (c1, c2) = terrain.GetEdgeCornerHeights(placement.TileX, placement.TileY, placement.Rotation);
+        return (c1, c2);
+      }
+      default: {
+        var sum = 0;
+        foreach (var corner in terrain.GetCorners(placement.TileX, placement.TileY)) sum += corner.Height;
+        var average = (ushort)(sum / Terrain.CornersPerTile);
+        return (average, average);
+      }
+    }
+  }
+
+  /// <summary>
+  /// Returns <paramref name="definition"/>'s footprint, swapping width/height when
+  /// <paramref name="rotation"/> is <see cref="Edge.West"/>/<see cref="Edge.East"/> — a 90°/270° turn
+  /// relative to the unrotated <see cref="Edge.South"/>/<see cref="Edge.North"/> orientations.
+  /// </summary>
+  private static (int Width, int Height) GetRotatedFootprint(SceneryDefinition definition, Edge rotation)
+    => rotation is Edge.West or Edge.East
+      ? (definition.FootprintHeight, definition.FootprintWidth)
+      : (definition.FootprintWidth, definition.FootprintHeight);
+
+  /// <summary>
+  /// Whether every corner of the <paramref name="width"/>x<paramref name="height"/> tile rectangle
+  /// anchored at <paramref name="tileX"/>, <paramref name="tileY"/> is on-grid and shares the same
+  /// height.
+  /// </summary>
+  private static bool IsFootprintLevel(int tileX, int tileY, int width, int height, Terrain terrain) {
+    ushort? reference = null;
+    for (var dy = 0; dy < height; dy++) {
+      for (var dx = 0; dx < width; dx++) {
+        var x = tileX + dx;
+        var y = tileY + dy;
+        if (!terrain.HasTile(x, y)) return false;
+
+        foreach (var corner in terrain.GetCorners(x, y)) {
+          reference ??= corner.Height;
+          if (corner.Height != reference) return false;
+        }
+      }
+    }
+    return true;
   }
 }

@@ -107,8 +107,28 @@ multiplier applied to a shared mesh.
 
 ## Status
 
-Core data-model shape (no scale field, OVL-symbol-keyed registry, `Placement` enum driving both footprint/
-snap-position and height-sampling rule, `AnimationKind` enum, ownership on `Park`) is settled, grounded in
-`rct3-importer`'s actual `sizeflag`/`SIZE_*`/`TYPE_*` fields. All open questions are resolved above (two fully,
-two explicitly deferred to decode-time confirmation without blocking a start). Ready to implement; no stub work
-has begun yet.
+Implemented: [`Placement.cs`](../../../OpenRCT3/Simulation/Placement.cs) (9-value enum),
+[`AnimationKind.cs`](../../../OpenRCT3/Simulation/AnimationKind.cs) (4-value, provisional),
+[`SceneryDefinition.cs`](../../../OpenRCT3/Simulation/SceneryDefinition.cs) (registry entry: `Placement`,
+`AnimationKind`, `FootprintWidth`/`FootprintHeight`), [`SceneryRegistry.cs`](../../../OpenRCT3/Simulation/SceneryRegistry.cs)
+(OVL-symbol-keyed lookup, independent of `Park`), and [`SceneryPlacement.cs`](../../../OpenRCT3/Simulation/SceneryPlacement.cs)
+(placed instance: `ObjectKey`/`TileX`/`TileY`/`Rotation`, no stored Z). `Rotation` reuses
+[`Edge`](../../../OpenRCT3/Simulation/Edge.cs) as the quarter-turn value, doubling as the mounted-edge
+selector for `Wall`/`PathEdgeInner`/`PathEdgeOuter`/`PathEdgeJoin`.
+
+`Park.SceneryPlacements` holds placed instances (no `SceneryLayer` wrapper, per Goals).
+`Park.TryPlaceScenery` enforces the footprint-flatness gate for multi-tile `FullTile` objects (rejects
+if any covered tile's corners disagree, rotation-aware footprint swap via a private
+`GetRotatedFootprint`/`IsFootprintLevel` pair) and otherwise just validates the object key is registered
+and the anchor tile is on-grid. `Park.GetSceneryHeight` implements the height-sampling rule: edge-mounted
+`Placement` values return the two corners bounding the `Rotation` edge (via
+`Terrain.GetEdgeCornerHeights`); everything else returns the anchor tile's average corner height twice
+(matching a single terrain-height query, and equal to any one corner once the flatness gate above holds
+for multi-tile objects). Covered by 9 tests in
+[`OpenRCT3.Tests/Simulation/SceneryPlacementTests.cs`](../../../OpenRCT3.Tests/Simulation/SceneryPlacementTests.cs),
+all passing; full `Simulation` test suite (53 tests) still green.
+
+Not yet done, left for follow-up work: wiring the registry to the real `sid`/`svd` OVL decoder (no
+decoder exists yet — see Resolved above), sub-tile snap-position math for `Quarter`/`Half`/`Corner`/
+`PathCenter` (currently only height sampling is implemented for these, not exact render position),
+and any rendering/mesh-gen consumption of `GetSceneryHeight`.
