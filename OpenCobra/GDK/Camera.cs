@@ -29,6 +29,19 @@ public class Camera : Uniform<Matrix4x4> {
   private static readonly Vector3 DefaultViewDirection = Vector3.Normalize(DefaultViewOffset);
   private static readonly float DefaultDistance = DefaultViewOffset.Length();
 
+  /// <summary>Near clip distance, in world-space meters. 1cm is close enough for any placeable object.</summary>
+  private const float NearPlaneDistance = 0.01f;
+  /// <summary>
+  /// Far clip distance, expressed as a multiple of the current eye-to-target distance rather than a
+  /// fixed constant. <see cref="Frame"/> callers (see <c>Game.cs</c>) already pick a distance that keeps
+  /// an entire park's mesh on-screen, scaled to that park's actual size — so deriving the far plane from
+  /// that same distance automatically scales with it too, instead of clipping larger maps that a fixed
+  /// constant wasn't sized for (see .agents/bugs/terrain-render-black-and-misoriented.md). The 2x margin
+  /// leaves room for a future cube-mapped skybox drawn just outside a park's total (OOB-inclusive)
+  /// bounds, without needing to be revisited once one exists.
+  /// </summary>
+  private const float FarPlaneDistanceMargin = 2f;
+
   /// <summary>The world-space point the camera is aimed at.</summary>
   public Vector3 Target { get; private set; } = Vector3.Zero;
   /// <summary>The camera's world-space eye position.</summary>
@@ -54,7 +67,8 @@ public class Camera : Uniform<Matrix4x4> {
   /// <param name="aspectRatio">The aspect ratio of the viewport.</param>
   public void Update(float aspectRatio) {
     var view = Matrix4x4.CreateLookAt(Eye, Target, Vector3.UnitZ);
-    var projection = CreatePerspectiveFieldOfViewGL(MathF.PI / 3f, aspectRatio, 0.1f, 1000f);
+    var farPlaneDistance = Vector3.Distance(Eye, Target) * FarPlaneDistanceMargin;
+    var projection = CreatePerspectiveFieldOfViewGL(MathF.PI / 3f, aspectRatio, NearPlaneDistance, farPlaneDistance);
 
     Value = view * projection;
   }

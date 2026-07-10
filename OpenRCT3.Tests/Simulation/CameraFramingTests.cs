@@ -40,6 +40,12 @@ public class CameraFramingTests {
     return new Vector2(clip.X / clip.W, clip.Y / clip.W);
   }
 
+  private static float ProjectToNdcZ(Camera camera, Vector3 worldPos) {
+    Assert.That(camera.Value, Is.Not.Null);
+    var clip = Vector4.Transform(new Vector4(worldPos, 1f), camera.Value!.Value);
+    return clip.Z / clip.W;
+  }
+
   // The corners of the *rendered mesh*, not just the buildable area: TerrainMeshBuilder renders the
   // full OOB-inclusive grid (see Terrain.cs / CornerPosition), which extends beyond BuildableBounds on
   // every side. Framing needs to keep this larger extent on-screen, not just the buildable area.
@@ -88,6 +94,12 @@ public class CameraFramingTests {
       var ndc = ProjectToNdc(camera, corner);
       Assert.That(ndc.X, Is.InRange(-1f, 1f), $"corner {corner} X out of view");
       Assert.That(ndc.Y, Is.InRange(-1f, 1f), $"corner {corner} Y out of view");
+      // Regression guard: a fixed far clip plane (previously hardcoded at 1000) doesn't scale with the
+      // framing distance Game.cs computes from the park's actual size, so the default 128x128 map's
+      // framing distance (~1303) exceeded it and every corner was silently frustum-culled - invisible
+      // despite X/Y projecting to plausible on-screen coordinates. Camera.Update now derives the far
+      // plane from the eye-to-target distance itself (see Camera.cs), so this must hold for any park size.
+      Assert.That(ProjectToNdcZ(camera, corner), Is.InRange(-1f, 1f), $"corner {corner} Z out of view (behind far plane)");
     }
   }
 
@@ -103,6 +115,23 @@ public class CameraFramingTests {
       var ndc = ProjectToNdc(camera, corner);
       Assert.That(ndc.X, Is.InRange(-1f, 1f), $"corner {corner} X out of view");
       Assert.That(ndc.Y, Is.InRange(-1f, 1f), $"corner {corner} Y out of view");
+      Assert.That(ProjectToNdcZ(camera, corner), Is.InRange(-1f, 1f), $"corner {corner} Z out of view (behind far plane)");
+    }
+  }
+
+  [Test]
+  public void FramedCamera_KeepsLargerCustomParkRenderedMeshCornersOnScreen() {
+    // A map larger than the default proves the far plane truly scales with framing distance rather than
+    // happening to clear a fixed constant that was merely large enough for the 128x128 default.
+    var park = new Park(buildableWidth: 512, buildableHeight: 512);
+    var terrain = new Terrain(width: 512, height: 512);
+    var camera = FrameOnPark(park);
+
+    foreach (var corner in FullMeshCorners(terrain)) {
+      var ndc = ProjectToNdc(camera, corner);
+      Assert.That(ndc.X, Is.InRange(-1f, 1f), $"corner {corner} X out of view");
+      Assert.That(ndc.Y, Is.InRange(-1f, 1f), $"corner {corner} Y out of view");
+      Assert.That(ProjectToNdcZ(camera, corner), Is.InRange(-1f, 1f), $"corner {corner} Z out of view (behind far plane)");
     }
   }
 }
