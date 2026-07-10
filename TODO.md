@@ -3,7 +3,8 @@
 ## Community
 
 - [ ] Create a private Discord server to coordinate our reverse engineering work (For me, `@Syn`, and `@TheMaskedMan00`)
-- [ ] Add an automation to `.claude\skills` that automatically updates the list of issues and the OpenRCT3 project (https://github.com/orgs/open-rct3/projects/1)
+- [ ] Add an automation to `.claude\skills` that automatically updates the list of issues and the OpenRCT3 project
+      (https://github.com/orgs/open-rct3/projects/1)
 
 ---
 
@@ -36,6 +37,9 @@ See the [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap#phase-2-ga
 ## Infrastructure
 
 - [ ] Fix CI failures on macOS runners (`.github/workflows/ovl.yml`)
+- [ ] Enable
+      [project coverage checks](https://docs.codecov.com/docs/common-recipe-list#set-project-coverage-checks-on-a-pull-request)
+      to maintain code quality
 
 ## 💾 Memory Leaks
 
