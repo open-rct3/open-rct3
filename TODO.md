@@ -1,5 +1,10 @@
 # TODOs
 
+## Comunity
+
+- [ ] Create a private Discord server to coordinate our reverse engineering work (For me, `@Syn`, and `@TheMaskedMan00`)
+- [ ] Add an automation to `.claude\skills` that automatically updates the list of issues and the OpenRCT3 project (https://github.com/orgs/open-rct3/projects/1)
+
 ## Phase 1: Engine & Rendering Scaffolding
 
 ### OVL Decoding

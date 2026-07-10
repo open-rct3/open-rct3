@@ -2,8 +2,13 @@
 
 Based on the official RCT3 manual, cross-referenced with the in-game panel layout.
 
-**Used by**: [`terrain-heightmap.md`](../terrain-heightmap.md) — the Terrain Heightmap Data Model plan, which
-derives its 1m corner-height step and grid-vs-freeform tool distinction from this reference.
+**Used by**:
+- [`terrain-heightmap.md`](../terrain-heightmap.md) — the Terrain Heightmap Data Model plan, which
+  derives its 1m corner-height step and grid-vs-freeform tool distinction from this reference.
+- [`water-tool.md`](water-tool.md) — the Water Tool Placement plan, which implements the **Water** entry
+  under "Other Tools" below.
+- [`raise-lower-smoothing-tools.md`](raise-lower-smoothing-tools.md) — the Raise/Lower Brush and
+  Smoothing Tools plan, which implements panels A and B below.
 
 ## The Four Panel Tabs
 

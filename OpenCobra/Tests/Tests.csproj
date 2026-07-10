@@ -69,9 +69,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="style.common.ovl" />
-    <None Remove="style.unique.ovl" />
-    <EmbeddedResource Include="style.common.ovl" />
-    <EmbeddedResource Include="style.unique.ovl" />
+    <None Remove="Fixtures\OVL\**\*.ovl" />
+    <EmbeddedResource Include="Fixtures\OVL\**\*.ovl" />
   </ItemGroup>
 </Project>
