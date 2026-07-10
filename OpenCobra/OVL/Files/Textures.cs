@@ -53,17 +53,43 @@ public static class Textures {
       }
     });
 
+    // Walk every loader instance in on-disk order (Part 6 Finding 4): "btbl"/"flic" are
+    // loader-category tags, not classified symbols (Finding 5), so they're invisible to ovl.Keys -
+    // this is the only way to discover and decode them. Each "btbl" loader becomes "current" until
+    // the next one; each "flic" loader's single extra-data chunk is a 4-byte index into whichever
+    // table was current when it was encountered.
+    Texture[]? currentTable = null;
+    var bitmapTablesByFlicAddress = new Dictionary<uint, Texture[]>();
+    foreach (var (tag, dataAddress) in ovl.LoaderEntriesInOrder) {
+      switch (tag) {
+        case "btbl":
+          try {
+            currentTable = TextureDecoding.ReadBitmapTableAt($"{ovl.Name}:btbl@{dataAddress:X}", ovl, dataAddress);
+            foreach (var texture in currentTable) bag.Add(texture);
+          } catch (Exception ex) {
+            logger.Error(ex, "Failed to decode bitmap table at {Address:X} in {OvlName}", dataAddress, ovl.Name);
+            currentTable = null;
+          }
+          break;
+        case "flic" when currentTable != null:
+          bitmapTablesByFlicAddress[dataAddress] = currentTable;
+          break;
+      }
+    }
+
     // Read other textures in parallel
     Parallel.ForEach(otherTextureData, fileData => {
       try {
         var name = fileData.File.ToString();
-        var bitmapTable = bitmapTables.GetValueOrDefault(fileData.OvlName);
 
         // ReSharper disable once ConvertIfStatementToSwitchStatement
         if (fileData.File.Type == FileType.Texture) {
-          var texture = TextureDecoding.ReadTexture(name, ovl, fileData.Data, bitmapTable);
+          if (!ovl.TryGetDataPointer(fileData.File, out var texAddress))
+            throw new InvalidOperationException($"Failed to resolve data pointer for {name}");
+          var texture = TextureDecoding.ReadTexture(name, ovl, texAddress, fileData.Data, bitmapTablesByFlicAddress);
           if (texture != null) bag.Add(texture);
         } else if (fileData.File.Type == FileType.Flic) {
+          var bitmapTable = bitmapTables.GetValueOrDefault(fileData.OvlName);
           if (!ovl.TryReadExtraData(fileData.File, out var chunks) || chunks.Count == 0)
             throw new InvalidOperationException($"Failed to resolve flic data for {name}");
           bag.Add(TextureDecoding.ReadFlic(name, chunks[0], bitmapTable));

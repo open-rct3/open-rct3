@@ -66,7 +66,9 @@ public static class ParticleEffects {
           return;
         }
 
-        var texture = TextureDecoding.ReadTexture(name, ovl, fileData.Data, bitmapTable);
+        if (!ovl.TryGetDataPointer(fileData.File, out var texAddress))
+          throw new InvalidOperationException($"Failed to resolve data pointer for {name}");
+        var texture = TextureDecoding.ReadTexture(name, ovl, texAddress, fileData.Data, null);
         if (texture != null) bag.Add(texture);
       } catch (Exception ex) {
         logger.Error(ex, "Failed to decode {FileName}", fileData.File.ToString());

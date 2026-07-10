@@ -139,13 +139,13 @@ internal readonly struct Tex {
   [SeenInGame(Values = [1])]
   public readonly uint Unk12;
 
-  /// <summary>Relocated pointer to a FlicStruct*[] array. Always a placeholder; never used to reach pixel data.</summary>
+  /// <summary>
+  /// A <c>FlicStruct**</c> - "always points to pointer before flic data" (rct3tex.cpp:621). Reading
+  /// pixel data means chasing this through two chained relocation-table lookups (Part 6 Finding 2);
+  /// see <see cref="TextureDecoding.ReadTexture"/>.
+  /// </summary>
   [FieldOffset(52)]
   public readonly uint FlicPtr;
-
-  /// <summary>Relocated pointer to this texture's TextureStruct2, whose own `Flic` field identifies the FLIC loader that owns this texture's pixel data.</summary>
-  [FieldOffset(56)]
-  public readonly uint Ts2Ptr;
 }
 
 internal static class BinaryReaderExtensions {
@@ -336,33 +336,47 @@ internal static class DxtDecoder {
 // the other symbol families that reuse the exact same shapes under different tags (mms/prt/psi -
 // see CharacterSkins.cs, ParticleEffects.cs).
 internal static class TextureDecoding {
-  // See ManagerTEX.cpp/icontexture.h (TextureStruct/TextureStruct2). Texture pixel data is never
-  // inline: TextureStruct.ts2 is a relocated pointer to a TextureStruct2, whose own `Flic` field
-  // holds the *raw data pointer of the FLIC loader* that owns the pixel data (ManagerFLIC.cpp::Make
-  // sets both the loader's own `data` field and TextureStruct2.Flic to the same address). That
-  // pixel data itself lives in the loader's "extra data" chunk stream, not any relocatable block.
+  // See ManagerTEX.cpp/icontexture.h (TextureStruct). Texture pixel data is never inline:
+  // TextureStruct.Flic (FlicPtr, offset 52) is a FlicStruct** - "always points to pointer before
+  // flic data" (rct3tex.cpp:621) - needing two chained relocation-table lookups to resolve to the
+  // owning FLIC loader's own data address (Part 6 Finding 2). That pixel data itself lives in the
+  // loader's "extra data" chunk stream, not any relocatable block.
   //
   // Reference (rct3tex.cpp:1368 TextureLoader) checks `tex->Flic != 0` and silently does nothing
   // (`tex->Flic = 0`) when it's absent - it's not an error, just a tex symbol with no backing image
-  // (e.g. runtime-generated render targets, LOD placeholders like "...Dummy"). The `Ts2Ptr`/`Flic`
-  // fields for these are only ever populated by the relocation-fixup table at load time (which
-  // OVL.cs's SkipRelocations does not parse), so on disk they're uninitialized/placeholder bytes -
-  // there is no way to recover pixel data for them, because there isn't any. Returning null here
-  // (rather than throwing) lets callers skip them without counting them as decode failures.
-  public static Texture? ReadTexture(string name, Ovl ovl, ReadOnlyMemory<byte> bytes, Texture[]? bitmapTable) {
+  // (e.g. runtime-generated render targets, LOD placeholders like "...Dummy"). FlicPtr for these is
+  // only ever populated by the relocation-fixup table at load time, so on disk it's an
+  // uninitialized/placeholder value that never appears as a listed relocation source - there is no
+  // way to recover pixel data for them, because there isn't any. Returning null here (rather than
+  // throwing) lets callers skip them without counting them as decode failures.
+  // <paramref name="bitmapTablesByFlicAddress"/> maps a "flic"-tagged loader's relocation-resolved
+  // data address to whichever "btbl" table was current at that point in loader-table order (Part 6
+  // Finding 4 - btbl/flic association is positional by loader-table order, not one-table-per-file),
+  // built by walking Ovl.LoaderEntriesInOrder.
+  public static Texture? ReadTexture(
+    string name, Ovl ovl, uint texAddress, ReadOnlyMemory<byte> bytes,
+    IReadOnlyDictionary<uint, Texture[]>? bitmapTablesByFlicAddress
+  ) {
     using var ms = bytes.AsStream();
     using var reader = new BinaryReader(ms);
 
     var read = reader.Read<Tex>(out var tex);
     Debug.Assert(read == Marshal.SizeOf<Tex>());
 
-    if (!ovl.TryResolveRelocation(tex.Ts2Ptr, out var ts2Block, out var ts2Offset))
+    // Hop 1: gate FlicPtr's on-disk value as a real (fixed-up) pointer rather than unpatched
+    // placeholder bytes, by requiring texAddress+52 (the field's own location) to be listed in the
+    // relocation-fixup table.
+    if (!ovl.TryGetRelocationSource(texAddress + 52, out var flicSlot))
+      return null;
+    // Hop 2: FlicPtr is a double pointer - flicSlot is itself a relocatable location, and the value
+    // stored there is the FLIC loader's own (equally relocation-gated) data address.
+    if (!ovl.TryGetRelocationSource(flicSlot, out var flicAddr))
       return null;
 
-    var flicLoaderPtr = BitConverter.ToUInt32(ts2Block, Convert.ToInt32(ts2Offset) + 4);
-    if (!ovl.TryReadExtraData(flicLoaderPtr, out var chunks) || chunks.Count == 0)
+    if (!ovl.TryReadExtraData(flicAddr, out var chunks) || chunks.Count == 0)
       return null;
 
+    var bitmapTable = bitmapTablesByFlicAddress?.GetValueOrDefault(flicAddr);
     var texture = ReadFlic(name, chunks[0], bitmapTable);
 
     // Default style to GUI icon for icon textures
@@ -468,6 +482,26 @@ internal static class TextureDecoding {
     if (!ovl.TryReadExtraData(file, out var chunks) || chunks.Count < 2)
       throw new InvalidOperationException($"Failed to resolve bitmap table data for {name}");
 
+    return DecodeBitmapTable(name, table, chunks);
+  }
+
+  // "btbl" is a loader-category tag only, never a classified symbol (Part 6 Finding 5) - unlike
+  // ReadBitmapTable above (which needs an OvlFile symbol), this reads a loader instance directly by
+  // its relocation-resolved data address, discovered by walking Ovl.LoaderEntriesInOrder.
+  internal static Texture[] ReadBitmapTableAt(string name, Ovl ovl, uint dataAddress) {
+    if (!ovl.TryReadBytes(dataAddress, 8, out var headerBytes)) return [];
+    using var headerMs = new ReadOnlyMemory<byte>(headerBytes).AsStream();
+    using var headerReader = new BinaryReader(headerMs);
+    var table = headerReader.ReadBitmapTable();
+    if (table.Length == 0) return [];
+
+    if (!ovl.TryReadExtraData(dataAddress, out var chunks) || chunks.Count < 2)
+      throw new InvalidOperationException($"Failed to resolve bitmap table data at {dataAddress:X}");
+
+    return DecodeBitmapTable(name, table, chunks);
+  }
+
+  private static Texture[] DecodeBitmapTable(string name, BitmapTable table, IReadOnlyList<byte[]> chunks) {
     using var headersMs = new ReadOnlyMemory<byte>(chunks[0]).AsStream();
     using var headersReader = new BinaryReader(headersMs);
     headersReader.BaseStream.Position += 8; // Two leading zero longs

@@ -66,8 +66,37 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
   private readonly List<Version> allVersions = [];
   private readonly List<Dictionary<uint, List<byte[]>>> allExtraData = [];
+  // Relocation-fixup table (Part 6 Finding 3 / rct3tex.cpp:1830-1842's DoReloc): a flat
+  // sourceAddress -> rawValueAtThatAddress map. "Source address" here is a location in block data
+  // that the archive's own linker flagged as needing pointer interpretation; the raw bytes stored
+  // there are only trustworthy as a real pointer if the address is listed here - unlisted locations
+  // are unpatched placeholder bytes (e.g. Tex fields for textureless entries like render targets).
+  private readonly Dictionary<uint, uint> relocations = [];
+  // Ordered (per file, in on-disk LoaderStruct order) (Tag, DataAddress) pairs - see Part 6
+  // Finding 4: "btbl"/"flic" are loader-category tags only, never discoverable as classified
+  // symbols, so callers that need every loader instance (not just symbol-backed resources) must
+  // walk this instead of ovl.Keys.
+  private readonly List<(string Tag, uint DataAddress)> loaderEntriesInOrder = [];
   private uint relocationOffset;
   private bool disposed = false;
+
+  /// <summary>
+  /// Every loader instance in the archive, in on-disk order (common file first, then unique), with
+  /// its category tag (e.g. "btbl", "flic", "tex") and relocation-resolved data address. Unlike
+  /// <see cref="Keys"/>, this includes loader categories (like "btbl"/"flic") that are never
+  /// classified as their own symbol - see Part 6 Finding 4 of the texture-decoding bug doc.
+  /// </summary>
+  internal IReadOnlyList<(string Tag, uint DataAddress)> LoaderEntriesInOrder => loaderEntriesInOrder;
+
+  /// <summary>Reads <paramref name="length"/> raw bytes at a relocation-resolved data address.</summary>
+  public bool TryReadBytes(uint address, int length, [MaybeNullWhen(false)] out byte[] data) {
+    if (!TryResolveRelocation(address, out var block, out var offset) || offset + length > block.Length) {
+      data = null;
+      return false;
+    }
+    data = block.AsSpan(Convert.ToInt32(offset), length).ToArray();
+    return true;
+  }
 
   #region IDictionary<OvlFile, OvlEntry>
   public ICollection<OvlFile> Keys => ((IDictionary<OvlFile, OvlEntry>)entries).Keys;
@@ -132,17 +161,8 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   public bool TryResolveRelocation(uint dataPtr, [MaybeNullWhen(false)] out byte[] data, out uint offset) {
     // A null (zero) pointer never resolves - without this guard it spuriously "resolves" to
     // whatever block happens to start at RelativeOffset 0 (see TryResolveString's matching guard).
-    if (dataPtr == 0) {
-      data = null;
-      offset = 0;
-      return false;
-    }
-
-    var resolvedBlock = allFileTypeBlocks
-      .SelectMany(ftb => ftb.SelectMany(b => b.Blocks))
-      .FirstOrDefault(fb => fb.Data != null && dataPtr >= fb.RelativeOffset && dataPtr < fb.RelativeOffset + fb.Size);
-
-    if (resolvedBlock == null || resolvedBlock.Data == null) {
+    var resolvedBlock = dataPtr == 0 ? null : FindBlock(dataPtr);
+    if (resolvedBlock?.Data == null) {
       data = null;
       offset = 0;
       return false;
@@ -152,6 +172,23 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     offset = dataPtr - resolvedBlock.RelativeOffset;
     return true;
   }
+
+  /// <summary>
+  /// Looks up a location in block data that the archive's own relocation-fixup table lists as
+  /// needing pointer interpretation (see <see cref="relocations"/>), and returns the raw value
+  /// stored there. Used to chase relocated pointer chains (e.g. <c>Tex.FlicPtr</c>, a double
+  /// pointer needing two chained lookups - see Part 6 Finding 2 of the texture-decoding bug doc)
+  /// without trusting arbitrary unpatched placeholder bytes as if they were real pointers.
+  /// </summary>
+  /// <param name="address">Relative offset address of the field to look up</param>
+  /// <param name="rawValue">The raw value stored at that address on disk, if listed</param>
+  /// <returns>True if <paramref name="address"/> is listed in the relocation-fixup table.</returns>
+  public bool TryGetRelocationSource(uint address, out uint rawValue) =>
+    relocations.TryGetValue(address, out rawValue);
+
+  private FileBlock? FindBlock(uint address) => allFileTypeBlocks
+    .SelectMany(ftb => ftb.SelectMany(b => b.Blocks))
+    .FirstOrDefault(fb => fb.Data != null && address >= fb.RelativeOffset && address < fb.RelativeOffset + fb.Size);
 
   /// <summary>
   /// Reads the "extra data" chunks attached to a loader, e.g. Flic pixel data or a bitmap-table
@@ -187,6 +224,9 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     return false;
   }
 
+  /// <summary>Looks up a resolved resource's own (relative offset) data pointer address.</summary>
+  public bool TryGetDataPointer(OvlFile file, out uint dataPtr) => entryDataPtrs.TryGetValue(file, out dataPtr);
+
   /// <summary>
   /// Resolves a relocated string pointer to its text value.
   /// </summary>
@@ -194,16 +234,8 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// <param name="value">The resolved string, or null if unresolved</param>
   /// <returns>True if resolution succeeded.</returns>
   public bool TryResolveString(uint ptr, [MaybeNullWhen(false)] out string value) {
-    if (ptr == 0) {
-      value = null;
-      return false;
-    }
-
-    var resolvedBlock = allFileTypeBlocks
-      .SelectMany(ftb => ftb.SelectMany(b => b.Blocks))
-      .FirstOrDefault(fb => fb.Data != null && ptr >= fb.RelativeOffset && ptr < fb.RelativeOffset + fb.Size);
-
-    if (resolvedBlock == null || resolvedBlock.Data == null) {
+    var resolvedBlock = ptr == 0 ? null : FindBlock(ptr);
+    if (resolvedBlock?.Data == null) {
       value = null;
       return false;
     }
@@ -279,23 +311,34 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
     ReadPostBlockUnknowns(reader, version);
     ReadBlockData(reader, blocks, version);
-    SkipRelocations(reader);
+    ReadRelocations(reader);
 
     if (version >= Version.Four && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
       if (version == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
     }
 
-    allExtraData.Add(ReadLoaderExtraData(reader, blocks, version));
+    allExtraData.Add(ReadLoaderExtraData(reader, blocks, version, loaderHeaders));
 
     return version;
   }
 
   /// <summary>
   /// Reads the per-loader "extra data" chunk stream that immediately follows the relocation-fixup
-  /// table, keyed by each loader's own (unresolved) data pointer. See LoaderStruct in ovlstructs.h
-  /// and the HasExtraData/ExtraChunk handling in OVLDump.cpp's MakeLoaders.
+  /// table. See LoaderStruct in ovlstructs.h and the HasExtraData/ExtraChunk handling in
+  /// OVLDump.cpp's MakeLoaders.
+  ///
+  /// Keyed by each loader's relocation-resolved data address, not its raw on-disk `data` field
+  /// value: per Part 6 Finding 3 (Root cause B), `LoaderStruct.data` is itself a fixup-table-only
+  /// pointer, just like `Tex.FlicPtr`. The reference (btbl.rs::decode_entry) reads
+  /// `entry.data_address` directly via a plain address read with no further relocation lookup,
+  /// which only works if `data_address` was already resolved through the relocation table when the
+  /// loader-entry list was built - so this does the same one-hop resolution here, falling back to
+  /// the raw field value when it isn't a listed relocation source (e.g. a v1/v4 archive without a
+  /// populated relocation table, where the raw on-disk value is already the intended address).
   /// </summary>
-  private static Dictionary<uint, List<byte[]>> ReadLoaderExtraData(BinaryReader reader, FileTypeBlock[] blocks, Version version) {
+  private Dictionary<uint, List<byte[]>> ReadLoaderExtraData(
+    BinaryReader reader, FileTypeBlock[] blocks, Version version, List<LoaderHeader> loaderHeaders
+  ) {
     var extraData = new Dictionary<uint, List<byte[]>>();
     if (blocks.Length <= 2 || blocks[2].Blocks.Count <= 1) return extraData;
 
@@ -307,10 +350,17 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     var loaderCount = Convert.ToInt32(loaderBlock.Size) / loaderStructSize;
     for (var i = 0; i < loaderCount; i++) {
       var offset = i * loaderStructSize;
-      var dataPtr = BitConverter.ToUInt32(loaderBlock.Data, offset + 4);
+      var loaderType = BitConverter.ToUInt32(loaderBlock.Data, offset);
+      var rawDataPtr = BitConverter.ToUInt32(loaderBlock.Data, offset + 4);
+      var dataFieldAddress = loaderBlock.RelativeOffset + Convert.ToUInt32(offset + 4);
+      var dataPtr = TryGetRelocationSource(dataFieldAddress, out var resolved) ? resolved : rawDataPtr;
       var hasExtraDataRaw = BitConverter.ToUInt32(loaderBlock.Data, offset + 8);
       // v5 packs a 16-bit extra-data count and a 16-bit unknown into this field; v1/v4 use it whole.
       var hasExtraData = version == Version.Five ? hasExtraDataRaw & 0xFFFF : hasExtraDataRaw;
+
+      // LoaderType is a direct, on-disk-position index into loaderHeaders (Part 6 Finding 1).
+      if (loaderType < loaderHeaders.Count)
+        loaderEntriesInOrder.Add((loaderHeaders[Convert.ToInt32(loaderType)].Tag, dataPtr));
 
       for (var c = 0; c < hasExtraData; c++) {
         if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) break;
@@ -444,12 +494,30 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     }
   }
 
-  private static void SkipRelocations(BinaryReader reader) {
+  /// <summary>
+  /// Reads the relocation-fixup table (Part 6 Finding 3 / rct3tex.cpp:1830-1842's DoReloc): a flat
+  /// list of <c>relCount</c> source addresses, each naming a location in block data whose raw
+  /// stored value should be trusted as a real pointer once "fixed up" by the archive's own loader
+  /// (previously discarded entirely by the method this replaces, <c>SkipRelocations</c>). Consumes
+  /// exactly the same number of bytes from the stream as before - it just also records what it
+  /// reads into <see cref="relocations"/> instead of discarding it.
+  /// </summary>
+  private void ReadRelocations(BinaryReader reader) {
     if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
     var relCount = reader.ReadUInt32();
-    var bytesToSkip = Convert.ToInt64(relCount) * 4;
-    if (bytesToSkip <= reader.BaseStream.Length - reader.BaseStream.Position)
-      reader.BaseStream.Seek(bytesToSkip, SeekOrigin.Current);
+    var bytesToRead = Convert.ToInt64(relCount) * 4;
+    if (bytesToRead > reader.BaseStream.Length - reader.BaseStream.Position) return;
+
+    for (var i = 0; i < relCount; i++) {
+      var sourceAddress = reader.ReadUInt32();
+      var block = FindBlock(sourceAddress);
+      if (block?.Data == null) continue;
+
+      var offset = Convert.ToInt32(sourceAddress - block.RelativeOffset);
+      if (offset + 4 > block.Data.Length) continue;
+
+      relocations[sourceAddress] = BitConverter.ToUInt32(block.Data, offset);
+    }
   }
 
   private void ExtractResources() {
