@@ -4,71 +4,116 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
+using System.ComponentModel;
+using System.Reflection;
+
 namespace OpenCobra.OVL.Files;
 
 /// <summary>
 /// Files known to Frontier Graphics Development Kit and RCT3, c. 2004.
 /// </summary>
 public enum FileType : ushort {
+  [Description("Unknown")]
   Unknown = 0,
   /// <summary>Text (txt)</summary>
+  [Description("Text")]
   Text,
   /// <summary>Integer Number (int)</summary>
+  [Description("Integer Number")]
   Integer,
   /// <summary>2D Texture (tex)</summary>
+  [Description("2D Texture")]
   Texture,
   /// <summary>Compressed 2D Image (flic)</summary>
+  [Description("Compressed 2D Image")]
   Flic,
   /// <summary>Flexi-Texture (ftx)</summary>
+  [Description("Flexi-Texture")]
   FlexibleTexture,
   /// <summary>GUI Skin Item (gsi)</summary>
+  [Description("GUI Skin Item")]
   GuiSkinItem,
   /// <summary>Scenery Item (sid)</summary>
+  [Description("Scenery Item")]
   SceneryItem,
   /// <summary>Bitmap Table (btbl)</summary>
+  [Description("Bitmap Table")]
   BitmapTable,
   /// <summary>Animated Ride (anr)</summary>
+  [Description("Animated Ride")]
   AnimatedRide,
   /// <summary>Bone Animation (ban)</summary>
+  [Description("Bone Animation")]
   BoneAnim,
   /// <summary>Bone Shape (bsh)</summary>
+  [Description("Bone Shape")]
   BoneShape,
   /// <summary>Carried Item Extra (ced)</summary>
+  [Description("Carried Item Extra")]
   CarriedItemExtra,
   /// <summary>Changing Room (chg)</summary>
+  [Description("Changing Room")]
   ChangingRoom,
   /// <summary>Carried Item (cid)</summary>
+  [Description("Carried Item")]
   CarriedItem,
   /// <summary>Manifold Mesh (mam)</summary>
+  [Description("Manifold Mesh")]
   ManifoldMesh,
-  /// <summary>Path Type (ptd)</summary>
+  /// <summary>Path (ptd)</summary>
+  [Description("Path")]
   PathType,
-  /// <summary>Queue Type (qtd)</summary>
+  /// <summary>Queue (qtd)</summary>
+  [Description("Queue")]
   QueueType,
   /// <summary>Ride Car (ric)</summary>
+  [Description("Ride Car")]
   RideCar,
   /// <summary>Ride Train (rit)</summary>
+  [Description("Ride Train")]
   RideTrain,
   /// <summary>Special Attraction (sat)</summary>
+  [Description("Special Attraction")]
   SpecialAttraction,
   /// <summary>Static Shape (shs)</summary>
+  [Description("Static Shape")]
   StaticShape,
   /// <summary>Sound (snd)</summary>
+  [Description("Sound")]
   Sound,
   /// <summary>Spline (spl)</summary>
+  [Description("Spline")]
   Spline,
   /// <summary>Stall (sta)</summary>
+  [Description("Stall")]
   Stall,
   /// <summary>Scenery Item Visual (svd)</summary>
+  [Description("Scenery Item Visual")]
   SceneryItemVisual,
-  /// <summary>Terrain Type (ter)</summary>
+  /// <summary>Terrain (ter)</summary>
+  [Description("Terrain")]
   TerrainType,
   /// <summary>Track Section (tks)</summary>
+  [Description("Track Section")]
   TrackSection,
   /// <summary>Tracked Ride (trr)</summary>
+  [Description("Tracked Ride")]
   TrackedRide,
   /// <summary>Wild Animal Item (wai)</summary>
-  WildAnimalItem
+  [Description("Wild Animal Item")]
+  WildAnimalItem,
+  /// <summary>Character Skin Texture Set (mms)</summary>
+  [Description("Character Skin Texture Set")]
+  CharacterSkinSet,
+  /// <summary>Character Skin Part Texture (prt)</summary>
+  [Description("Character Skin Part Texture")]
+  CharacterSkinPart,
+  /// <summary>Particle Sprite Item (psi)</summary>
+  [Description("Particle Sprite Item")]
+  ParticleSpriteItem,
+  /// <summary>Font Character Table (fct)</summary>
+  [Description("Font Character Table")]
+  FontCharacterTable
 }
 
 /// <summary>Extension methods for working with <see cref="FileType"/>.</summary>
@@ -105,6 +150,10 @@ public static class FileTypeExtensions {
     "tks" => FileType.TrackSection,
     "trr" => FileType.TrackedRide,
     "wai" => FileType.WildAnimalItem,
+    "mms" => FileType.CharacterSkinSet,
+    "prt" => FileType.CharacterSkinPart,
+    "psi" => FileType.ParticleSpriteItem,
+    "fct" => FileType.FontCharacterTable,
     _ => FileType.Unknown,
   };
 
@@ -144,6 +193,10 @@ public static class FileTypeExtensions {
       FileType.TrackSection => "tks",
       FileType.TrackedRide => "trr",
       FileType.WildAnimalItem => "wai",
+      FileType.CharacterSkinSet => "mms",
+      FileType.CharacterSkinPart => "prt",
+      FileType.ParticleSpriteItem => "psi",
+      FileType.FontCharacterTable => "fct",
       _ => "",
     };
 
@@ -153,39 +206,13 @@ public static class FileTypeExtensions {
   }
 
   /// <summary>Returns a human-readable display name for the given <see cref="FileType"/>.</summary>
-  public static string ToDisplayName(this FileType type) => type switch {
-    FileType.Unknown => "Unknown",
-    FileType.Text => "Text",
-    FileType.Integer => "Integer Number",
-    FileType.Texture => "2D Texture",
-    FileType.Flic => "Compressed 2D Image",
-    FileType.FlexibleTexture => "Flexi-Texture",
-    FileType.GuiSkinItem => "GUI Skin Item",
-    FileType.SceneryItem => "Scenery Item",
-    FileType.BitmapTable => "Bitmap Table",
-    FileType.AnimatedRide => "Animated Ride",
-    FileType.BoneAnim => "Bone Animation",
-    FileType.BoneShape => "Bone Shape",
-    FileType.CarriedItemExtra => "Carried Item Extra",
-    FileType.ChangingRoom => "Changing Room",
-    FileType.CarriedItem => "Carried Item",
-    FileType.ManifoldMesh => "Manifold Mesh",
-    FileType.PathType => "Path Type",
-    FileType.QueueType => "Queue Type",
-    FileType.RideCar => "Ride Car",
-    FileType.RideTrain => "Ride Train",
-    FileType.SpecialAttraction => "Special Attraction",
-    FileType.StaticShape => "Static Shape",
-    FileType.Sound => "Sound",
-    FileType.Spline => "Spline",
-    FileType.Stall => "Stall",
-    FileType.SceneryItemVisual => "Scenery Item Visual",
-    FileType.TerrainType => "Terrain Type",
-    FileType.TrackSection => "Track Section",
-    FileType.TrackedRide => "Tracked Ride",
-    FileType.WildAnimalItem => "Wild Animal Item",
-    _ => "Unknown",
-  };
+  public static string ToDisplayName(this FileType type) =>
+    type.GetAttr<DescriptionAttribute>()?.Description ?? "Unknown";
+
+  private static T? GetAttr<T>(this Enum value) where T : Attribute =>
+    value.GetType()
+         .GetField(value.ToString())
+         ?.GetCustomAttribute<T>();
 
   /// <summary>Returns a Material Design icon name for the given <see cref="FileType"/>.</summary>
   public static string ToIconName(this FileType type) => type switch {
@@ -219,6 +246,10 @@ public static class FileTypeExtensions {
     FileType.TrackSection => "Train",
     FileType.TrackedRide => "Train",
     FileType.WildAnimalItem => "Paw",
+    FileType.CharacterSkinSet => "Image",
+    FileType.CharacterSkinPart => "Image",
+    FileType.ParticleSpriteItem => "Image",
+    FileType.FontCharacterTable => "FormatFont",
     _ => "FileQuestion",
   };
 
@@ -239,13 +270,15 @@ public static class FileTypeExtensions {
     FileType.GuiSkinItem => "PaletteMultiple",
     FileType.PathType or FileType.QueueType => "SignDirectionMultiple",
     FileType.Spline => "VectorPolyline",
-    FileType.TerrainType => "TextureBox",
     FileType.TrackSection => "TrainCar",
     FileType.SpecialAttraction => "FerrisWheel",
     FileType.Stall => "StorefrontMultiple",
     FileType.WildAnimalItem => "Paw",
     FileType.ChangingRoom => "Door",
     FileType.Integer => "Numeric",
+    FileType.CharacterSkinSet or FileType.CharacterSkinPart => "ImageMultiple",
+    FileType.ParticleSpriteItem => "ImageMultiple",
+    FileType.FontCharacterTable => "FormatFont",
     _ => "FileMultipleOutline",
   };
 }

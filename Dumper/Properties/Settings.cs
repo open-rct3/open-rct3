@@ -25,6 +25,14 @@ namespace Dumper.Properties;
 /// </remarks>
 internal partial class Settings : ApplicationSettingsBase {
   /// <summary>
+  /// The path to the user's RCT3 installation, if found or set.
+  /// </summary>
+  [UserScopedSetting]
+  public string? Rct3Dir {
+    get => this[nameof(Rct3Dir)]?.ToString() ?? null;
+    set => this[nameof(Rct3Dir)] = value;
+  }
+  /// <summary>
   /// The last OVL archive opened by the user, if any.
   /// </summary>
   [UserScopedSetting]

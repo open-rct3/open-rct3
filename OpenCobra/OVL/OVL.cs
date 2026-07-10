@@ -7,6 +7,7 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Text;
 using OpenCobra.OVL.Files;
 
@@ -14,7 +15,7 @@ namespace OpenCobra.OVL;
 
 /// <summary>OVL archive entry (resource) identifier.</summary>
 public record OvlFile(string Name, FileType Type, string Path) {
-  public override string ToString() => $"{Name}.{Type}";
+  public override string ToString() => $"{Name}.{Type.ToTagString()}";
   public override int GetHashCode() => HashCode.Combine(Name, Type, Path);
 }
 
@@ -53,15 +54,50 @@ internal class FileTypeBlock {
 }
 
 /// <summary>Represents an OVL archive, providing methods to load and extract resource entries.</summary>
-public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
+public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposable {
   public const string UnnamedOvl = "Untitled OVL";
 
+  public readonly string Name = name;
+  public Version Version => version;
+
+  private Version version;
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
+  private readonly Dictionary<OvlFile, uint> entryDataPtrs = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
-  private readonly List<uint> allVersions = [];
+  private readonly List<Version> allVersions = [];
+  private readonly List<Dictionary<uint, List<byte[]>>> allExtraData = [];
+  // Relocation-fixup table (Part 6 Finding 3 / rct3tex.cpp:1830-1842's DoReloc): a flat
+  // sourceAddress -> rawValueAtThatAddress map. "Source address" here is a location in block data
+  // that the archive's own linker flagged as needing pointer interpretation; the raw bytes stored
+  // there are only trustworthy as a real pointer if the address is listed here - unlisted locations
+  // are unpatched placeholder bytes (e.g. Tex fields for textureless entries like render targets).
+  private readonly Dictionary<uint, uint> relocations = [];
+  // Ordered (per file, in on-disk LoaderStruct order) (Tag, DataAddress) pairs - see Part 6
+  // Finding 4: "btbl"/"flic" are loader-category tags only, never discoverable as classified
+  // symbols, so callers that need every loader instance (not just symbol-backed resources) must
+  // walk this instead of ovl.Keys.
+  private readonly List<(string Tag, uint DataAddress)> loaderEntriesInOrder = [];
   private uint relocationOffset;
   private bool disposed = false;
+
+  /// <summary>
+  /// Every loader instance in the archive, in on-disk order (common file first, then unique), with
+  /// its category tag (e.g. "btbl", "flic", "tex") and relocation-resolved data address. Unlike
+  /// <see cref="Keys"/>, this includes loader categories (like "btbl"/"flic") that are never
+  /// classified as their own symbol - see Part 6 Finding 4 of the texture-decoding bug doc.
+  /// </summary>
+  internal IReadOnlyList<(string Tag, uint DataAddress)> LoaderEntriesInOrder => loaderEntriesInOrder;
+
+  /// <summary>Reads <paramref name="length"/> raw bytes at a relocation-resolved data address.</summary>
+  public bool TryReadBytes(uint address, int length, [MaybeNullWhen(false)] out byte[] data) {
+    if (!TryResolveRelocation(address, out var block, out var offset) || offset + length > block.Length) {
+      data = null;
+      return false;
+    }
+    data = block.AsSpan(Convert.ToInt32(offset), length).ToArray();
+    return true;
+  }
 
   #region IDictionary<OvlFile, OvlEntry>
   public ICollection<OvlFile> Keys => ((IDictionary<OvlFile, OvlEntry>)entries).Keys;
@@ -85,16 +121,24 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
 
   /// <summary>Load an OVL archive and extract all resource entries.</summary>
   public static Ovl Load(string ovlPath) {
-    var ovl = new Ovl();
-    ovl.IngestArchive(ovlPath);
+    var ovl = new Ovl(Path.GetFileName(ovlPath));
+    ovl.version = ovl.IngestArchive(ovlPath);
     return ovl;
   }
 
   /// <summary>Find a resource by name.</summary>
-  public OvlFile? Find(string? name) => entries.Keys.FirstOrDefault(key =>
-    key.Type == FileType.Texture &&
-    (name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
-  );
+  public OvlFile? Find(string? name, FileType? type = null) => entries.Keys.FirstOrDefault(key => {
+    var nameProvided = name != null;
+    var nameMatch = name == null || key.Name.Contains(name, StringComparison.OrdinalIgnoreCase);
+    var typeMatch = type == null || key.Type == type;
+
+    // If a name is given, return true if the name matches.
+    // If a name and type is given, return true if both match.
+    // Otherwise, return true if the type matches.
+    return nameProvided
+      ? nameMatch && (type == null || typeMatch)
+      : typeMatch;
+  });
 
   /// <summary>Read the resource data for a given file.</summary>
   public byte[]? ReadResource(OvlFile file) {
@@ -108,37 +152,140 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
     return bytes;
   }
 
-  private void IngestArchive(string ovlPath) {
+  /// <summary>
+  /// Resolves a relocated data pointer to its absolute block data.
+  /// </summary>
+  /// <param name="dataPtr">Relative offset pointer from OVL block data</param>
+  /// <param name="data">The resolved block's full data, or null if unresolved</param>
+  /// <param name="offset">Offset within the resolved data where the pointer refers</param>
+  /// <returns>True if resolution succeeded.</returns>
+  public bool TryResolveRelocation(uint dataPtr, [MaybeNullWhen(false)] out byte[] data, out uint offset) {
+    // A null (zero) pointer never resolves - without this guard it spuriously "resolves" to
+    // whatever block happens to start at RelativeOffset 0 (see TryResolveString's matching guard).
+    var resolvedBlock = dataPtr == 0 ? null : FindBlock(dataPtr);
+    if (resolvedBlock?.Data == null) {
+      data = null;
+      offset = 0;
+      return false;
+    }
+
+    data = resolvedBlock.Data;
+    offset = dataPtr - resolvedBlock.RelativeOffset;
+    return true;
+  }
+
+  /// <summary>
+  /// Looks up a location in block data that the archive's own relocation-fixup table lists as
+  /// needing pointer interpretation (see <see cref="relocations"/>), and returns the raw value
+  /// stored there. Used to chase relocated pointer chains (e.g. <c>Tex.FlicPtr</c>, a double
+  /// pointer needing two chained lookups - see Part 6 Finding 2 of the texture-decoding bug doc)
+  /// without trusting arbitrary unpatched placeholder bytes as if they were real pointers.
+  /// </summary>
+  /// <param name="address">Relative offset address of the field to look up</param>
+  /// <param name="rawValue">The raw value stored at that address on disk, if listed</param>
+  /// <returns>True if <paramref name="address"/> is listed in the relocation-fixup table.</returns>
+  public bool TryGetRelocationSource(uint address, out uint rawValue) =>
+    relocations.TryGetValue(address, out rawValue);
+
+  private FileBlock? FindBlock(uint address) => allFileTypeBlocks
+    .SelectMany(ftb => ftb.SelectMany(b => b.Blocks))
+    .FirstOrDefault(fb => fb.Data != null && address >= fb.RelativeOffset && address < fb.RelativeOffset + fb.Size);
+
+  /// <summary>
+  /// Reads the "extra data" chunks attached to a loader, e.g. Flic pixel data or a bitmap-table
+  /// index. This data is written after the relocation-fixup table and is not part of any
+  /// relocatable block, so it cannot be reached via <see cref="TryResolveRelocation"/>: it must be
+  /// looked up by the raw data-pointer value of the *loader* that owns it (see LoaderStruct.data
+  /// in ManagerFLIC.cpp/OVLDump.cpp's MakeLoaders), not the pointer of the symbol that references it.
+  /// </summary>
+  /// <param name="dataPtr">Relative offset pointer identifying the owning loader</param>
+  /// <param name="chunks">The loader's extra-data chunks, in on-disk order, or null if none exist</param>
+  /// <returns>True if any extra data chunks were found for this loader.</returns>
+  public bool TryReadExtraData(uint dataPtr, [MaybeNullWhen(false)] out IReadOnlyList<byte[]> chunks) {
+    foreach (var extraData in allExtraData.Where(extraData => extraData.ContainsKey(dataPtr))) {
+      extraData.TryGetValue(dataPtr, out var found);
+      chunks = found;
+      return true;
+    }
+
+    chunks = null;
+    return false;
+  }
+
+  /// <summary>
+  /// Reads the "extra data" chunks attached to the loader for a named resource. See the
+  /// <see cref="TryReadExtraData(uint, out IReadOnlyList{byte[]})"/> overload for why this data
+  /// cannot be reached via <see cref="TryResolveRelocation"/>.
+  /// </summary>
+  public bool TryReadExtraData(OvlFile file, [MaybeNullWhen(false)] out IReadOnlyList<byte[]> chunks) {
+    if (entryDataPtrs.TryGetValue(file, out var dataPtr))
+      return TryReadExtraData(dataPtr, out chunks);
+
+    chunks = null;
+    return false;
+  }
+
+  /// <summary>Looks up a resolved resource's own (relative offset) data pointer address.</summary>
+  public bool TryGetDataPointer(OvlFile file, out uint dataPtr) => entryDataPtrs.TryGetValue(file, out dataPtr);
+
+  /// <summary>
+  /// Resolves a relocated string pointer to its text value.
+  /// </summary>
+  /// <param name="ptr">Relative offset pointer to a null-terminated ASCII string in OVL block data</param>
+  /// <param name="value">The resolved string, or null if unresolved</param>
+  /// <returns>True if resolution succeeded.</returns>
+  public bool TryResolveString(uint ptr, [MaybeNullWhen(false)] out string value) {
+    var resolvedBlock = ptr == 0 ? null : FindBlock(ptr);
+    if (resolvedBlock?.Data == null) {
+      value = null;
+      return false;
+    }
+
+    var offset = Convert.ToInt32(ptr - resolvedBlock.RelativeOffset);
+    var end = Array.IndexOf(resolvedBlock.Data, (byte)0, offset);
+    if (end < 0) end = resolvedBlock.Data.Length;
+    value = Encoding.ASCII.GetString(resolvedBlock.Data, offset, end - offset);
+    return true;
+  }
+
+  private Version IngestArchive(string ovlPath) {
+    var version = Version.Unknown;
     var basePath = Path.GetDirectoryName(ovlPath) ?? "";
     var fileName = Path.GetFileNameWithoutExtension(ovlPath).Split('.')[0];
 
     var commonPath = Path.Combine(basePath, $"{fileName}.common.ovl");
-    if (File.Exists(commonPath)) ProcessFile(commonPath);
+    if (File.Exists(commonPath))
+      version = ProcessFile(commonPath);
 
     var uniquePath = Path.Combine(basePath, $"{fileName}.unique.ovl");
-    if (File.Exists(uniquePath)) ProcessFile(uniquePath);
+    if (File.Exists(uniquePath)) {
+      var v = ProcessFile(uniquePath);
+      version = version == Version.Unknown ? v : version;
+    }
 
     ExtractResources();
+
+    return version;
   }
 
-  private void ProcessFile(string filePath) {
+  private Version ProcessFile(string filePath) {
     using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
     using var reader = new BinaryReader(stream, Encoding.UTF8, false);
 
     var magic = reader.ReadUInt32();
     Debug.Assert(magic == 0x4b524746, "Invalid OVL magic");
     var reserved = reader.ReadUInt32();
-    var version = reader.ReadUInt32();
+    var version = (Version) reader.ReadUInt32();
     var headerRefs = reader.ReadUInt32();
 
     Debug.WriteLine($"[OVL] Loading {Path.GetFileName(filePath)} (v{version})");
 
     var subVersionFlag = 0u;
-    uint referenceCount = 0;
-
-    if (version == 5) referenceCount = ReadV5References(reader, out subVersionFlag);
-    else if (version == 4) referenceCount = reader.ReadUInt32();
-    else referenceCount = headerRefs;
+    var referenceCount = version switch {
+      Version.Five => ReadV5References(reader, out subVersionFlag),
+      Version.Four => reader.ReadUInt32(),
+      _ => headerRefs
+    };
 
     Debug.WriteLine($"[OVL] subVersionFlag: {subVersionFlag}, referenceCount: {referenceCount}");
 
@@ -154,7 +301,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
       var fileTypeCount = reader.ReadUInt32();
       if (fileTypeCount > 0 && fileTypeCount < 1024) {
         loaderHeaders = ReadLoaderHeaders(reader, (int)fileTypeCount);
-        if (version == 5) ReadV5SymbolCounts(reader, loaderHeaders);
+        if (version == Version.Five) ReadV5SymbolCounts(reader, loaderHeaders);
       }
     }
     allLoaderHeaders.Add([.. loaderHeaders]);
@@ -165,23 +312,79 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
 
     ReadPostBlockUnknowns(reader, version);
     ReadBlockData(reader, blocks, version);
-    SkipRelocations(reader);
+    ReadRelocations(reader);
 
-    if (version >= 4 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
-      if (version == 4 || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
+    if (version >= Version.Four && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
+      if (version == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
     }
+
+    allExtraData.Add(ReadLoaderExtraData(reader, blocks, version, loaderHeaders));
+
+    return version;
+  }
+
+  /// <summary>
+  /// Reads the per-loader "extra data" chunk stream that immediately follows the relocation-fixup
+  /// table. See LoaderStruct in ovlstructs.h and the HasExtraData/ExtraChunk handling in
+  /// OVLDump.cpp's MakeLoaders.
+  ///
+  /// Keyed by each loader's relocation-resolved data address, not its raw on-disk `data` field
+  /// value: per Part 6 Finding 3 (Root cause B), `LoaderStruct.data` is itself a fixup-table-only
+  /// pointer, just like `Tex.FlicPtr`. The reference (btbl.rs::decode_entry) reads
+  /// `entry.data_address` directly via a plain address read with no further relocation lookup,
+  /// which only works if `data_address` was already resolved through the relocation table when the
+  /// loader-entry list was built - so this does the same one-hop resolution here, falling back to
+  /// the raw field value when it isn't a listed relocation source (e.g. a v1/v4 archive without a
+  /// populated relocation table, where the raw on-disk value is already the intended address).
+  /// </summary>
+  private Dictionary<uint, List<byte[]>> ReadLoaderExtraData(
+    BinaryReader reader, FileTypeBlock[] blocks, Version version, List<LoaderHeader> loaderHeaders
+  ) {
+    var extraData = new Dictionary<uint, List<byte[]>>();
+    if (blocks.Length <= 2 || blocks[2].Blocks.Count <= 1) return extraData;
+
+    var loaderBlock = blocks[2].Blocks[1];
+    if (loaderBlock.Data == null || loaderBlock.Size == 0) return extraData;
+
+    // LoaderStruct: LoaderType(4), data(ptr, 4), HasExtraData(4), Sym(ptr, 4), SymbolsToResolve(4)
+    const int loaderStructSize = 20;
+    var loaderCount = Convert.ToInt32(loaderBlock.Size) / loaderStructSize;
+    for (var i = 0; i < loaderCount; i++) {
+      var offset = i * loaderStructSize;
+      var loaderType = BitConverter.ToUInt32(loaderBlock.Data, offset);
+      var rawDataPtr = BitConverter.ToUInt32(loaderBlock.Data, offset + 4);
+      var dataFieldAddress = loaderBlock.RelativeOffset + Convert.ToUInt32(offset + 4);
+      var dataPtr = TryGetRelocationSource(dataFieldAddress, out var resolved) ? resolved : rawDataPtr;
+      var hasExtraDataRaw = BitConverter.ToUInt32(loaderBlock.Data, offset + 8);
+      // v5 packs a 16-bit extra-data count and a 16-bit unknown into this field; v1/v4 use it whole.
+      var hasExtraData = version == Version.Five ? hasExtraDataRaw & 0xFFFF : hasExtraDataRaw;
+
+      // LoaderType is a direct, on-disk-position index into loaderHeaders (Part 6 Finding 1).
+      if (loaderType < loaderHeaders.Count)
+        loaderEntriesInOrder.Add((loaderHeaders[Convert.ToInt32(loaderType)].Tag, dataPtr));
+
+      for (var c = 0; c < hasExtraData; c++) {
+        if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) break;
+        var chunkSize = reader.ReadUInt32();
+        if (reader.BaseStream.Position + chunkSize > reader.BaseStream.Length) break;
+        var chunk = reader.ReadBytes(Convert.ToInt32(chunkSize));
+
+        if (!extraData.TryGetValue(dataPtr, out var chunks))
+          extraData[dataPtr] = chunks = [];
+        chunks.Add(chunk);
+      }
+    }
+    return extraData;
   }
 
   private static uint ReadV5References(BinaryReader reader, out uint subVersionFlag) {
     subVersionFlag = reader.ReadUInt32();
-    if (subVersionFlag != 0) {
-      if (reader.BaseStream.Position + 12 <= reader.BaseStream.Length) {
-        reader.ReadBytes(12);
-        while (reader.BaseStream.Position < reader.BaseStream.Length && reader.ReadByte() != 0) { }
-        while (reader.BaseStream.Position < reader.BaseStream.Length && reader.BaseStream.Position % 4 != 0)
-          reader.ReadByte();
-      }
-    }
+    if (subVersionFlag == 0 || reader.BaseStream.Position + 12 > reader.BaseStream.Length)
+      return reader.BaseStream.Position + 4 <= reader.BaseStream.Length ? reader.ReadUInt32() : 0;
+    reader.ReadBytes(12);
+    while (reader.BaseStream.Position < reader.BaseStream.Length && reader.ReadByte() != 0) { }
+    while (reader.BaseStream.Position < reader.BaseStream.Length && reader.BaseStream.Position % 4 != 0)
+      reader.ReadByte();
     return reader.BaseStream.Position + 4 <= reader.BaseStream.Length ? reader.ReadUInt32() : 0;
   }
 
@@ -222,7 +425,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
   }
 
   private static FileTypeBlock[] ReadFileTypeBlocks(
-    string filePath, BinaryReader reader, uint version, uint subVersionFlag
+    string filePath, BinaryReader reader, Version version, uint subVersionFlag
   ) {
     var blocks = new FileTypeBlock[9];
     for (var i = 0; i < blocks.Length; i++) {
@@ -231,9 +434,9 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
         continue;
       }
       blocks[i] = new FileTypeBlock { Count = reader.ReadUInt32() };
-      if (version > 1 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
+      if (version > Version.One && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
         reader.ReadUInt32();
-        if (version == 5 && (subVersionFlag & 1) != 0 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length)
+        if (version == Version.Five && (subVersionFlag & 1) != 0 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length)
           blocks[i].UnknownV5Extra = reader.ReadUInt32();
       }
 
@@ -241,7 +444,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
         .Select(_ => new FileBlock() { Path = filePath})];
 
       // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
-      if (version > 1) foreach (var block in blocks[i].Blocks) {
+      if (version > Version.One) foreach (var block in blocks[i].Blocks) {
         if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) break;
         block.Size = reader.ReadUInt32();
         blocks[i].Size += block.Size;
@@ -253,27 +456,29 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
     return blocks;
   }
 
-  private static void ReadPostBlockUnknowns(BinaryReader reader, uint version) {
-    if (version == 4 && reader.BaseStream.Position + 8 <= reader.BaseStream.Length) {
-      reader.ReadBytes(8);
-    }
-    else if (version >= 5 && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
-      var bytesCount = reader.ReadUInt32();
-      if (bytesCount > 0 && bytesCount <= reader.BaseStream.Length - reader.BaseStream.Position)
-        reader.ReadBytes(Convert.ToInt32(bytesCount));
+  private static void ReadPostBlockUnknowns(BinaryReader reader, Version version) {
+    switch (version) {
+      case Version.Four when reader.BaseStream.Position + 8 <= reader.BaseStream.Length:
+        reader.ReadBytes(8);
+        break;
+      case >= Version.Five when reader.BaseStream.Position + 4 <= reader.BaseStream.Length: {
+        var bytesCount = reader.ReadUInt32();
+        if (bytesCount > 0 && bytesCount <= reader.BaseStream.Length - reader.BaseStream.Position)
+          reader.ReadBytes(Convert.ToInt32(bytesCount));
 
-      if (reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
+        if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
         var longCount = reader.ReadUInt32();
         if (Convert.ToInt64(longCount * 4) <= reader.BaseStream.Length - reader.BaseStream.Position)
           reader.ReadBytes(Convert.ToInt32(longCount * 4));
+        break;
       }
     }
   }
 
-  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, uint version) {
+  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, Version version) {
     for (var i = 0; i < blocks.Length; i++) {
       foreach (var block in blocks[i].Blocks) {
-        if (version == 1 && block.Size == 0) {
+        if (version == Version.One && block.Size == 0) {
           if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
           block.Size = reader.ReadUInt32();
         }
@@ -281,21 +486,39 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
         block.RelativeOffset = relocationOffset;
         block.TypeIndex = i;
         relocationOffset += block.Size;
-        if (block.Size > 0 && reader.BaseStream.Position + block.Size <= reader.BaseStream.Length) {
-          block.Offset = Convert.ToUInt64(reader.BaseStream.Position);
-          block.Data = reader.ReadBytes(Convert.ToInt32(block.Size));
-          Debug.WriteLine($"[OVL] Seek past block {i} size {block.Size} at relOffset 0x{block.RelativeOffset:X}");
-        }
+
+        if (block.Size <= 0 || reader.BaseStream.Position + block.Size > reader.BaseStream.Length) continue;
+        block.Offset = Convert.ToUInt64(reader.BaseStream.Position);
+        block.Data = reader.ReadBytes(Convert.ToInt32(block.Size));
+        Debug.WriteLine($"[OVL] Seek past block {i} size {block.Size} at relOffset 0x{block.RelativeOffset:X}");
       }
     }
   }
 
-  private static void SkipRelocations(BinaryReader reader) {
+  /// <summary>
+  /// Reads the relocation-fixup table (Part 6 Finding 3 / rct3tex.cpp:1830-1842's DoReloc): a flat
+  /// list of <c>relCount</c> source addresses, each naming a location in block data whose raw
+  /// stored value should be trusted as a real pointer once "fixed up" by the archive's own loader
+  /// (previously discarded entirely by the method this replaces, <c>SkipRelocations</c>). Consumes
+  /// exactly the same number of bytes from the stream as before - it just also records what it
+  /// reads into <see cref="relocations"/> instead of discarding it.
+  /// </summary>
+  private void ReadRelocations(BinaryReader reader) {
     if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
     var relCount = reader.ReadUInt32();
-    var bytesToSkip = Convert.ToInt64(relCount) * 4;
-    if (bytesToSkip <= reader.BaseStream.Length - reader.BaseStream.Position)
-      reader.BaseStream.Seek(bytesToSkip, SeekOrigin.Current);
+    var bytesToRead = Convert.ToInt64(relCount) * 4;
+    if (bytesToRead > reader.BaseStream.Length - reader.BaseStream.Position) return;
+
+    for (var i = 0; i < relCount; i++) {
+      var sourceAddress = reader.ReadUInt32();
+      var block = FindBlock(sourceAddress);
+      if (block?.Data == null) continue;
+
+      var offset = Convert.ToInt32(sourceAddress - block.RelativeOffset);
+      if (offset + 4 > block.Data.Length) continue;
+
+      relocations[sourceAddress] = BitConverter.ToUInt32(block.Data, offset);
+    }
   }
 
   private void ExtractResources() {
@@ -317,8 +540,8 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
       // layout has a header before the symbol table. Guessing the stride from the block size (e.g.
       // any size that is a multiple of 48 divides evenly by both 12 and 16) silently misaligns every
       // name/data pointer read for the rest of the file once it picks wrong.
-      var version = fileIndex < allVersions.Count ? allVersions[fileIndex] : 0u;
-      var symbolSize = version == 1 ? 12 : 16;
+      var version = fileIndex < allVersions.Count ? allVersions[fileIndex] : Version.Unknown;
+      var symbolSize = version == Version.One ? 12 : 16;
       if (symbolBlock.Size % symbolSize != 0) continue;
 
       var loaderHeaders = fileIndex < allLoaderHeaders.Count ? allLoaderHeaders[fileIndex] : [];
@@ -362,10 +585,12 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
           // Neither SymbolStruct nor SymbolStruct2 stores a resource byte size; the archive
           // format has no reliable per-entry length, so read to the end of the resolved block.
           var effectiveSize = resolvedBlock.Size - relOffset;
-          entries[new OvlFile(name, fileType, resolvedBlock.Path)] = new OvlEntry(
+          var file = new OvlFile(name, fileType, resolvedBlock.Path);
+          entries[file] = new OvlEntry(
             Convert.ToUInt32(resolvedBlock.Offset + relOffset),
             effectiveSize
           );
+          entryDataPtrs[file] = dataPtr;
         }
 
         if (loaderSymbolRemaining > 0) loaderSymbolRemaining--;
@@ -395,14 +620,16 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
     return null;
   }
 
-  protected virtual void Dispose(bool disposing) {
+  private void Dispose(bool disposing) {
     if (disposed) return;
 
     // Empty large fields
     if (disposing) {
       entries.Clear();
+      entryDataPtrs.Clear();
       allFileTypeBlocks.Clear();
       allLoaderHeaders.Clear();
+      allExtraData.Clear();
     }
 
     disposed = true;
@@ -411,6 +638,7 @@ public class Ovl : IDictionary<OvlFile, OvlEntry>, IDisposable {
   public void Dispose() {
     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
     Dispose(disposing: true);
+    // ReSharper disable once GCSuppressFinalizeForTypeWithoutDestructor because this class doesn't use unamanged data
     GC.SuppressFinalize(this);
   }
 }

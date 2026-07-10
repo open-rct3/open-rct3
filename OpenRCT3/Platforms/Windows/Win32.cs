@@ -1,9 +1,18 @@
-using System;
+// Win32 Wrappers
+//
+// Authors:
+//   - Chance Snow <git@chancesnow.me>
+//
+// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+
 using System.Runtime.InteropServices;
 
 namespace OpenRCT3.Platforms.Windows;
 
 internal static partial class Win32 {
+  private const string USER32 = "user32.dll";
+  private const string GDI32 = "gdi32.dll";
+
   public readonly struct HWND(IntPtr value) {
     public readonly IntPtr Value = value;
 
@@ -12,15 +21,11 @@ internal static partial class Win32 {
     public override string ToString() => Value.ToString();
   }
 
-  const string USER32 = "user32.dll";
-  const string GDI32 = "gdi32.dll";
-  const string OPENGL32 = "opengl32.dll";
+  [LibraryImport(USER32, SetLastError = true)]
+  public static partial nint GetDC(nint hWnd);
 
-  [DllImport(USER32, SetLastError = true)]
-  public static extern IntPtr GetDC(IntPtr hWnd);
-
-  [DllImport(USER32, SetLastError = true)]
-  public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+  [LibraryImport(USER32, SetLastError = true)]
+  public static partial int ReleaseDC(nint hWnd, nint hDC);
 
   [StructLayout(LayoutKind.Sequential)]
   public struct PIXELFORMATDESCRIPTOR {
@@ -53,22 +58,11 @@ internal static partial class Win32 {
   }
 
   [LibraryImport(GDI32, SetLastError = true)]
-  public static partial int ChoosePixelFormat(IntPtr hdc, ref PIXELFORMATDESCRIPTOR pfd);
+  public static partial nint ChoosePixelFormat(IntPtr hdc, ref PIXELFORMATDESCRIPTOR pfd);
 
   [LibraryImport(GDI32, SetLastError = true)]
   [return: MarshalAs(UnmanagedType.Bool)]
-  public static partial bool SetPixelFormat(IntPtr hdc, int format, ref PIXELFORMATDESCRIPTOR pfd);
-
-  [LibraryImport(OPENGL32, SetLastError = true)]
-  public static partial IntPtr wglCreateContext(IntPtr hdc);
-
-  [LibraryImport(OPENGL32, SetLastError = true)]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  public static partial bool wglMakeCurrent(IntPtr hdc, IntPtr hglrc);
-
-  [LibraryImport(OPENGL32, SetLastError = true)]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  public static partial bool wglDeleteContext(IntPtr hglrc);
+  public static partial bool SetPixelFormat(IntPtr hdc, nint format, ref PIXELFORMATDESCRIPTOR pfd);
 
   [LibraryImport("gdi32.dll", SetLastError = true)]
   [return: MarshalAs(UnmanagedType.Bool)]
@@ -123,4 +117,22 @@ internal static partial class Win32 {
 
   [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
   private static partial IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+  [LibraryImport("user32.dll")]
+  public static partial IntPtr GetSystemMenu(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool bRevert);
+
+  [LibraryImport("user32.dll", EntryPoint = "InsertMenuW", StringMarshalling = StringMarshalling.Utf16)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool InsertMenu(IntPtr hMenu, uint uPosition, uint uFlags, uint uIDNewItem, string lpNewItem);
+
+  [LibraryImport("user32.dll", EntryPoint = "InsertMenuW")]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool InsertMenu(IntPtr hMenu, uint uPosition, uint uFlags, uint uIDNewItem, nint lpNewItem);
+
+  [LibraryImport("user32.dll", EntryPoint = "AppendMenuW", StringMarshalling = StringMarshalling.Utf16)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static partial bool AppendMenu(IntPtr hMenu, uint uFlags, uint uIDNewItem, string? lpNewItem);
+
+  [LibraryImport("user32.dll")]
+  public static partial int GetMenuItemCount(IntPtr hMenu);
 }

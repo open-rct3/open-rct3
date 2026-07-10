@@ -17,7 +17,7 @@
     {
       "label": "Test",
       "type": "shell",
-      "command": "make test",
+      "command": "make test integration",
       "problemMatcher": [
         "$deno-test"
       ],

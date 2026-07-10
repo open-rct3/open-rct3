@@ -7,13 +7,17 @@
 
 using OpenCobra.GDK.Materials;
 using OpenCobra.GDK.Meshes;
-using OpenCobra.GDK.Shaders;
 
 namespace OpenCobra.GDK;
 
-public class Model {
-  public Mesh Mesh { get; set; } = new();
-  public Material Material { get; set; } = new();
+public class Model(Mesh mesh) : IDisposable {
+  public Mesh Mesh { get; init; } = mesh;
+  public Material? Material { get; set; }
   public Transform Transform { get; set; } = new();
-  public ShaderProgram Shader { get; set; } = new();
+
+  public void Dispose() {
+    Mesh.Dispose();
+    Material?.Dispose();
+    GC.SuppressFinalize(this);
+  }
 }

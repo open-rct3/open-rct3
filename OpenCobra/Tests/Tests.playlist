@@ -10,23 +10,6 @@
               <Property Name="Namespace" Value="OVL.Tests" />
               <Rule Match="Any">
                 <Rule Match="All">
-                  <Property Name="Class" Value="ExtractResources" />
-                  <Rule Match="Any">
-                    <Rule Match="All">
-                      <Property Name="TestWithNormalizedFullyQualifiedName" Value="OVL.Tests.ExtractResources.Load_NullbmpFtx_ExtractsFlexibleTexture" />
-                      <Rule Match="Any">
-                        <Property Name="DisplayName" Value="Load_NullbmpFtx_ExtractsFlexibleTexture" />
-                      </Rule>
-                    </Rule>
-                    <Rule Match="All">
-                      <Property Name="TestWithNormalizedFullyQualifiedName" Value="OVL.Tests.ExtractResources.Load_ShapesCommon_HasResources" />
-                      <Rule Match="Any">
-                        <Property Name="DisplayName" Value="Load_ShapesCommon_HasResources" />
-                      </Rule>
-                    </Rule>
-                  </Rule>
-                </Rule>
-                <Rule Match="All">
                   <Property Name="Class" Value="ListResources" />
                   <Rule Match="Any">
                     <Rule Match="All">

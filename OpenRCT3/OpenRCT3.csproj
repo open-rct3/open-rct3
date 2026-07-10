@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StartupObject>OpenRCT3.Program</StartupObject>
+    <TieredCompilation>true</TieredCompilation>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Display name -->
     <ApplicationTitle>OpenRCT3</ApplicationTitle>
@@ -17,20 +18,24 @@
     <!-- Versions -->
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
+    <LangVersion>14</LangVersion>
   </PropertyGroup>
   <!-- Configure debug and release modes -->
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <CreatePackage>false</CreatePackage>
     <UseSGen>false</UseSGen>
     <WarningLevel>1</WarningLevel>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
     <LinkMode>None</LinkMode>
+    <TrimMode>disable</TrimMode>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <CreatePackage>false</CreatePackage>
     <UseSGen>false</UseSGen>
     <LinkMode>None</LinkMode>
-    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <!-- TODO: <TrimMode>Link</TrimMode> to minimize bundle size -->
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 
   <ItemGroup>
@@ -41,17 +46,25 @@
     <ProjectReference Include="../OpenCobra/OVL/OVL.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="HidSharp" Version="2.6.4" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
     <PackageReference Include="NLog" Version="5.3.4" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.3.4" />
-    <PackageReference Include="Silk.NET.OpenGL" Version="2.22.0" />
-    <PackageReference Include="System.Drawing.Common" Version="10.0.5" />
-    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
-    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
-    <PackageReference Include="System.Text.Json" Version="8.0.6" />
+    <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
+    <PackageReference Include="Silk.NET.Input" Version="2.23.0" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.8" />
+    <PackageReference Include="System.Linq.Async" Version="7.0.1" />
+    <PackageReference Include="System.Resources.Extensions" Version="10.0.8" />
+    <PackageReference Include="System.Text.Json" Version="10.0.8" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Panda.ico" />
     <InternalsVisibleTo Include="OpenRCT3.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="System" />
+    <Using Include="System.Diagnostics" />
+    <Using Include="System.IO" />
   </ItemGroup>
   <Choose>
     <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
@@ -59,10 +72,11 @@
         <ProfileName>macOS</ProfileName>
         <DefineConstants>$(DefineConstants);MACOS;OSX</DefineConstants>
         <!-- See https://github.com/xamarin/xamarin-macios -->
-        <TargetFramework>net8.0-macos</TargetFramework>
+        <TargetFramework>net9.0-macos</TargetFramework>
         <ImplicitUsings>true</ImplicitUsings>
-        <TargetPlatformVersion>14.0</TargetPlatformVersion>
-        <SupportedOSPlatformVersion>12.0</SupportedOSPlatformVersion>
+        <TargetPlatformVersion>15.0</TargetPlatformVersion>
+        <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+        <LinkerBehavior>LinkFrameworkSDKsOnly</LinkerBehavior>
       </PropertyGroup>
       <ItemGroup>
         <Compile Remove="OpenGL\GLContext.windows.cs" />
@@ -80,10 +94,16 @@
       <PropertyGroup>
         <ProfileName>Windows</ProfileName>
         <OutputType>WinExe</OutputType>
-        <TargetFramework>net8.0-windows</TargetFramework>
+        <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
         <UseWindowsForms>true</UseWindowsForms>
-        <TargetPlatformVersion>8.0</TargetPlatformVersion>
+        <UseWindowsDesktopSdk>true</UseWindowsDesktopSdk>
+        <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
       </PropertyGroup>
+      <ItemGroup>
+        <PackageReference Include="Silk.NET.WGL" Version="2.23.0" />
+        <PackageReference Include="Silk.NET.WGL.Extensions.ARB" Version="2.23.0" />
+        <PackageReference Include="Silk.NET.WGL.Extensions.EXT" Version="2.23.0" />
+      </ItemGroup>
       <ItemGroup>
         <Compile Remove="OpenGL\GLContext.macOS.cs" />
         <Compile Remove="**\Platforms\macOS\**\*.cs" />

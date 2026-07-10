@@ -5,14 +5,15 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.ComponentModel;
+using Silk.NET.OpenGL;
 
 namespace OpenCobra.GDK.Shaders;
 
-public class ShaderProgram {
-  [Category("Data")]
-  public string VertexSource { get; set; } = string.Empty;
-  [Category("Data")]
-  public string FragmentSource { get; set; } = string.Empty;
+public record struct ShaderSource(string Vertex, string Fragment);
+
+public class ShaderProgram(uint shader) {
+  public Shader Shader { get; init; } = new(shader);
+
   [Category("Data")]
   public List<Uniform> Uniforms { get; init; } = [];
   [Category("Data")]
@@ -28,15 +29,11 @@ public class Uniform {
   public virtual object? Value { get; set; }
 }
 
-public enum UniformType {
-  Float,
-  Vec2,
-  Vec3,
-  Vec4,
-  Mat3,
-  Mat4,
-  Int,
-  Sampler2D
+public class Uniform<T> : Uniform where T : struct {
+  public new T? Value {
+    get => base.Value as T?;
+    set => base.Value = value;
+  }
 }
 
 public class Attribute {

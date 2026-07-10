@@ -1,12 +1,15 @@
 # OS detection for cross-platform bundling
 ifeq ($(OS),Windows_NT)
-    PLATFORM := Windows
+  PLATFORM := Windows
 else
-    PLATFORM := $(shell uname -s)
+  PLATFORM := $(shell uname -s)
 endif
 
-all: gui
-	dotnet build OpenRCT3/OpenRCT3.csproj
+all: release
+
+# ===========
+# Publishing
+# ===========
 
 .PHONY: install
 ifeq ($(PLATFORM),Darwin)
@@ -15,6 +18,7 @@ else ifeq ($(PLATFORM),Windows)
 install: bin/OpenRCT3.exe
 endif
 
+# FIXME: Use `dotnet publish` to generate the bundle, this doesn't include all dependencies
 ifeq ($(PLATFORM),Darwin)
 bin/OpenRCT3.app: release
 	@cp -R OpenRCT3/bin/Release/net8.0-macos/osx-x64/OpenRCT3.app bin/OpenRCT3.app
@@ -27,19 +31,25 @@ endif
 release: gui
 	dotnet build OpenRCT3/OpenRCT3.csproj -c Release
 
-# Debug the Game
-
-.PHONY: debug
-debug:
-	deno task build:plugins
-	deno task build:desktop
-	dotnet run --project OpenRCT3/OpenRCT3.csproj
-
-# Game GUI
-
 .PHONY: gui
 gui: ovl
 	deno task build:desktop
+
+.PHONY: ovl
+ovl:
+	dotnet build OpenCobra/OVL/OVL.csproj -c Release
+
+# ==========
+# Debugging
+# ==========
+
+.PHONY: dumper
+dumper:
+	dotnet run --project Dumper/Dumper.csproj
+
+.PHONY: debug
+debug: plugins
+	dotnet run --project OpenRCT3/OpenRCT3.csproj
 
 # Website
 
@@ -47,7 +57,7 @@ WEBSITE_DIR := clients/website
 WEBSITE_SRC := $(wildcard clients/website/*.ts) $(wildcard clients/website/src/*.*) $(wildcard clients/website/src/css/*.scss) $(wildcard clients/website/src/templates/*.vto) $(wildcard clients/website/src/templates/partials/*.vto)
 
 .PHONY: website
-website: $(WEBSITE_DIR)/_site
+website: ovl $(WEBSITE_DIR)/_site
 
 $(WEBSITE_DIR)/_site: $(WEBSITE_SRC)
 	deno task build:website
@@ -57,28 +67,70 @@ $(WEBSITE_DIR)/_site: $(WEBSITE_SRC)
 percy: website
 	deno run -A npm:@percy/cli snapshot -b "https://rct3.chancesnow.me" $(WEBSITE_DIR)/_site
 
-.PHONY: ovl
-ovl:
-	dotnet build OpenCobra/OVL/OVL.csproj
+# =========================================================
+# Tests
+#
+# Re-builds are only performed if sources change
+# =========================================================
 
-.PHONY: dumper
-dumper:
-	dotnet run --project Dumper/Dumper.csproj
+# Plugins
 
-.PHONY: test
-test: test-plugins
-	deno check clients/desktop/main.ts
-	deno task check:plugins
-	dotnet test
+PLUGINS_SRC := $(wildcard plugins/*/index.ts)
+PLUGINS_OUT := $(patsubst plugins/%/index.ts,bin/plugins/%.wasm,$(PLUGINS_SRC))
+$(PLUGINS_OUT): $(PLUGINS_SRC)
+	deno task build:plugins
 
-.PHONY: test-ovl
-test-ovl:
-	dotnet test OpenCobra/Tests/Tests.csproj /p:SolutionDir=$(CURDIR)/
+.PHONY: plugins
+plugins: $(PLUGINS_OUT)
 
 .PHONY: test-plugins
-test-plugins:
-# FIXME: This doesn't work on macOS
-ifeq ($(PLATFORM),Windows)
-	dotnet build OpenCobra/Tests/TestRunner/OvlTestBench.csproj /p:Profile=cli
-	dotnet run --project OpenCobra/Tests/TestRunner/OvlTestBench.csproj -- --plugins
+test-plugins: $(PLUGINS_OUT)
+	deno task check:plugins
+	deno task test:plugins
+
+# .NET Tests
+
+TESTS_PROJ := OpenCobra/Tests/Tests.csproj
+TEST_BENCH_PROJ := OpenCobra/Tests/TestRunner/OvlTestBench.csproj
+
+TESTS_SRC := $(wildcard OpenCobra/Tests/*.cs OpenCobra/Tests/*/*.cs)
+# Extract TargetFramework from the csproj
+TESTS_TFM := $(shell grep -oEm1 "<TargetFramework>[^<]+" OpenCobra/Tests/Tests.csproj | sed "s/<TargetFramework>//")
+TESTS_DLL := OpenCobra/Tests/bin/Debug/$(TESTS_TFM)/Tests.dll
+
+$(TESTS_DLL): $(TESTS_PROJ) $(TESTS_SRC)
+	dotnet build OpenCobra/Tests/Tests.csproj
+
+# Extract TargetFramework from the project files
+TEST_BENCH_TFM := $(shell grep -oEm1 "<TargetFramework>[^<]+" $(TEST_BENCH_PROJ) | sed "s/<TargetFramework>//")
+# Path to the compiled test runner using the detected TFM
+TEST_BENCH_DLL := OpenCobra/Tests/TestRunner/bin/Debug/$(TEST_BENCH_TFM)/OvlTestBench.dll
+
+# Validate TFM resolution
+TFM_ERROR := Could not determine .NET target framework!
+ifeq ($(TESTS_TFM),)
+  $(error $(TFM_ERROR))
+else ifeq ($(TEST_BENCH_TFM),)
+  $(error $(TFM_ERROR))
+else
+  $(info Using '$(TESTS_TFM)' to compile $(TESTS_PROJ))
+  $(info Using '$(TEST_BENCH_TFM)' to compile $(TEST_BENCH_PROJ))
 endif
+
+.PHONY: test
+test: $(TESTS_DLL)
+	deno check clients/desktop/main.ts
+	dotnet test OpenRCT3.tests.slnf --no-build /p:SolutionDir=$(CURDIR)
+
+.PHONY: cover
+cover: $(TESTS_DLL)
+	dotnet test $(TESTS_PROJ) --no-build \
+	  /p:SolutionDir=$(CURDIR) \
+	  --collect:"XPlat Code Coverage;Format=lcov" \
+	  --results-directory "$(CURDIR)/coverage"
+
+.PHONY: integration
+$(TEST_BENCH_DLL): $(PLUGINS_OUT) test-plugins $(TEST_BENCH_PROJ) $(TESTS_SRC)
+integration: $(TEST_BENCH_DLL)
+	dotnet run --project $(TEST_BENCH_PROJ) -- --plugins
+	dotnet test OpenCobra/Tests/Integration/IntegrationTests.csproj

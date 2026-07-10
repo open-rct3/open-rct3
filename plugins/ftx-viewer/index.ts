@@ -2,6 +2,7 @@
 import { Host } from "@extism/as-pdk";
 import "../types.ts";
 import { convertIndexedToRgba } from "../palette-converter.ts";
+import { renderHexView } from "../lib/hexViewer.ts";
 
 export function name(): i32 {
   Host.outputString("Flexi-Texture Viewer");
@@ -45,27 +46,22 @@ function base64Encode(data: Uint8Array): string {
 
 export function render(): i32 {
   const data = Host.input();
-  if (data.length < 20) {
-    Host.outputString("<div class='ftx-viewer'><p class='empty'>No texture data.</p></div>");
+  if (data.length === 0) {
+    Host.outputString("<p class='error'>Invalid flexi-texture data: empty input.</p>");
     return 0;
   }
 
   const scale = decodeU32(data, 0);
   const width = decodeU32(data, 4);
   const height = decodeU32(data, 8);
-  const recolorable = decodeU32(data, 12);
-  const hasPalette = decodeU32(data, 16) != 0;
+  const _fps = decodeU32(data, 12);
+  const recolorable = decodeU32(data, 16);
+  // Skip past offsets, frame count, and repeated scale, width, height, and recolorable flags
+  let offset = 36 + 16;
 
-  let offset = 20;
-  let palette = new Uint8Array(0);
-  if (hasPalette) {
-    if (data.length < offset + 1024) {
-      Host.outputString("<p class='error'>Invalid flexi-texture data: missing palette.</p>");
-      return 0;
-    }
-    palette = data.slice(offset, offset + 1024);
-    offset += 1024;
-  }
+  // Read palette and texture data
+  const palette = data.slice(offset, offset + 1024);
+  offset += 1024;
 
   const pixelCount = i32(width * height);
   if (data.length < offset + pixelCount) {
@@ -151,6 +147,7 @@ export function render(): i32 {
   html += "  <div class='image-container'>";
   html += "    <img src='" + dataUrl + "' alt='Flexi-texture' style='image-rendering: pixelated; max-width: 100%;' />";
   html += "  </div>";
+  html += renderHexView(data);
   html += "</div>";
 
   Host.outputString(html);

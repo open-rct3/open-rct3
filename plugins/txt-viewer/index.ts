@@ -1,6 +1,7 @@
 /// <reference no-default-lib="true" />
 /// <reference types="assemblyscript/types" />
 import { Host } from "@extism/as-pdk";
+import { renderHexView } from "../lib/hexViewer.ts";
 
 export function name(): i32 {
   Host.outputString("Text Viewer");
@@ -13,41 +14,6 @@ export function version(): i32 {
 export function file_types(): i32 {
   Host.outputString('["txt"]');
   return 0;
-}
-
-function renderHexView(data: Uint8Array): string {
-  let html = "<div class='hex-view'><table><thead><tr><th>Offset</th>";
-  for (let h = 0; h < 16; h++) {
-    html += "<th>" + h.toString(16).toUpperCase() + "</th>";
-  }
-  html += "<th>ASCII</th></tr></thead><tbody>";
-
-  let rowCount = data.length / 16;
-  for (let r = 0; r < rowCount; r++) {
-    let offset = r * 16;
-    html += "<tr><td>" + offset.toString(16).toUpperCase().padStart(4, "0") + "</td>";
-
-    let ascii = "";
-    for (let i = 0; i < 16; i++) {
-      let idx = offset + i;
-      if (idx < data.length) {
-        let byte = data[idx];
-        html += "<td>" + byte.toString(16).toUpperCase().padStart(2, "0") + "</td>";
-        if (byte >= 32 && byte < 127) {
-          ascii += String.fromCharCode(byte);
-        } else {
-          ascii += ".";
-        }
-      } else {
-        html += "<td></td>";
-      }
-    }
-
-    html += "<td>" + ascii + "</td></tr>";
-  }
-
-  html += "</tbody></table></div>";
-  return html;
 }
 
 function decodeText(data: Uint8Array, encoding: string): string {
