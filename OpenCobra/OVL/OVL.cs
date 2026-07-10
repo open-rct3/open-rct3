@@ -7,6 +7,7 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Text;
 using OpenCobra.OVL.Files;
 
@@ -133,10 +134,10 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
     // If a name is given, return true if the name matches.
     // If a name and type is given, return true if both match.
-    // Otherwise, return true if either the name or type matches.
+    // Otherwise, return true if the type matches.
     return nameProvided
       ? nameMatch && (type == null || typeMatch)
-      : nameMatch || typeMatch;
+      : typeMatch;
   });
 
   /// <summary>Read the resource data for a given file.</summary>
@@ -201,8 +202,8 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// <param name="chunks">The loader's extra-data chunks, in on-disk order, or null if none exist</param>
   /// <returns>True if any extra data chunks were found for this loader.</returns>
   public bool TryReadExtraData(uint dataPtr, [MaybeNullWhen(false)] out IReadOnlyList<byte[]> chunks) {
-    foreach (var extraData in allExtraData) {
-      if (!extraData.TryGetValue(dataPtr, out var found)) continue;
+    foreach (var extraData in allExtraData.Where(extraData => extraData.ContainsKey(dataPtr))) {
+      extraData.TryGetValue(dataPtr, out var found);
       chunks = found;
       return true;
     }

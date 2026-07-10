@@ -57,7 +57,7 @@ public class CrashAlert : NSAlert {
     });
 
     var response = RunModal();
-    config.SuppressCrashAlerts = SuppressionButton?.State == NSCellStateValue.On;
+    config.SuppressCrashAlerts = SuppressionButton != null && SuppressionButton.State == NSCellStateValue.On;
     config.Save();
     if (response == Convert.ToInt64(NSAlertButtonReturn.First))
       Environment.Exit(1);

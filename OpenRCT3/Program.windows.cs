@@ -44,15 +44,12 @@ internal static class Program {
   /// </summary>
   private static void HandleException(Exception? e) {
     if (e == null) return;
-    var message = e.InnerException != null
-      ? $"{e.Message}\n\n{e.InnerException.Message}"
-      : e.Message;
     logger.Fatal(e, "An unhandled exception occurred.");
     Debug.Assert(false);
 
     // TODO: Refactor to custom modal with "Restart" label in place of "Retry".
     var result = MessageBox.Show(
-      $"An unhandled exception occurred:\n\n{message}",
+      $"An unhandled exception occurred:\n\n{(e.InnerException != null ? $"{e.Message}\n\n{e.InnerException.Message}" : e.Message)}",
       "OpenRCT3 Error",
       MessageBoxButtons.AbortRetryIgnore,
       MessageBoxIcon.Error
