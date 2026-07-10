@@ -128,8 +128,10 @@ public class RelocationDebug {
     // small amount.
     var allExtraDataField = ovlType.GetField("allExtraData", nonPublicInstance)!;
     var allExtraData = (System.Collections.IEnumerable)allExtraDataField.GetValue(ovl)!;
-    foreach (var dict in allExtraData.Cast<System.Collections.IDictionary>()) {
-      var keys = dict.Keys.Cast<uint>().OrderBy(k => k).ToList();
+    var projectedKeys = allExtraData
+      .Cast<System.Collections.IDictionary>()
+      .Select(dict => dict.Keys.Cast<uint>().OrderBy(k => k).ToList());
+    foreach (var keys in projectedKeys) {
       TestContext.Out.WriteLine($"allExtraData dict has {keys.Count} keys; sample: {string.Join(", ", keys.Take(10))}");
       var closest = keys.OrderBy(k => Math.Abs((long)k - (long)flicSlot)).FirstOrDefault();
       TestContext.Out.WriteLine($"closest key to flicSlot({flicSlot}): {closest} (diff {(long)closest - (long)flicSlot})");
