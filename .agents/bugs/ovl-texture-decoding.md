@@ -1,8 +1,8 @@
 # Bug: Texture (`tex`/`flic`/`btbl`) decoding — crash fixed, symbol-resolution issue remains open
 
-## Status: Partially fixed — decode pipeline fixed and hardened; two structural root causes identified for the remaining `tex`/`flic`/`btbl` failures, not yet fixed. Scope corrected: `mms`/`prt` (Part 5) are not texture data and were never part of this bug; real remaining scope is `fct`-adjacent `tex` failures and unverified `psi`. Exact list of affected real-game files known (Part 4) — use it instead of a full-install rescan.
+## Status: Root cause now understood with high confidence, thanks to an independent, separately-developed Rust reference implementation (`assets/reference/ovl/`) that decodes `tex`/`ftx` correctly. Not yet re-verified against the real install in this pass (see Part 6's caveat). Scope confirmed: `mms`/`prt`/`psi`/`fct` are not texture-shaped data for decoding purposes and are conclusively out of scope (Part 5, strengthened by Part 6). The concrete fix is Root cause B (the discarded relocation-fixup table) plus using on-disk `LoaderStruct.LoaderType`/`.Sym` fields directly instead of the guessed positional walk — see Part 6 and the companion fix plan, `.agents/plans/fix/ovl-texture-decoding.md`, which supersedes its own earlier steps.
 
-Five passes over the same subsystem (`OpenCobra/OVL/Files/Textures.cs`, `OpenCobra/OVL/OVL.cs`,
+Six passes over the same subsystem (`OpenCobra/OVL/Files/Textures.cs`, `OpenCobra/OVL/OVL.cs`,
 plus `CharacterSkins.cs`/`ParticleEffects.cs`). The first fixed a hard crash and got real
 textures decoding; the second investigated the remaining graceful failures the first pass
 left behind and found they're one still-open symbol-resolution bug, not the several small
@@ -15,7 +15,12 @@ down the *exact* 37 files (of 7,490) that exercise them; the fifth found that gr
 those 37 (`mms`/`prt`, i.e. character/animal skins) was a false lead — that tag family
 isn't texture data at all (loader categories `MorphMesh`/`PeoplePart`), so **the real
 in-scope repro target is `Main.common.ovl`** (font-table-adjacent `tex` failures, Part 4
-group 2), not the character-skin files. See Part 5.
+group 2), not the character-skin files (see Part 5); the sixth cross-referenced a
+newly-supplied, independently-developed Rust reimplementation that actually produces correct
+`tex`/`ftx` pixel data, reconciled it against the same C++ dumper Parts 1-3 already used, and
+found the *specific* fields/algorithm the current C# code gets wrong — narrower and more
+concrete than Part 3's two "root causes," one of which (Root cause A) turns out to already be
+fixed in the current code and was never the real problem. See Part 6.
 
 ## Part 1 — `Textures.Extract` decoded 0 textures and crashed on real RCT3 data (Fixed)
 
@@ -477,6 +482,202 @@ independently confirmed and still the strongest, most direct evidence for Root c
 and a sample symbol's raw bytes the same way before assuming `ParticleEffects.cs`'s premise
 holds, using the method in Part 4 as a template.
 
+## Part 6 — A working reference reconciled: the concrete fields and algorithm, not just "two root causes"
+
+A friend independently wrote a Rust OVL reader/decoder (`assets/reference/ovl/{parser.rs,
+reader.rs,decoder.rs,tex.rs,btbl.rs,ftx.rs,snd.rs}`) that **actually produces correct pixel
+data for `tex` and `ftx`** — a working, independent second implementation, not just another
+struct-definition cross-reference. It supersedes Part 3's two "root causes" with something
+narrower and directly actionable. It was reconciled line-by-line against
+`rct3tex.cpp` (the same C++ dumper Parts 1-3 already used) to fill a gap (see caveat below)
+and to independently confirm every claim below against the original reference, not just the
+new Rust code.
+
+**Caveat on the source material.** `reader.rs` as supplied does not compile against
+`parser.rs`/`tex.rs`/`btbl.rs`: those three files use a type `OvlLoaderEntry` (fields
+`data_address`, `extra_range`, plus whatever `loader_for` needs) and an `OvlData.entries`
+list that `reader.rs` never defines — the crate's actual entry-table-building code wasn't
+included in what was supplied. **This is not a blocker for OpenCobra**, though: `OVL.cs`'s
+existing `ReadLoaderExtraData` (`OVL.cs:298-327`) already walks the same on-disk
+`LoaderStruct` array in the same order and is the working, already-verified C# equivalent of
+whatever builds Rust's `entries`/`OvlLoaderEntry` — it just currently discards `LoaderType`
+and `Sym` after using them locally instead of retaining them per entry alongside the chunk
+dictionary it already returns. Treat the supplied Rust files as **authoritative for algorithm
+and field layout**, confirmed independently against `rct3tex.cpp` below wherever possible; the
+missing Rust entries-builder is irrelevant since an equivalent already exists and is used here.
+
+### Finding 1 (confirmed against `rct3tex.cpp:1848-1878`) — the "loader table" is a per-entry array with an explicit type index; the positional `SymbolCount` walk in `ExtractResources` is solving an already-solved problem
+
+`file_blocks[2].blocks[1]` (OpenCobra: `blocks[2].Blocks[1]`) is an array of on-disk
+`LoaderStruct` records — 20 bytes each: `LoaderType`(u32), `data`(ptr, u32),
+`HasExtraData`(u32), `Sym`(ptr, u32), `SymbolsToResolve`(u32) — **one record per resolved
+symbol instance**, not per loader *type*. Confirmed directly in the reference:
+
+```c
+File fs = FileTypeStruct[CurrentFile].Types[2].dataptr[1];
+unsigned long count = fs.size / sizeof(LoaderStruct);
+LoaderStruct *s = (LoaderStruct *)fs.data;
+...
+for (i = 0; i < count; i++) {
+  LoaderStruct l = s[i];
+  if (stricmp(LoaderNames[l.LoaderType], "btbl") == 0) { ... }
+  if (stricmp(LoaderNames[l.LoaderType], "tex") == 0) { ... }
+  ...
+```
+(`rct3tex.cpp:1847-1965`). `l.LoaderType` is a **direct array index** into the small
+(≤10-entry) loader-*type* table (`LoaderNames`/`Types[10]` — this is the *other*,
+much smaller table OpenCobra already reads correctly as `loaderHeaders`). There is no
+positional walk, no `SymbolCount` countdown, anywhere in the reference's loader loop — the
+category for every single entry is explicit, stored data, read once.
+
+`OVL.cs`'s `ExtractResources` (`OVL.cs:455-530`) never reads this array at all for
+classification purposes. It only reads the *symbol* table (`blocks[2].Blocks[0]`) and
+falls back, when a symbol's name has no recognized `:tag` suffix, to walking
+`loaderHeaders` positionally using a `SymbolCount` countdown (`OVL.cs:478-511`) — this is
+the mechanism Part 3 blamed (as "Root cause A") for `mms`/`prt`/`fct` corruption. The
+countdown walk isn't reading corrupted data; **it's reconstructing, by guesswork, a mapping
+that's already sitting on disk as `LoaderStruct.LoaderType` and `LoaderStruct.Sym`** (the
+latter a pointer straight to the owning `SymbolStruct2`, i.e. the exact symbol — see
+`l.Sym->Symbol` used directly for filenames at `rct3tex.cpp:1961,1968`). Any archive whose
+real loader-table order doesn't match the guessed grouping desyncs the countdown, which
+matches the "corruption clusters by *file*" symptom from Part 3 exactly, but the fix is
+"read the field," not "port more C++ control flow."
+
+**Correction to Part 3's Root cause A.** `ReadLoaderExtraData` (`OVL.cs:298-327`) already
+parses this same `LoaderStruct` array correctly — struct layout matches
+(`LoaderType,data,HasExtraData,Sym,SymbolsToResolve`, 20 bytes), and it already masks
+`HasExtraData` with `& 0xFFFF` for v5 only, matching the reference's `read_extra_data`
+(`reader.rs:257-279`, `if version == 5 { raw & 0xFFFF } else { raw }`). This function does
+**not** need the hardcoded-per-loader-type rewrite Part 3 and the old fix plan called for.
+Decomposing `rct3tex.cpp`'s inlined `btbl` reads (`rct3tex.cpp:1893-1912`: `fread(&size,...)`,
+`fread(&val1,...)`, `fread(&val2,...)`, `count` × `FlicHeader`, `fread(&size,...)`, pixel
+data) shows they decompose into exactly **two length-prefixed chunks** once "read the
+length" is separated from "read the fixed-shape payload it prefixes": chunk 1 =
+`val1+val2+FlicHeader[count]`, chunk 2 = pixel data. The friend's Rust reference
+(`btbl.rs::decode_entry`) independently expects exactly `let [header_chunk, pixels] = chunks`
+— two chunks, generic model, no per-category special casing. Part 3's Root cause A verdict
+was reading the C++ literally instead of decomposing it; **the generic model was right, and
+the current code already implements it.** No change needed to `ReadLoaderExtraData` itself.
+
+### Finding 2 (confirmed against `rct3tex.cpp:616-638,1368-1388`) — `TextureDecoding.ReadTexture` chases the wrong pointer field, and the right one needs *two* relocation hops, not the flat block-lookup it currently gets
+
+`OpenCobra/OVL/Files/TextureDecoding.cs`'s `Tex` struct has both `FlicPtr` (offset 52) and
+`Ts2Ptr` (offset 56). `ReadTexture` currently chases `Ts2Ptr` → `TryResolveRelocation` (a
+flat block-boundary lookup on the raw on-disk value, **not** a real relocation-table lookup —
+see Finding 3) → reads `TextureStruct2.Flic` at `+4` → `TryReadExtraData`. This is the wrong
+field. The reference dumper's actual per-texture code path never touches `ts2` at all:
+
+```c
+struct TextureStruct {
+  ...
+  unsigned long *TextureData; // offset 44, always 0 on disk
+  unsigned long unk12;        // offset 48
+  FlicStruct **Flic;          // offset 52 — "always points to pointer before flic data"
+  TextureStruct2 *ts2;        // offset 56
+};
+void TextureLoader(TextureStruct *tex, char *filename) {
+  if (tex->Flic != 0) {
+    if (tex->Flic[0]->Texture != 0)
+      error = D3DXSaveTextureToFile(filename, outformat, *tex->Flic[0]->Texture, NULL);
+    ...
+```
+(`rct3tex.cpp:621-638,1368-1388`). `Flic` (offset 52, OpenCobra's `FlicPtr`) is declared
+`FlicStruct **` — **a double pointer** — and is what the reference actually uses to save
+pixel data. The friend's `tex.rs::Texture::decode` independently arrived at the same field:
+
+```rust
+let flic_slot = ovl.reloc_target(res.address + 52)?;   // hop 1
+let flic_addr = ovl.reloc_target(flic_slot)?;            // hop 2
+let bitmap = ctx.lookup(flic_addr)?;
+```
+
+The double pointer explains why two hops are needed and why they're not optional: hop 1
+resolves the placeholder stored *in the Tex struct itself* to the address of "the pointer
+slot before flic data" (matching the C comment verbatim); hop 2 resolves the value *stored at
+that slot* to the real `FlicStruct` address. Both slots are independently listed in the
+relocation-fixup table (each is its own genuine `unsigned long *`-typed field needing its own
+fixup) — this is a property of the on-disk struct shape, not an implementation quirk. By
+contrast, a `flic`-category `LoaderStruct.data` field is declared plain `unsigned long
+*data` — a *single* pointer — so a `flic` loader entry reaches the same shared `FlicStruct`
+in **one** hop. Both paths land on the same address once correctly resolved; `Ts2Ptr` is not
+on this path at all for pixel-data purposes and should be dropped from `ReadTexture`.
+
+This reframes Part 2's "`Tex.FlicPtr`/`Ts2Ptr` are only ever populated by the relocation-fixup
+table" finding: it undersold the fix. It's not one missing hop on one field — the field
+`ReadTexture` actually needs (`FlicPtr`) requires **two** chained relocation-table lookups,
+and `OVL.cs` currently performs **zero** (`SkipRelocations` discards the entire table; see
+Finding 3), so `TryResolveRelocation(tex.Ts2Ptr, ...)`'s apparent 55-texture success is exactly
+what the old fix plan already suspected: a flat, un-fixed-up value coincidentally landing
+in a plausible block for the easy/local cases, not a working general mechanism.
+
+### Finding 3 (confirmed, unchanged from Part 3 but now with a concrete consumer) — Root cause B is still completely unfixed and is the actual prerequisite
+
+`Ovl.SkipRelocations` (`OVL.cs:447-453`) reads the relocation-fixup table's count and
+unconditionally seeks past every entry — it builds nothing. Finding 2 above is the concrete
+reason this now blocks a specific, identified decode path (not just a theoretical gap):
+without a real `source address → raw stored value` lookup (gated on the source address
+actually being a listed relocation, matching the reference's `DoReloc` fixup loop at
+`rct3tex.cpp:1830-1842`), `FlicPtr`'s two-hop chase in Finding 2 cannot be implemented at
+all. This is the single prerequisite fix; everything else in this Part is either
+already-correct (Finding 1's `ReadLoaderExtraData`) or depends on this being fixed first.
+
+### Finding 4 (medium-high confidence, inherited from the reference, not independently re-derived byte-for-byte) — BTBL↔FLIC association is positional by *loader-table order*, not one-table-per-file
+
+`TextureContext::build` (`tex.rs:16-49`) walks `data.entries` (the `LoaderStruct` array from
+Finding 1) in on-disk order, tracking "the most recently seen `btbl` loader" as it goes; each
+`flic`-category entry encountered before the *next* `btbl` is associated with that table by
+reading a single extra-data chunk containing a 4-byte index. `Textures.Extract`
+(`Textures.cs:42-54`) instead keys one bitmap table per **OVL file**
+(`bitmapTables[fileData.OvlName]`), with no ordering — wrong for any file containing more
+than one BTBL. `CharacterSkins.cs`'s own comment already documents this happening in
+practice for `mms`+`prt` pairs in the same character archive; whether a pure `tex`/`flic`/
+`btbl`-only file (this bug's actual scope) ever has two BTBLs is unconfirmed, but the
+loader-order algorithm handles the single-BTBL case identically to today's code, so there's
+no reason to keep the weaker, file-scoped one.
+
+### Finding 5 (confirmed, strengthens Part 5) — `mms`/`prt`/`psi`/`fct` are conclusively not texture pixel data; `CharacterSkins.cs`/`ParticleEffects.cs`'s premise is wrong, not just unverified
+
+The friend's `decoder.rs::decode_ovl` dispatches on every known resource *name*-tag and has
+explicit no-op arms for `"mms"`, `"prt"`, `"psi"`, and `"fct"` — the reference fully solves
+`tex`/`ftx` decoding and *still* doesn't attempt these. Also telling: `"btbl"` and `"flic"`
+never appear as arms in that dispatch at all (only `tex`/`ftx` do real work; everything else
+is either a no-op or `other => todo!(other)`, which would panic on any tag the author didn't
+anticipate) — meaning in practice **no symbol's own name-tag suffix is ever literally
+`:btbl` or `:flic`**; those two strings are loader-*category* tags only, discovered by
+iterating the loader table directly (Finding 1) and filtering on `loader.tag`, never by
+looking at `ovl.resources()`/the symbol table's name suffix. This independently confirms
+Part 5's `mms`/`prt` finding, extends the same conclusion to `psi` (previously only
+suspected, per Part 5's own "has not been checked the same way" note), and sharpens the
+verdict on `fct`: it's not just non-texture-shaped, it's outside the reference's texture
+decoder's scope entirely, on purpose.
+
+Practically: `CharacterSkins.cs` and `ParticleEffects.cs` reuse `TextureDecoding.Read*`
+against `mms`/`prt`/`psi` resource bytes on the premise that they're tex/flic/btbl-shaped.
+Both modules' own doc comments already flag this as unverified; Finding 5 makes it more than
+unverified — a reference that correctly solves the *actual* tex/flic/btbl shape doesn't
+recognize these tags as that shape at all. Fixing Findings 1-4 will not make these modules
+decode correctly, because their premise (not the resolution bug) is what's wrong. Treat
+them as a separate, follow-up concern outside this bug's fix plan, not something the plan
+below should try to satisfy.
+
+### What this changes about the fix
+
+Findings 1-4 replace Part 3's two "root causes" with: **one confirmed-unfixed prerequisite**
+(Finding 3 / Root cause B — parse the relocation table for real), **one already-fixed
+non-issue** (Finding 1's `ReadLoaderExtraData` chunking — Root cause A's chunking claim was
+wrong; its classification claim was right but the fix is "read `LoaderType`/`Sym` directly,"
+not "port more control flow"), and **two concrete, narrow consumer fixes** (Finding 2's
+`FlicPtr`-not-`Ts2Ptr` two-hop chase; Finding 4's loader-order BTBL association). See the
+companion fix plan (`.agents/plans/fix/ovl-texture-decoding.md`), rewritten around these
+findings — it supersedes its own previous steps, which were written before this reference
+was available and targeted Root cause A's now-corrected framing.
+
+**Not yet done in this pass:** re-verification against the real install. Findings 1-5 above
+are cross-referenced against `rct3tex.cpp` but not yet empirically confirmed by dumping a
+real archive's `LoaderStruct[]` tally against `loaderHeaders` and `ovl.Keys`'s current
+classification tally. Do this (bug doc Part 4's `Main.common.ovl` repro is the obvious
+target) before or alongside implementing the fix plan below.
+
 ## Key references
 
 - [`rct3tex.cpp::ReadTexture`](https://github.com/chances/rct3-importer) —
@@ -484,30 +685,48 @@ holds, using the method in Part 4 as a template.
 - [`rct3tex.cpp::ReadTextures`](https://github.com/chances/rct3-importer) —
   reference BTBL mip decoder (per-mip block-counted sizes).
 - [`rct3tex.cpp::TextureLoader`/`FlicStruct`/`TextureStruct2`/`DoReloc`](https://github.com/chances/rct3-importer) —
-  reference tex→flic pointer chain and the relocation-fixup table `OVL.cs` doesn't parse.
-- `rct3tex.cpp:1830-1842` (`DoReloc` fixup loop) and `rct3tex.cpp:1878-2008` (the
-  `LoaderStruct` loop, per-loader-type extra-data handling for `btbl`/`txt`/`gsi`/`flic`/
-  `tex`/`ftx`) — the two sections behind Part 3's root causes.
-- `assets/reference/ovl/parser.rs` (`extract_resources`, `detect_symbol_layout`) and
-  `assets/reference/ovl/reader.rs` (`read_extra_data`) — semi-working Rust
-  reimplementation kept for cross-reference; shares the same generic-chunk assumption
-  identified as Root cause A.
-- `OpenCobra/OVL/Files/Textures.cs` — current state.
+  reference tex→flic pointer chain and the relocation-fixup table `OVL.cs` doesn't parse;
+  per Part 6 Finding 2, `TextureLoader` (`rct3tex.cpp:1368-1388`) uses `TextureStruct.Flic`
+  (offset 52, a double pointer), not `TextureStruct2` (offset 56) as OpenCobra currently does.
+- `rct3tex.cpp:1830-1842` (`DoReloc` fixup loop, still unported — Part 6 Finding 3) and
+  `rct3tex.cpp:1848-1878` (the `LoaderStruct` array read + direct `l.LoaderType` index —
+  Part 6 Finding 1, supersedes Part 3's framing of `rct3tex.cpp:1878-2008` as needing a
+  per-loader-type rewrite in `OVL.cs`; that section's per-category branches decompose into
+  the generic chunk model `ReadLoaderExtraData` already implements).
+- `rct3tex.cpp:616-638` (`TextureStruct`/`TextureStruct2` field layout, confirms `Flic` at
+  offset 52 is `FlicStruct **` and `ts2` at offset 56 is unrelated to pixel data).
+- **`assets/reference/ovl/{parser.rs,reader.rs,decoder.rs,tex.rs,btbl.rs,ftx.rs,snd.rs}`** —
+  an independently-developed, working Rust OVL reader/decoder (Part 6) that correctly
+  produces `tex`/`ftx` pixel data. Supplied incomplete (`reader.rs` doesn't define
+  `OvlLoaderEntry`/`OvlData.entries`, which the other files depend on — see Part 6's
+  caveat); reconciled against `rct3tex.cpp` to fill the gap. `decoder.rs::decode_ovl` is
+  the top-level per-tag dispatch (Finding 5: no-ops for `mms`/`prt`/`psi`/`fct`, no arms at
+  all for `btbl`/`flic`); `tex.rs::TextureContext`/`Texture::decode` is the corrected
+  tex→flic chain (Finding 2/4); `btbl.rs::BitmapTable::decode_entry` is the BTBL decode
+  (confirms Finding 1's 2-chunk generic model). `snd.rs` is unrelated (sound), not
+  cross-referenced further.
+- `OpenCobra/OVL/Files/Textures.cs` — current state; `Extract`'s one-BTBL-per-file keying
+  (`Textures.cs:42-54`) is what Part 6 Finding 4 says needs to become loader-order-based.
 - `OpenCobra/OVL/OVL.cs:158-180` — `TryReadExtraData` (the bitmap-table index / flic
   chunk lookup).
-- `OpenCobra/OVL/OVL.cs:298-327` — `ReadLoaderExtraData` (Root cause A: generic chunk
-  parsing where the format is actually per-loader-type).
-- `OpenCobra/OVL/OVL.cs:447-453` — `SkipRelocations` (Root cause B: discards the
-  relocation-fixup table instead of parsing it).
+- `OpenCobra/OVL/OVL.cs:298-327` — `ReadLoaderExtraData` — per Part 6 Finding 1, this
+  already correctly parses the per-entry `LoaderStruct` array and does **not** need the
+  per-loader-type rewrite Part 3 called for; what's still missing is *using*
+  `LoaderStruct.LoaderType`/`.Sym` for symbol classification, not rewriting this function.
+- `OpenCobra/OVL/OVL.cs:447-453` — `SkipRelocations` — Part 6 Finding 3: still completely
+  unfixed, and now the confirmed, concrete prerequisite for Finding 2's `FlicPtr` chase
+  (not just a theoretical gap).
 - `OpenCobra/OVL/OVL.cs:447-529` — `ExtractResources` (symbol → `FileType` resolution,
-  including the positional loader-walk fallback, and the still-unfixed "Suspect 4"
+  including the positional loader-walk fallback Part 6 Finding 1 says should be replaced
+  by reading `LoaderStruct.LoaderType`/`.Sym` directly, and the still-unfixed "Suspect 4"
   no-origin-check block resolution).
 - `OpenCobra/OVL/Files/FileTypes.cs` — `FileType` enum and `ToFileType`/`ToTagString`
   conversions, now including `CharacterSkinSet`/`CharacterSkinPart`/`ParticleSpriteItem`/
   `FontCharacterTable`.
 - `OpenCobra/OVL/Files/CharacterSkins.cs` / `OpenCobra/OVL/Files/ParticleEffects.cs` —
-  `mms`/`prt`/`psi` decoders (Part 4), shape-detecting per symbol; not yet verified to
-  produce correct pixel data since Root causes A/B are still open.
+  `mms`/`prt`/`psi` decoders (Part 4); per Part 6 Finding 5, conclusively out of scope for
+  this bug — the reference confirms these tags aren't tex/flic/btbl-shaped at all, so no
+  fix to `Textures.Extract`/`OVL.cs` will make them decode correctly. Track separately.
 - Part 4's 37-file list (above) — exact real-install files affected; use instead of a
   full-install rescan when iterating on a fix.
 - [`ovl-resource-relocation.md`](./ovl-resource-relocation.md) — the earlier, related

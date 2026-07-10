@@ -44,10 +44,14 @@ multiplier applied to a shared mesh.
       the other 8 values place at a fixed sub-tile offset derived from the enum value itself, not a
       registry-supplied width/height.
     - **Height sampling** — `FullTile`/`Quarter`/`Half`/`Corner`/`PathCenter` are effectively single-sample
-      placements (one terrain-height query at the snapped position). `PathEdgeInner`, `PathEdgeOuter`, and
-      `PathEdgeJoin` are the edge-following cases (fences, path-adjacent scenery) that need per-corner terrain
-      queries along the tile edge to conform to slope, matching what fences/long-row bushes/flowers visibly
-      do in-game. `Wall` samples off the adjacent vertical face, not corner height directly.
+      placements (one terrain-height query at the snapped position). `PathEdgeInner`, `PathEdgeOuter`,
+      `PathEdgeJoin`, and `Wall` are all edge-mounted: the object sits on one of the tile's four
+      [`Edge`](../../../OpenRCT3/Simulation/Edge.cs)s, selected by the same quarter-turn rotation value the
+      placement record already carries, and height comes from that edge's two bounding corners — a per-corner
+      terrain query, same shape as the fence/path-edge conforming case, not a distinct "vertical face" concept.
+      (An earlier draft of this plan described `Wall` as sampling "off the adjacent vertical face" — that
+      confused wall placement with the unrelated cliff-rendering vertical face from
+      [`terrain-heightmap.md`](terrain-heightmap.md); corrected here.)
   - **Height**: scenery snaps to terrain height at placement time per the sampling rule implied by
     `Placement` above — the placement record does not store its own Z; it's derived from a terrain height
     query each time it's needed, mirroring how [`terrain-heightmap.md`](terrain-heightmap.md) treats height as
@@ -68,24 +72,43 @@ multiplier applied to a shared mesh.
   variant alongside (not replacing) the grid anchor, similar in spirit to how the terrain plan keeps water
   level as an independent value rather than folding it into the corner grid. Not designed further here.
 
-## Open Questions
+## Resolved
 
-- Confirm `sizeflag` lives on the `sid` (not `svd`) struct in the actual OVL data our decoder reads — the
-  `rct3-importer` header shows it on the raw C++ struct, but our own OVL-decoding research
-  ([ovl-static-shapes.md](../OVL%20Decoding/ovl-static-shapes.md) and related) should be checked for where it
-  actually surfaces in the symbols we parse.
-  Do any placements outside `TYPE_FENCE`/`TYPE_WALL_STRAIGHT`/`TYPE_WALL_ROOF`/`TYPE_WALL_CORNER`
-  in `sceneryold.h`'s `TYPE_*` list use `Wall`, or is it effectively 1:1 with those categories? Affects whether
-  `Wall` height-sampling needs to be generalized or can hardcode "adjacent vertical face."
-- For `FullTile` multi-tile objects, does Z come from the anchor corner specifically, or a footprint-wide
-  average? Minor, but affects multi-tile placement on a sloped tile.
-- `AnimationKind.MorphTarget` covers animal meshes per the Context note above — confirm no other OVL scenery
-  category needs a distinct kind not yet enumerated (`None` / `Looping` / `Triggered` / `MorphTarget`).
+- **`sizeflag` lives on `sid`, not `svd`.** Confirmed directly against `rct3-importer`'s
+  `RCT3 Importer/include/scenery.h`: `sizeflag` appears at the same relative struct offset in both `Scenery`
+  (line 74) and `SIDData` (line 158) — the latter matching this plan's `sid` terminology — and is absent from
+  `SceneryItemData` (line 256, the `svd`-side struct: visual/render params like LOD, sway, brightness, no
+  placement-shape field). Caveat: that entire struct block (`scenery.h:14-451`) is wrapped in `#if 0` in the
+  importer itself — it's the original reverse-engineer's struct-layout notes, not code the importer actually
+  compiles/runs — so treat this as strong evidence, not proof, and reconfirm against real decoded bytes once
+  our own `sid` decoder exists. Deferred to decode time (not blocking now): the exact byte offset/decoder wiring
+  in `OpenCobra`.
+- **`Wall` category scope is unresolved by design, deferred to decode time.** `scenery.h`'s `TYPE_*` list
+  includes `TYPE_WALL_MISC` (5) and fence-adjacent categories (`TYPE_KEEP_CLEAR_FENCE` 26, `TYPE_ANIMAL_FENCE`
+  45) beyond the `TYPE_FENCE`/`TYPE_WALL_STRAIGHT`/`TYPE_WALL_ROOF`/`TYPE_WALL_CORNER` set this plan originally
+  named. `type` and `sizeflag` are independent fields in the struct, though, so which `TYPE_*` values actually
+  carry `SIZE_WALL` is data-dependent and can't be settled from the header alone — whoever implements the `sid`
+  decoder confirms this against real entries and generalizes `Wall` height-sampling only if a non-wall-shaped
+  category turns up using it; hardcode "adjacent vertical face" until then.
+- **`FullTile` multi-tile height is a footprint-flatness gate, not an anchor-vs-average choice.** Multi-tile
+  `FullTile` objects (and rides, later) query every corner within the object's footprint bounds (OVL data
+  supplies scenery/ride bounds — a later concern). If those corners aren't all equal height, placement is
+  blocked outright rather than averaged or snapped — mirroring `terrain/tools.md`'s "Flatten for Scenery and
+  Rides" tool and the same flatness-check shape [`Park.cs:112`](../../../OpenRCT3/Simulation/Park.cs)'s
+  `IsAtGradePathPlaceable` already uses for single-tile paths. Once corners agree, "anchor vs. average" is moot
+  — both read the same value. This applies to non-terrain-conforming footprint objects generally (flat rides,
+  large scenery); the edge-following `Placement` values (`PathEdgeInner`/`PathEdgeOuter`/`PathEdgeJoin`, plus
+  fences/flowers) are unaffected and keep their per-corner conforming height query as already scoped above.
+- **`AnimationKind` stays the 4-value enum (`None`/`Looping`/`Triggered`/`MorphTarget`), explicitly provisional.**
+  `ovl-scenery-items.md`'s notes on `sid` sound references, animation scripts, and flat-ride-specific `ANR`
+  animation params hint at categories that may not map cleanly onto `Looping`/`Triggered` once decoded — likely
+  candidates for a future 5th kind, not designed further here. Not blocking: the registry only needs the enum
+  value today, no keyframe/timeline model.
 
 ## Status
 
-Not started — stub only. Core data-model shape (no scale field, OVL-symbol-keyed registry, `Placement` enum
-driving both footprint/snap-position and height-sampling rule, `AnimationKind` enum, ownership on `Park`) is
-settled from discussion, now grounded in `rct3-importer`'s actual `sizeflag`/`SIZE_*` field rather than a
-guessed height-conforming bool. Remaining open questions above are confirmatory (locating `sizeflag` in our own
-OVL decode path, `Wall`/`FullTile` edge-case sampling detail) and don't block starting implementation.
+Core data-model shape (no scale field, OVL-symbol-keyed registry, `Placement` enum driving both footprint/
+snap-position and height-sampling rule, `AnimationKind` enum, ownership on `Park`) is settled, grounded in
+`rct3-importer`'s actual `sizeflag`/`SIZE_*`/`TYPE_*` fields. All open questions are resolved above (two fully,
+two explicitly deferred to decode-time confirmation without blocking a start). Ready to implement; no stub work
+has begun yet.
