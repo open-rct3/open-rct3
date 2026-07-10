@@ -43,8 +43,13 @@ jobs:
         run: dotnet restore
       - name: Test
         run: dotnet test --no-restore --verbosity normal --collect:"XPlat Code Coverage"
+      - name: Merge Coverage Reports
+        if: success()
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:CoverageReport -reporttypes:Cobertura
       - name: Upload Coverage to Codecov
         if: success()
         uses: codecov/codecov-action@v4
         with:
-          files: "**/coverage.cobertura.xml"
+          files: CoverageReport/Cobertura.xml
