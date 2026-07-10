@@ -93,12 +93,12 @@ public partial class GLContext : IGLContext, INativeContext, IDisposable {
         ),
         0 // NULL terminator
       ]);
-      if (context == nint.Zero) context = wgl.CreateContext(hdc);
-      if (context == nint.Zero) throw new Exception(CreateContextError);
-
       // Cleanup temporary context
       Debug.Assert(wgl.MakeCurrent(hdc, 0));
       Debug.Assert(wgl.DeleteContext(tempContext));
+
+      if (context == nint.Zero) context = wgl.CreateContext(hdc);
+      if (context == nint.Zero) throw new Exception(CreateContextError);
 
       // Make the new context current
       Debug.Assert(wgl.MakeCurrent(hdc, context));
@@ -125,11 +125,10 @@ public partial class GLContext : IGLContext, INativeContext, IDisposable {
   }
 
   public void Dispose() {
-    if (openglLib == nint.Zero) return;
     GC.SuppressFinalize(this);
     if (context != nint.Zero) wgl.DeleteContext(context);
     context = nint.Zero;
-    FreeLibrary(openglLib);
+    if (openglLib != nint.Zero) FreeLibrary(openglLib);
   }
 
   public void SwapInterval(int interval) {
