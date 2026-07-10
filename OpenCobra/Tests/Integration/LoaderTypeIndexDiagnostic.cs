@@ -167,8 +167,7 @@ public class LoaderTypeIndexDiagnostic {
 
   private static Dictionary<string, int> TallyCurrentClassification(Ovl ovl) {
     var tally = new Dictionary<string, int>();
-    foreach (var key in ovl.Keys) {
-      var tag = key.Type.ToTagString();
+    foreach (var tag in ovl.Keys.Select(key => key.Type.ToTagString())) {
       tally[tag] = tally.GetValueOrDefault(tag) + 1;
     }
     return tally;
