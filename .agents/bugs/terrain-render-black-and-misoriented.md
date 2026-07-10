@@ -1,6 +1,6 @@
 # Bug: Terrain renders solid black, and its silhouette reads as mis-oriented ("upside down")
 
-## Status: Geometry fixed and verified. Color bug still open.
+## Status: RESOLVED. All three symptoms fixed, tested, and visually verified.
 
 ## Fix 1: `MatrixExtensions.ToGl()` transpose bug — FIXED
 
@@ -52,11 +52,11 @@ exactly the gap that let this ship (a point behind the far plane still produces 
 `CoreProfileBit | ForwardCompatibleBit` context. Fixed to `#version 410 core` in an earlier session. Real,
 independently-justified fix, but produced no visible change to the black-color symptom on its own.
 
-## Still open: solid black fragment color
+## Fix 4: solid black fragment color — FIXED
 
-With geometry now correct, the terrain is a well-formed diamond — still **solid black**, unaffected by
-vertex color (magenta swap test: identical `(0,0,0,255)` output). Ruled out, via live GPU introspection
-(temporary diagnostics, since removed):
+With geometry corrected (Fixes 1–2), the terrain was a well-formed diamond — still **solid black**,
+unaffected by vertex color (magenta swap test: identical `(0,0,0,255)` output). Ruled out, via live GPU
+introspection (temporary diagnostics, since removed):
 
 - **CPU vertex data**: correct (`vertices[0].Color` logged as magenta before upload).
 - **GPU buffer contents**: `glGetBufferSubData` at offset 32 post-upload reads back correct magenta,
@@ -75,7 +75,7 @@ vertex color (magenta swap test: identical `(0,0,0,255)` output). Ruled out, via
   Doesn't apply to the real shader's unconditional `v_Color = a_Color;` passthrough (`colLoc` was found
   fine there).
 
-### Leading suspect: `CastFrom<From>.To<To>` (`OpenCobra/GDK/Memory/Cast.cs`)
+### Root cause, confirmed: `CastFrom<From>.To<To>` (`OpenCobra/GDK/Memory/Cast.cs`)
 
 ```csharp
 public struct CastFrom<From> where From : unmanaged {
@@ -85,27 +85,60 @@ public struct CastFrom<From> where From : unmanaged {
 
 `Unsafe.As` reinterprets an address, it doesn't numerically convert. When `To` is larger than `From` —
 exactly the case for every vertex attribute *offset* cast in `Mesh.cs`, `CastFrom<int>.To<nint>(32)` (4
-bytes → 8 bytes on x64) — the read goes past the source value's storage into whatever bytes follow
-(garbage). `CastFrom<int>.To<uint>(...)`, used for attribute *locations*, is same-size and fine — which
-matches every diagnostic above showing correct locations while never checking the offset value itself.
+bytes → 8 bytes on x64) — the read goes past the source value's 4-byte storage into whatever 4 bytes of
+stack garbage follow it. `CastFrom<int>.To<uint>(...)`, used for attribute *locations*, is same-size and
+fine — which matches every diagnostic above showing correct locations while never checking the offset
+value itself.
 
-**Not confirmed.** A diagnostic logging `CastFrom<int>.To<nint>(32)`'s actual value never got a clean
-capture (kept colliding with the dead-code-elimination crash above and stale log reads). It's plausible
-the JIT optimizes this away for constant-literal arguments (every call site in `Mesh.cs` uses literals),
-which would make this a real bug but not this symptom's cause.
+**Confirmed** with an isolated console repro (no GL context, mirroring `Mesh.Upload`'s exact call
+sequence — same casts, same branches):
 
-## Next steps
+```
+offset(0)  = 0             (expect 0  — correct, by luck)
+offset(32) = 876173328416  (expect 32 — garbage)
+```
 
-1. **Isolate the `CastFrom` check first**, before touching the live app again: a plain unit test (no GL
-   context) asserting `CastFrom<int>.To<nint>(32) == 32`. Five minutes; settles the leading suspect.
-2. **Fix `CastFrom` regardless.** `Unsafe.As` across differently-sized types is unsound. Either assert
-   `Unsafe.SizeOf<From>() == Unsafe.SizeOf<To>()` inside it, or stop using it for offset casts in `Mesh.cs`
-   and use a plain `(nint)offset` there.
-3. If that doesn't resolve it: confirm `GLExtensions.HookupDebugCallback` is actually registered and
-   firing (never verified — deliberately trigger a GL error and see if it logs) before trusting its
-   silence.
-4. For silent app-exits during this kind of investigation: `Debug.Assert` failures call
-   `Environment.FailFast`, which bypasses NLog. Check `Get-WinEvent -FilterHashtable
-   @{LogName='Application'}` (event ID 1025) for the real stack trace instead.
-5. `.claude/skills/drive-native-app/scripts/AppDriver.ps1` had `GetCurrentThreadId` declared against
-   `user32.dll` instead of `kernel32.dll`, intermittently breaking `Screenshot`. Fixed this session.
+`CastFrom<int>.To<nint>(32)` does **not** evaluate to 32. It's deterministic within a run (stable across
+repeated calls) but has nothing to do with the intended value — it's whatever 4 bytes of stack memory
+happen to sit adjacent to that particular call site's `int` parameter. `offset(0)` happening to come back
+as exactly `0` is coincidence (that call site's adjacent stack bytes happen to be zero), which is why
+`a_Position` (offset 0) has rendered correctly all along while `a_Color` (offset 32) never has.
+
+This directly explains the black terrain: `glVertexAttribPointer`'s offset parameter for `a_Color` gets a
+huge, garbage byte offset — hundreds of gigabytes past the VBO's actual data. The GPU driver reads
+out-of-bounds vertex data for every `a_Color` fetch, and (consistent with common driver behavior for
+invalid/unmapped attribute fetches) returns `(0, 0, 0, 1)` — exactly the observed color, exactly why the
+alpha channel always came back as 1.
+
+**Fix, applied in `OpenCobra/GDK/Memory/Cast.cs`**: rewrote `CastFrom` to do a real numeric conversion via
+.NET's generic-math interfaces instead of bit-reinterpretation, constraining both type parameters to
+`IBinaryInteger<T>` (satisfied by `int`, `uint`, `nint`, `long`, etc.) and converting with
+`To.CreateChecked(value)`:
+
+```csharp
+public readonly struct CastFrom<From> where From : IBinaryInteger<From> {
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static To To<To>(From value) where To : IBinaryInteger<To> => To.CreateChecked(value);
+}
+```
+
+`CreateChecked` throws `OverflowException` if a value genuinely doesn't fit (e.g. negative → unsigned,
+out-of-range narrowing) instead of silently corrupting it — matching the file's own "safe cast" intent.
+This fixes every existing call site automatically, including `Mesh.cs`'s offset casts — no changes needed
+there, since the bug was entirely inside `CastFrom` itself.
+
+Covered by `OpenCobra/Tests/GDK/Memory/CastTests.cs`: widening (`int→nint`, the exact bug — asserts
+`CastFrom<int>.To<nint>(32) == 32`), same-size (`int→uint`), narrowing within range, narrowing/negative
+out of range (asserts `OverflowException`), and identity casts.
+
+**Verified end-to-end**: rebuilt and launched the app — the terrain now renders the correct grass color,
+pixel-sampled as exactly `R=79 G=129 B=14 A=255`, matching `Color.FromArgb(79, 129, 14)` byte-for-byte.
+
+## Carried-over notes
+
+- `.claude/skills/drive-native-app/scripts/AppDriver.ps1` had `GetCurrentThreadId` declared against
+  `user32.dll` instead of `kernel32.dll`, intermittently breaking `Screenshot`. Fixed this session.
+- `GLExtensions.HookupDebugCallback`'s GL debug callback was never confirmed to actually be registered
+  and firing during any of this investigation (it logs at `LogLevel.Debug` and none ever appeared) — not
+  load-bearing for this bug, but worth a look if a future GL issue's error logging seems suspiciously
+  quiet.
