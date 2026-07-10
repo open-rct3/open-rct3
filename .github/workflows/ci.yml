@@ -50,6 +50,7 @@ jobs:
           reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:CoverageReport -reporttypes:Cobertura
       - name: Upload Coverage to Codecov
         if: success()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: CoverageReport/Cobertura.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
