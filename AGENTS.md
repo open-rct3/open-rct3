@@ -20,6 +20,15 @@
 
   Don't investigate when the root cause is clear from the code and error message.
 
+### Planning Workflow
+
+For any task requiring multiple steps:
+
+1. **Write the plan first**: Decompose the full task into concrete steps before touching any code. Include file paths, dependencies between steps, and estimated complexity.
+2. **Get approval before executing**: Present the plan in a markdown checklist format and wait for feedback. Only proceed after human confirmation, or modify the plan based on feedback.
+3. **Execute step-by-step**: Mark tasks as you complete them. If you discover the plan is wrong mid-execution, pause and ask for clarification rather than improvising.
+4. **When stuck**: If a step blocks or you're uncertain, ask a clarifying question. Do not guess at architecture or deviate from the plan without explicit permission.
+
 ### C#
 
 - Prefer `var` declarations over those with explicit types
