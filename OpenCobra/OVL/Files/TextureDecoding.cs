@@ -8,7 +8,7 @@
 // Shared tex/flic/btbl decode plumbing. Originally lived entirely in Textures.cs; split out so
 // other symbol families that reuse the same on-disk tex/flic/btbl loader shapes - CharacterSkins
 // (mms/prt), ParticleEffects (psi) - can decode through the same code instead of duplicating it.
-// See .agents/bugs/ovl-texture-decoding.md for the reverse-engineering history behind this format.
+// See .agents/plans/fix/ovl-texture-decoding.md for the on-disk format and what's still broken.
 using System.Collections;
 using System.Diagnostics;
 using System.Runtime.InteropServices;

@@ -2,7 +2,7 @@
 
 Small, real custom-scenery OVL pairs used to exercise `tex`/`flic`/`btbl` (and, where
 available, `mms`/`prt`/`psi`/`fct`) parsing against real-world archives without needing
-the full RCT3 install. See `.agents/bugs/ovl-texture-decoding.md` for the bugs this is
+the full RCT3 install. See `.agents/plans/fix/ovl-texture-decoding.md` for the bugs this is
 meant to help pin down.
 
 ## Adding a pack

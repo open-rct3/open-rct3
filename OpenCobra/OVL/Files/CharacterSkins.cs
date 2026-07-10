@@ -17,7 +17,7 @@
 // same TextureDecoding routines Textures.cs uses.
 //
 // NOTE: the underlying mms/prt symbol-resolution bug documented in
-// .agents/bugs/ovl-texture-decoding.md is still open - real archives have been observed resolving
+// .agents/plans/fix/ovl-texture-decoding.md is still open - real archives have been observed resolving
 // a claimed 192-entry bitmap table to a 40-byte block. Expect most real archives to still fail to
 // decode until that is fixed; this module exists so decoding "just works" once it is.
 using System.Collections.Concurrent;

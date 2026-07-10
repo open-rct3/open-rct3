@@ -14,7 +14,7 @@
 // and the reasoning behind it.
 //
 // NOTE: the mms/prt/psi/fct symbol-resolution bug documented in
-// .agents/bugs/ovl-texture-decoding.md is still open. This module exists so decoding "just works"
+// .agents/plans/fix/ovl-texture-decoding.md is still open. This module exists so decoding "just works"
 // once it is; it is not yet verified to produce real pixel data against the actual install.
 using System.Collections.Concurrent;
 using NLog;

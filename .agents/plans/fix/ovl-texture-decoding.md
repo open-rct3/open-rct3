@@ -1,7 +1,30 @@
 # Plan: Fix `tex`/`flic`/`btbl` symbol-resolution failures
 
-Read `.agents/bugs/ovl-texture-decoding.md` Part 6 before touching this — it has the exact
-C++/Rust line references behind every claim below.
+## Background: on-disk layout needed to debug the remaining BTBL bug
+
+Reference sources: `assets/reference/ovl/{parser.rs,tex.rs,btbl.rs}` (a working, independently
+developed Rust OVL decoder that correctly produces `tex`/`ftx` pixel data — treat as
+authoritative for algorithm/field layout) and `rct3tex.cpp` (Jonathan Wilson's `rct3tex`
+dumper, the original C++ reference both were cross-checked against).
+
+- **`LoaderStruct`** (`blocks[2].Blocks[1]`, one entry per resolved symbol instance, not per
+  loader type): 20 bytes — `LoaderType`(u32, direct index into `loaderHeaders`), `data`(ptr,
+  u32), `HasExtraData`(u32, v5 packs a 16-bit count in the low bits), `Sym`(ptr, u32),
+  `SymbolsToResolve`(u32).
+- **`Tex` struct** (`TextureStruct`, icontexture.h, 60 bytes): `FlicPtr` at offset 52 is a
+  `FlicStruct**` (double pointer, "always points to pointer before flic data") — the only
+  field on the pixel-data path. `Ts2Ptr`/`TextureStruct2` (offset 56) is unrelated to pixel
+  data and was removed from the C# struct.
+- **BTBL chunk shape** (`ManagerBTBL.cpp`, confirmed by `btbl.rs::BitmapTable::decode_entry`):
+  the inline resource is just an 8-byte `BmpTbl{Unk, Length}` header. The loader's own extra
+  data is exactly two length-prefixed chunks: chunk 0 = 8 leading zero bytes + `Length ×
+  FlicHeader` (16 bytes each: Format, Width, Height, MipCount); chunk 1 = all mip pixel bytes
+  for every table entry, concatenated in table order, each mip sized independently
+  (`max(1, dim>>level)`, `/4` for DXT block counts, `BlockSize()`/`BitsPerPixel()/8` per pixel).
+- **Relocation-fixup table**: a flat list of `relCount` source addresses; for each, the raw
+  `u32` stored at that address is trustworthy as a real pointer *only if* the address is
+  listed here (unlisted = unpatched placeholder). `LoaderStruct.data` is itself one such
+  fixup-table-only pointer, not a directly-usable address.
 
 ## Ground rules (still hold)
 
@@ -76,6 +99,27 @@ scratch diagnostic — delete or formalize it):
 - `"bitmap table entry N mip M truncated: needed X bytes, got 0"` for others — the
   pixel-data chunk (`chunks[1]`) runs out of bytes partway through: either mip-count/
   dimension math is wrong for this data, or `chunks[1]` isn't the full pixel blob expected.
+
+## Scope caveats not yet independently verified
+
+- `psi` (`ParticleSpriteItem`) hasn't been checked the same way `mms`/`prt` were (dumping its
+  loader category name and a sample symbol's raw bytes) before assuming `ParticleEffects.cs`'s
+  tex/flic/btbl-shaped premise is wrong — it's grouped with `mms`/`prt` on the strength of the
+  Rust reference's no-op dispatch arm for it, not independently confirmed.
+- `gsi`/`shs` are not classified symbols in `Main.common.ovl` either (0 `LoaderStruct` entries
+  each, same signature as `tex`/`fct`) — consistent with the same "loader-category-only, no
+  symbol" pattern, but not independently root-caused the way `tex`/`fct` were.
+
+## Known affected files (real install, pre-fix baseline)
+
+A full 7,490-file `*.common.ovl` scan found 37 files exercising this bug family, before this
+session's fixes: 28 character/animal-skin archives (now known out-of-scope per `mms`/`prt`
+above, except each carries one genuine in-scope `tex` symbol alongside them — e.g.
+`Characters/AF/AF01_Body_Main.common.ovl`'s `AF01_Body:tex`), 8 font-table-adjacent files
+(`Main.common.ovl` largest at 84 `Texture` entries; `gui/{800,1024,1280}/{Resolution,
+SChinese}.common.ovl` partial failures), and `Particles/Particles.common.ovl` (41 `psi` + 5
+plain `tex`, out of scope pending the `psi` caveat above). None can become embedded test
+fixtures (Frontier's copyrighted base-game data) — verify against a local `RCT3_PATH` install.
 
 ## Next steps
 
