@@ -42,6 +42,14 @@ Work that depends on data models or systems that don't exist yet. State what thi
 avoid foreclosing that future work (e.g. "the API shape leaves room for X"), not just that it's
 deferred. Also notes relevant work that is out-of-scope for this plan.
 
+## Testing
+
+What this plan will cover with unit/integration tests, called out per untested area it touches —
+not just the new code it adds. Existing untested code this plan modifies (especially in
+`OpenCobra/OVL` and `OpenCobra/GDK`) needs coverage added alongside the change, per
+[`AGENTS.md`](../../AGENTS.md). List concrete cases (known-good, edge, failure) rather than
+"add tests for X".
+
 ## Implementation Notes
 
 <!-- Fill in during/after implementation, not during initial planning. -->

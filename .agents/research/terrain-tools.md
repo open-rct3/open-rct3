@@ -1,4 +1,4 @@
-# RollerCoaster Tycoon 3 — Terrain Tool Reference
+# Terrain Tools
 
 Based on the official RCT3 manual, cross-referenced with the in-game panel layout.
 

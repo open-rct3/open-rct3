@@ -99,7 +99,7 @@ multiplier applied to a shared mesh.
 - **`FullTile` multi-tile height is a footprint-flatness gate, not an anchor-vs-average choice.** Multi-tile
   `FullTile` objects (and rides, later) query every corner within the object's footprint bounds (OVL data
   supplies scenery/ride bounds — a later concern). If those corners aren't all equal height, placement is
-  blocked outright rather than averaged or snapped — mirroring `terrain/tools.md`'s "Flatten for Scenery and
+  blocked outright rather than averaged or snapped — mirroring `research/terrain-tools.md`'s "Flatten for Scenery and
   Rides" tool and the same flatness-check shape [`Park.cs:112`](../../../OpenRCT3/Simulation/Park.cs)'s
   `IsAtGradePathPlaceable` already uses for single-tile paths. Once corners agree, "anchor vs. average" is moot
   — both read the same value. This applies to non-terrain-conforming footprint objects generally (flat rides,

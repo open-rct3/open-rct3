@@ -9,6 +9,7 @@
 - Links in any markdown file MUST work both locally and on GitHub. Use relative paths for links.
 - All references (file paths, documentation, online resources) MUST be hyperlinked when relevant to the context.
 - When you need to know a third-party library's API (e.g. an enum member or method overload), look it up via its docs/source on the web (WebFetch/WebSearch) FIRST. Do NOT dig through decompiled DLLs, `strings`, or reflection/MetadataLoadContext gymnastics to reverse-engineer an API that's already documented online.
+- Always increase test coverage, not just maintain it. Any plan or change that touches untested code — especially in `OpenCobra/OVL` and `OpenCobra/GDK` — MUST add unit tests for the code paths it touches, not just for newly-added code.
 
 ### Brevity
 

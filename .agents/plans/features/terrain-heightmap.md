@@ -3,7 +3,7 @@
 **Roadmap**: Phase 1, item 4 — "Render fluctuating terrain"
 
 **See also**:
-- [`terrain/tools.md`](terrain/tools.md) — RCT3 terrain tool reference used to derive the height unit and
+- [`terrain-tools.md`](../../research/terrain-tools.md) — RCT3 terrain tool reference used to derive the height unit and
   smoothing behavior below.
 - [`.agents/research/grass-from-ovl.md`](../../research/grass-from-ovl.md) —
   `TerrainType` OVL research; source of the surface/cliff paint-index model below and the `type` field
@@ -42,7 +42,7 @@ placement, and building will all read from — data model only, no texture paint
   `Terrain.Height` — no separate coordinate system for buildable vs. OOB area. `Park.BuildableBounds` continues
   to describe the buildable sub-rectangle within that same index space.
 - Height unit: 1 cm per corner step (`Terrain.HeightStep = 0.01f`), finer than RCT3's 1 m ramp-rise snap (see
-  `.agents/plans/features/terrain/tools.md`) so freeform sculpting tools can render smoothly instead of
+  `.agents/research/terrain-tools.md`) so freeform sculpting tools can render smoothly instead of
   stair-stepping to whole meters. Store as a `ushort` corner-height count, not raw meters — convert to
   world-space Z via `Terrain.CornerHeightToWorldZ(count) = count * HeightStep`. Grid-based tools that snap to
   the 1 m ramp rise should snap their edits to 100-unit increments through this same API, not introduce a
@@ -62,7 +62,7 @@ placement, and building will all read from — data model only, no texture paint
   concern, tracked as an open question below rather than decided here.
 - Height-change API: raise/lower corner(s), where:
   - The default action on a normal (non-cliff) edit propagates to the matching corner on neighboring tiles,
-    keeping edges smooth-joined — matching "Snap Corners to Neighboring Corners" in `terrain/tools.md`.
+    keeping edges smooth-joined — matching "Snap Corners to Neighboring Corners" in `research/terrain-tools.md`.
   - An explicit "detach edge" operation breaks that link for one edge, turning it into a cliff — this is what
     the freeform Cliff/Crater/Canyon-style tools and manual cliff editing produce.
   - No global max-delta clamp is needed: a "steep slope" and a "cliff" aren't points on the same continuum in
@@ -120,7 +120,7 @@ same edge concept — see `path-network.md`). Two deviations from the Goals abov
 
 - **`Terrain.HeightStep = 0.01f` (1 cm), not the 1 m ramp-rise step originally planned.** The 1 m figure is
   the grid-tool snap increment, but the freeform sculpting tools (Hill/Mountain/Mesa/Ridge/etc., see
-  `terrain/tools.md`) are continuous-drag and need a finer resolution to render smoothly — a 1 m corner grid
+  `research/terrain-tools.md`) are continuous-drag and need a finer resolution to render smoothly — a 1 m corner grid
   would make hills/valleys look stair-stepped. `TerrainCorner.Height` stores a count of `HeightStep` units;
   world-space Z is `Terrain.CornerHeightToWorldZ(height) = height * HeightStep`. Grid-based tools should snap
   their edits to 100-unit increments (1 m) when this plan's raise/lower API gets a UI in front of it.

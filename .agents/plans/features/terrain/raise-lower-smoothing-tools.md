@@ -1,134 +1,215 @@
-# Plan: Raise/Lower Brush and Smoothing Tools
+# Raise/Lower Brush and Smoothing Tools (Scoped Cut)
 
-**Roadmap**: Phase 1, item 4 — "Render fluctuating terrain" (grid-tool follow-on)
+**Roadmap**: Phase 1, "Render fluctuating terrain"
 
 **See also**:
-- [`tools.md`](tools.md) — RCT3 terrain tool reference; this plan implements panel **A** ("Pulling",
-  Freeform Corner-Pulling, Snap Corners to Neighboring Corners, Spray Mode) and panel **B** (the six
-  Smoothing Tools).
-- [`../terrain-heightmap.md`](../terrain-heightmap.md) — implements the single-corner primitives
+- [`terrain-tools.md`](../../../research/terrain-tools.md) — RCT3 terrain tool reference; scoped subset of panel **A** (Snap Corners to
+  Neighboring Corners), **B** (Remove Cliffs, Flatten Terrain, Flatten for Scenery and Rides), **C**
+  (Hill, Mesa), **D** (Trough).
+- [`../terrain-heightmap.md`](../terrain-heightmap.md) — single-corner primitives this plan builds on
   (`Terrain.RaiseCorner`/`LowerCorner`/`SetCornerHeight`, `Park.RaiseTerrainCorner`/`LowerTerrainCorner`/
-  `SetTerrainCornerHeight`) this plan builds a multi-corner brush layer on top of.
-- [`water-tool.md`](water-tool.md) — a sibling tool-layer plan with the same shape: existing per-edit
-  primitives already implemented, tool-level decision logic (there: flood fill; here: brush footprint)
-  still missing.
+  `SetTerrainCornerHeight`).
+- [`water-tool.md`](water-tool.md) — sibling plan, same shape (primitives done, tool decision layer missing).
 
 ## Context
 
-`Terrain.RaiseCorner`/`LowerCorner` already do the hard part for a *single* corner: apply a delta,
-propagate to every tile sharing that world-space corner, and respect an optional per-corner
-ceiling/floor query (for ride-constrained edits). `Park`'s wrappers additionally invalidate any
-`WaterPool` touched by the edit. None of that needs to change. What's missing is everything the manual's
-panels A and B describe as acting on a *brush footprint* — a diameter-N square of tiles — rather than one
-corner: nothing today decides which corners a brush touches, or what each of the six smoothing behaviors
-does to them. This plan designs that decision layer, in terms of calls into the existing per-corner API.
+[`Terrain.RaiseCorner`/`LowerCorner`](../../../../OpenRCT3/Simulation/Terrain.cs:191) already propagate
+an edit in `HeightStep` (1 cm) units to every tile sharing a corner via `EnumerateSharedCorners`, and
+[`Park.RaiseTerrainCorner`/`LowerTerrainCorner`](../../../../OpenRCT3/Simulation/Park.cs:220) wrap them
+to invalidate any `WaterPool` covering a changed tile (`InvalidateWaterPoolsSharingCorner`); that layer
+doesn't change. Missing: the tool-level decision layer — which corners a brush touches, what each
+smoothing behavior does to them, how Hill/Mesa/Trough shapes are derived, and how a screen click/drag
+becomes `(tileX, tileY, TerrainCornerSlot)` calls into that layer. Scope: six tools (one
+snap-from-outside, three grid/brush, two freeform raise, one freeform lower) covering every decision
+shape the rest of the panel will reuse.
+
+**No mouse→tile picking exists yet.** Searched `OpenRCT3/` for raycast/pick/screen-to-world helpers —
+none found; `Editor.cs` (the scenery/scenario editor `IWindow`) has no tile-picking either, despite
+`Park.TryPlaceScenery` existing. This plan therefore also owns the first world-space picking primitive
+in the codebase, not just terrain-tool logic on top of an existing one.
+
+Deferred to a follow-on plan: Pulling, Freeform Corner-Pulling, Spray Mode, Flatten Dynamically,
+Create Cliffs, Averager, Mountain, Ridge, Crater, Canyon, and Corner Snapping to Scenery/Coasters
+(blocked on missing data models).
 
 ## Goals
 
 ### Shared primitive: brush corner enumeration
 
-- A brush of diameter `N` centered on tile `(x, y)` covers an `N`×`N` tile footprint (matching the
-  manual's "diameter spinner controls brush/area of effect in grid squares" — see `tools.md`); at `N = 1`
-  the footprint is the single tile, matching the manual's note that size-1 lets you drag a single
-  tile's edge or corner directly.
-- A footprint's corners form an `(N+1)`×`(N+1)` grid of distinct world-space points, not `N × N × 4`
-  corner copies. Every brush operation below must enumerate **distinct corners once**, not once per
-  tile-corner-copy — `RaiseCorner`/`LowerCorner` already propagate a single corner's edit to every tile
-  sharing it, so naively looping over each tile's four corners would apply an edit twice (once directly,
-  once via propagation) to every corner shared between two tiles in the footprint, and up to four times
-  to a fully-interior corner.
-- This plan's one new shared building block is therefore an enumerator — e.g.
-  `GetCornersInBrush(centerX, centerY, diameter)` — yielding one canonical `(tileX, tileY, slot)` per
-  distinct world corner point in the footprint. Every tool below (raise, lower, flatten variants,
-  averager, cliff remove/create) is a different per-corner *height decision* applied over the same
-  enumeration, not a different traversal.
-- Canonical-tile tie-break (which of up to four owning tiles represents a shared corner) is left to
-  implementation judgment — any consistent choice works since `RaiseCorner`/`LowerCorner`/
-  `SetCornerHeight` all key off world-space corner identity, not which tile the call was issued through.
+- Brush diameter `N` centered on tile `(x, y)` covers an `N`×`N` footprint; `N=1` is a single tile.
+- A footprint's corners form an `(N+1)`×`(N+1)` grid of **distinct** world-space points, not
+  `N×N×4` copies — since `RaiseCorner`/`LowerCorner` propagate per shared corner, looping tile-by-tile
+  would double- or quadruple-apply shared/interior corners.
+- New shared building block: `GetCornersInBrush(centerX, centerY, diameter)`, yielding one canonical
+  `(tileX, tileY, slot)` per distinct corner. Each tool below is a different per-corner height decision
+  over the same enumeration, feeding straight into `Park.RaiseTerrainCorner`/`LowerTerrainCorner`/
+  `SetTerrainCornerHeight` (not the raw `Terrain` methods, so water invalidation stays automatic).
+- Canonical-tile tie-break for shared corners is an implementation detail — any consistent choice
+  works since `Terrain.EnumerateSharedCorners` keys corner identity off world position
+  (`TerrainCornerSlot.SouthWest = (x, y)`, `SouthEast = (x+1, y)`, `NorthWest = (x, y+1)`,
+  `NorthEast = (x+1, y+1)`, per `TerrainCornerSlot.cs`), not which tile the call was issued through.
 
-### Panel A — Grid-Based Tools
+### Panel A — Snap Corners to Neighboring Corners
 
-- **Pulling / Freeform Corner-Pulling**: apply `Park.RaiseTerrainCorner`/`LowerTerrainCorner` once per
-  corner from the brush enumeration above, same delta for every corner, passing through the same
-  `maxHeightQuery`/`minHeightQuery` ride-constraint hook already on the single-corner API — a brush edit
-  is not a new constraint model, just N corners' worth of the existing one.
-- **Snap Corners to Neighboring Corners**: for each corner strictly on the footprint's boundary ring,
-  read the matching corner height on the adjacent tile just outside the brush (via
-  `Terrain.GetCorner`/neighbor lookup, no new API needed) and raise/lower that boundary corner to match
-  it, propagating inward implicitly through the interior via the existing propagation in
-  `RaiseCorner`/`LowerCorner`. This is the tool the manual describes as smoothing terrain "previously
-  shaped with freeform corner-pulling" — i.e. it re-joins a brush's edited region back to its
-  surroundings rather than performing a new kind of edit.
-- **Spray Mode**: not a new height decision — it's the *Pulling* decision above, re-applied on a timer
-  while the mouse button is held, at a rate that increases the longer it's held. The rate-ramp and input
-  polling are an input-layer concern (out of scope here, no input system exists yet); this plan's only
-  claim is that the underlying per-tick operation is identical to Pulling, so no separate terrain-side
-  design is needed once an input layer exists to drive it repeatedly.
-- **Corner Snapping to Scenery / Corner Snapping to Coasters** — **deferred**: both need to query the
-  height of nearby placed scenery or ride entrances, which depend on data models that don't exist yet
-  (scenery placement, ride placement). Same shape as `terrain-heightmap.md`'s deferred
-  "Ride-constrained terrain edit enforcement" — the brush-enumeration primitive above doesn't foreclose
-  these, since "snap each corner to a queried height" composes with it the same way Pulling does; only
-  the query source (scenery/ride height lookup) is missing.
+- For each boundary-ring corner, look up its `Edge` toward the outside neighbor, read that neighbor's
+  matching-slot height via `Terrain.GetEdgeCornerHeights`/`GetCorner` (`Terrain.cs:284`,`120`), and
+  `RaiseCorner`/`LowerCorner` the boundary corner to match; interior corners reach their new heights
+  through the same calls' existing propagation, not a second pass. Re-joins a freeform-edited region to
+  its surroundings.
 
 ### Panel B — Smoothing Tools
 
-All six read the brush's corner enumeration once, compute a per-tool target, then either propagate
-(`RaiseCorner`/`LowerCorner` — smooth result, matching edges rejoin) or detach (`SetCornerHeight` —
-sharp terraced result, matching edges split) to reach it:
+All three enumerate the brush once, compute a per-tool target, then propagate to reach it:
 
-- **Flatten Terrain**: target height = the height of whichever corner was under the pointer when the
-  drag started, fixed for the whole drag. Every corner in the footprint is raised or lowered
-  (`RaiseCorner`/`LowerCorner`, so edges smooth-join) to that one fixed height.
-- **Flatten Dynamically**: same as Flatten Terrain, except the target height is re-read from the corner
-  currently under the pointer on every tick rather than fixed at drag start — the "dynamic" part is a
-  per-tick re-evaluation of the same target computation, not a different target rule.
-- **Flatten for Scenery and Rides**: same fixed-at-drag-start target as Flatten Terrain, but the target
-  height is first snapped to the nearest 1 m increment (`Park.AtGradePathMaxRise`, 100 `HeightStep`
-  units) — the same snap constant `water-tool.md` reuses for its candidate height, so a flattened area is
-  guaranteed reachable by an at-grade path/ramp per `Park.IsAtGradePathPlaceable`'s existing rise check.
-- **Remove Cliffs**: for every corner in the footprint, if any of its edges is detached
-  (`Terrain.IsEdgeDetached`), raise/lower it (propagating) to match its neighbor rather than leaving it
-  set independently — converting a sharp edge back into a smooth slope. This is explicitly the inverse
-  of Create Cliffs below, and (per `terrain-heightmap.md`'s confirmed auto-rejoin behavior) is really
-  just "stop calling `SetCornerHeight` here and let a normal raise/lower propagate instead."
-- **Create Cliffs**: for every corner in the footprint, quantize its current height to a coarser terrace
-  step (candidate: the same 1 m/100-unit grid used elsewhere, though the manual doesn't specify the
-  exact terrace spacing — flagged as an open question below) and write it with `SetCornerHeight`, which
-  detaches the edge instead of propagating — turning a smooth slope into cube-shaped terraced edges.
-- **Averager**: compute the mean height across every corner in the footprint's enumeration, then
-  raise/lower (propagating) each corner some fraction of the way toward that mean rather than snapping
-  it there outright — matching the manual's "moderates terrain shape between the extremes" (a damping
-  pass, not a hard flatten). The damping fraction is an open question below, not a value the manual
-  specifies.
+- **Flatten Terrain**: target = height of the corner under the pointer at drag start; every corner in
+  `GetCornersInBrush` gets `RaiseCorner`/`LowerCorner` (delta = target − current, sign picks the call)
+  to reach it — a per-corner delta, not a single call, since each starts at a different height.
+- **Flatten for Scenery and Rides**: same fixed-at-drag-start target, but rounded to the nearest
+  multiple of `Park.AtGradePathMaxRise` (100 `HeightStep` units = 1 m, `Park.cs:61`) before applying —
+  same constant `water-tool.md` reuses, and the same flatness gate `Park.IsAtGradePathPlaceable`
+  (`Park.cs:118`) and the level-pad check in `Park.TryPlaceScenery` (`Park.cs:282`, `IsFootprintLevel`)
+  already assume, so a flattened area is guaranteed placeable without duplicating that logic here.
+- **Remove Cliffs**: for any corner where `Terrain.IsEdgeDetached` (`Terrain.cs:152`) is true on one of
+  its edges, `RaiseCorner`/`LowerCorner` it to match the neighbor instead of leaving it set via
+  `SetCornerHeight` — inverse of Create Cliffs (deferred). Per `Terrain.SetCornerHeight`'s own doc
+  comment ("the edge re-joins automatically if a later raise/lower brings the matching neighbor corner
+  back to the same height"), this tool is literally that re-join, invoked deliberately per corner
+  rather than waiting for it to happen incidentally.
+
+### Panel C — Freeform Raise (Hill, Mesa)
+
+Continuous-drag, not brush-based (see `terrain-tools.md` Granularity Notes) — same per-corner primitives,
+but the decision is a heightfield sampled along the mouse path.
+
+- **Hill**: for each corner along the path, compute a target height = current height + a rounded-peak
+  falloff (apex proportional to drag vertical extent, smooth radial falloff to zero at brush radius),
+  then reach it via `Park.RaiseTerrainCorner` (delta = target − current). Falloff curve
+  (Gaussian/cosine/quadratic) is an implementation choice; the pinned shape is rounded peak + smooth
+  falloff to zero. Height deltas are in `Terrain.HeightStep` (1 cm) units, matching `RaiseCorner`'s
+  `delta` parameter (`Terrain.cs:191`), which is why the tool needs a finer grid than the 1 m ramp snap
+  — see `HeightStep`'s own doc comment (`Terrain.cs:39`).
+- **Mesa**: same path/apex, flat-topped instead of pointed — a plateau blend of Hill, still via
+  `Park.RaiseTerrainCorner` so edges smooth-join rather than forming a free-standing cube.
+
+Both share one drag-path-sample + radial-falloff evaluator; Mesa only changes the falloff's top.
+
+### Panel D — Freeform Lower (Trough)
+
+- **Trough**: Hill mirrored — `Park.LowerTerrainCorner`, sign flipped, with a depth cap keeping it
+  "shallow" vs. Crater/Canyon (deferred). Included to lock in the lower-side mirror pattern those tools
+  will reuse.
 
 ## Open Questions
 
-- **Create Cliffs terrace spacing**: is it the same 1 m grid-tool snap used everywhere else, or a
-  distinct step? Not verified against the reference implementation — flag before/during implementation,
-  same caveat pattern as the per-pool water amendment in `terrain-heightmap.md`.
-- **Averager damping fraction**: single-pass fraction (e.g. move each corner 50% toward the mean) vs.
-  an iterative multi-pass relaxation — the manual's wording ("moderates... between the extremes")
-  doesn't pin down which. Needs either reference-implementation comparison or an in-game feel check.
-- **Snap Corners to Neighboring Corners at a footprint corner (not edge)**: the boundary ring includes
-  the four footprint corners, each adjacent to two outside neighbors (diagonal-adjacent tiles aren't
-  reachable via a shared edge at all in this data model — see `terrain-heightmap.md`'s edge-vs-corner
-  distinction). Whether both matter equally or only the axis-aligned neighbors count needs confirming
-  against actual tool behavior.
+- **Snap Corners at a footprint corner**: each footprint corner touches two outside neighbors
+  (diagonal not reachable — see `terrain-heightmap.md`'s edge-vs-corner distinction). Whether both
+  neighbors matter or only axis-aligned ones needs confirming against real tool behavior.
+- **Hill/Mesa/Trough falloff shape and radius**: manual gives the result, not the curve — check a
+  reference implementation before locking it in, or start with a tunable `FalloffCurve` param.
+- **Mesa plateau radius**: fraction of brush radius that's flat vs. falling off — undocumented, same caveat.
+- **Trough depth cap**: undocumented; flag for reference comparison or default to ~1 m.
+- **`WorldInputLatch`'s one-frame-lagged `CaptureMouse` read**: accepted as harmless for a fixed-position
+  panel (see Input wiring below) — if a future consumer of the same primitive has UI that reflows or
+  moves under the cursor frame-to-frame, the lag could misclassify a click for one frame; revisit then
+  rather than fixing pre-emptively for a case this plan doesn't have.
 
 ## Deferred (out of scope for this plan)
 
-- **UI/input wiring**: brush cursor/preview, diameter spinner, drag-start detection, Spray Mode's
-  hold-to-accelerate timing — all input-layer, none of which exists yet. This plan only designs the
-  terrain-side decision functions such a layer would call.
-- **Corner Snapping to Scenery/Coasters** (see Panel A above) — blocked on scenery/ride placement data
-  models.
-- **Panel C/D freeform sculpting** (Hill/Mountain/Mesa/Ridge/Trough/Crater/Canyon): the manual describes
-  these as continuous-drag, not grid/brush-based — a materially different interaction model from the
-  brush tools here, and left to its own future plan rather than folded into this one.
+- **Panel A**: Pulling, Freeform Corner-Pulling, Spray Mode, Corner Snapping to Scenery/Coasters
+  (also blocked on missing data models).
+- **Panel B**: Flatten Dynamically, Create Cliffs, Averager — each a small target-height decision on
+  the same enumeration, a localized addition later.
+- **Panel C/D**: Mountain, Ridge, Crater, Canyon — compose from the drag-path/falloff evaluator built
+  here (sharper falloff, axis-stretched, deeper cap); no new data-model work needed.
+- **Water pool invalidation under freeform tools**: already handled per-corner by the `Park` wrappers
+  (see `terrain-heightmap.md` Status) — noted only so implementation uses those wrappers, not raw
+  `Terrain` calls.
+
+### ImGui tool window
+
+- New `TerrainTools` window in `OpenRCT3/UI/`, implementing the same `IWindow` (`OpenCobra.GDK.GUI`)
+  that `Debug`/`Editor` do, registered via `Scene.Windows.Add(...)` in `Game.cs` alongside the existing
+  `editor`/`Debug` registrations (`Game.cs:186-187`).
+- Anchored bottom-left (opposite `Debug`'s top-right, `Debug.cs:30-32`): pivot `(0, 1)`, position
+  `(WorkPos.X + Padding, WorkPos.Y + WorkSize.Y - Padding)`, `ImGuiCond.Always`.
+- No resize/move/collapse (`ImGuiWindowFlags.NoResize | NoMove | NoCollapse`, matching `Debug.cs:33`);
+  `Debug.cs:26` already TODOs extracting this workspace/pivot/padding math to a shared helper — leave a
+  matching TODO here rather than duplicating it a second time.
+- Layout mirrors the in-game panel (![reference](../../../assets/reference/gui/terrain%20tools%20smoothing.png)):
+  brush-size widget left, raise/lower arrows middle, eight tool buttons right (4×2). This cut fills
+  Hill/Mesa (Mountain/Ridge slots empty, deferred) and Remove Cliffs/Flatten Terrain/Flatten for
+  Scenery and Rides; Snap Corners lives in the "Tweak Terrain" sub-panel, not rendered in v1. Disabled
+  slots render greyed, not hidden.
+- **Icons**: placeholder `ImGui.Button` with tool name for v1; TODO to swap in RCT3 textures later
+  (out of scope to avoid coupling to a rendering concern).
+- **Input wiring depends on [`screen-tile-picking.md`](screen-tile-picking.md)** — button press sets
+  `SelectedTool`; world click dispatches to the matching decision function with brush size, pointer
+  tile, and (freeform only) sampled drag path. Resolving a screen click to `(tileX, tileY)` is a
+  separate plan (no such picking existed anywhere in the codebase — see that plan's Context); this plan
+  only consumes its `TilePickResult`, it doesn't implement the ray march itself.
+  - **No new per-frame hook needed.** `IWindow.Render()` (`OpenCobra.GDK.GUI.IWindow`, implemented by
+    `Editor`/`Debug` today) already runs once per frame, same cadence a dedicated `Update()` would —
+    `TerrainTools` can poll mouse state, run the pick, and dispatch drag/click handling directly inside
+    its own `Render()`, the same way `Editor.cs` reacts to its "Quit" button inline and raises `Exit`
+    for the one case (`Game.cs`'s shutdown) that needs to know about it from outside. No new event is
+    needed here since `TerrainTools` is both the source and the only consumer of its own click/drag
+    state — an `Exit`-style event would only be justified if some other system needed to react to a
+    completed edit, which isn't the case in this plan's scope.
+  - **`Controller.CaptureMouse` alone isn't enough for drags — latch ownership at mouse-down.** Checking
+    `WantCaptureMouse` (`Controller.cs:28`) every frame is the standard first step — per ImGui's own FAQ,
+    "you should always pass mouse/keyboard inputs to Dear ImGui" and gate *your* handling on
+    `WantCaptureMouse` ([ImGui FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md);
+    background discussion in
+    [WantCaptureMouse behavior #621](https://github.com/ocornut/imgui/issues/621)) — and
+    `Controller.cs:56-59` already forwards every raw mouse event to ImGui unconditionally, so that half
+    of the standard pattern is already satisfied. But a per-frame re-check breaks mid-drag: a
+    continuous-drag tool (Hill/Mesa/Trough) that starts over world space and then strays over the
+    `TerrainTools` panel mid-drag would suddenly stop registering world hits — the mirror image of the
+    "click/drag that started over your application" edge case ImGui's own maintainers describe handling
+    on ImGui's *own* side of the boundary (same #621 thread; also see
+    [First click goes through ImGui window #8431](https://github.com/ocornut/imgui/issues/8431) for the
+    general class of capture-boundary timing bugs this pattern is meant to avoid). Solution: decide
+    "does this press belong to the world?" once, at mouse-down, from `CaptureMouse` at that instant, and
+    hold that decision for the full press regardless of where the cursor wanders until mouse-up
+    (matching how ImGui itself keeps a widget "active" through a drag rather than re-hit-testing every
+    frame).
+  - **New shared GDK primitive: `OpenCobra.GDK.Input.WorldInputLatch`** (or similar), not
+    terrain-specific — a small stateful helper (`bool Update(bool buttonDown)`: latches
+    `!Controller.CaptureMouse` on the down-edge, stays latched until `buttonDown` goes false) that any
+    future `Render()`-driven world-interaction consumer can reuse (the flying-camera route editor's
+    click/drag gizmo work is the next likely consumer, same reuse rationale as `debug-draw.md`) rather
+    than every tool re-deriving this by hand. This is the "extend the GDK's input abstractions" fix
+    rather than a one-off `if` check buried in `TerrainTools`.
+  - **One-frame lag is accepted, not fixed.** `Renderer.cs:129` calls `gui.StartFrame()`
+    (`ImGui.NewFrame()`) before windows' `Render()` runs, so `WantCaptureMouse` read inside
+    `TerrainTools.Render()` reflects last frame's widget layout, not this frame's — a known ImGui
+    architectural quirk (see Open Questions;
+    [One frame lag when clicking outside of the ImGui window/widgets? #1152](https://github.com/ocornut/imgui/issues/1152)).
+    Not worth fixing here: `TerrainTools` is a
+    fixed-position, fixed-content panel (no reflow frame-to-frame per its own Goals above), so the
+    lagged capture boundary is spatially identical to the current frame's in practice.
+  - Left-click is currently unbound to any camera action regardless (`DefaultBindings.cs` only binds
+    Right/Middle/chords to camera pan/rotate — see `DefaultBindings.cs:124-134`), so there's no other
+    left-click consumer to conflict with once the latch is in place.
+  - **Brush cursor/preview**: highlight the diameter-N footprint under the picked tile using
+    [`debug-draw.md`](debug-draw.md)'s immediate-mode line/quad primitives (new plan — no such overlay
+    primitive exists today; the only precedent, `Game.cs:154`'s rotation-marker cube, is an opaque
+    `Model`, not an outline).
+  - **Diameter spinner**: `ImGui.DragInt`/`SliderInt` bound to a `BrushDiameter` field, range 1..map
+    size (`Terrain.Width`/`Height` minus `Park.OutOfBoundsBorder`).
+  - **Click dispatch**: grid tools (Panel A/B) fire once per mouse-down (or per tick while held, for
+    repeat-on-drag tools); freeform tools (Panel C/D) begin a drag re-sampled on mouse-move via
+    `MouseState.PressedButtons`.
+  - **Drag detection**: compare mouse-down tile vs. current picked tile each frame.
+  - **Path sampling for Hill/Mesa/Trough**: one sample per mouse-move (step-capped) feeding the
+    radial-falloff evaluator.
 
 ## Status
 
-Not started. Builds entirely on already-implemented primitives (`Terrain.RaiseCorner`/`LowerCorner`/
-`SetCornerHeight`/`IsEdgeDetached`, `Park.RaiseTerrainCorner`/`LowerTerrainCorner`); this plan covers the
-still-missing brush-enumeration primitive and the per-tool target-height decisions listed above.
+Not started. Builds on existing primitives (`Terrain.RaiseCorner`/`LowerCorner`/`SetCornerHeight`/
+`IsEdgeDetached`, `Park.RaiseTerrainCorner`/`LowerTerrainCorner`/`SetTerrainCornerHeight`). Remaining:
+brush-enumeration primitive, per-tool target-height decisions for the six tools, the drag-path/
+radial-falloff evaluator, the `TerrainTools` window, and the input wiring (brush cursor/preview,
+diameter spinner, click dispatch, drag detection, continuous-drag path sampling) — blocked on
+[`screen-tile-picking.md`](screen-tile-picking.md) for the pointer-tile resolution and
+[`debug-draw.md`](debug-draw.md) for the brush cursor overlay, both tracked as separate plans.

@@ -3,7 +3,7 @@
 **Roadmap**: Phase 1, item 4 — "Render fluctuating terrain" (water tool follow-on)
 
 **See also**:
-- [`tools.md`](tools.md) — RCT3 terrain tool reference; this plan implements the **Water** entry under
+- [`terrain-tools.md`](../../../research/terrain-tools.md) — RCT3 terrain tool reference; this plan implements the **Water** entry under
   "Other Tools" ("add/remove water at the clicked height").
 - [`../terrain-heightmap.md`](../terrain-heightmap.md) — "Water is per-pool" Goals section and its
   Deferred entry "Water pool perimeter tracing (flood-fill placement)", which this plan picks up.
@@ -28,7 +28,7 @@ unchanged.
   `IsAtGradePathPlaceable`'s min/max-corner style query rather than inventing a new terrain predicate.
 - **Candidate height comes from the clicked tile, snapped.** Take the lowest corner of the seed tile,
   then snap up to the nearest 1 m (`Park.AtGradePathMaxRise`, 100 `HeightStep` units) increment — the
-  same snap granularity grid-based tools already use for height edits (see `tools.md`, "Corner Snapping"
+  same snap granularity grid-based tools already use for height edits (see `terrain-tools.md`, "Corner Snapping"
   family). This reuses `AtGradePathMaxRise` as the shared snap constant rather than adding a second
   one; if a future tool needs a materially different snap step, split the constant then, not now.
 - **Reject tiles already claimed.** A tile already present in `Park.WaterTiles` is not walkable — the
