@@ -23,11 +23,12 @@ namespace OpenCobra.Tests.OVL;
 [TestFixture]
 [Category("Measurement")]
 public class TexturesMeasurementTests {
-  // Baseline recorded when this test was added (bug doc Part 6 / fix plan Step 0). After every
-  // change made while implementing the fix plan, this number must still hold - it is a regression
-  // check on the embedded fixtures, not a progress check (progress is measured against the fix
-  // plan's Step 7, using a real RCT3_PATH install).
-  private const int BaselineTextureCount = 5;
+  /// <remarks>
+  /// <para>This number must still hold after any change.</para>
+  /// <para>It's a regression check on the embedded fixtures, not a progress check.
+  /// Progress is measured against a real <c>RCT3_PATH</c> install.</para>
+  /// </remarks>
+  private const int BaselineTextureCount = 29;
 
   private static IEnumerable<string> CommonOvlResourceNames() =>
     Assembly.GetExecutingAssembly().GetManifestResourceNames().Where(n => n.EndsWith(".common.ovl"));

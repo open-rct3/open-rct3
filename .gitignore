@@ -51,6 +51,7 @@ obj/
 **/bin/Debug/**/OpenCobra.Tests.Integration
 **/bin/Debug/**/OVL Dumper
 **/bin/Debug/**/OvlTestBench
+**/bin/Debug/**/textures-measurement.log
 **/bin/Release/**/*.deps.json
 **/bin/Release/**/.msCoverageSourceRootsMapping_Tests
 **/bin/Release/**/CoverletSourceRootsMapping_Tests

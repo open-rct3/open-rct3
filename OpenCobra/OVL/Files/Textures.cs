@@ -14,7 +14,7 @@ public static class Textures {
 
   public static bool IsDecodable(TextureFormat _) => false;
 
-  // Extract all textures from an OVL
+  // Extract all textures from an OVL.
   public static TextureCollection Extract(Ovl ovl) {
     // Find all tex, flic, and btbl files and read their data, in parallel
     var textureTypes = new[] { FileType.Texture, FileType.Flic, FileType.BitmapTable };
@@ -44,7 +44,7 @@ public static class Textures {
       try {
         var name = fileData.File.ToString();
 
-        var table = TextureDecoding.ReadBitmapTable(name, ovl, fileData.File, fileData.Data);
+        var table = BitmapTables.Read(name, ovl, fileData.File, fileData.Data);
         bitmapTables[fileData.OvlName] = table;
         foreach (var texture in table) bag.Add(texture);
       } catch (Exception ex) {
@@ -64,7 +64,7 @@ public static class Textures {
       switch (tag) {
         case "btbl":
           try {
-            currentTable = TextureDecoding.ReadBitmapTableAt($"{ovl.Name}:btbl@{dataAddress:X}", ovl, dataAddress);
+            currentTable = BitmapTables.ReadAt($"{ovl.Name}:btbl@{dataAddress:X}", ovl, dataAddress);
             foreach (var texture in currentTable) bag.Add(texture);
           } catch (Exception ex) {
             logger.Error(ex, "Failed to decode bitmap table at {Address:X} in {OvlName}", dataAddress, ovl.Name);
@@ -92,11 +92,35 @@ public static class Textures {
           var bitmapTable = bitmapTables.GetValueOrDefault(fileData.OvlName);
           if (!ovl.TryReadExtraData(fileData.File, out var chunks) || chunks.Count == 0)
             throw new InvalidOperationException($"Failed to resolve flic data for {name}");
-          bag.Add(TextureDecoding.ReadFlic(name, chunks[0], bitmapTable));
+          bag.Add(Flic.Read(name, chunks[0], bitmapTable));
         }
       } catch (Exception ex) {
         logger.Error(ex, "Failed to decode {FileName}", fileData.File.ToString());
         failures.Add(fileData.File);
+      }
+    });
+
+    // ftx (FlexiTexture) decodes through its own format-specific loader (FlexiTexture.cs) - each
+    // animation frame becomes one Texture, since TextureCollection has no separate animated-frame
+    // concept. Single-frame ftx entries (the common case) keep the symbol's own name; multi-frame
+    // ones get a "#index" suffix per frame so no frame is silently dropped.
+    var ftxFiles = ovl.Keys.Where(file => file.Type == FileType.FlexibleTexture).ToList();
+    Parallel.ForEach(ftxFiles, file => {
+      var name = file.ToString();
+      try {
+        var flexiTexture = FlexiTextureList.Load(ovl, file);
+        for (var i = 0; i < flexiTexture.Length; i++) {
+          var frame = flexiTexture[i];
+          var frameName = flexiTexture.Length == 1 ? name : $"{name}#{i}";
+          var texture = new Texture(frameName, TextureFormat.A8R8G8B8,
+            Convert.ToUInt32(frame.Texture.Width), Convert.ToUInt32(frame.Texture.Height)) {
+            MipLevels = { [0] = frame.Texture },
+          };
+          bag.Add(texture);
+        }
+      } catch (Exception ex) {
+        logger.Error(ex, "Failed to decode {FileName}", name);
+        failures.Add(file);
       }
     });
 

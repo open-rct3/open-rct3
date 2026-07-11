@@ -43,7 +43,7 @@ public static class ParticleEffects {
     Parallel.ForEach(allFiles, fileData => {
       var name = fileData.File.ToString();
       try {
-        var table = TextureDecoding.ReadBitmapTable(name, ovl, fileData.File, fileData.Data);
+        var table = BitmapTables.Read(name, ovl, fileData.File, fileData.Data);
         bitmapTables[fileData.OvlName] = table;
         foreach (var texture in table) bag.Add(texture);
         return;
@@ -62,7 +62,7 @@ public static class ParticleEffects {
         var bitmapTable = bitmapTables.GetValueOrDefault(fileData.OvlName);
 
         if (ovl.TryReadExtraData(fileData.File, out var chunks) && chunks.Count > 0) {
-          bag.Add(TextureDecoding.ReadFlic(name, chunks[0], bitmapTable));
+          bag.Add(Flic.Read(name, chunks[0], bitmapTable));
           return;
         }
 
