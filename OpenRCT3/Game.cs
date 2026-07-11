@@ -142,10 +142,10 @@ public class Game : IGame {
     // Proof-of-concept marker: a unit cube placed off-center in one quadrant of the buildable area, so
     // Q/E map rotation (above) is visually obvious - a centered object wouldn't appear to move at all.
     Debug.Assert(World.Park != null);
-    var markerBounds = World.Park.BuildableBounds;
+    var (boundsMin, boundsMax) = World.Park.BuildableBounds;
     var markerPosition = new Vector3(
-      markerBounds.Min.X + (markerBounds.Max.X - markerBounds.Min.X) * 0.75f,
-      markerBounds.Min.Y + (markerBounds.Max.Y - markerBounds.Min.Y) * 0.75f,
+      boundsMin.X + (boundsMax.X - boundsMin.X) * 0.75f,
+      boundsMin.Y + (boundsMax.Y - boundsMin.Y) * 0.75f,
       1f);
     var marker = new Model(Primitives.Cube(name: "RotationMarker", color: Color.FromArgb(200, 30, 30).ToGl())) {
       Material = new Flat(),
