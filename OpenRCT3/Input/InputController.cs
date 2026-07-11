@@ -72,7 +72,7 @@ public sealed class InputController {
   /// </remarks>
   public float ZoomSensitivity { get; set; } =
 #if WINDOWS
-    0.4f;
+    0.5f;
 #elif OSX
     0.1f;
 #else
