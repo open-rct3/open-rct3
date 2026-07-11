@@ -1,6 +1,6 @@
 # Render Grass Texture from Terrain OVL
 
-**Status**: OVL `tex`/`flic`/`btbl` decoding now works. Plan pivots to a small follow-up: pull a grass texture out of the decoded `TextureCollection` and feed it into the terrain mesh as `AlbedoTexture`.
+**Status**: Done. OVL `tex`/`flic`/`btbl` decoding works, steps 0-3 below are implemented and covered by `make test`, and the grass texture (`Terrain_06`) is confirmed visible in-game.
 
 ## What's already done (commit 2a35414 "🎉 Finally fix OVL texture decoding")
 
@@ -26,7 +26,7 @@ Decode code is split:
 
 The `ter` (TerrainType) tag is still undecoded, but it is no longer required: each `ter` entry's `texture_ref` points to a `tex` entry with the same name (`Terrain_00`..`Terrain_25`, `Cliff_00`..`Cliff_05`, `TerrainCliff0`..`TerrainCliff5`), and the `tex` entries now decode cleanly via the loader walk.
 
-## Gaps and risks (found during review, before execution)
+## Gaps and Risks
 
 1. ~~No renderer texture-binding path~~ — **verified already working, no action needed.** Checked [OpenRCT3/OpenGL/Renderer.cs](../../OpenRCT3/OpenGL/Renderer.cs): `UploadMaterial` calls `Texture.Upload()` for any material texture still `Uninitialized`, and the draw loop (`Render`/`BuildDisplayList`) binds `material.AlbedoTexture.Handle` to `TEXTURE0` and sets `u_Texture` before `DrawElements`. This landed after the "What's already done" snapshot at the top of this plan (commit `b22f4da` "Wire OVL Textures into GDK Materials" and later). `Textured`'s shader (`Material.cs:101`) and `Mesh.Upload`'s conditional `a_TexCoord` binding are also already correct. Steps 1–3 below are the complete remaining work.
 2. **`worldX`/`worldY` don't exist in `AddTopFace`'s scope.** They're locals inside `CornerPosition` ([OpenRCT3/Simulation/TerrainMeshBuilder.cs:44-57](OpenRCT3/Simulation/TerrainMeshBuilder.cs)), which returns only `Vector3 Position` (already centered by `-terrain.Width/2f * TileSize`). **Resolved**: derive `TexCoord` from `Position.X`/`Position.Z` directly — no signature change to `CornerPosition`. Texture origin will shift slightly if `terrain.Width` changes, but tiling density and correctness are unaffected. Step 2's snippet below reflects this.
@@ -37,11 +37,11 @@ The `ter` (TerrainType) tag is still undecoded, but it is no longer required: ea
    - `Texture.cs`'s `texture` ctor param is deliberately left un-annotated with `[TakesOwnership]` (so `GDK002` keeps nagging until a real fix lands), which means `GDK003` — the rule that would catch a double-dispose at a call site — is inert everywhere right now, including here.
    - Even once annotated, `GDK003` only does identifier-level matching (same variable name passed as the argument *and* separately disposed/`using`'d in the same block). In this plan's exact hazard scenario the disposed identifier is `textures`, but the constructor argument is `mip0`, extracted via a property pattern (`textures["Terrain_00"] is { MipLevels: [{ } mip0] } tex`) — different identifier text, no dataflow tracing through the indexer/pattern-match, so `GDK003` would silently miss it even if the annotation were added.
    - **Scheduled, not deferred**: the structural fix — give `OVL.Files.Texture` a `TakeMip(int level)` that removes-and-returns rather than exposing `MipLevels` for read+alias, then mark the GDK `Texture` ctor param `[TakesOwnership]` for real — is step 0 below, done as part of this plan rather than left as a follow-up. Once it lands, `GDK002` goes quiet on `Texture.cs:52` (the annotation is now honest — the source object can no longer double-dispose), and the `// Do not dispose` comment in step 1 becomes redundant (`textures` disposal becomes safe by construction, though still unnecessary since nothing else in `TextureCollection` needs releasing early).
-5. **"Terrain_00 is grass" is an unverified guess.** No per-texture-name data exists in `.agents/summaries/ovl-texture-scan.csv` (only aggregate counts), and the `ter`/`TerrainType` tag — the only structure that would authoritatively map a `TerrainType` enum value to a texture name — is still undecoded per this plan's own text. The selection rationale (first `tex` entry, no `Cliff` prefix, BTBL index 0) is circumstantial. Treat step 1's texture choice as provisional until the visual-confirmation step in Verification actually runs; if it's wrong, swap the string constant only — no structural rework needed.
+5. ~~"Terrain_00 is grass" is an unverified guess.~~ **Resolved by visual diff.** No per-texture-name data exists in `.agents/summaries/ovl-texture-scan.csv` (only aggregate counts), and the `ter`/`TerrainType` tag — the only structure that would authoritatively map a `TerrainType` enum value to a texture name — is still undecoded per this plan's own text. `Terrain_00` was a circumstantial guess (first `tex` entry, no `Cliff` prefix, BTBL index 0) and turned out wrong: it's dirt. Diffed every extracted `assets/prod/terrain/Terrain_*.png` by eye — **`Terrain_06` is grass**; that's what step 1 now loads.
 
-   **Decided**: proceed with the guess and verify visually rather than block on decoding `ter` first — this plan is small enough that a wrong guess costs a one-line fix. Decoding `ter` for real (giving an authoritative `TerrainType.texture` reference instead of a guess) is tracked separately as [`.agents/plans/features/ovl/ovl-terrain-types.md`](features/ovl/ovl-terrain-types.md) — parallel verification work, not a dependency of this plan.
+   Decoding `ter` for real (giving an authoritative `TerrainType.texture` reference instead of an eyeballed one) is tracked separately as [`.agents/plans/features/ovl/ovl-terrain-types.md`](features/ovl/ovl-terrain-types.md) — parallel verification work, not a dependency of this plan.
 
-## What's left
+## Implementation
 
 Four changes, no decoder work needed, no renderer changes needed (risk #1 above confirmed that path already works):
 
@@ -59,6 +59,13 @@ public Image<Rgba32> TakeMip(int level) {
 
 (`Dispose()` — TextureDecoding.cs:41-45 — must skip `null` entries in the loop.) Then mark GDK `Texture.cs:32`'s `texture` parameter `[TakesOwnership]` ([OpenCobra/GDK/TakesOwnershipAttribute.cs](OpenCobra/GDK/TakesOwnershipAttribute.cs)) — it's now an honest annotation, since the source can no longer alias-and-dispose the same image. This closes the `GDK002` warning `DisposableOwnershipAnalyzer` already raises on `Texture.cs:52`, and it's the only thing that makes step 1's `mip0` extraction actually safe rather than "safe because nothing disposes `textures` yet."
 
+**`TakeMip` vs `TextureLoader.ToGl` — these are two different, deliberately separate ownership strategies, not interchangeable:**
+
+- **`ToGl`** ([OpenCobra/GDK/Assets/TextureLoader.cs](OpenCobra/GDK/Assets/TextureLoader.cs)) clones every mip so the GDK `Texture` never aliases the OVL source. It's the renderer/general-asset path — `TextureLoader.LoadTexture` uses it for every `FileType.Texture`/`FileType.FlexibleTexture` symbol an arbitrary caller resolves by name, where the OVL source may still be read again or is otherwise not the caller's to consume. It stays `internal` to `OpenCobra.GDK.Assets` — it isn't meant to be called from outside GDK.
+- **`TakeMip`** is for exactly this call site: `Terrain.Load()` already owns the one `TextureCollection` it just extracted, is about to dispose every entry in it regardless, and only needs a single mip (mip 0) out of one texture (`Terrain_06`) to survive that disposal. Cloning here would be a wasted copy of data that's discarded seconds later. `TakeMip` transfers the mip out in place — no clone, no second buffer — and nulls the source slot so `Texture.Dispose()` can't double-free it.
+
+Do not swap `Terrain.Load()` over to `ToGl` — it was tried and reverted; it works, but it silently leaves `GDK002` open on `Texture.cs:52` (the ctor still aliases an un-annotated parameter, `ToGl` just happens to always pass it a private clone) and duplicates a second, untested ownership contract alongside the one this step establishes. Covered by `TakeMipTests` in [OpenCobra/Tests/OVL/TexturesTests.cs](OpenCobra/Tests/OVL/TexturesTests.cs) — `TakeMip_NullsSourceSlot_AndReturnsTheMip`, `TakeMip_ThenDisposeSource_DoesNotDoubleDisposeTheTakenMip`, `TakeMip_TransferredToGdkTexture_OwnershipIsSafeToDisposeBothSides`.
+
 ### 1. `OpenRCT3/Simulation/Terrain.cs` — populate `GrassTexture` from the decoded collection
 
 Replace the stub `Terrain.Load()` ([OpenRCT3/Simulation/Terrain.cs:81](OpenRCT3/Simulation/Terrain.cs)) with a real implementation:
@@ -70,19 +77,22 @@ public static Terrain Load() {
   var terrain = new Terrain();
   var terrainOvl = Path.Combine(config.InstallPath, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
   using var ovl = Ovl.Load(terrainOvl);
-  using var textures = Textures.Extract(ovl); // safe: TakeMip (step 0) detaches the mip before this disposes
-  if (textures["Terrain_00"] is { } tex) {
+  var textures = Textures.Extract(ovl); // TextureCollection isn't IDisposable - dispose its entries below
+  // Terrain_06 is grass (confirmed against assets/prod/terrain/Terrain_06.png); Terrain_00 is dirt.
+  if (textures.Names.Contains("Terrain_06")) {
+    var tex = textures["Terrain_06"];
     var mip0 = tex.TakeMip(0);
     terrain.GrassTexture = new GDK.Materials.Texture(
-      tex.Name, tex.Width, tex.Height, mip0, tex.Recolorable);
+      tex.Name, (int)tex.Width, (int)tex.Height, mip0, tex.Recolorable);
   }
+  foreach (var texture in textures) texture.Dispose();
   return terrain;
 }
 ```
 
-Choice of `Terrain_00` as the grass candidate: it's the first `tex` entry in the OVL, its name has no `Cliff` prefix, and its BTBL index in the loader walk is `0` — the surface a freshly-built park drops you onto. Confirmed structurally grass-shaped; visual confirmation requires the renderer change below.
+Choice of `Terrain_06` as the grass texture: confirmed by eye against `assets/prod/terrain/Terrain_*.png` (see risk #5 above) — `Terrain_00` (the original guess) is dirt; `Terrain_06` is grass.
 
-Step 0's `TakeMip` is what makes `using var textures = ...` here actually safe: the mip handed to `GDK.Materials.Texture` is removed from `tex.MipLevels` before `textures`' disposal walks it, so there's no double-dispose regardless of what a future reader does with this method. `[TakesOwnership]` on the GDK `Texture` ctor (also step 0) documents the same guarantee at the receiving end.
+Step 0's `TakeMip` is what makes disposing every extracted texture afterward safe: the mip handed to `GDK.Materials.Texture` is removed from `tex.MipLevels` before the `foreach` disposal loop reaches it, so there's no double-dispose regardless of what a future reader does with this method. `[TakesOwnership]` on the GDK `Texture` ctor (also step 0) documents the same guarantee at the receiving end.
 
 ### 2. `OpenRCT3/Simulation/TerrainMeshBuilder.cs` — add UVs
 
@@ -108,9 +118,9 @@ The marker cube at [OpenRCT3/Game.cs:150](OpenRCT3/Game.cs) can stay on `Flat`; 
 
 ## Verification
 
-1. Run `make test` — should pass with no new failures. The 33-textures-decoded number for `terrain/RCT3/Terrain_RCT3.common.ovl` in `.agents/summaries/ovl-texture-scan.csv` proves the decode path is exercised in integration tests.
-2. Launch the game: the ground plane should show the RCT3 grass texture, tiled across the buildable area. A `nullbmp` or missing-install surface would render as a black quad (because `Textured` samples `u_Texture(0,0)`); a missing `Terrain_00` from the collection would render flat green via the `v_Color` fallback.
-3. Add a unit test in [OpenCobra/Tests/Integration/IngestionTests.cs](../../OpenCobra/Tests/Integration/IngestionTests.cs) that loads the terrain OVL via `Ovl.Load` and asserts `Textures.Extract(ovl)["Terrain_00"]` has a non-empty `MipLevels[0]`.
+1. Run `make test` — should pass with no new failures. The 33-textures-decoded number for `terrain/RCT3/Terrain_RCT3.common.ovl` in `.agents/summaries/ovl-texture-scan.csv` proves the decode path is exercised in integration tests. **Done**: `TakeMipTests` in [OpenCobra/Tests/OVL/TexturesTests.cs](../../OpenCobra/Tests/OVL/TexturesTests.cs) covers step 0's ownership transfer; [OpenCobra/Tests/Integration/IngestionTests.cs](../../OpenCobra/Tests/Integration/IngestionTests.cs)'s `LoadTerrainTexture_Succeeds` (below) covers the decode path end-to-end.
+2. Launch the game: the ground plane should show the RCT3 grass texture, tiled across the buildable area. A `nullbmp` or missing-install surface would render as a black quad (because `Textured` samples `u_Texture(0,0)`); a missing `Terrain_06` from the collection would render flat green via the `v_Color` fallback.
+3. **Done**: [OpenCobra/Tests/Integration/IngestionTests.cs](../../OpenCobra/Tests/Integration/IngestionTests.cs)'s `LoadTerrainTexture_Succeeds` loads the terrain OVL via `Ovl.Load` and asserts `Textures.Extract(ovl)["Terrain_06"]` has a non-empty `MipLevels[0]` (gated on `RCT3_PATH` via `SkipIfEnvironmentMissing`, same as the rest of this file's ingestion tests).
 
 ## Open follow-ups (not blocking this plan)
 

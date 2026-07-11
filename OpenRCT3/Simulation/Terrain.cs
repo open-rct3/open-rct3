@@ -5,8 +5,9 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Collections.Generic;
-using OpenCobra.GDK.Materials;
+using System.Linq;
 using OpenCobra.OVL;
+using OpenCobra.OVL.Files;
 using OpenRCT3.Platforms;
 
 namespace OpenRCT3.Simulation;
@@ -53,7 +54,7 @@ public class Terrain {
   /// <summary>The height of the terrain grid in tiles, including the OOB border.</summary>
   public int Height { get; }
 
-  public Texture? GrassTexture { get; private set; }
+  public OpenCobra.GDK.Materials.Texture? GrassTexture { get; private set; }
 
   private readonly TerrainCorner[] _corners;
 
@@ -85,7 +86,17 @@ public class Terrain {
     var terrain = new Terrain();
     // Load textures from terrain/RCT3/Terrain_RCT3.common.ovl
     var terrainOvl = Path.Combine(config.InstallPath, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
-    var ovl = Ovl.Load(terrainOvl);
+    using var ovl = Ovl.Load(terrainOvl);
+    var textures = Textures.Extract(ovl);
+    // Terrain_06 is grass (confirmed against assets/prod/terrain/Terrain_06.png); Terrain_00 is dirt.
+    if (textures.Names.Contains("Terrain_06")) {
+      var tex = textures["Terrain_06"];
+      // TakeMip transfers ownership of mip 0 to GrassTexture and nulls the source slot, so
+      // disposing `tex` below (with every other extracted texture) can't double-dispose it.
+      var mip0 = tex.TakeMip(0);
+      terrain.GrassTexture = new OpenCobra.GDK.Materials.Texture(tex.Name, (int)tex.Width, (int)tex.Height, mip0, tex.Recolorable);
+    }
+    foreach (var texture in textures) texture.Dispose();
 
     return terrain;
   }

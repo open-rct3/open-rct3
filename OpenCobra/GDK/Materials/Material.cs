@@ -119,7 +119,7 @@ void main() {
     var fragmentSource = @"#version 410 core
 uniform sampler2D u_Texture;
 in vec2 v_TexCoord;
-in vec4 v_Color;
+in vec4 v_Color; // tint multiplier over the sampled texture, not a lighting term
 
 out vec4 FragColor;
 

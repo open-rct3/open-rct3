@@ -20,9 +20,13 @@ public class Texture(
   private bool disposed;
 
   /// <summary>
-  /// The symbol name of the texture, e.g. "GUIIcon.txs".
+  /// The symbol name of the texture, e.g. "GUIIcon". Always stored without the OVL file-type
+  /// tag suffix (".tex", ".flic", ".btbl", ".ftx", ".mms", ".prx") so callers that look up
+  /// textures by their human-readable name never have to guess whether the suffix is present.
+  /// OvlFile.ToString() returns "Name.tag"; decoders pass that through, so the ctor strips it
+  /// back off here.
   /// </summary>
-  public string Name { get; private set; } = name;
+  public string Name { get; private set; } = name.StripOvlTagSuffix();
   public readonly TextureFormat Format = format;
   /// <summary>
   /// Symbol reference to a Texture Style (TXS).
@@ -38,6 +42,16 @@ public class Texture(
   /// </summary>
   public readonly Image<Rgba32>[] MipLevels = new Image<Rgba32>[mipCount == 0 ? 1 : mipCount];
 
+  /// <summary>
+  /// Removes and returns mip <paramref name="level"/>, transferring ownership to the caller.
+  /// The removed slot is nulled so <see cref="Dispose(bool)"/> skips it, preventing a double-dispose.
+  /// </summary>
+  public Image<Rgba32> TakeMip(int level) {
+    var mip = MipLevels[level];
+    MipLevels[level] = null!;
+    return mip;
+  }
+
   protected virtual void Dispose(bool disposing) {
     if (disposed || !disposing) return;
     foreach (var mipLevel in MipLevels) mipLevel?.Dispose();
@@ -50,11 +64,12 @@ public class Texture(
     GC.SuppressFinalize(this);
   }
 
-  /// <returns>A clone of this texture with a new <paramref name="name"/>.</returns>
+  /// <returns>A clone of this texture with a new <paramref name="name"/> (with any OVL tag
+  /// suffix stripped, matching the ctor's behavior).</returns>
   public Texture WithName(string name) {
     var clone = MemberwiseClone() as Texture;
     Debug.Assert(clone != null);
-    clone.Name = name;
+    clone.Name = name.StripOvlTagSuffix();
     return clone;
   }
 }

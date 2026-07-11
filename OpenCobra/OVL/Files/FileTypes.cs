@@ -118,6 +118,24 @@ public enum FileType : ushort {
 
 /// <summary>Extension methods for working with <see cref="FileType"/>.</summary>
 public static class FileTypeExtensions {
+  private static readonly char[] fileTypeDelimiters = new[] { '.', ':' };
+
+  /// <summary>Strips an OVL file-type tag suffix (e.g. <c>.tex</c> or <c>:tex</c>) from a symbol
+  /// name like <c>"Terrain_06.tex"</c> or <c>"Terrain_06:tex"</c>, returning the bare name
+  /// (<c>"Terrain_06"</c>) callers use to look-up textures. Animation frame suffixes are
+  /// preserved: <c>"Foo.ftx#0"</c> → <c>"Foo#0"</c> and <c>"ftx:Example#0"</c> →
+  /// <c>"Example#0"</c>. A name without a recognised tag (or with a non-tag suffix like
+  /// <c>.bar</c>) is returned unchanged.</summary>
+  public static string StripOvlTagSuffix(this string name) {
+    var sep = name.IndexOfAny(fileTypeDelimiters);
+    if (sep <= 0 || sep >= name.Length - 1) return name;
+    var after = name[(sep + 1)..];
+    var tagEnd = after.IndexOfAny(fileTypeDelimiters);
+    var tag = tagEnd < 0 ? after : after[..tagEnd];
+    if (tag.ToFileType() == FileType.Unknown) return name;
+    return tagEnd < 0 ? name[..sep] : name[..sep] + after[tagEnd..];
+  }
+
   /// <summary>Convert an OVL file type tag string (e.g. <c>"tex"</c>) to the corresponding <see cref="FileType"/>.</summary>
   public static FileType ToFileType(this string extension) => extension switch {
     "txt" => FileType.Text,

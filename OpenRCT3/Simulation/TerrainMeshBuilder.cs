@@ -71,10 +71,12 @@ public static class TerrainMeshBuilder {
     // Two triangles, CCW when viewed from +Z: (SW, SE, NE) and (SW, NE, NW).
     var normal = Vector3.Normalize(Vector3.Cross(se - sw, ne - sw));
     var baseIndex = (uint)vertices.Count;
-    vertices.Add(new Vertex { Position = sw, Normal = normal, Color = color });
-    vertices.Add(new Vertex { Position = se, Normal = normal, Color = color });
-    vertices.Add(new Vertex { Position = ne, Normal = normal, Color = color });
-    vertices.Add(new Vertex { Position = nw, Normal = normal, Color = color });
+    // Each tile's texture maps 1:1 to the unit square, not world-space - simplest correct testing
+    // mapping (no repeat/tiling math to get wrong). Revisit once continuous tiling is wanted.
+    vertices.Add(new Vertex { Position = sw, Normal = normal, Color = color, TexCoord = new Vector2(0, 0) });
+    vertices.Add(new Vertex { Position = se, Normal = normal, Color = color, TexCoord = new Vector2(1, 0) });
+    vertices.Add(new Vertex { Position = ne, Normal = normal, Color = color, TexCoord = new Vector2(1, 1) });
+    vertices.Add(new Vertex { Position = nw, Normal = normal, Color = color, TexCoord = new Vector2(0, 1) });
     indices.AddRange([baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3]);
   }
 
@@ -105,10 +107,11 @@ public static class TerrainMeshBuilder {
     // Wind so the face's outward normal points away from this tile, into the neighbor.
     var normal = Vector3.Normalize(Vector3.Cross(farTop - nearTop, nearBottom - nearTop));
     var baseIndex = (uint)vertices.Count;
-    vertices.Add(new Vertex { Position = nearTop, Normal = normal, Color = color });
-    vertices.Add(new Vertex { Position = farTop, Normal = normal, Color = color });
-    vertices.Add(new Vertex { Position = farBottom, Normal = normal, Color = color });
-    vertices.Add(new Vertex { Position = nearBottom, Normal = normal, Color = color });
+    // Same unit-square-per-face mapping as AddTopFace - see comment there.
+    vertices.Add(new Vertex { Position = nearTop, Normal = normal, Color = color, TexCoord = new Vector2(0, 1) });
+    vertices.Add(new Vertex { Position = farTop, Normal = normal, Color = color, TexCoord = new Vector2(1, 1) });
+    vertices.Add(new Vertex { Position = farBottom, Normal = normal, Color = color, TexCoord = new Vector2(1, 0) });
+    vertices.Add(new Vertex { Position = nearBottom, Normal = normal, Color = color, TexCoord = new Vector2(0, 0) });
     indices.AddRange([baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3]);
   }
 }

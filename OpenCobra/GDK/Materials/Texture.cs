@@ -9,6 +9,7 @@ using DryIoc;
 using OpenCobra.GDK.Game;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
+using OpenCobra.GDK;
 using Silk.NET.OpenGL;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -29,7 +30,7 @@ public record struct MipChain(IReadOnlyList<Image<Rgba32>> Mips);
 /// </summary>
 public record struct Animation(uint Fps, int FrameWidth, int FrameHeight, int FrameCount);
 
-public class Texture(string name, int width, int height, Image<Rgba32> texture, Recolorable recolorable = 0) : IResource, IDisposable {
+public class Texture(string name, int width, int height, [TakesOwnership] Image<Rgba32> texture, Recolorable recolorable = 0) : IResource, IDisposable {
   public static readonly string UniformName = "u_Texture";
   private bool disposed;
 
@@ -107,6 +108,14 @@ public class Texture(string name, int width, int height, Image<Rgba32> texture, 
     gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
     gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
     gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+
+    // Core since GL 4.6 (was EXT_texture_filter_anisotropic before); GLEnum.TextureMaxAnisotropy /
+    // GLEnum.MaxTextureMaxAnisotropy aren't in TextureParameterName/GetPName's restricted enum sets,
+    // so both calls go through the raw GLEnum overloads.
+    float maxAnisotropy;
+    gl.GetFloat(GLEnum.MaxTextureMaxAnisotropy, out maxAnisotropy);
+    gl.TexParameter(TextureTarget.Texture2D, GLEnum.TextureMaxAnisotropy, maxAnisotropy);
+
     gl.BindTexture(TextureTarget.Texture2D, 0);
   }
 

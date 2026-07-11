@@ -103,6 +103,45 @@ public class TexturesTests {
   }
 
   [TestFixture]
+  public class TakeMipTests {
+    [Test]
+    public void TakeMip_NullsSourceSlot_AndReturnsTheMip() {
+      using var src = MakeSyntheticTexture("Src", width: 2, height: 2, mipCount: 2);
+      var original = src.MipLevels[0];
+
+      var taken = src.TakeMip(0);
+
+      Assert.That(taken, Is.SameAs(original));
+      Assert.That(src.MipLevels[0], Is.Null);
+      taken.Dispose();
+    }
+
+    [Test]
+    public void TakeMip_ThenDisposeSource_DoesNotDoubleDisposeTheTakenMip() {
+      var src = MakeSyntheticTexture("Src", width: 2, height: 2, mipCount: 1);
+      var mip0 = src.TakeMip(0);
+
+      // Dispose() skips the nulled slot, so this must not throw or touch `mip0`.
+      Assert.DoesNotThrow(new Action(src.Dispose));
+      Assert.That(mip0.Width, Is.EqualTo(2));
+      mip0.Dispose();
+    }
+
+    [Test]
+    public void TakeMip_TransferredToGdkTexture_OwnershipIsSafeToDisposeBothSides() {
+      var src = MakeSyntheticTexture("Src", width: 2, height: 2, mipCount: 1);
+      var mip0 = src.TakeMip(0);
+
+      using var gdkTexture = new GdkTexture(src.Name, (int)src.Width, (int)src.Height, mip0, src.Recolorable);
+
+      // `src` no longer owns mip0 (TakeMip nulled the slot), and `gdkTexture` now owns it -
+      // disposing both must not double-dispose the shared image.
+      Assert.DoesNotThrow(new Action(src.Dispose));
+      Assert.DoesNotThrow(new Action(gdkTexture.Dispose));
+    }
+  }
+
+  [TestFixture]
   public class ToGlTests {
     [Test]
     public void ToGl_CopiesMipsIndependently() {

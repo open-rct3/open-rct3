@@ -7,6 +7,7 @@
 using NUnit.Framework;
 using OpenCobra.GDK.Assets;
 using OpenCobra.OVL;
+using OpenCobra.OVL.Files;
 using OVL.Tests;
 using System;
 using System.IO;
@@ -25,8 +26,11 @@ public class IngestionTests {
     if (!File.Exists(terrainOvl))
       Assert.Fail("Terrain OVL not found at: " + terrainOvl);
 
-    // FIXME: This is a placeholder for actual texture names in the terrain OVL
-    // Once we identify the texture names, we can verify they load correctly
-    Assert.Pass("Terrain OVL exists. Ingestion logic to be verified once texture names are identified.");
+    using var ovl = Ovl.Load(terrainOvl);
+    var textures = Textures.Extract(ovl);
+    Assert.That(textures.Names, Does.Contain("Terrain_06"));
+    var grassTexture = textures["Terrain_06"];
+    Assert.That(grassTexture.MipLevels, Is.Not.Empty);
+    Assert.That(grassTexture.MipLevels[0], Is.Not.Null);
   }
 }

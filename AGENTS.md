@@ -8,6 +8,7 @@
 - Read reference implementations FIRST. Do NOT guess at clumsy changes or trial-and-error before understanding a problem. If a reference implementation exists for the code you're touching, read the relevant source before writing a single line - not after a guess fails.
 - Links in any markdown file MUST work both locally and on GitHub. Use relative paths for links.
 - All references (file paths, documentation, online resources) MUST be hyperlinked when relevant to the context.
+- When you need to know a third-party library's API (e.g. an enum member or method overload), look it up via its docs/source on the web (WebFetch/WebSearch) FIRST. Do NOT dig through decompiled DLLs, `strings`, or reflection/MetadataLoadContext gymnastics to reverse-engineer an API that's already documented online.
 
 ### Brevity
 

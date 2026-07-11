@@ -132,9 +132,12 @@ public class Game : IGame {
     // surface painting isn't wired up yet)
     var grass = Color.FromArgb(79, 129, 14).ToGl();
     Debug.Assert(World.Terrain != null);
-    var terrainMesh = TerrainMeshBuilder.Build(World.Terrain, grass);
+    var hasGrassTexture = World.Terrain.GrassTexture != null;
+    var terrainMesh = TerrainMeshBuilder.Build(World.Terrain, hasGrassTexture ? Color.White.ToGl() : grass);
     var ground = new Model(terrainMesh) {
-      Material = new Flat()
+      Material = hasGrassTexture
+        ? new Textured { AlbedoTexture = World.Terrain.GrassTexture }
+        : new Flat()
     };
     Scene.Models.Add(ground);
     logger.Trace("Added terrain mesh");
@@ -147,36 +150,35 @@ public class Game : IGame {
       boundsMin.X + (boundsMax.X - boundsMin.X) * 0.75f,
       boundsMin.Y + (boundsMax.Y - boundsMin.Y) * 0.75f,
       1f);
+    var markerCenter = markerPosition + new Vector3(0, 0, 0.5f);
     var marker = new Model(Primitives.Cube(name: "RotationMarker", color: Color.FromArgb(200, 30, 30).ToGl())) {
       Material = new Flat(),
       Transform = new Transform { Matrix = Matrix4x4.CreateTranslation(markerPosition) }
     };
-    marker.Transform.Translate(0, 0, 0.5f);
     Scene.Models.Add(marker);
     logger.Trace("Added rotation marker cube");
 
-    // Frame the camera on the loaded park's buildable area.
-    //
-    // `distance = diagonal` alone isn't enough margin: Camera's default view direction sits at an
-    // exact 45° azimuth (equal X/Y offset), so a square/rectangular map's corners land exactly on its
-    // diagonals and render as a rotated "diamond" rather than an upright rectangle. Perspective then
-    // foreshortens the near corner (closest to the eye) more than the sine-of-half-FOV bounding-sphere
-    // formula accounts for, pushing it outside the frustum before the far corner even reaches the
-    // frustum's edge. FramingDistanceMargin was picked empirically (see CameraFramingTests) to keep
-    // every corner comfortably on-screen.
+    // "Fully zoomed out" distance framing the whole park - bounds Zoom and sizes the far clip plane
+    // (Camera.FarPlaneReferenceDistance) even though default framing below targets the marker cube.
+    // Margin compensates for Camera's fixed 45° azimuth foreshortening the near corner; picked empirically.
     const float FramingDistanceMargin = 1.25f;
     Debug.Assert(World.Park != null);
     var bounds = World.Park.BuildableBounds;
-    var parkCenter = new Vector3((bounds.Min.X + bounds.Max.X) / 2f, (bounds.Min.Y + bounds.Max.Y) / 2f, 0f);
     var parkDiagonal = Vector2.Distance(bounds.Min, bounds.Max);
-    var defaultFramingDistance = parkDiagonal * FramingDistanceMargin;
-    Scene.Camera.Frame(parkCenter, defaultFramingDistance);
-    // Don't let Zoom push past the default "whole park" framing - that's the intended "fully zoomed out" state.
-    Scene.Camera.MaxDistance = defaultFramingDistance;
-    logger.Trace("Framed camera on park");
+    var maxFramingDistance = parkDiagonal * FramingDistanceMargin;
+    Scene.Camera.MaxDistance = maxFramingDistance;
+
+    // Default framing targets the marker cube (currently the only placed object worth focusing on)
+    // rather than the whole park. Primitives.Cube spans -1..1 on each local axis (corner-to-corner
+    // diagonal 2*sqrt(3)); the same margin as the whole-park framing keeps every corner on-screen.
+    var markerDiagonal = 2f * MathF.Sqrt(3);
+    var markerFramingDistance = markerDiagonal * FramingDistanceMargin;
+    Scene.Camera.Frame(markerCenter, markerFramingDistance);
+    logger.Trace("Framed camera on marker cube");
 
     // Add the scenario editor window
     Scene.Windows.Add(new Editor());
+    Scene.Windows.Add(new DebugWindow());
   }
 
   /// <summary>
