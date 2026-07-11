@@ -51,6 +51,12 @@ public class Camera : Uniform<Matrix4x4> {
   /// <summary>The current eye-to-target distance, as last set by <see cref="Frame"/>.</summary>
   private float distance = DefaultDistance;
   /// <summary>
+  /// The farthest <see cref="Zoom"/> may push the eye from <see cref="Target"/>. Unset (<c>null</c>) by
+  /// default; callers that know a natural "fully zoomed out" distance for the current scene (e.g. the
+  /// distance that frames an entire park) should set this so <see cref="Zoom"/> can't push past it.
+  /// </summary>
+  public float? MaxDistance { get; set; }
+  /// <summary>
   /// Rotation, in degrees, applied around <see cref="Target"/>'s Z axis on top of
   /// <see cref="DefaultViewDirection"/>. See <see cref="RotateAzimuth"/>.
   /// </summary>
@@ -85,10 +91,11 @@ public class Camera : Uniform<Matrix4x4> {
   /// <summary>
   /// Moves the eye <paramref name="delta"/> units closer to (negative) or farther from (positive)
   /// <see cref="Target"/>, keeping the same azimuth and elevation. Clamped to <see cref="MinDistance"/>
-  /// so the eye can never reach or pass through <see cref="Target"/>.
+  /// (so the eye can never reach or pass through <see cref="Target"/>) and, if set, <see cref="MaxDistance"/>.
   /// </summary>
   public void Zoom(float delta) {
-    distance = MathF.Max(distance + delta, MinDistance);
+    var candidate = MathF.Max(distance + delta, MinDistance);
+    distance = MaxDistance is { } max ? MathF.Min(candidate, max) : candidate;
     UpdateEye();
   }
 

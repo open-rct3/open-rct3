@@ -9,7 +9,6 @@ using DryIoc;
 using NLog;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Game;
-using OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Input;
 using OpenCobra.GDK.Materials;
 using OpenCobra.GDK.Meshes;
@@ -109,45 +108,17 @@ public class Game : IGame {
   public Simulation.World World { get; } = new();
   public Scene Scene { get; } = new();
 
+  private readonly GameInputController inputController;
   /// <summary>
   /// Resolves the game's named, rebindable input actions (see <see cref="DefaultBindings"/>) against the
   /// window's live <see cref="IInputContext"/>.
   /// </summary>
-  public InputActionMap InputActions { get; }
+  public InputActionMap InputActions => inputController.Actions;
 
   public Game() {
     Instance = this;
 
-    // Seed the action map with the game's defaults, then layer in any user rebinds from config.
-    InputActions = new InputActionMap(IoC.Resolve<IInputContext>(), DefaultBindings.Defaults);
-    if (Config.KeyBindings is { } overrides) {
-      foreach (var (action, binding) in overrides) InputActions.Bind(action, binding.ToBinding());
-    }
-
-    // Proof of concept: Q/E rotate the camera in fixed 90° steps (Isometric-mode-style snapping), and
-    // mouse-wheel/PageUp/PageDown zoom it in/out. Other camera modes (Regular's continuous rotation,
-    // Freelook's WASD/right-drag) are follow-up work - see .agents/plans/features/input-rebinding.md.
-    const float RotationStepDegrees = 90f;
-    // Fixed per-press step for the keyboard bindings (PageUp/PageDown), which have no notion of "how hard".
-    const float ZoomStepDistance = 50f;
-    // Units of zoom per unit of raw scroll-wheel tick magnitude (one notch == 1.0, see
-    // Platforms.Windows.InputAdapter's ScrollWheel construction) - chosen to match ZoomStepDistance so a
-    // single notch feels the same as a single PageUp/PageDown press.
-    const float ScrollZoomScale = 50f;
-    InputActions.Pressed += action => {
-      if (Controller.CaptureKeyboard || Controller.CaptureMouse) return;
-      else if (action == DefaultBindings.ExitGame) Quit();
-      else if (action == DefaultBindings.RotateMapLeft) Scene.Camera.RotateAzimuth(-RotationStepDegrees);
-      else if (action == DefaultBindings.RotateMapRight) Scene.Camera.RotateAzimuth(RotationStepDegrees);
-      else if (action == DefaultBindings.ZoomIn) Scene.Camera.Zoom(-ZoomStepDistance);
-      else if (action == DefaultBindings.ZoomOut) Scene.Camera.Zoom(ZoomStepDistance);
-    };
-    InputActions.Scrolled += (action, delta) => {
-      if (Controller.CaptureKeyboard || Controller.CaptureMouse) return;
-      // Positive delta (scroll up) zooms in (negative distance change); negative delta zooms out - the
-      // sign is already correct for both ZoomIn and ZoomOut bindings, so no branch on action is needed.
-      if (action == DefaultBindings.ZoomIn || action == DefaultBindings.ZoomOut) Scene.Camera.Zoom(-delta * ScrollZoomScale);
-    };
+    inputController = new GameInputController(IoC.Resolve<IInputContext>(), Config, Scene.Camera, Quit);
 
     logger.Trace("Creating game world...");
     logger.Warn("Simulation features are unimplemented!");
@@ -198,7 +169,10 @@ public class Game : IGame {
     var bounds = World.Park.BuildableBounds;
     var parkCenter = new Vector3((bounds.Min.X + bounds.Max.X) / 2f, (bounds.Min.Y + bounds.Max.Y) / 2f, 0f);
     var parkDiagonal = Vector2.Distance(bounds.Min, bounds.Max);
-    Scene.Camera.Frame(parkCenter, parkDiagonal * FramingDistanceMargin);
+    var defaultFramingDistance = parkDiagonal * FramingDistanceMargin;
+    Scene.Camera.Frame(parkCenter, defaultFramingDistance);
+    // Don't let Zoom push past the default "whole park" framing - that's the intended "fully zoomed out" state.
+    Scene.Camera.MaxDistance = defaultFramingDistance;
     logger.Trace("Framed camera on park");
 
     // Add the scenario editor window

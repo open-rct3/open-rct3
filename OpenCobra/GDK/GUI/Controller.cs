@@ -27,6 +27,14 @@ public class Controller : ThreadAffine, IDisposable {
 
   public static bool CaptureMouse => ImGui.GetIO().WantCaptureMouse;
   public static bool CaptureKeyboard => ImGui.GetIO().WantCaptureKeyboard;
+  /// <summary>
+  /// Whether a text-entry widget (e.g. an <c>InputText</c>) currently wants literal keyboard characters.
+  /// Unlike <see cref="CaptureKeyboard"/> - which stays true for any focused ImGui window, including one
+  /// with no text field at all, since ImGui may also want keys for nav/shortcuts - this is only true while
+  /// something is actually editable, which is the narrower condition game keyboard shortcuts should be
+  /// gated on.
+  /// </summary>
+  public static bool WantTextInput => ImGui.GetIO().WantTextInput;
 
   private Vector2 FramebufferSize => (Vector2)window.FramebufferSize.As<float>();
 

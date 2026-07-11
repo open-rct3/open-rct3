@@ -120,6 +120,56 @@ already exist as `KeyboardBinding`s per the Goals section; what's new here is a 
   bound-but-unconsumed entries — proving the map/binding/config layers work without scoping this plan into
   a full camera-controls rewrite.
 
+## Known issue: `WantCaptureKeyboard` over-blocks game shortcuts
+
+Observed once the PoC was in-hand: Q/E and scroll-wheel zoom are swallowed almost continuously while the
+Scenario Editor ImGui window is open, and stop being swallowed only after clicking off it entirely (onto
+the bare game viewport) to defocus it — not just after moving the mouse away from it.
+
+- **Root cause, per ImGui's own FAQ and multiple engine-integration threads**: `io.WantCaptureKeyboard` is
+  deliberately broad. It's true whenever *any* ImGui window has input focus — not only while a text field
+  is being edited — because ImGui may want arrow/Tab keys for keyboard navigation (this project already
+  sets `ImGuiConfigFlags.NavEnableKeyboard`, `Controller.cs:42`) or other non-text widget interaction. A
+  floating window like the Scenario Editor keeps input focus after any click into it, so `WantCaptureKeyboard`
+  stays true well beyond the moment you were actually typing into anything — which is exactly the "swallowed
+  until I click off the window" symptom. `io.WantCaptureMouse` is comparatively well-behaved (it's
+  hover/drag-driven, and the FAQ specifically calls it "more correct than any manual hover check"), so the
+  mouse/scroll side of this is expected to need less rework than keyboard — but see the DockSpace caveat below.
+- **Standard fix used by other ImGui-integrated engines**: gate default keyboard *game shortcuts*
+  (movement, camera, hotkeys — anything that isn't literal text entry) on `io.WantTextInput` instead of
+  `io.WantCaptureKeyboard`. `WantTextInput` is true only while a widget that actually consumes typed
+  characters (e.g. an `InputText`) has focus, which is the actual condition this project's default bindings
+  care about — none of them are text entry, so there's never a real conflict to guard against beyond that.
+  Mouse-driven actions (clicks, scroll/zoom) keep using `io.WantCaptureMouse` as-is, per the FAQ's guidance.
+- **`Controller.cs` still forwards raw input to ImGui unconditionally regardless of capture state**
+  (`Mouse_Move`/`Mouse_Down`/etc. in `Controller.cs:72-84` aren't gated on `CaptureMouse`/`CaptureKeyboard`)
+  — this is correct and must stay that way: ImGui needs the raw stream even when *not* capturing, so it can
+  detect e.g. "clicked in the void" and defocus its own windows. Only the game-input consumer side
+  (`GameInputController`) should change its gating, not `Controller.cs`'s forwarding.
+- **Design change**: add `Controller.WantTextInput => ImGui.GetIO().WantTextInput` alongside the existing
+  `CaptureMouse`/`CaptureKeyboard` statics (`Controller.cs:28-29`). Update `GameInputController`'s guard
+  (`GameInputController.cs`) to check `WantTextInput` for the `Pressed` (keyboard-shortcut) handler instead
+  of `CaptureKeyboard`, while the `Scrolled` (mouse) handler keeps checking `CaptureMouse` unchanged.
+  `IsActive`-based polling consumers (none yet, but the pattern any future Regular/Freelook camera-mode
+  code should follow per the PoC's out-of-scope notes) should follow the same split.
+- **Dockspace caveat, not currently applicable**: several ImGui docking issues
+  ([#4042](https://github.com/ocornut/imgui/issues/4042), [#3733](https://github.com/ocornut/imgui/issues/3733))
+  document `io.WantCaptureMouse` going permanently true at the viewport edges, or over empty space, when a
+  fullscreen `DockSpaceOverViewport()` host window is used with `ImGuiDockNodeFlags_PassthruCentralNode`.
+  This project doesn't use a fullscreen dockspace host today (`Editor.cs` is a single floating
+  `ImGui.Begin("Scenario Editor", ...)` window, not a dockspace) — noted here so it's not rediscovered as a
+  surprise if a fullscreen dockspace/toolbar layout is added later.
+- **Implemented**: `Controller.WantTextInput` added (`Controller.cs`); `GameInputController`'s `Pressed`
+  handler now gates on `WantTextInput` instead of `CaptureKeyboard`/`CaptureMouse`, and the `Scrolled`
+  handler gates on `CaptureMouse` only (dropped the `CaptureKeyboard` check it never needed).
+
+Sources:
+- [Dear ImGui FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md) — official guidance on
+  `WantCaptureMouse`/`WantCaptureKeyboard`/`WantTextInput` semantics and always-forward-raw-input rationale.
+- [ocornut/imgui#3916 — WantCaptureMouse and WantCaptureKeyboard usage with events](https://github.com/ocornut/imgui/issues/3916)
+- [ocornut/imgui#4042 — Viewport-covering DockSpace capturing mouse input on viewport edge](https://github.com/ocornut/imgui/issues/4042)
+- [ocornut/imgui#3733 — Mouse capture issue while using DockSpaceOverViewport()](https://github.com/ocornut/imgui/issues/3733)
+
 ## Explicitly out of scope
 
 - Gamepad action bindings (structure for it, don't implement it).
@@ -170,3 +220,7 @@ startup bugfix found along the way.
   `InputMocks.cs` (no mocking framework in this project). `OpenCobra/Tests/GDK/TransformTests.cs` covers
   the `Translate`/`Rotate`/`RotateX`/`RotateY`/`RotateZ` helpers added to `Transform.cs` to support the
   PoC's camera math.
+- **`WantCaptureKeyboard` over-blocking fixed**: see "Known issue" section above — `GameInputController`'s
+  `Pressed` handler now gates on the new `Controller.WantTextInput` instead of `CaptureKeyboard`, so Q/E and
+  other keyboard shortcuts no longer get swallowed just because an unrelated ImGui window (e.g. the
+  Scenario Editor) holds focus.
