@@ -202,8 +202,8 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// <param name="chunks">The loader's extra-data chunks, in on-disk order, or null if none exist</param>
   /// <returns>True if any extra data chunks were found for this loader.</returns>
   public bool TryReadExtraData(uint dataPtr, [MaybeNullWhen(false)] out IReadOnlyList<byte[]> chunks) {
-    foreach (var extraData in allExtraData.Where(extraData => extraData.ContainsKey(dataPtr))) {
-      extraData.TryGetValue(dataPtr, out var found);
+    foreach (var extraData in allExtraData) {
+      if (!extraData.TryGetValue(dataPtr, out var found)) continue;
       chunks = found;
       return true;
     }
