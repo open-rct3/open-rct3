@@ -122,7 +122,7 @@ test plan for a live example. Cover: synthetic-struct decode of an `SceneryItemV
 type (StaticShape/BoneShape/Billboard), and — against real data — that every `svd`-tagged symbol (unique OVL
 only) decodes with at least one LOD.
 
-Also worth checking against [`ovl-resource-relocation.md`](../../../bugs/ovl-resource-relocation.md) before
+Also worth checking against [`ovl-resource-relocation.md`](../../summaries/completed-work/ovl-resource-relocation.md) before
 trusting decoded output: that bug's fix targeted `svd`/`ftx` symbol resolution specifically, so this decoder
 is a natural place to add the byte-offset `SvdFlags` coverage test that bug's writeup flags as a follow-up.
 

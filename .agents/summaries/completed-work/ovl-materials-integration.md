@@ -47,7 +47,7 @@ independent `Image<Rgba32>` instances; double-`Dispose()` is idempotent), `ToGl`
 ## Known non-regression
 
 The `mms`/`prt`/`psi`/`fct` symbol-resolution issue tracked in
-[`ovl-resource-relocation.md`](../../bugs/ovl-resource-relocation.md) predates this work and is unaffected —
+[`ovl-resource-relocation.md`](ovl-resource-relocation.md) predates this work and is unaffected —
 `LoadTexture` returns whatever pixels the decoder resolves, correct or not, for those tag families. Not a
 regression introduced here; still open separately.
 
