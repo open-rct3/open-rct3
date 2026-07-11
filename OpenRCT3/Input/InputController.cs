@@ -21,14 +21,19 @@ namespace OpenRCT3.Input;
 public sealed class InputController {
   /// <summary>Degrees <see cref="DefaultBindings.RotateMapLeft"/>/<see cref="DefaultBindings.RotateMapRight"/> snap-rotate per press.</summary>
   private const float RotationStepDegrees = 90f;
-  /// <summary>Fixed per-press step for the keyboard zoom bindings (PageUp/PageDown), which have no notion of "how hard".</summary>
-  private const float ZoomStepDistance = 50f;
+  /// <summary>Map tiles of zoom per press of the keyboard zoom bindings (PageUp/PageDown), which have no notion of "how hard".</summary>
+  private const float ZoomStepTiles = 3f;
+  /// <summary>Fixed per-press zoom step, in world units - <see cref="ZoomStepTiles"/> scaled by <see cref="Park.TileSize"/>.</summary>
+  private const float ZoomStepDistance = ZoomStepTiles * Park.TileSize;
   /// <summary>
-  /// Units of zoom per unit of raw scroll-wheel tick magnitude (one notch == 1.0, see
-  /// <c>Platforms.Windows.InputAdapter</c>'s <see cref="ScrollWheel"/> construction) - chosen to match
-  /// <see cref="ZoomStepDistance"/> so a single notch feels the same as a single PageUp/PageDown press.
+  /// Map tiles of zoom per unit of raw scroll-wheel tick magnitude, before <see cref="ZoomSensitivity"/>.
+  /// Chosen to match <see cref="ZoomStepTiles"/> so one "unit" of scroll feels like one PageUp/PageDown
+  /// press - what a "unit" of scroll actually corresponds to physically varies by platform/device (see
+  /// <see cref="ZoomSensitivity"/>), which is a separate concern from this base scale.
   /// </summary>
-  private const float ScrollZoomScale = 50f;
+  private const float ScrollZoomScaleTiles = 3f;
+  /// <summary>Base scroll-wheel zoom scale, in world units - <see cref="ScrollZoomScaleTiles"/> scaled by <see cref="Park.TileSize"/>.</summary>
+  private const float ScrollZoomScale = ScrollZoomScaleTiles * Park.TileSize;
   /// <summary>Ground-plane pan speed, in map tiles per second, for the held WASD/arrow-key movement actions.</summary>
   private const float PanSpeedTiles = 6f;
   /// <summary>Ground-plane pan speed, in world units per second - <see cref="PanSpeedTiles"/> scaled by <see cref="Park.TileSize"/>.</summary>
@@ -50,6 +55,30 @@ public sealed class InputController {
   /// <summary>Resolves the game's named, rebindable input actions against the window's live <see cref="IInputContext"/>.</summary>
   public InputActionMap Actions { get; }
 
+  /// <summary>
+  /// Multiplies both <see cref="ZoomStepDistance"/> (keyboard) and <see cref="ScrollZoomScale"/> (scroll
+  /// wheel) zoom amounts. Defaulted per-platform here, but a plain settable property so callers can
+  /// override it (e.g. a future sensitivity setting).
+  /// </summary>
+  /// <remarks>
+  /// What one scroll-wheel "unit" of <see cref="OpenCobra.GDK.Input.InputActionMap.Scrolled"/> magnitude
+  /// physically corresponds to isn't the same across platforms: Windows' <c>InputAdapter</c> normalizes
+  /// against <c>WHEEL_DELTA</c> (120, one classic notch == 1.0 - see the FIXME left in that file about
+  /// Raw Input's <c>RI_MOUSE_WHEEL</c> for even finer-grained deltas), while macOS's <c>InputAdapter</c>
+  /// passes <c>NSEvent.deltaY</c> straight through unnormalized, which reports much smaller values per
+  /// scroll/trackpad event than a Windows notch does. Without a per-platform multiplier, the same base
+  /// <see cref="ScrollZoomScale"/> would feel wildly different (or, on Windows, simply too strong) across
+  /// platforms - these are first-pass estimates, not measured against real macOS hardware.
+  /// </remarks>
+  public float ZoomSensitivity { get; set; } =
+#if WINDOWS
+    0.4f;
+#elif OSX
+    0.1f;
+#else
+    1f;
+#endif
+
   public InputController(IInputContext context, AppConfig config, Camera camera, Func<bool> quit) {
     this.camera = camera;
     mouse = context.Mice[0];
@@ -69,14 +98,14 @@ public sealed class InputController {
       else if (action == DefaultBindings.ExitGame) quit();
       else if (action == DefaultBindings.RotateMapLeft) camera.RotateAzimuth(-RotationStepDegrees);
       else if (action == DefaultBindings.RotateMapRight) camera.RotateAzimuth(RotationStepDegrees);
-      else if (action == DefaultBindings.ZoomIn) camera.Zoom(-ZoomStepDistance);
-      else if (action == DefaultBindings.ZoomOut) camera.Zoom(ZoomStepDistance);
+      else if (action == DefaultBindings.ZoomIn) camera.Zoom(-ZoomStepDistance * ZoomSensitivity);
+      else if (action == DefaultBindings.ZoomOut) camera.Zoom(ZoomStepDistance * ZoomSensitivity);
     };
     Actions.Scrolled += (action, delta) => {
       if (Controller.CaptureMouse) return;
       // Positive delta (scroll up) zooms in (negative distance change); negative delta zooms out - the
       // sign is already correct for both ZoomIn and ZoomOut bindings, so no branch on action is needed.
-      if (action == DefaultBindings.ZoomIn || action == DefaultBindings.ZoomOut) camera.Zoom(-delta * ScrollZoomScale);
+      if (action == DefaultBindings.ZoomIn || action == DefaultBindings.ZoomOut) camera.Zoom(-delta * ScrollZoomScale * ZoomSensitivity);
     };
   }
 

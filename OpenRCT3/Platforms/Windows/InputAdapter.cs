@@ -150,6 +150,22 @@ public class InputAdapter : InputContext {
         mouse = mouse.WithPosition(new(e.Location.X, e.Location.Y));
         MouseMove?.Invoke(this, mouse.Position);
       };
+      // FIXME: WinForms' MouseWheel/e.Delta is the classic WM_MOUSEWHEEL message, normalized against
+      // WHEEL_DELTA (120) here - fine for standard notched wheels, but high-resolution wheels/trackpads
+      // send finer sub-120 deltas per event (accumulating to 120 over a full notch) that this collapses
+      // into the same coarse granularity. The Windows Raw Input API (RegisterRawInputDevices + WM_INPUT)
+      // exposes these directly via RAWMOUSE.usButtonFlags' RI_MOUSE_WHEEL/RI_MOUSE_HWHEEL flags and
+      // usButtonData, without WinForms' message-loop normalization - worth integrating for smoother zoom
+      // on precision wheels. See Input.InputController.ZoomSensitivity for where the current per-platform
+      // scroll-to-zoom scaling lives.
+      // FIXME: WinForms' MouseWheel/e.Delta is the classic WM_MOUSEWHEEL message, normalized against
+      // WHEEL_DELTA (120) here - fine for standard notched wheels, but high-resolution wheels/trackpads
+      // send finer sub-120 deltas per event (accumulating to 120 over a full notch) that this collapses
+      // into the same coarse granularity. The Windows Raw Input API (RegisterRawInputDevices + WM_INPUT)
+      // exposes these directly via RAWMOUSE.usButtonFlags' RI_MOUSE_WHEEL/RI_MOUSE_HWHEEL flags and
+      // usButtonData, without WinForms' message-loop normalization - worth integrating for smoother zoom
+      // on precision wheels. See Input.InputController.ZoomSensitivity for where the current per-platform
+      // scroll-to-zoom scaling lives.
       control.MouseWheel += (_, e) => Scroll?.Invoke(this, new ScrollWheel(0, (float)e.Delta / SystemInformation.MouseWheelScrollDelta));
     }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
