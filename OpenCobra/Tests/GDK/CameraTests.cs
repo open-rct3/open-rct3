@@ -160,6 +160,64 @@ public class CameraTests {
   }
 
   [Test]
+  public void Update_FarPlaneStaysPinnedToMaxDistance_AndDoesNotShrinkWhenZoomingIn() {
+    // Regression test: Update() used to size the far plane off the *live* eye-to-target distance, which
+    // Zoom() shrinks continuously as the camera moves closer - even though the scene's actual extent
+    // (what MaxDistance represents, e.g. "whole park") hasn't changed. That clipped terrain that should
+    // still be visible any time the camera zoomed in, worse the closer it got. The far plane must stay
+    // anchored to MaxDistance instead, regardless of the live zoomed-in distance.
+    var camera = new Camera { MaxDistance = 1000f };
+    camera.Frame(Vector3.Zero, distance: 1000f);
+
+    camera.Zoom(-950f); // zoomed in close: live eye-to-target distance is now only 50
+    camera.Update(aspectRatio: 1f);
+    Assert.That(camera.Value, Is.Not.Null);
+
+    // The far plane should still land at 2x MaxDistance (1000), not 2x the shrunk live distance (50).
+    var direction = Vector3.Normalize(camera.Target - camera.Eye);
+    var expectedFarPoint = camera.Eye + (direction * 1000f * 2f);
+
+    Assert.That(NdcZ(camera.Value!.Value, expectedFarPoint), Is.EqualTo(1f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Update_FarPlaneStaysPinnedToMaxDistance_WhenZoomedInAndTiltedTowardTheGround() {
+    // Same regression as above, but combined with a low Elevation (the other half of the reported bug:
+    // "zoom in further and also down to ground-level") - the far plane must still be sized off
+    // MaxDistance, not the shrunk live distance, regardless of viewing angle.
+    var camera = new Camera { MaxDistance = 1000f };
+    camera.Frame(Vector3.Zero, distance: 1000f);
+
+    camera.Zoom(-950f);
+    camera.Tilt(-1000f); // clamps to the minimum (near-horizon) elevation
+    camera.Update(aspectRatio: 1f);
+    Assert.That(camera.Value, Is.Not.Null);
+
+    var direction = Vector3.Normalize(camera.Target - camera.Eye);
+    var expectedFarPoint = camera.Eye + (direction * 1000f * 2f);
+
+    Assert.That(NdcZ(camera.Value!.Value, expectedFarPoint), Is.EqualTo(1f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Update_FarPlaneFallsBackToLiveDistance_WhenMaxDistanceIsUnset() {
+    // MaxDistance defaults to null (e.g. a camera Game.cs never wires up a park-framing distance for) -
+    // Update() should still size the far plane off the live distance in that case, matching the original
+    // pre-MaxDistance behavior, rather than defaulting to zero or throwing.
+    var camera = new Camera();
+    camera.Frame(Vector3.Zero, distance: 500f);
+
+    camera.Zoom(-400f); // live distance now 100, MaxDistance still unset
+    camera.Update(aspectRatio: 1f);
+    Assert.That(camera.Value, Is.Not.Null);
+
+    var direction = Vector3.Normalize(camera.Target - camera.Eye);
+    var expectedFarPoint = camera.Eye + (direction * 100f * 2f);
+
+    Assert.That(NdcZ(camera.Value!.Value, expectedFarPoint), Is.EqualTo(1f).Within(Epsilon));
+  }
+
+  [Test]
   public void RotateAzimuth_AccumulatesAcrossCalls() {
     var camera = new Camera();
 

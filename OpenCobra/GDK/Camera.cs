@@ -45,7 +45,7 @@ public class Camera : Uniform<Matrix4x4> {
   /// <summary>Near clip distance, in world-space meters. 1cm is close enough for any placeable object.</summary>
   private const float NearPlaneDistance = 0.01f;
   /// <summary>
-  /// Far clip distance, expressed as a multiple of the current eye-to-target distance rather than a
+  /// Far clip distance, expressed as a multiple of <see cref="FarPlaneReferenceDistance"/> rather than a
   /// fixed constant. <see cref="Frame"/> callers (see <c>Game.cs</c>) already pick a distance that keeps
   /// an entire park's mesh on-screen, scaled to that park's actual size — so deriving the far plane from
   /// that same distance automatically scales with it too, instead of clipping larger maps that a fixed
@@ -191,12 +191,30 @@ public class Camera : Uniform<Matrix4x4> {
   }
 
   /// <summary>
+  /// The distance <see cref="Update"/> sizes the far clip plane from: <see cref="MaxDistance"/> if set,
+  /// otherwise the live <see cref="distance"/>.
+  /// </summary>
+  /// <remarks>
+  /// Deliberately not always the live eye-to-target distance. <see cref="Zoom"/> mutates
+  /// <see cref="distance"/> continuously as the camera moves closer/farther, but the scene's actual
+  /// extent (how far the terrain/objects reach) doesn't shrink just because the camera zoomed in - sizing
+  /// the far plane off the live distance pulled it in along with every zoom-in, clipping terrain that
+  /// should still be visible (worse at low <see cref="Elevation"/>, where the horizon is much farther
+  /// than <see cref="Target"/>). <see cref="MaxDistance"/> is already the stable "whole scene" reference
+  /// - <c>Game.cs</c> sets it once, to the same distance <see cref="Frame"/> used to fit the whole park -
+  /// so anchoring to it keeps the far plane fixed regardless of zoom/tilt. Falling back to the live
+  /// <see cref="distance"/> when <see cref="MaxDistance"/> is unset preserves the original scale-with-Frame
+  /// behavior for callers that never zoom (e.g. a fixed camera with no <see cref="MaxDistance"/> set).
+  /// </remarks>
+  private float FarPlaneReferenceDistance => MaxDistance ?? distance;
+
+  /// <summary>
   /// Updates the camera view and projection matrices.
   /// </summary>
   /// <param name="aspectRatio">The aspect ratio of the viewport.</param>
   public void Update(float aspectRatio) {
     var view = Matrix4x4.CreateLookAt(Eye, Target, Vector3.UnitZ);
-    var farPlaneDistance = Vector3.Distance(Eye, Target) * FarPlaneDistanceMargin;
+    var farPlaneDistance = FarPlaneReferenceDistance * FarPlaneDistanceMargin;
     var projection = CreatePerspectiveFieldOfViewGL(MathF.PI / 3f, aspectRatio, NearPlaneDistance, farPlaneDistance);
 
     Value = view * projection;
