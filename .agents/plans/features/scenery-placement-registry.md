@@ -11,9 +11,15 @@
 ## Context
 
 Scenery placement (where an object sits, at what rotation, static vs. animated) is a data-model concern
-separable from whether the underlying mesh/texture for that object has been resolved yet. This lets placement
-and object-registry design proceed without depending on the still-open texture decoding work
-([ovl-texture-decoding.md](../../bugs/ovl-texture-decoding.md)).
+separable from whether the underlying mesh/texture for that object has been resolved yet. This let placement
+and object-registry design proceed without depending on the texture decoding work, which was open when this
+plan was written and has since been fixed
+([`completed-work/ovl-texture-decoding.md`](../../summaries/completed-work/ovl-texture-decoding.md),
+[`completed-work/ovl-materials-integration.md`](../../summaries/completed-work/ovl-materials-integration.md)).
+The underlying reason this plan's design doesn't depend on that pipeline still holds, though: `svd`/`shs`
+mesh decoding (which is what actually resolves a scenery item's geometry) remains unimplemented — see
+[`ovl-scenery-item-visuals.md`](ovl/ovl-scenery-item-visuals.md)/[`ovl-static-shapes.md`](ovl/ovl-static-shapes.md)
+— so the object registry designed here is still ahead of, not blocked by, mesh resolution.
 
 **Scenery is not scalable.** RCT3's scenery catalog has a Small/Medium/Large enum, but that's a catalog
 filter/grouping property, not a render-time scale factor — placed scenery is static-mesh geometry (aside from

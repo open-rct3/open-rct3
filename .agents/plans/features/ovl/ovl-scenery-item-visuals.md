@@ -1,5 +1,10 @@
 # Plan: Decode SceneryItemVisual (SVD) Entries
 
+**See also**: [`features/scenery-placement-registry.md`](../scenery-placement-registry.md) — the placement
+data model this decoder's output will eventually feed (registry entries key on the raw `svd` symbol name).
+That plan confirmed `sizeflag`/placement-shape data lives on the *`sid`* struct, not `svd` — `svd` is purely
+visual/render data (LOD, sway, brightness, mesh refs), matching this plan's scope below.
+
 ## Problem
 
 SVD entries define the visual representation of scenery items with multiple LOD (Level of Detail) models. Each SVD
@@ -108,42 +113,18 @@ public static class SceneryItemVisuals {
 - New test file: `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItemVisuals.cs`
 - Run TestRunner before/after implementation
 
-### Testing Strategy (TestRunner)
+### Testing Strategy
 
-Create new file `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItemVisuals.cs`:
+The `TestRunner`/`OvlTest[]` pattern this section originally described no longer exists in the codebase.
+Current convention: NUnit tests in `OpenCobra/Tests/OVL/SceneryItemVisualsTests.cs`, plus a real-archive check
+in `OpenCobra/Tests/Integration/ExtractResources.cs` gated by `RCT3_PATH` — see `ovl-materials-integration.md`'s
+test plan for a live example. Cover: synthetic-struct decode of an `SceneryItemVisual` with one LOD per mesh
+type (StaticShape/BoneShape/Billboard), and — against real data — that every `svd`-tagged symbol (unique OVL
+only) decodes with at least one LOD.
 
-```csharp
-using System;
-using System.Linq;
-using OVL;
-
-namespace OvlTestBench.Tests;
-
-public static class ReadSceneryItemVisuals {
-  public static readonly OvlTest[] All = [
-    new("SceneryItemVisualEntriesDecoded", pair => {
-      foreach (var file in pair.Files) {
-        if (file.Type != OvlType.Unique) continue;  // SVD is unique-only
-        try {
-          using var stream = System.IO.File.OpenRead(file.Path);
-          var ovl = Ovl.Read(stream, file.Path);
-          var visuals = SceneryItemVisuals.Extract(ovl);
-          if (ovl.LoaderEntries.Any(e => e.Tag == "svd") && visuals.Count == 0) {
-            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected scenery visuals but got none");
-          }
-          foreach (var visual in visuals) {
-            Assert.That(visual.Lods.Count > 0, $"{System.IO.Path.GetFileName(file.Path)}: visual '{visual.Name}' has no LODs");
-          }
-        } catch (Exception ex) {
-          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
-        }
-      }
-    }),
-  ];
-}
-```
-
-Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
+Also worth checking against [`ovl-resource-relocation.md`](../../../bugs/ovl-resource-relocation.md) before
+trusting decoded output: that bug's fix targeted `svd`/`ftx` symbol resolution specifically, so this decoder
+is a natural place to add the byte-offset `SvdFlags` coverage test that bug's writeup flags as a follow-up.
 
 ### Success Criteria
 
@@ -167,11 +148,8 @@ Production OVL archives containing scenery item visual entries (tag: `"svd"`) ha
 
 ## Post-Implementation Steps
 
-When this decoder is implemented:
-
-1. **Create results file**: Add `.opencode/results/ovl-scenery-item-visuals.md` with implementation summary
-2. **Update README**: Change Status to `Done` in the Plans table
-3. **Update this plan**: Change status in "Production OVLs with Entries" section
+When this decoder is implemented, add a results summary under `.agents/summaries/` (see
+`completed-work/flat-empty-park.md` for the current convention) and update this plan's status/README row.
 
 ### Future Work
 

@@ -106,42 +106,14 @@ public static class StaticShapes {
 - New test file: `OpenCobra/Tests/TestRunner/Tests/ReadStaticShapes.cs`
 - Run TestRunner before/after implementation
 
-### Testing Strategy (TestRunner)
+### Testing Strategy
 
-Create new file `OpenCobra/Tests/TestRunner/Tests/ReadStaticShapes.cs`:
-
-```csharp
-using System;
-using System.Linq;
-using OVL;
-
-namespace OvlTestBench.Tests;
-
-public static class ReadStaticShapes {
-  public static readonly OvlTest[] All = [
-    new("StaticShapeEntriesDecoded", pair => {
-      foreach (var file in pair.Files) {
-        if (file.Type != OvlType.Unique) continue;  // SHS is unique-only
-        try {
-          using var stream = System.IO.File.OpenRead(file.Path);
-          var ovl = Ovl.Read(stream, file.Path);
-          var shapes = StaticShapes.Extract(ovl);
-          if (ovl.LoaderEntries.Any(e => e.Tag == "shs") && shapes.Count == 0) {
-            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected shapes but got none");
-          }
-          foreach (var shape in shapes) {
-            Assert.That(shape.Meshes.Count > 0, $"{System.IO.Path.GetFileName(file.Path)}: shape '{shape.Name}' has no meshes");
-          }
-        } catch (Exception ex) {
-          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
-        }
-      }
-    }),
-  ];
-}
-```
-
-Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
+The `TestRunner`/`OvlTest[]` pattern this section originally described no longer exists in the codebase.
+Current convention: NUnit tests in `OpenCobra/Tests/OVL/StaticShapesTests.cs`, plus a real-archive check in
+`OpenCobra/Tests/Integration/ExtractResources.cs` gated by `RCT3_PATH` — see `ovl-materials-integration.md`'s
+test plan for a live example of this pattern. Cover: synthetic-struct decode of a `StaticShape` with one mesh
+(vertex/index counts, `ftx_ref`/`txs_ref` symbol resolution), and — against real data — that every
+`shs`-tagged symbol decodes with at least one mesh and non-empty vertex/index arrays.
 
 ### Success Criteria
 
@@ -164,8 +136,5 @@ Production OVL archives containing static shape entries (tag: `"shs"`) have not 
 
 ## Post-Implementation Steps
 
-When this decoder is implemented:
-
-1. **Create results file**: Add `.opencode/results/ovl-static-shapes.md` with implementation summary
-2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
-3. **Update this plan**: Change status in "Production OVLs with Entries" section
+When this decoder is implemented, add a results summary under `.agents/summaries/` (see
+`completed-work/flat-empty-park.md` for the current convention) and update this plan's status/README row.

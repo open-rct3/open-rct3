@@ -1,5 +1,12 @@
 # Plan: Decode TerrainType (TER) Entries
 
+**See also**: [`grass-texture-from-terrain-ovl.md`](../../../research/grass-texture-from-terrain-ovl.md) —
+research on `Terrain_RCT3.*.ovl`'s 32 `TerrainType` entries (`Terrain_00`..`Terrain_25` +
+`Cliff_00`..`Cliff_05`) and the `type` field (Ground Unblended/Cliff/Ground Blended), already consumed by
+[`features/terrain-heightmap.md`](../terrain-heightmap.md)'s `SurfaceIndex`/`CliffIndex` corner storage. That
+research covers *what the data means*; this plan is still the one that owns actually parsing `ter` bytes into
+a `TerrainType` record — not yet implemented (no `TerrainTypes.cs` exists).
+
 ## Problem
 
 TER entries define terrain types with color parameters, texture references, and display metadata. Each terrain type has
@@ -99,42 +106,16 @@ public static class TerrainTypes {
 - New test file: `OpenCobra/Tests/TestRunner/Tests/ReadTerrainTypes.cs`
 - Run TestRunner before/after implementation
 
-### Testing Strategy (TestRunner)
+### Testing Strategy
 
-Create new file `OpenCobra/Tests/TestRunner/Tests/ReadTerrainTypes.cs`:
-
-```csharp
-using System;
-using System.Linq;
-using OVL;
-
-namespace OvlTestBench.Tests;
-
-public static class ReadTerrainTypes {
-  public static readonly OvlTest[] All = [
-    new("TerrainTypeEntriesDecoded", pair => {
-      foreach (var file in pair.Files) {
-        if (file.Type != OvlType.Unique) continue;  // TER is unique-only
-        try {
-          using var stream = System.IO.File.OpenRead(file.Path);
-          var ovl = Ovl.Read(stream, file.Path);
-          var terrains = TerrainTypes.Extract(ovl);
-          if (ovl.LoaderEntries.Any(e => e.Tag == "ter") && terrains.Count == 0) {
-            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected terrain types but got none");
-          }
-          foreach (var terrain in terrains) {
-            Assert.That(!string.IsNullOrEmpty(terrain.Name), $"{System.IO.Path.GetFileName(file.Path)}: terrain has empty name");
-          }
-        } catch (Exception ex) {
-          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
-        }
-      }
-    }),
-  ];
-}
-```
-
-Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
+The `TestRunner`/`OvlTest[]` pattern this section originally described no longer exists in the codebase.
+Current convention (see `ovl-materials-integration.md`'s test plan for a live example): NUnit tests in
+`OpenCobra/Tests/OVL/TerrainTypesTests.cs`, plus an integration-suite check in
+`OpenCobra/Tests/Integration/ExtractResources.cs` gated by `RCT3_PATH` (real archives, not synthetic
+fixtures) — mirroring how `TexturesTests`/`ExtractResources` are structured today. Cover: synthetic-struct
+decode of a single `TerrainType`, symbol reference resolution (TXT/GSI/TEX), and — against real data — that
+every `ter`-tagged symbol in `Terrain_RCT3.*.ovl` decodes to a non-empty name and a `type` value matching one
+of Ground Unblended/Cliff/Ground Blended per `grass-texture-from-terrain-ovl.md`.
 
 ### Success Criteria
 
@@ -157,11 +138,8 @@ Production OVL archives containing terrain type entries (tag: `"ter"`) have not 
 
 ## Post-Implementation Steps
 
-When this decoder is implemented:
-
-1. **Create results file**: Add `.opencode/results/ovl-terrain-types.md` with implementation summary
-2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
-3. **Update this plan**: Change status in "Production OVLs with Entries" section
+When this decoder is implemented, add a results summary under `.agents/summaries/` (see
+`completed-work/flat-empty-park.md` for the current convention) and update this plan's status/README row.
 
 ### Future Work
 

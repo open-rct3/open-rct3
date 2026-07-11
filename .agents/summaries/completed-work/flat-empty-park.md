@@ -3,9 +3,12 @@
 **Issue**: [#4](https://github.com/open-rct3/open-rct3/issues/4) (GitHub)
 
 **Status**: Milestone complete. Phases 1–5 done; the goal of rendering a flat, empty park is satisfied by the
-solid-colored terrain mesh described below. Phase 6 (real grass texture) is deferred, not required for this
-milestone — tracked separately, blocked on the OVL texture-decoding pipeline
-([`ovl-texture-decoding.md`](../../bugs/ovl-texture-decoding.md)).
+solid-colored terrain mesh described below. Phase 6 (real grass texture) was deferred at the time this
+milestone was closed, blocked on the OVL texture-decoding pipeline — that bug is now fixed (see
+[`completed-work/ovl-texture-decoding.md`](ovl-texture-decoding.md) and
+[`completed-work/ovl-materials-integration.md`](ovl-materials-integration.md)), and Phase 6 has an active
+follow-up plan: [`plans/grass-texture-from-terrain-ovl.md`](../../plans/grass-texture-from-terrain-ovl.md).
+Still not required for *this* milestone, which remains closed regardless of Phase 6's outcome.
 
 ## Phases
 
@@ -16,7 +19,7 @@ milestone — tracked separately, blocked on the OVL texture-decoding pipeline
 | 3. RCT3 Install Detection | ✅ | `InstallFinder` + `AppConfig` in `OpenRCT3/Platforms/` |
 | 4. Solid Color Plane | ✅ | `IRenderer` interface, `Renderer` implementation, `Transform`, `Model`, `Scene` |
 | 5. Textured Plane (nullbmp) | ✅ | `TextureLoader`, palette conversion, WebGL texture binding |
-| 6. Textured Plane (grass) | Deferred | Blocked on the `tex`/`flic`/`btbl` OVL texture-decoding bug; see below |
+| 6. Textured Plane (grass) | In progress | Texture pipeline unblocked; see [`grass-texture-from-terrain-ovl.md`](../../plans/grass-texture-from-terrain-ovl.md) |
 
 Since Phases 4/5 landed, the flat quad they produced was superseded by a real terrain mesh: the park now
 renders a height-accurate, solid-colored mesh generated from the `Terrain` corner-height grid via

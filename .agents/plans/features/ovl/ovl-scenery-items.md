@@ -1,5 +1,12 @@
 # Plan: Decode SceneryItem (SID) Entries
 
+**See also**: [`features/scenery-placement-registry.md`](../scenery-placement-registry.md) — confirms (against
+`rct3-importer`'s `scenery.h`) that `sizeflag`, the field driving placement footprint/height-sampling
+(`SIZE_FULLTILE` etc., mapped there to a `Placement` enum), lives on this `sid` struct, not on `svd`. That
+plan's `Placement`/`AnimationKind` design is what this decoder's output will eventually feed; this plan should
+add a `SizeFlag`/`Placement`-shaped field to `SceneryItem` (or `SceneryItemPosition`) once implemented, rather
+than leaving placement-shape data out of the record below as currently drafted.
+
 ## Problem
 
 SID entries are the most complex OVL file type — they define all placeable scenery objects (rides, stalls, decorations,
@@ -128,42 +135,14 @@ public static class SceneryItems {
 - New test file: `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItems.cs`
 - Run TestRunner before/after implementation
 
-### Testing Strategy (TestRunner)
+### Testing Strategy
 
-Create new file `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItems.cs`:
-
-```csharp
-using System;
-using System.Linq;
-using OVL;
-
-namespace OvlTestBench.Tests;
-
-public static class ReadSceneryItems {
-  public static readonly OvlTest[] All = [
-    new("SceneryItemEntriesDecoded", pair => {
-      foreach (var file in pair.Files) {
-        if (file.Type != OvlType.Unique) continue;  // SID is unique-only
-        try {
-          using var stream = System.IO.File.OpenRead(file.Path);
-          var ovl = Ovl.Read(stream, file.Path);
-          var items = SceneryItems.Extract(ovl);
-          if (ovl.LoaderEntries.Any(e => e.Tag == "sid") && items.Count == 0) {
-            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected scenery items but got none");
-          }
-          foreach (var item in items) {
-            Assert.That(!string.IsNullOrEmpty(item.UI.Name), $"{System.IO.Path.GetFileName(file.Path)}: scenery item has empty name");
-          }
-        } catch (Exception ex) {
-          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
-        }
-      }
-    }),
-  ];
-}
-```
-
-Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
+The `TestRunner`/`OvlTest[]` pattern this section originally described no longer exists in the codebase.
+Current convention: NUnit tests in `OpenCobra/Tests/OVL/SceneryItemsTests.cs`, plus a real-archive check in
+`OpenCobra/Tests/Integration/ExtractResources.cs` gated by `RCT3_PATH` — see `ovl-materials-integration.md`'s
+test plan for a live example. Cover: synthetic-struct decode per version (v0/v1/v2), `sizeflag` resolving to
+one of the 9 `Placement` values from `scenery-placement-registry.md`, and — against real data — that every
+`sid`-tagged symbol (unique OVL only) decodes with a non-empty UI name.
 
 ### Success Criteria
 
@@ -187,11 +166,8 @@ Production OVL archives containing scenery item entries (tag: `"sid"`) have not 
 
 ## Post-Implementation Steps
 
-When this decoder is implemented:
-
-1. **Create results file**: Add `.opencode/results/ovl-scenery-items.md` with implementation summary
-2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
-3. **Update this plan**: Change status in "Production OVLs with Entries" section
+When this decoder is implemented, add a results summary under `.agents/summaries/` (see
+`completed-work/flat-empty-park.md` for the current convention) and update this plan's status/README row.
 
 ### Future Work
 
