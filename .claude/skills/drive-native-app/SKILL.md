@@ -20,18 +20,32 @@ calls). The target window is re-resolved every time via a PID file in `%TEMP%` (
 a title search for `OpenRCT3` if the PID file is stale), so ordering across separate tool calls
 is fine.
 
-## Tell the user before taking over input
+## STOP before taking control of the user's mouse and keyboard
 
 `Screenshot`, `Click`/`DoubleClick`/`RightClick`, `MouseMove`, `Key`, and `Text` all call
 `SetForegroundWindow` first, which **steals focus from whatever window the user is currently
 looking at**. `Click`/`DoubleClick`/`RightClick`/`MouseMove` additionally **warp the user's real
-system cursor** to click at, and `Key`/`Text` send input to whatever ends up focused. This is
-disruptive if the user is actively typing or clicking elsewhere at the time.
+system cursor** to click at, and `Key`/`Text` send input to whatever ends up focused.
 
-Before the *first* such call in a session (or after a long gap), say so in one short sentence —
-e.g. "I'm going to bring the OpenRCT3 window to the front and click around in it; your mouse
-cursor will move for a moment." — then proceed. `Build`, `Launch`, `Info`, `Logs`, and `Close`
-don't touch focus or input and need no warning.
+This is not a hypothetical. This runs on the user's real, currently-in-use desktop — not a
+sandboxed VM or CI runner — and there is no isolation between "the app being driven" and
+whatever else is on screen. In practice this has already: captured an unrelated app's private
+conversation into a screenshot because focus landed somewhere other than intended, and moved
+the user's literal cursor and clicked while they could have been mid-task in another window.
+There is no way to distinguish "safe, I have the desktop to myself" from "the user is actively
+typing an email right now" from inside the script.
+
+**Before the first `Screenshot`/`Click`/`DoubleClick`/`RightClick`/`MouseMove`/`Key`/`Text` call
+in a turn, stop and ask the user in chat — do not just announce and proceed.** State plainly
+that this will steal focus and (for click/move actions) move their real mouse cursor, then wait
+for an explicit go-ahead before calling the script. Re-ask if there's been a long gap since the
+last confirmation, or anything suggests the user has moved on to something else in the
+meantime (e.g. the window went away on its own, an action failed unexpectedly, or a lot of time
+has passed) — don't treat one earlier "yes" as blanket permission for the rest of the session.
+
+`Build`, `Launch`, `Info`, and `Logs` don't touch focus or input and don't need this. `Close`
+doesn't move focus/input either, but launching a build is itself only worth doing once the user
+has agreed you'll be interacting with the window at all.
 
 ## Workflow
 
@@ -79,9 +93,12 @@ screenshot, since the captured image is the full window including its title bar/
   invoke `OpenRCT3.exe` directly from an arbitrary directory.
 - **Screenshot uses `CopyFromScreen`, not `PrintWindow`**: the game draws via raw WGL
   `SwapBuffers`, which `PrintWindow`'s DC-replay path doesn't reliably capture. This means the
-  window must actually be on-screen and unoccluded — `Screenshot` calls `SetForegroundWindow`
-  first, but if some other window is covering the same screen region (e.g. a modal dialog
-  positioned on top), you'll capture that instead.
+  window must actually be on-screen and unoccluded. `Set-Foreground` (used by every
+  input/screenshot action) verifies the foreground switch actually landed via the
+  `AttachThreadInput`-based `ForceForeground` helper and throws rather than continuing if it
+  can't confirm it — plain `SetForegroundWindow` silently no-ops when called from a background
+  process, and capturing/clicking without that check means acting on whatever window actually
+  has focus instead of the game.
 - **DPI**: the script sets Per-Monitor-V2 DPI awareness on itself so `GetWindowRect` and
   `CopyFromScreen` agree in physical pixels. If clicks land visibly off-target, compare
   `Info`'s `ScreenRect`/`ClientSize` against the screenshot's actual pixel dimensions first.
