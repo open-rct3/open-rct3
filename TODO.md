@@ -2,7 +2,7 @@
 
 ## Community
 
-- [ ] Create a private Discord server to coordinate our reverse engineering work (For me, `@Syn`, and `@TheMaskedMan00`)
+- [x] Create a private Discord server to coordinate our reverse engineering work (For me, `@Syn`, and `@TheMaskedMan00`)
 - [ ] Add an automation to `.claude\skills` that automatically updates the list of issues and the OpenRCT3 project
       (https://github.com/orgs/open-rct3/projects/1)
 
@@ -18,8 +18,8 @@
       [.agents/summaries/ovl-enum-verification.md](.agents/summaries/ovl-enum-verification.md)
 - [ ] Implement tracked rides support (`OpenCobra/OVL/Enums.cs:235`) — **deferred**; will implement after OVL decoder is
       ready
-- [ ] Fix `Ovl` resource pointer/relocation resolution returning wrong bytes for some resources — see
-      [.agents/bugs/ovl-resource-relocation.md](.agents/bugs/ovl-resource-relocation.md)
+- [x] Fix `Ovl` resource pointer/relocation resolution returning wrong bytes for some resources — see
+      [.agents/summaries/completed-work/ovl-resource-relocation.md](.agents/summaries/completed-work/ovl-resource-relocation.md)
 - [x] Create data model for inspector items (`OpenRCT3/ViewModels/Inspector.cs:14`)
 - [ ] Handle OS-dependent and game-store-dependent game paths (`src/paths.d:34,49`)
 

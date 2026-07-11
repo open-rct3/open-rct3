@@ -37,6 +37,8 @@ public class Debug(Game game, Mesh terrainMesh) : IWindow {
     ImGui.Text($"Frame: {fps:0} fps ({game.FrameTime.TotalMilliseconds:0.00}ms)");
     ImGui.Text($"Terrain: {terrainMesh.Indices.Count / 3} faces, {terrainMesh.Vertices.Count} vertices");
 
+    // TODO: Render a graph of frame times
+
     ImGui.End();
   }
 }
