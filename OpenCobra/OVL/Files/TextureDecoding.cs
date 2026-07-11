@@ -1,24 +1,22 @@
-// TextureDecoding
+// Shared tex/flic/btbl decode plumbing.
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.
-//
-// Shared tex/flic/btbl decode plumbing. Originally lived entirely in Textures.cs; split out so
-// other symbol families that reuse the same on-disk tex/flic/btbl loader shapes - CharacterSkins
-// (mms/prt), ParticleEffects (psi) - can decode through the same code instead of duplicating it.
-// See .agents/plans/fix/ovl-texture-decoding.md for the on-disk format and what's still broken.
+
 using System.Collections;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using CommunityToolkit.HighPerformance;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.OVL.Files;
 
-public class Texture(string name, TextureFormat format, uint width, uint height, uint mipCount = 1) : IDisposable {
+public class Texture(
+  string name, TextureFormat format, uint width, uint height, uint mipCount = 1,
+  Recolorable recolorable = Recolorable.None
+) : IDisposable {
   private bool disposed;
 
   /// <summary>
@@ -34,6 +32,7 @@ public class Texture(string name, TextureFormat format, uint width, uint height,
   public readonly uint Height = height;
   public readonly uint MipCount = mipCount;
   public readonly bool IsCompressed = format.IsCompressed();
+  public readonly Recolorable Recolorable = recolorable;
   /// <summary>
   /// The decoded texture data.
   /// </summary>
@@ -63,6 +62,19 @@ public class Texture(string name, TextureFormat format, uint width, uint height,
 public class TextureCollection : IReadOnlyList<Texture> {
   private readonly Dictionary<string, Texture> textures = [];
 
+  public TextureCollection() { }
+
+  // ReSharper disable once ParameterHidesMember
+  public TextureCollection(IEnumerable<Texture> textures, uint fps = 0) {
+    Fps = fps;
+    AddRange(textures);
+  }
+
+  /// <summary>
+  /// Frames-per-second for animated (flexi) texture collections. 0 for static collections.
+  /// </summary>
+  public uint Fps { get; init; }
+
   public Texture this[int index] => textures.Values.ElementAt(index);
   public Texture this[string name] => textures[name];
 
@@ -76,10 +88,10 @@ public class TextureCollection : IReadOnlyList<Texture> {
   public IEnumerator<Texture> GetEnumerator() => textures.Values.GetEnumerator();
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-  internal void Add(Texture texture) => textures[texture.Name] = texture;
+  public void Add(Texture texture) => textures[texture.Name] = texture;
 
   // ReSharper disable once ParameterHidesMember
-  internal TextureCollection AddRange(IEnumerable<Texture> textures) {
+  public TextureCollection AddRange(IEnumerable<Texture> textures) {
     foreach (var texture in textures)
       this.textures[texture.Name] = texture;
     return this;
@@ -408,5 +420,32 @@ internal static class TextureDecoding {
       height >>= 1;
     }
     return Math.Max(count, 1);
+  }
+
+  // Walk every loader instance in on-disk order (Part 6 Finding 4): "btbl"/"flic" are
+  // loader-category tags, not classified symbols (Finding 5), so they're invisible to ovl.Keys -
+  // this is the only way to discover and decode them. Each "btbl" loader becomes "current" until
+  // the next one; each "flic" loader's single extra-data chunk is a 4-byte index into whichever
+  // table was current when it was encountered.
+  public static IReadOnlyDictionary<uint, Texture[]> BuildBitmapTablesByFlicAddress(Ovl ovl) {
+    var logger = NLog.LogManager.GetCurrentClassLogger();
+    Texture[]? currentTable = null;
+    var bitmapTablesByFlicAddress = new Dictionary<uint, Texture[]>();
+    foreach (var (tag, dataAddress) in ovl.LoaderEntriesInOrder) {
+      switch (tag) {
+        case "btbl":
+          try {
+            currentTable = BitmapTables.ReadAt($"{ovl.Name}:btbl@{dataAddress:X}", ovl, dataAddress);
+          } catch (Exception ex) {
+            logger.Error(ex, "Failed to decode bitmap table at {Address:X} in {OvlName}", dataAddress, ovl.Name);
+            currentTable = null;
+          }
+          break;
+        case "flic" when currentTable != null:
+          bitmapTablesByFlicAddress[dataAddress] = currentTable;
+          break;
+      }
+    }
+    return bitmapTablesByFlicAddress;
   }
 }

@@ -11,17 +11,20 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.OVL.Files;
 
-public record struct FlexiTexture(Recolorable Recolorable, Image<Rgba32> Texture);
+/// <summary>
+/// A single flexi-texture frame's raw, already relocation-resolved bytes: palette (256 × 4 BGRA),
+/// indexed pixel data, and an optional alpha mask. Produced by <see cref="FlexiTextureList.Load"/>
+/// (the only place that talks to <see cref="Ovl"/>'s relocation table) and consumed by
+/// <see cref="FlexiTextureList.Parse"/> (the decode/naming logic, which has no dependency on
+/// relocation resolution and so is unit-testable without a real OVL archive).
+/// </summary>
+internal readonly record struct FlexiFrameData(
+  Recolorable Recolorable, ReadOnlyMemory<byte> Palette, ReadOnlyMemory<byte> Texture, ReadOnlyMemory<byte> Alpha
+);
 
-public record struct FlexiTextureList(uint Fps, FlexiTexture[] Frames) {
-  public readonly int Width => Frames[0].Texture.Width;
-  public readonly int Height => Frames[0].Texture.Height;
-  public readonly Recolorable Recolorable => Frames[0].Recolorable;
-  public readonly int Length => Frames.Length;
-  public readonly FlexiTexture this[int index] => Frames[index];
-
+public static class FlexiTextureList {
   // See FlexiTextureInfoStruct/FlexiTextureStruct in flexitexture.h and ManagerFTX.cpp.
-  public static FlexiTextureList Load(Ovl ovl, OvlFile file) {
+  public static TextureCollection Load(Ovl ovl, OvlFile file) {
     var bytes = ovl.ReadResource(file) ??
       throw new InvalidOperationException($"Resource '{file.Name}' not found in OVL.");
 
@@ -46,8 +49,9 @@ public record struct FlexiTextureList(uint Fps, FlexiTexture[] Frames) {
     if (!ovl.TryResolveRelocation(fts2Ptr, out var framesBlock, out var framesOffset))
       throw new InvalidOperationException($"Could not resolve FlexiTexture frame data for '{file.Name}'.");
 
+    var name = file.ToString();
     const int frameStructSize = 28; // scale, width, height, Recolorable, palette*, texture*, alpha*
-    var frames = new FlexiTexture[frameCount];
+    var frames = new FlexiFrameData[frameCount];
     for (var i = 0; i < frameCount; i++) {
       var frameOffset = Convert.ToInt32(framesOffset) + i * frameStructSize;
       using var frameMs = new ReadOnlyMemory<byte>(framesBlock, frameOffset, frameStructSize).AsStream();
@@ -63,27 +67,51 @@ public record struct FlexiTextureList(uint Fps, FlexiTexture[] Frames) {
 
       if (!ovl.TryResolveRelocation(palettePtr, out var paletteBlock, out var paletteOffset))
         throw new InvalidOperationException($"Could not resolve FlexiTexture palette for '{file.Name}' frame {i}.");
-      var palette = paletteBlock.AsSpan(Convert.ToInt32(paletteOffset), 256 * 4); // 256 × 4 (BGRA)
+      var palette = new ReadOnlyMemory<byte>(paletteBlock, Convert.ToInt32(paletteOffset), 256 * 4); // 256 × 4 (BGRA)
 
       if (!ovl.TryResolveRelocation(texturePtr, out var textureBlock, out var textureOffset))
         throw new InvalidOperationException($"Could not resolve FlexiTexture pixel data for '{file.Name}' frame {i}.");
-      var texture = textureBlock.AsSpan(Convert.ToInt32(textureOffset), Convert.ToInt32(width * height));
+      var texture = new ReadOnlyMemory<byte>(textureBlock, Convert.ToInt32(textureOffset), Convert.ToInt32(width * height));
 
-      byte[] alpha;
+      ReadOnlyMemory<byte> alpha;
       if (alphaPtr != 0 && ovl.TryResolveRelocation(alphaPtr, out var alphaBlock, out var alphaOffset)) {
-        alpha = alphaBlock.AsSpan(Convert.ToInt32(alphaOffset), Convert.ToInt32(width * height)).ToArray();
+        alpha = new ReadOnlyMemory<byte>(alphaBlock, Convert.ToInt32(alphaOffset), Convert.ToInt32(width * height));
       } else {
         // A null alpha pointer means the frame has no alpha mask: fully opaque.
-        alpha = new byte[width * height];
-        Array.Fill(alpha, (byte) 255);
+        var opaque = new byte[width * height];
+        Array.Fill(opaque, (byte) 255);
+        alpha = opaque;
       }
 
-      var rgbaTexture = PaletteConverter.ConvertIndexedBgraToRgba(width, height, palette, texture, alpha);
-      frames[i] = new FlexiTexture(
-        recolorable, Image.LoadPixelData<Rgba32>(rgbaTexture, Convert.ToInt32(width), Convert.ToInt32(height))
-      );
+      frames[i] = new FlexiFrameData(recolorable, palette, texture, alpha);
     }
 
-    return new FlexiTextureList(fps, frames);
+    return Parse(name, fps, width, height, frames);
+  }
+
+  // Pure decode/naming logic: no dependency on Ovl or relocation resolution, so it's directly
+  // unit-testable with synthetic FlexiFrameData rather than a real OVL archive.
+  internal static TextureCollection Parse(
+    string name, uint fps, uint width, uint height, IReadOnlyList<FlexiFrameData> frameData
+  ) {
+    var frames = new Texture[frameData.Count];
+    for (var i = 0; i < frameData.Count; i++) {
+      var data = frameData[i];
+      var rgbaTexture = PaletteConverter.ConvertIndexedBgraToRgba(
+        width, height, data.Palette.Span, data.Texture.Span, data.Alpha.Span
+      );
+      var image = Image.LoadPixelData<Rgba32>(rgbaTexture, Convert.ToInt32(width), Convert.ToInt32(height));
+
+      // Single-frame ftx keeps the symbol's own name; multi-frame gets a "#i" suffix (same rule
+      // as Textures.Extract used before this collapsed into TextureCollection).
+      var frameName = frameData.Count == 1 ? name : $"{name}#{i}";
+      frames[i] = new Texture(
+        frameName, TextureFormat.A8R8G8B8, width, height, mipCount: 1, data.Recolorable
+      ) {
+        MipLevels = { [0] = image },
+      };
+    }
+
+    return new TextureCollection(frames, fps);
   }
 }

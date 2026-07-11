@@ -12,6 +12,7 @@
     <InternalsVisibleTo Include="OvlTestBench" />
     <InternalsVisibleTo Include="OvlTestBench.Tests" />
     <InternalsVisibleTo Include="OVL Dumper" />
+    <InternalsVisibleTo Include="GDK" />
   </ItemGroup>
 
   <ItemGroup>

@@ -59,21 +59,23 @@ public class ExtractResources {
     // `offset1` and `fts2` in FlexiTextureInfoStruct are relocated pointers, not inline data, so
     // fully decoding the texture (palette, indexed pixels, alpha mask) requires following them
     // through Ovl.TryResolveRelocation rather than reading the resource's raw bytes sequentially.
-    var flexiTexture = FlexiTextureList.Load(resources, ftxEntry.Key);
+    var collection = FlexiTextureList.Load(resources, ftxEntry.Key);
     using (Assert.EnterMultipleScope()) {
-      Assert.That(flexiTexture.Length, Is.GreaterThan(0), "FlexiTexture must have at least one frame");
-      Assert.That(flexiTexture.Width, Is.GreaterThan(0).And.EqualTo(flexiTexture.Height));
+      Assert.That(collection.Count, Is.GreaterThan(0), "FlexiTexture must have at least one frame");
 
-      var frame = flexiTexture[0];
-      Assert.That(frame.Texture.Width, Is.EqualTo(flexiTexture.Width));
-      Assert.That(frame.Texture.Height, Is.EqualTo(flexiTexture.Height));
+      var frame = collection.First();
+      var frameMip = frame.MipLevels[0];
+      Assert.That(frameMip, Is.Not.Null);
+      Assert.That(Convert.ToInt32(frame.Width), Is.GreaterThan(0).And.EqualTo(Convert.ToInt32(frame.Height)));
+      Assert.That(frameMip!.Width, Is.EqualTo(Convert.ToInt32(frame.Width)));
+      Assert.That(frameMip.Height, Is.EqualTo(Convert.ToInt32(frame.Height)));
 
       // Pixels must vary; a resolver bug landing on the wrong block tends to produce either a
       // crash, a single repeated color, or the symbol name string reinterpreted as pixel data.
       var distinctPixels = new HashSet<Rgba32>();
-      for (var y = 0; y < frame.Texture.Height && distinctPixels.Count < 2; y++)
-        for (var x = 0; x < frame.Texture.Width && distinctPixels.Count < 2; x++)
-          distinctPixels.Add(frame.Texture[x, y]);
+      for (var y = 0; y < frameMip.Height && distinctPixels.Count < 2; y++)
+        for (var x = 0; x < frameMip.Width && distinctPixels.Count < 2; x++)
+          distinctPixels.Add(frameMip[x, y]);
       Assert.That(distinctPixels, Has.Count.GreaterThan(1), "Decoded FTX texture has no pixel variation");
     }
   }
@@ -140,13 +142,14 @@ public class ExtractResources {
         var isPlausibleFtxHeader = width == height && width > 0 && (width & (width - 1)) == 0;
         if (!isPlausibleFtxHeader) continue;
 
-        var flexiTexture = FlexiTextureList.Load(ovl, entry);
-        Assert.That(flexiTexture.Width, Is.EqualTo(Convert.ToInt32(width)),
-          $"{entry.Name} in {Path.GetFileName(ovlPath)}: decoded width does not match header");
-        Assert.That(flexiTexture.Height, Is.EqualTo(Convert.ToInt32(height)),
-          $"{entry.Name} in {Path.GetFileName(ovlPath)}: decoded height does not match header");
-        Assert.That(flexiTexture.Length, Is.GreaterThan(0),
+        var collection = FlexiTextureList.Load(ovl, entry);
+        Assert.That(collection.Count, Is.GreaterThan(0),
           $"{entry.Name} in {Path.GetFileName(ovlPath)}: expected at least one decoded frame");
+        var frame = collection.First();
+        Assert.That(Convert.ToInt32(frame.Width), Is.EqualTo(Convert.ToInt32(width)),
+          $"{entry.Name} in {Path.GetFileName(ovlPath)}: decoded width does not match header");
+        Assert.That(Convert.ToInt32(frame.Height), Is.EqualTo(Convert.ToInt32(height)),
+          $"{entry.Name} in {Path.GetFileName(ovlPath)}: decoded height does not match header");
       }
     }
   }
