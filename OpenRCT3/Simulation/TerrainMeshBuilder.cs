@@ -41,7 +41,12 @@ public static class TerrainMeshBuilder {
     return new Mesh(vertices, indices) { Name = name };
   }
 
-  private static Vector3 CornerPosition(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot) {
+  /// <summary>
+  /// Computes the world-space position of a tile corner. Shared with <see cref="TerrainPicker"/> so
+  /// picking uses the exact formula the render mesh was built from, rather than an independently
+  /// maintained copy that could drift from what's actually on screen.
+  /// </summary>
+  internal static Vector3 CornerPosition(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot) {
     var (dx, dy) = slot switch {
       TerrainCornerSlot.SouthWest => (0, 0),
       TerrainCornerSlot.SouthEast => (1, 0),

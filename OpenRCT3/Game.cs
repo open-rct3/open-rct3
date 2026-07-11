@@ -38,6 +38,12 @@ namespace OpenRCT3;
 public class Game : IGame {
   /// <summary>The maximum number of simulation ticks to process in one instant.</summary>
   private const int MaxSimulationTicks = 8;
+  /// <summary>
+  /// <see cref="IoC"/> service key the terrain <see cref="Mesh"/> is registered under - keyed rather
+  /// than by bare <see cref="Mesh"/> type so a later feature registering some other <see cref="Mesh"/>
+  /// instance can't collide with (or be shadowed by) this one.
+  /// </summary>
+  private const string TerrainMeshServiceKey = "Terrain";
   /// <summary>The minimum time between lag warning messages.</summary>
   /// <remarks>This prevents spamming the log with warnings about lag.</remarks>
   private readonly TimeSpan lagWarningDebounceInterval = TimeSpan.FromSeconds(10);
@@ -117,6 +123,7 @@ public class Game : IGame {
 
   public Game() {
     Instance = this;
+    IoC.RegisterInstance(this);
 
     inputController = new InputController(IoC.Resolve<IInputContext>(), Config, Scene.Camera, Quit);
 
@@ -134,6 +141,7 @@ public class Game : IGame {
     Debug.Assert(World.Terrain != null);
     var hasGrassTexture = World.Terrain.GrassTexture != null;
     var terrainMesh = TerrainMeshBuilder.Build(World.Terrain, hasGrassTexture ? Color.White.ToGl() : grass);
+    IoC.RegisterInstance(terrainMesh, serviceKey: TerrainMeshServiceKey);
     var ground = new Model(terrainMesh) {
       Material = hasGrassTexture
         ? new Textured { AlbedoTexture = World.Terrain.GrassTexture }
@@ -184,7 +192,17 @@ public class Game : IGame {
       Application.Exit();
     };
     Scene.Windows.Add(editor);
-    Scene.Windows.Add(new UI.Debug(this, terrainMesh));
+
+    // Made.Of statically checks Debug's constructor at compile time (rather than reflection-based
+    // Parameters.Of), matching the IInputContext/GUI.Controller registrations above - Game and the
+    // terrain Mesh are resolved from the instances just registered, PlatformWindow/IInputContext from
+    // the registrations GameWindow.cs/GLSurface.cs already made.
+    IoC.Register<UI.Debug>(Made.Of(() => new UI.Debug(
+      Arg.Of<Game>(),
+      Arg.Of<Mesh>(TerrainMeshServiceKey),
+      Arg.Of<IWindow>(),
+      Arg.Of<IInputContext>())));
+    Scene.Windows.Add(IoC.Resolve<UI.Debug>());
   }
 
   /// <summary>

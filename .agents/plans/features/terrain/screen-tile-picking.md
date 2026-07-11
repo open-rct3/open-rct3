@@ -30,19 +30,19 @@ reads `Dpi` from a separate `Graphics.DpiX`/`DpiY` call — nothing currently cr
 (non-100%) display, a mismatch here would make every pick land on the wrong tile by a consistent,
 DPI-dependent offset — silently, since nothing renders yet to visually catch it.
 
-Before implementing `Camera.Unproject`/`TryPickTile`, add:
+Before implementing `Camera.ToRay`/`TryPickTile`, add:
 
-- **Unit test**: a fake/mock `IWindow` (see `OpenCobra.Tests/GDK/Input/InputMocks.cs` for existing
-  mocking patterns) asserting `Camera.Unproject`'s NDC conversion math is internally consistent for a
-  given `(screenPos, framebufferSize)` pair — this doesn't touch the real platform, just proves the math
-  in isolation.
+- **Unit test**: exercise the screen→ray math directly against a fixed `Camera` state (no real window
+  needed — see `OpenCobra/Tests/GDK/Input/InputMocks.cs` for this repo's existing test-double patterns,
+  used elsewhere for `IMouse`/`IKeyboard`), proving the math in isolation from the platform. **Done** —
+  see `CameraExtensionsTests.cs`'s `ToRay_*` tests.
 - **Integration test** (real `GameWindow`/`GLSurface`, at 100% and at least one non-100% Windows display
   scale — e.g. run manually at 125%/150% first, then decide whether CI can simulate it): confirm
   `IView.FramebufferSize` matches the actual `glViewport` dimensions in use, and that a known
-  `IMouse.Position` value (e.g. simulated click at the window's exact center) unprojects to a world-space
+  `IMouse.Position` value (e.g. simulated click at the window's exact center) resolves to a world-space
   ray passing through `Camera.Target` — the one point guaranteed to be dead-center on screen for an
   unpanned camera. A mismatch here means `FramebufferSize`, `Dpi`, or `IMouse.Position` needs a
-  correction factor applied before `Camera.Unproject` is trustworthy.
+  correction factor applied before `Camera.ToRay` is trustworthy.
 
 This is a prerequisite, not part of the Testing section below — if it turns up a mismatch, fixing it is
 in scope for this plan before the ray march is built on top of unverified coordinates.
@@ -52,28 +52,46 @@ in scope for this plan before the ray march is built on top of unverified coordi
 - **`OpenCobra.GDK.Ray`**: a new `readonly record struct Ray(Vector3 Origin, Vector3 Direction)` in the
   engine layer (`OpenCobra.GDK`), alongside `Camera` — this is graphics-engine math, not game logic, and
   belongs where `Camera` already lives rather than under `OpenRCT3/`.
-  - `Camera.Unproject(Vector2 screenPos, Vector2D<int> framebufferSize) : Ray` — converts a screen-space
-    point to a world-space ray using `Matrix4x4.Invert(Value, out var inverse)` computed at call time (no
-    cached inverse on `Camera`; picking is a per-click operation, not per-frame, so recomputing is
-    negligible and avoids widening `Camera`'s API/invariants for every other feature that reads `Value`).
+  - `CameraExtensions.ToRay(this Camera camera, Vector2 screenPos, Vector2D<int> framebufferSize) : Ray`
+    — an extension method (kept off `Camera` itself, in a new `OpenCobra.GDK.CameraExtensions` static
+    class) that builds the ray **analytically from the camera's basis vectors**, not by inverting
+    `Camera.Value`. See "Superseded" below for why the matrix-inversion approach this Goals section
+    originally specified was replaced.
   - `framebufferSize` is `IView.FramebufferSize` (`Silk.NET.Maths.Vector2D<int>`, pixels) — the same
     property `Game.cs` already reads to size the projection's aspect ratio — not a DPI-scaled logical
-    size. `screenPos` must already be in that same pixel space.
-  - Unprojection steps (standard technique, e.g.
-    [Coding Labs: World, View and Projection Transformation Matrices](https://www.codinglabs.net/article_world_view_projection_matrix.aspx),
-    [Der Schmale: Unprojections Explained](https://www.derschmale.com/2014/09/28/unprojections-explained/)),
-    expressed with this project's existing `System.Numerics` types — no new math types needed:
+    size. `screenPos` must already be in that same pixel space. `framebufferSize` also supplies the
+    aspect ratio directly (`X / Y`), so it stays a single source of truth rather than a separately-passed
+    value that could drift out of sync with it.
+  - Steps:
     1. Convert `screenPos` (pixels, Y-down) to NDC X/Y in `[-1, 1]` (Y-up, so flip):
        `ndcX = 2 * screenPos.X / framebufferSize.X - 1`,
        `ndcY = 1 - 2 * screenPos.Y / framebufferSize.Y`.
-    2. Unproject two points at the same NDC X/Y but different NDC Z — near (`-1`) and far (`+1`) — using
-       this project's own GL depth convention (`Camera.CreatePerspectiveFieldOfViewGL`'s remarks: NDC
-       z=-1 is the near plane, z=+1 is the far plane, not D3D's `[0, 1]`).
-    3. For each: build a `Vector4(ndcX, ndcY, ndcZ, 1)`, transform by `inverse` (`Vector4.Transform`), then
-       perspective-divide by `.W` to get the world-space point.
-    4. `Ray.Origin` = the near-plane world point (not `Camera.Eye` — off-axis/asymmetric projections would
-       make those differ, though this project's projection is symmetric today); `Ray.Direction` =
-       `Vector3.Normalize(farPoint - nearPoint)`.
+    2. Build the camera's true (tilt-aware) view basis the same way `Matrix4x4.CreateLookAt` derives its
+       axes, so it matches `Update()`'s view matrix exactly — deliberately not `Camera.Forward`/
+       `Camera.Right`, which are ground-plane-flattened for WASD panning, not the actual viewing
+       direction: `forward = Normalize(Target - Eye)`, `right = Normalize(Cross(forward, UnitZ))`,
+       `up = Cross(right, forward)`.
+    3. `direction = Normalize(forward + right * (ndcX * tan(FieldOfView/2) * aspectRatio) + up * (ndcY * tan(FieldOfView/2)))`.
+    4. `Ray.Origin = Camera.Eye`; `Ray.Direction = direction`. No near/far plane, no matrix inversion —
+       the ray is exact regardless of camera distance.
+
+### Superseded: matrix-inversion `Camera.Unproject`
+
+The first implementation of this plan built the ray by inverting `Camera.Value` and unprojecting NDC
+points at the near (`z=-1`) and far (`z=+1`) clip planes (the standard technique, e.g.
+[Coding Labs: World, View and Projection Transformation Matrices](https://www.codinglabs.net/article_world_view_projection_matrix.aspx),
+[Der Schmale: Unprojections Explained](https://www.derschmale.com/2014/09/28/unprojections-explained/)).
+That approach shipped, then was found (via its own test suite) to lose real precision at realistic
+gameplay camera distances — see the removed "Finding" note this section replaces, previously in
+Implementation Notes. Root cause: `Camera`'s far clip plane sits `FarPlaneDistanceMargin` (2x) times the
+framing distance from a fixed 1cm near plane, so at the default park's ~1303-unit framing distance the
+far/near ratio is ~260,000:1 — ill-conditioned for `Matrix4x4.Invert` in single-precision float,
+independent of near/far plane tuning.
+The analytic `ToRay` approach above replaces it entirely: it never inverts a matrix and never touches the
+near/far planes, so the far/near ratio doesn't enter the computation at all. Confirmed by
+`ToRay_RemainsPreciseAtRealisticFullParkFramingDistances`, which holds a tight (`1e-4`) epsilon at the
+same ~1303-unit distance that made the matrix-inversion approach's tests need a loosened epsilon at
+*20 units*.
 - **`Ray` vs. triangle intersection**: standard Möller–Trumbore (or equivalent) ray-triangle test, since
   the heightfield hit test below is triangle-based, not a plane test.
 - **Shared corner-to-world mapping**: `TerrainMeshBuilder.CornerPosition` (currently `private static`)
@@ -106,12 +124,11 @@ in scope for this plan before the ray march is built on top of unverified coordi
   (`IWindow`, extending Silk.NET's `IView`) supplies `FramebufferSize`; the live mouse position comes
   from the same `IMouse.Position` source `InputController` already reads (`OpenRCT3/Input/InputController.cs:139`).
   A picking helper (owned by `raise-lower-smoothing-tools.md`, not this plan) resolves both from IoC,
-  calls `Camera.Unproject`, then `TryPickTile`.
-- **[`Debug.cs`](../../../../OpenRCT3/UI/Debug.cs) diagnostics line**: `Debug.Render()` (currently
-  constructor-injected with only `Game` and the terrain `Mesh`) gains an `IMouse`/`Terrain`/`Camera`
-  dependency (resolved from `IGame.IoC`, same as the picking call site above — not passed through the
-  constructor, to avoid widening `Debug`'s signature for a diagnostics-only feature) and re-runs
-  `Camera.Unproject` + `TryPickTile` once per frame against the current mouse position, purely for
+  calls `Camera.ToRay`, then `TryPickTile`.
+- **[`Debug.cs`](../../../../OpenRCT3/UI/Debug.cs) diagnostics line**: `Debug.Render()` gains
+  `PlatformWindow`/`IInputContext` constructor dependencies (resolved via `Game.IoC`'s `Made.Of`
+  registration in `Game.cs`, not manual `Resolve` calls inside `Render()` — see Implementation Notes) and
+  re-runs `Camera.ToRay` + `TryPickTile` once per frame against the current mouse position, purely for
   display — this is a second, independent call from whatever `raise-lower-smoothing-tools.md` wires up
   for actual tool input, not a shared/cached result, since a debug overlay shouldn't add a hidden
   dependency between the two.
@@ -122,7 +139,7 @@ in scope for this plan before the ray march is built on top of unverified coordi
   - **Gated on `!ImGui.GetIO().WantCaptureMouse`**: when the mouse is over an ImGui window (the Debug
     panel itself, or any other UI), `IMouse.Position` still reports a screen coordinate, and
     `TryPickTile` would happily report a bogus pick for whatever's behind that panel. Skip the
-    `Unproject`/`TryPickTile` call entirely when `WantCaptureMouse` is true and render
+    `ToRay`/`TryPickTile` call entirely when `WantCaptureMouse` is true and render
     `ImGui.Text("Cursor: (UI)")` instead.
   - When `TryPickTile` returns `null` (cursor off the OOB-inclusive grid), renders
     `ImGui.Text("Cursor: none")` instead.
@@ -143,21 +160,24 @@ in scope for this plan before the ray march is built on top of unverified coordi
 code to touch `Camera`'s matrix math, so new tests are added for the paths it introduces, not just
 `Ray`/picking itself:
 
-- **`Camera.Unproject`**: known screen point (e.g. viewport center) against a fixed `Eye`/`Target`/
-  `Update(aspectRatio)` state → known world-space ray direction (pointing at `Target`) and origin
-  (`Eye`). Also a corner of the framebuffer, to catch an X/Y or Y-flip mistake that center-only
-  testing wouldn't.
+- **`Camera.ToRay`**: known screen point (e.g. viewport center) against a fixed `Eye`/`Target` state →
+  known world-space ray direction (pointing at `Target`) and origin (exactly `Eye`, no `Update()`
+  required first). Also a corner of the framebuffer, to catch an X/Y or Y-flip mistake that center-only
+  testing wouldn't, and a realistic full-park framing distance (~1303 units) to confirm precision holds
+  where the superseded matrix-inversion approach lost it.
 - **Ray-triangle intersection**: unit tests on the Möller–Trumbore helper directly, decoupled from
   the terrain march — hit, miss, edge-on (ray parallel to triangle plane), and hit-behind-origin
   (should not count as a hit) cases.
 - **Grid-stepped march (`TryPickTile`)**: against small synthetic `Terrain` instances —
   - Flat terrain: ray straight down hits the expected `(tileX, tileY)` and world Z.
-  - Sloped terrain: hit point's Z matches the interpolated corner heights, not a flat plane.
-  - A cliff (`IsEdgeDetached`) tile: verifies the march tests the near face, not the far tile's
-    corners, when the ray crosses a detached edge.
+  - A raised (propagated) corner: hit point's Z matches the raised height exactly at that vertex.
+  - A detached corner (`SetCornerHeight`, no propagation — a cliff between two tiles): a ray just
+    inside the edited tile hits its own raised height, not the neighbor's unraised copy of the same
+    world-space corner.
   - Off-grid ray (never crosses `Terrain.HasTile`): returns `null`.
-  - Step-budget exhaustion with `Camera.MaxDistance` unset: still terminates and returns `null`
-    rather than looping unbounded, exercising the `MaxDistance ?? distance` fallback.
+  - Step-budget exhaustion: a ray that never converges on any triangle still terminates at `maxSteps`
+    and returns `null` rather than looping unbounded. (Implemented as a plain `int maxSteps` parameter,
+    not a `Camera` reference — see Implementation Notes for why.)
 - **`TerrainMeshBuilder.CornerPosition`**: currently untested despite already shipping in the render
   path; once it's shared with the picker (see Goals above), add a test pinning its formula (including
   the `Width / 2f` X-centering offset) so a future edit can't silently desync the picker from the
@@ -173,6 +193,82 @@ code to touch `Camera`'s matrix math, so new tests are added for the paths it in
   distinguishing "Scenery" from "Terrain" hits) but no scenery/ride hit-testing exists yet, so that line
   only ever prints `"Terrain"` for now.
 
+## Implementation Notes
+
+- [`OpenCobra/GDK/Ray.cs`](../../../../OpenCobra/GDK/Ray.cs) — `Ray` record struct with a Möller–Trumbore
+  `Intersects` method.
+- [`OpenCobra/GDK/Camera.cs`](../../../../OpenCobra/GDK/Camera.cs) — gained a public `FieldOfView` const
+  (previously an inline `MathF.PI / 3f` literal in `Update()`), shared with `CameraExtensions.ToRay` so
+  picking's frustum always matches the rendered one. The matrix-inversion `Unproject`/`UnprojectPoint`
+  methods originally added here were removed entirely — see "Superseded" in Goals.
+- [`OpenCobra/GDK/CameraExtensions.cs`](../../../../OpenCobra/GDK/CameraExtensions.cs) — `ToRay`, matching
+  the Goals section's analytic-basis math exactly.
+- [`OpenRCT3/Simulation/TerrainMeshBuilder.cs`](../../../../OpenRCT3/Simulation/TerrainMeshBuilder.cs) —
+  `CornerPosition` changed from `private` to `internal`, shared with `TerrainPicker`.
+- [`OpenRCT3/Simulation/TerrainPicker.cs`](../../../../OpenRCT3/Simulation/TerrainPicker.cs) —
+  `TilePickResult` and `TerrainPicker.TryPickTile`. One deviation from the Goals section:
+  `TryPickTile(Ray ray, Terrain terrain, int maxSteps)` takes the step budget as a plain `int` rather than
+  a `Camera` reference — `Camera`'s live eye-to-target `distance` field is private (no public accessor),
+  so the `MaxDistance ?? distance` fallback has to be computed by the caller (via
+  `Vector3.Distance(camera.Eye, camera.Target)`, mathematically identical to the private field) and
+  passed in, rather than `TryPickTile` reaching into `Camera` itself.
+- [`OpenRCT3/UI/Debug.cs`](../../../../OpenRCT3/UI/Debug.cs) — `RenderCursorPosition()`, gated on
+  `!ImGui.GetIO().WantCaptureMouse`. `Debug`'s primary constructor takes `PlatformWindow window` and
+  `IInputContext inputContext` directly (aliased as `PlatformWindow` locally —
+  `OpenCobra.GDK.GUI.IWindow`, the ImGui-window interface `Debug` itself implements, and
+  `OpenCobra.GDK.Platform.IWindow`, the platform window, collide on the bare name once both namespaces
+  are imported) rather than resolving them from `Game.IoC` inside `Render()` each frame — see the IoC
+  refactor below. `Terrain`/`Camera` still come directly from the `Game` reference (`game.World.Terrain`,
+  `game.Scene.Camera`).
+- [`OpenRCT3/Game.cs`](../../../../OpenRCT3/Game.cs) — refactored to construct `Debug` through `Game.IoC`
+  instead of `new UI.Debug(this, terrainMesh)`: registers `this` (`IoC.RegisterInstance(this)`) and the
+  terrain `Mesh` (keyed as `"Terrain"`, not by bare `Mesh` type, so a later feature registering some other
+  `Mesh` instance can't collide with it), then registers `Debug` via
+  `Made.Of(() => new UI.Debug(Arg.Of<Game>(), Arg.Of<Mesh>("Terrain"), Arg.Of<IWindow>(), Arg.Of<IInputContext>()))`
+  — the same statically-checked constructor-selection pattern `GLSurface.cs` already uses for
+  `GUI.Controller`, rather than reflection-based `Parameters.Of` — and resolves it
+  (`Scene.Windows.Add(IoC.Resolve<UI.Debug>())`). All four of `Debug`'s dependencies now come from the
+  container; `Debug` itself never touches `Game.IoC`.
+
+### Precision fix: matrix-inversion `Unproject` replaced with analytic `ToRay`
+
+The first implementation of this plan (see "Superseded" in Goals) built the ray via `Matrix4x4.Invert`.
+Its own test suite (`Unproject_RayOriginatesNearTheEyeAndPointsTowardTheTarget`) surfaced a real
+precision problem: at the default park's ~1303-unit framing distance, the far/near ratio is ~260,000:1,
+ill-conditioned for single-precision matrix inversion regardless of near/far tuning. Concretely, that
+test needed its epsilon loosened from 1e-3 to 5e-3 at a test distance of just 20, and was off by 0.6
+units at distance 500 — a real, growing accuracy risk for real gameplay clicks near tile boundaries when
+zoomed out, not just test noise.
+
+Fixed by replacing `Unproject` with `CameraExtensions.ToRay`, which builds the ray directly from the
+camera's basis vectors (`Eye`, `Target`, `FieldOfView`) instead of inverting a matrix — no near/far
+planes enter the computation at all, so the far/near ratio that caused the imprecision doesn't either.
+`ToRay_RemainsPreciseAtRealisticFullParkFramingDistances` confirms a tight `1e-4` epsilon holds at the
+same ~1303-unit distance that broke the old approach's tests at 20 units. This also simplified
+`Debug.cs`'s null-checks: `ToRay` doesn't require `Camera.Update()` to have run first (unlike `Unproject`,
+which needed `Value` to be non-null), so the `camera.Value is null` guard was removed.
+
+### Not done in this pass: Step Zero's platform integration test
+
+The unit-test half of Step Zero (screen→ray math, tested in isolation) is done — see
+`CameraExtensionsTests.cs`. The **integration test half — real `GameWindow`/`GLSurface` at non-100%
+Windows display scaling, confirming `FramebufferSize` matches the live GL viewport and `IMouse.Position`
+resolves to a ray through `Camera.Target` — was not implemented.** This repo has no existing pattern for
+spinning up a real windowed/GL context inside a test run (the `Integration` test project only exercises
+OVL file loading, not rendering), and building that harness is a substantial task on its own. The DPI
+mismatch risk described in Step Zero above is therefore still unverified in practice, not just in theory —
+recommend a manual check (run at 125%/150% Windows scaling, watch the `Debug.cs` cursor line against a
+known tile) before relying on `ToRay` for real tool input in `raise-lower-smoothing-tools.md`.
+
 ## Status
 
-Not started.
+Core picking primitives (`Ray`, `CameraExtensions.ToRay`, `TerrainPicker.TryPickTile`) and the `Debug.cs`
+cursor readout are implemented and unit-tested (60 new/updated tests across `OpenCobra.Tests` and
+`OpenRCT3.Tests`, all passing, including a regression test proving the analytic `ToRay` stays precise at
+realistic full-park framing distances where the original matrix-inversion approach lost precision; full
+existing suites re-run clean aside from 7 pre-existing, unrelated `OpenCobra/OVL`
+texture-name-mangling failures predating this work). `Debug.cs` and `Game.cs` were also refactored to
+construct `Debug` fully through `Game.IoC` (`Made.Of` + keyed registrations) rather than manual `Resolve`
+calls inside `Render()`. Not yet done: the Step Zero platform/DPI integration test (see above — recommend
+manual verification first), and everything in Deferred (brush/click dispatch, non-terrain picking) which
+remains `raise-lower-smoothing-tools.md`'s responsibility.

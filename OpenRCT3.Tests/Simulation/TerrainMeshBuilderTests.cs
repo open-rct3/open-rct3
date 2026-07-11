@@ -53,6 +53,20 @@ public class TerrainMeshBuilderTests {
   }
 
   [Test]
+  public void CornerPosition_AppliesTheWidthCenteringOffsetAndTileSizeScale() {
+    // Pins the exact formula TerrainPicker.TryPickTile's inverse mapping depends on - if this ever
+    // changes (e.g. the Width/2f centering), the picker would silently start pointing at the wrong
+    // tiles without this test catching it.
+    var terrain = NewTerrain();
+
+    var sw = TerrainMeshBuilder.CornerPosition(terrain, 6, 6, TerrainCornerSlot.SouthWest);
+    var ne = TerrainMeshBuilder.CornerPosition(terrain, 6, 6, TerrainCornerSlot.NorthEast);
+
+    Assert.That(sw, Is.EqualTo(new Vector3(0, 24, 0)));
+    Assert.That(ne, Is.EqualTo(new Vector3(4, 28, 0)));
+  }
+
+  [Test]
   public void Build_CornerWorldPositions_MatchTileGrid() {
     var terrain = NewTerrain();
     var mesh = TerrainMeshBuilder.Build(terrain, Vector4.One);

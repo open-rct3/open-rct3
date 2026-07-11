@@ -10,6 +10,10 @@
 
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+
+    <!-- CA1416: platform-support analysis flags every call into OpenRCT3 (Windows/macOS-specific by
+         its TargetFramework), which this test project intentionally references cross-platform. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
   </PropertyGroup>
 
   <!-- Match OpenRCT3.csproj's per-OS TargetFramework, since this project references it. -->

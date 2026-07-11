@@ -42,6 +42,12 @@ public class Camera : Uniform<Matrix4x4> {
     new Vector2(DefaultViewOffset.X, DefaultViewOffset.Y).Length()
   ) * 180f / MathF.PI;
 
+  /// <summary>
+  /// Vertical field of view, in radians. Shared with <see cref="CameraExtensions.ToRay"/> so picking's
+  /// analytic ray reconstructs the exact same frustum <see cref="Update"/> projects with, rather than a
+  /// second, independently maintained copy of this constant.
+  /// </summary>
+  public const float FieldOfView = MathF.PI / 3f;
   /// <summary>Near clip distance, in world-space meters. 1cm is close enough for any placeable object.</summary>
   private const float NearPlaneDistance = 0.01f;
   /// <summary>
@@ -215,7 +221,7 @@ public class Camera : Uniform<Matrix4x4> {
   public void Update(float aspectRatio) {
     var view = Matrix4x4.CreateLookAt(Eye, Target, Vector3.UnitZ);
     var farPlaneDistance = FarPlaneReferenceDistance * FarPlaneDistanceMargin;
-    var projection = CreatePerspectiveFieldOfViewGL(MathF.PI / 3f, aspectRatio, NearPlaneDistance, farPlaneDistance);
+    var projection = CreatePerspectiveFieldOfViewGL(FieldOfView, aspectRatio, NearPlaneDistance, farPlaneDistance);
 
     Value = view * projection;
   }
