@@ -22,7 +22,7 @@ using Silk.NET.Input;
 using System.Drawing;
 using System.Numerics;
 using System.Threading;
-
+using UI = OpenRCT3.UI;
 
 #if WINDOWS
 using System.Windows.Forms;
@@ -176,9 +176,9 @@ public class Game : IGame {
     Scene.Camera.Frame(markerCenter, markerFramingDistance);
     logger.Trace("Framed camera on marker cube");
 
-    // Add the scenario editor window
+    // Add the scenario editor and debug windows
     Scene.Windows.Add(new Editor());
-    Scene.Windows.Add(new DebugWindow());
+    Scene.Windows.Add(new UI.Debug(this, terrainMesh));
   }
 
   /// <summary>
