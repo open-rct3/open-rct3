@@ -142,11 +142,13 @@ Both share one drag-path-sample + radial-falloff evaluator; Mesa only changes th
   slots render greyed, not hidden.
 - **Icons**: placeholder `ImGui.Button` with tool name for v1; TODO to swap in RCT3 textures later
   (out of scope to avoid coupling to a rendering concern).
-- **Input wiring depends on [`screen-tile-picking.md`](screen-tile-picking.md)** — button press sets
+- **Input wiring depends on [`screen-tile-picking.md`](../../../summaries/completed-work/screen-tile-picking.md)**
+  (now implemented — `TerrainPicker.TryPickTile`/`CameraExtensions.ToRay`) — button press sets
   `SelectedTool`; world click dispatches to the matching decision function with brush size, pointer
-  tile, and (freeform only) sampled drag path. Resolving a screen click to `(tileX, tileY)` is a
-  separate plan (no such picking existed anywhere in the codebase — see that plan's Context); this plan
-  only consumes its `TilePickResult`, it doesn't implement the ray march itself.
+  tile, and (freeform only) sampled drag path. This plan only consumes `TilePickResult`, it doesn't
+  implement the ray march itself. Note that plan's "Known follow-ups": the Step Zero platform/DPI
+  integration test was never done — recommend a manual check at non-100% Windows display scaling before
+  relying on picking for real click input here.
   - **No new per-frame hook needed.** `IWindow.Render()` (`OpenCobra.GDK.GUI.IWindow`, implemented by
     `Editor`/`Debug` today) already runs once per frame, same cadence a dedicated `Update()` would —
     `TerrainTools` can poll mouse state, run the pick, and dispatch drag/click handling directly inside
@@ -210,6 +212,8 @@ Not started. Builds on existing primitives (`Terrain.RaiseCorner`/`LowerCorner`/
 `IsEdgeDetached`, `Park.RaiseTerrainCorner`/`LowerTerrainCorner`/`SetTerrainCornerHeight`). Remaining:
 brush-enumeration primitive, per-tool target-height decisions for the six tools, the drag-path/
 radial-falloff evaluator, the `TerrainTools` window, and the input wiring (brush cursor/preview,
-diameter spinner, click dispatch, drag detection, continuous-drag path sampling) — blocked on
-[`screen-tile-picking.md`](screen-tile-picking.md) for the pointer-tile resolution and
-[`debug-draw.md`](debug-draw.md) for the brush cursor overlay, both tracked as separate plans.
+diameter spinner, click dispatch, drag detection, continuous-drag path sampling). Pointer-tile resolution
+is no longer blocking — see
+[`completed-work/screen-tile-picking.md`](../../../summaries/completed-work/screen-tile-picking.md)
+(implemented, with one caveat: its platform/DPI integration test was never done — see that doc's Known
+follow-ups). Still blocked on [`debug-draw.md`](debug-draw.md) for the brush cursor overlay.
