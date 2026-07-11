@@ -1,4 +1,4 @@
-# Plan: Render Grass Texture from Terrain OVL
+# Render Grass Texture from Terrain OVL
 
 **Status**: OVL `tex`/`flic`/`btbl` decoding now works. Plan pivots to a small follow-up: pull a grass texture out of the decoded `TextureCollection` and feed it into the terrain mesh as `AlbedoTexture`.
 
@@ -26,9 +26,17 @@ Decode code is split:
 
 The `ter` (TerrainType) tag is still undecoded, but it is no longer required: each `ter` entry's `texture_ref` points to a `tex` entry with the same name (`Terrain_00`..`Terrain_25`, `Cliff_00`..`Cliff_05`, `TerrainCliff0`..`TerrainCliff5`), and the `tex` entries now decode cleanly via the loader walk.
 
+## Gaps and risks (found during review, before execution)
+
+1. ~~No renderer texture-binding path~~ — **verified already working, no action needed.** Checked [OpenRCT3/OpenGL/Renderer.cs](../../OpenRCT3/OpenGL/Renderer.cs): `UploadMaterial` calls `Texture.Upload()` for any material texture still `Uninitialized`, and the draw loop (`Render`/`BuildDisplayList`) binds `material.AlbedoTexture.Handle` to `TEXTURE0` and sets `u_Texture` before `DrawElements`. This landed after the "What's already done" snapshot at the top of this plan (commit `b22f4da` "Wire OVL Textures into GDK Materials" and later). `Textured`'s shader (`Material.cs:101`) and `Mesh.Upload`'s conditional `a_TexCoord` binding are also already correct. Steps 1–3 below are the complete remaining work.
+2. **`worldX`/`worldY` don't exist in `AddTopFace`'s scope.** They're locals inside `CornerPosition` ([OpenRCT3/Simulation/TerrainMeshBuilder.cs:44-57](OpenRCT3/Simulation/TerrainMeshBuilder.cs)), which returns only `Vector3 Position` (already centered by `-terrain.Width/2f * TileSize`). **Resolved**: derive `TexCoord` from `Position.X`/`Position.Z` directly — no signature change to `CornerPosition`. Texture origin will shift slightly if `terrain.Width` changes, but tiling density and correctness are unaffected. Step 2's snippet below reflects this.
+3. **Green tint never gets removed, and vertex-color's role needs documenting.** The step-3 code sample keeps passing the green `grass` vertex color even after the texture is wired up, so `Textured`'s `FragColor = texColor * v_Color` would tint the real grass texture dark green. **Resolved**: `Game.cs` picks `Color.White` when `GrassTexture` is set, green flat-color otherwise. Also confirmed by grep: `v_Color` currently has exactly one job — flat-shading fallback / tint multiplier for `Textured` — it's not used for baked lighting, AO, or anything else today, and the separate `Recolorable` flag threaded through `OVL.Files.Texture` → GDK `Texture` (`Texture.cs:32,43,71`, `IsRecolorable`) is fully unused dead code with zero call sites, so there's no existing recolor-via-vertex-color mechanism to conflict with. Renamed `v_Color`'s doc comment in the shader source to spell out "tint multiplier" so a future recolor or baked-lighting feature doesn't silently overload it without noticing the collision — see step 3 below.
+4. **Shared-`Image<Rgba32>` double-dispose landmine.** `OVL.Files.Texture.MipLevels` are independent copies safe to outlive `using var ovl` — confirmed the DXT/A8R8G8B8 decoders build fresh pixel arrays, not mmap-backed views. But GDK `Texture` (`OpenCobra/GDK/Materials/Texture.cs:32,52`) stores the passed `Image<Rgba32>` **by reference**, not by copy. The plan's snippet never disposes the `TextureCollection` returned by `Textures.Extract` (leaving ~32 unused decoded textures for the GC), which is fine *as written* — but if anyone later "cleans up" that leak by adding `using var textures = Textures.Extract(ovl)`, it will double-dispose the same `Image<Rgba32>` that `GDK.Texture.Dispose()` also disposes via `World.Dispose`. Add an explicit code comment at the call site: `// Do not dispose `textures` — GrassTexture holds a live reference into MipLevels[0].`
+5. **"Terrain_00 is grass" is an unverified guess.** No per-texture-name data exists in `.agents/summaries/ovl-texture-scan.csv` (only aggregate counts), and the `ter`/`TerrainType` tag — the only structure that would authoritatively map a `TerrainType` enum value to a texture name — is still undecoded per this plan's own text. The selection rationale (first `tex` entry, no `Cliff` prefix, BTBL index 0) is circumstantial. Treat step 1's texture choice as provisional until the visual-confirmation step in Verification actually runs; if it's wrong, swap the string constant only — no structural rework needed.
+
 ## What's left
 
-Three small changes, no decoder work needed:
+Three small changes, no decoder work needed, no renderer changes needed (risk #1 above confirmed that path already works):
 
 ### 1. `OpenRCT3/Simulation/Terrain.cs` — populate `GrassTexture` from the decoded collection
 
@@ -41,6 +49,8 @@ public static Terrain Load() {
   var terrain = new Terrain();
   var terrainOvl = Path.Combine(config.InstallPath, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
   using var ovl = Ovl.Load(terrainOvl);
+  // Do not dispose `textures` — GrassTexture holds a live reference into MipLevels[0]
+  // (GDK Texture stores the Image<Rgba32> by reference, not a copy).
   var textures = Textures.Extract(ovl);
   if (textures["Terrain_00"] is { MipLevels: [{ } mip0] } tex) {
     terrain.GrassTexture = new GDK.Materials.Texture(
@@ -58,20 +68,21 @@ Choice of `Terrain_00` as the grass candidate: it's the first `tex` entry in the
 
 The current builder ([OpenRCT3/Simulation/TerrainMeshBuilder.cs:59](OpenRCT3/Simulation/TerrainMeshBuilder.cs)) writes only `Position`, `Normal`, `Color` — no `TexCoord`. `Material.Textured` ([OpenCobra/GDK/Materials/Material.cs:101](OpenCobra/GDK/Materials/Material.cs)) reads `a_TexCoord` and the current shader will sample `(0, 0)` for every vertex, producing a black quad.
 
-Add a UV per top-face vertex. Each top face is one tile (4 m × 4 m, see `Park.TileSize`), and the grass texture is intended to tile across the park — the simplest correct mapping is world-space metres, scaled by an inverse like `1 / Park.TileSize` so a single grass tile maps to one world tile. Set `TexCoord = new Vector2(worldX, worldY) * (1f / Park.TileSize)` in `AddTopFace` and on cliff-face vertices. Adjust scale later if a different repeat density is preferred.
+Add a UV per top-face vertex. Each top face is one tile (4 m × 4 m, see `Park.TileSize`), and the grass texture is intended to tile across the park — the simplest correct mapping is world-space metres, scaled by an inverse like `1 / Park.TileSize` so a single grass tile maps to one world tile. `CornerPosition` only returns a `Vector3 Position` (already centered by `-terrain.Width/2f * TileSize`), so derive the UV from that rather than plumbing through separate raw grid coordinates: set `TexCoord = new Vector2(Position.X, Position.Z) * (1f / Park.TileSize)` in `AddTopFace` and on cliff-face vertices. The texture origin will shift slightly if `terrain.Width` changes, which is fine for tiling. Adjust scale later if a different repeat density is preferred.
 
 The existing `Vertex` struct ([OpenCobra/GDK/Meshes/Vertex.cs:25](OpenCobra/GDK/Meshes/Vertex.cs)) already has a `TexCoord` field, so no GDK changes are needed.
 
 ### 3. `OpenRCT3/Game.cs:131` — switch to `Textured` material
 
 ```csharp
-var terrainMesh = TerrainMeshBuilder.Build(World.Terrain, grass);
+var hasGrassTexture = World.Terrain?.GrassTexture != null;
+var terrainMesh = TerrainMeshBuilder.Build(World.Terrain, hasGrassTexture ? Color.White : grass);
 var ground = new Model(terrainMesh) {
   Material = new Textured { AlbedoTexture = World.Terrain?.GrassTexture }
 };
 ```
 
-The vertex `Color` of `Color.FromArgb(79, 129, 14)` (BGRA 0x4F, 0x81, 0x0E) is still passed in so the rendered surface falls back to a flat grass colour if no texture is available, matching `Textured`'s `FragColor = texColor * v_Color` math. Once the texture is wired up, the shader multiplies it by white (or whatever colour the user picks) — pass `Color.White` once a texture is present and the fallback becomes a no-op.
+`Textured`'s `FragColor = texColor * v_Color` math means the vertex `Color` is a tint multiplier, not a lighting term — pass `Color.White` when `GrassTexture` is present so the texture renders unmodified, and fall back to the flat `Color.FromArgb(79, 129, 14)` grass colour (BGRA 0x4F, 0x81, 0x0E) only when there's no texture to show. Add a one-line comment on `v_Color` in `Textured`'s fragment shader source ([OpenCobra/GDK/Materials/Material.cs:101](OpenCobra/GDK/Materials/Material.cs)) — `// vertex color is a tint multiplier over the sampled texture, not a lighting term` — so a future recolor feature or baked-lighting pass doesn't silently repurpose it without noticing the existing usage. (The `Recolorable` flag already threaded through `OVL.Files.Texture` → GDK `Texture.IsRecolorable` is currently dead code with no render-time behavior, so there's nothing to reconcile with yet — just the comment to prevent a future collision.)
 
 The marker cube at [OpenRCT3/Game.cs:150](OpenRCT3/Game.cs) can stay on `Flat`; it's a proof-of-concept, not a textured object.
 
