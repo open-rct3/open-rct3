@@ -44,12 +44,6 @@ internal partial class GameWindow : Form, IWindow {
     SystemMenu.AddItems(this);
 
     Game.IoC.RegisterInstance<IWindow>(this);
-    Game.IoC.Register<IInputContext>(
-      Reuse.Scoped,
-      Made.Of(r => ServiceInfo.Of<IWindow>(), window => window.CreateInput(Arg.Of<IWindow>())),
-      // The input abstraction is kinda heavy, so let services dispose it
-      Setup.With(trackDisposableTransient: true, allowDisposableTransient: true)
-    );
     InputWindowExtensions.Add(this);
 
     // Required: The OpenGL surface is not created otherwise

@@ -41,24 +41,60 @@ public class Camera : Uniform<Matrix4x4> {
   /// bounds, without needing to be revisited once one exists.
   /// </summary>
   private const float FarPlaneDistanceMargin = 2f;
+  /// <summary>The closest <see cref="Zoom"/> may bring the eye to <see cref="Target"/>.</summary>
+  private const float MinDistance = 1f;
 
   /// <summary>The world-space point the camera is aimed at.</summary>
   public Vector3 Target { get; private set; } = Vector3.Zero;
   /// <summary>The camera's world-space eye position.</summary>
   public Vector3 Eye { get; private set; }
+  /// <summary>The current eye-to-target distance, as last set by <see cref="Frame"/>.</summary>
+  private float distance = DefaultDistance;
+  /// <summary>
+  /// Rotation, in degrees, applied around <see cref="Target"/>'s Z axis on top of
+  /// <see cref="DefaultViewDirection"/>. See <see cref="RotateAzimuth"/>.
+  /// </summary>
+  public float Azimuth { get; private set; }
 
   public Camera() {
     Value = Matrix4x4.Identity;
-    Eye = Target + (DefaultViewDirection * DefaultDistance);
+    UpdateEye();
   }
 
   /// <summary>
   /// Re-aims the camera at <paramref name="target"/>, keeping the same South-East/elevated viewing
-  /// direction, with the eye placed <paramref name="distance"/> units away along that direction.
+  /// direction (rotated by any accumulated <see cref="Azimuth"/>), with the eye placed
+  /// <paramref name="distance"/> units away along that direction.
   /// </summary>
   public void Frame(Vector3 target, float distance) {
     Target = target;
-    Eye = target + (DefaultViewDirection * distance);
+    this.distance = distance;
+    UpdateEye();
+  }
+
+  /// <summary>
+  /// Rotates the camera around <see cref="Target"/>'s Z axis by <paramref name="degrees"/>, keeping the
+  /// same eye-to-target distance and elevation. Positive values rotate counter-clockwise looking down -Z.
+  /// </summary>
+  public void RotateAzimuth(float degrees) {
+    Azimuth = (Azimuth + degrees) % 360f;
+    if (Azimuth < 0f) Azimuth += 360f;
+    UpdateEye();
+  }
+
+  /// <summary>
+  /// Moves the eye <paramref name="delta"/> units closer to (negative) or farther from (positive)
+  /// <see cref="Target"/>, keeping the same azimuth and elevation. Clamped to <see cref="MinDistance"/>
+  /// so the eye can never reach or pass through <see cref="Target"/>.
+  /// </summary>
+  public void Zoom(float delta) {
+    distance = MathF.Max(distance + delta, MinDistance);
+    UpdateEye();
+  }
+
+  private void UpdateEye() {
+    var rotation = Matrix4x4.CreateRotationZ(Azimuth * MathF.PI / 180f);
+    Eye = Target + Vector3.Transform(DefaultViewDirection * distance, rotation);
   }
 
   /// <summary>

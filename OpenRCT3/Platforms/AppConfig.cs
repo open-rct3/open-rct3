@@ -6,9 +6,11 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using NLog;
+using OpenRCT3.Input;
 
 namespace OpenRCT3.Platforms;
 
@@ -31,6 +33,11 @@ public record AppConfig {
   /// Whether to suppress unhandled exception alert modals.
   /// </summary>
   public bool SuppressCrashAlerts { get; set; }
+  /// <summary>
+  /// User overrides of <see cref="DefaultBindings"/>, keyed by action name. Only actions the user has
+  /// re-bound appear here; anything absent keeps its default binding(s).
+  /// </summary>
+  public Dictionary<string, KeyBindingOverride>? KeyBindings { get; set; }
 
   public static string LogsFolder => Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

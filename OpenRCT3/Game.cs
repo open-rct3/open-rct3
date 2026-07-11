@@ -9,13 +9,17 @@ using DryIoc;
 using NLog;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Game;
+using OpenCobra.GDK.GUI;
+using OpenCobra.GDK.Input;
 using OpenCobra.GDK.Materials;
 using OpenCobra.GDK.Meshes;
 using OpenCobra.GDK.Platform;
+using OpenRCT3.Input;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Scenario;
 using OpenRCT3.Simulation;
+using Silk.NET.Input;
 using System.Drawing;
 using System.Numerics;
 using System.Threading;
@@ -45,7 +49,7 @@ public class Game : IGame {
   private readonly ManualResetEvent resumeSignal = new(true);
   private readonly Stopwatch stopwatch = new();
   private DateTime lastLagWarning = DateTime.Now;
-  private readonly Renderer renderer = Game.IoC.Resolve<IRenderer>() as Renderer ??
+  private readonly Renderer renderer = IoC.Resolve<IRenderer>() as Renderer ??
     throw new InvalidOperationException();
 
   public static Container IoC => IGame.IoC;
@@ -105,8 +109,45 @@ public class Game : IGame {
   public Simulation.World World { get; } = new();
   public Scene Scene { get; } = new();
 
+  /// <summary>
+  /// Resolves the game's named, rebindable input actions (see <see cref="DefaultBindings"/>) against the
+  /// window's live <see cref="IInputContext"/>.
+  /// </summary>
+  public InputActionMap InputActions { get; }
+
   public Game() {
     Instance = this;
+
+    // Seed the action map with the game's defaults, then layer in any user rebinds from config.
+    InputActions = new InputActionMap(IoC.Resolve<IInputContext>(), DefaultBindings.Defaults);
+    if (Config.KeyBindings is { } overrides) {
+      foreach (var (action, binding) in overrides) InputActions.Bind(action, binding.ToBinding());
+    }
+
+    // Proof of concept: Q/E rotate the camera in fixed 90° steps (Isometric-mode-style snapping), and
+    // mouse-wheel/PageUp/PageDown zoom it in/out. Other camera modes (Regular's continuous rotation,
+    // Freelook's WASD/right-drag) are follow-up work - see .agents/plans/features/input-rebinding.md.
+    const float RotationStepDegrees = 90f;
+    // Fixed per-press step for the keyboard bindings (PageUp/PageDown), which have no notion of "how hard".
+    const float ZoomStepDistance = 50f;
+    // Units of zoom per unit of raw scroll-wheel tick magnitude (one notch == 1.0, see
+    // Platforms.Windows.InputAdapter's ScrollWheel construction) - chosen to match ZoomStepDistance so a
+    // single notch feels the same as a single PageUp/PageDown press.
+    const float ScrollZoomScale = 50f;
+    InputActions.Pressed += action => {
+      if (Controller.CaptureKeyboard || Controller.CaptureMouse) return;
+      else if (action == DefaultBindings.ExitGame) Quit();
+      else if (action == DefaultBindings.RotateMapLeft) Scene.Camera.RotateAzimuth(-RotationStepDegrees);
+      else if (action == DefaultBindings.RotateMapRight) Scene.Camera.RotateAzimuth(RotationStepDegrees);
+      else if (action == DefaultBindings.ZoomIn) Scene.Camera.Zoom(-ZoomStepDistance);
+      else if (action == DefaultBindings.ZoomOut) Scene.Camera.Zoom(ZoomStepDistance);
+    };
+    InputActions.Scrolled += (action, delta) => {
+      if (Controller.CaptureKeyboard || Controller.CaptureMouse) return;
+      // Positive delta (scroll up) zooms in (negative distance change); negative delta zooms out - the
+      // sign is already correct for both ZoomIn and ZoomOut bindings, so no branch on action is needed.
+      if (action == DefaultBindings.ZoomIn || action == DefaultBindings.ZoomOut) Scene.Camera.Zoom(-delta * ScrollZoomScale);
+    };
 
     logger.Trace("Creating game world...");
     logger.Warn("Simulation features are unimplemented!");
@@ -126,6 +167,22 @@ public class Game : IGame {
     };
     Scene.Models.Add(ground);
     logger.Trace("Added terrain mesh");
+
+    // Proof-of-concept marker: a unit cube placed off-center in one quadrant of the buildable area, so
+    // Q/E map rotation (above) is visually obvious - a centered object wouldn't appear to move at all.
+    Debug.Assert(World.Park != null);
+    var markerBounds = World.Park.BuildableBounds;
+    var markerPosition = new Vector3(
+      markerBounds.Min.X + (markerBounds.Max.X - markerBounds.Min.X) * 0.75f,
+      markerBounds.Min.Y + (markerBounds.Max.Y - markerBounds.Min.Y) * 0.75f,
+      1f);
+    var marker = new Model(Primitives.Cube(name: "RotationMarker", color: Color.FromArgb(200, 30, 30).ToGl())) {
+      Material = new Flat(),
+      Transform = new Transform { Matrix = Matrix4x4.CreateTranslation(markerPosition) }
+    };
+    marker.Transform.Translate(0, 0, 0.5f);
+    Scene.Models.Add(marker);
+    logger.Trace("Added rotation marker cube");
 
     // Frame the camera on the loaded park's buildable area.
     //

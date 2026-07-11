@@ -7,8 +7,7 @@
 
 using DryIoc;
 using NLog;
-using OpenCobra.GDK;
-using OpenCobra.GDK.GUI;
+using GUI = OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Numerics;
 using OpenCobra.GDK.Platform;
 using OpenRCT3.OpenGL;
@@ -94,13 +93,22 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
     Context.MakeCurrent();
 
     // TODO: Refactor to extract the rest of this method into the GDK
+    // Renderer implementations depend on the GUI controller
     Game.IoC.RegisterInstance<IGraphicsSurface>(this);
     Game.IoC.RegisterInstance(gl);
     Game.IoC.RegisterInstance<IGLContext>(Context);
-
-    // Initialize the GUI controller first, renderer implementations depend on it
-    var mainWindow = Parent as GameWindow ?? throw new InvalidOperationException();
-    Game.IoC.RegisterInstance(new Controller(mainWindow.CreateInput()), IfAlreadyRegistered.Throw);
+    Game.IoC.Register<IInputContext>(
+      Reuse.ScopedOrSingleton,
+      Made.Of(r => ServiceInfo.Of<IWindow>(), window => window.CreateInput(Arg.Of<IWindow>())),
+      // The input abstraction is kinda heavy, so let services dispose of it
+      Setup.With(trackDisposableTransient: true, allowDisposableTransient: true),
+      IfAlreadyRegistered.Throw
+    );
+    Game.IoC.Register<GUI.Controller>(
+      Reuse.ScopedOrSingleton,
+      Made.Of(r => ServiceInfo.Of<IInputContext>(), input => new GUI.Controller(input)),
+      ifAlreadyRegistered: IfAlreadyRegistered.Throw
+    );
 
     // Initialize the scene renderer
     renderer = new Renderer { FramebufferSize = new(ClientSize.Width, ClientSize.Height) };
