@@ -108,7 +108,7 @@ public class Game : IGame {
   public Simulation.World World { get; } = new();
   public Scene Scene { get; } = new();
 
-  private readonly GameInputController inputController;
+  private readonly InputController inputController;
   /// <summary>
   /// Resolves the game's named, rebindable input actions (see <see cref="DefaultBindings"/>) against the
   /// window's live <see cref="IInputContext"/>.
@@ -118,7 +118,7 @@ public class Game : IGame {
   public Game() {
     Instance = this;
 
-    inputController = new GameInputController(IoC.Resolve<IInputContext>(), Config, Scene.Camera, Quit);
+    inputController = new InputController(IoC.Resolve<IInputContext>(), Config, Scene.Camera, Quit);
 
     logger.Trace("Creating game world...");
     logger.Warn("Simulation features are unimplemented!");
@@ -236,6 +236,11 @@ public class Game : IGame {
           interpolation: lag.TotalMilliseconds / TargetFrameTime.TotalMilliseconds);
         lag -= TargetFrameTime;
       }
+
+      // Poll held-key camera movement (WASD/arrows) once per rendered frame - unlike the
+      // InputActionMap.Pressed/Scrolled-driven handlers, continuous movement has no discrete event to
+      // hook and needs this frame's elapsed time to scale by.
+      inputController.Update((float)elapsed.TotalSeconds);
 
       // Rendering can happen at arbitrary points between updates, and frames can
       // be dropped if the machine is slow.

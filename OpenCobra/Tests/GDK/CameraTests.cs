@@ -158,4 +158,272 @@ public class CameraTests {
         $"far plane did not land at 2x the framing distance ({distance})");
     }
   }
+
+  [Test]
+  public void RotateAzimuth_AccumulatesAcrossCalls() {
+    var camera = new Camera();
+
+    camera.RotateAzimuth(30f);
+    camera.RotateAzimuth(15f);
+
+    Assert.That(camera.Azimuth, Is.EqualTo(45f).Within(Epsilon));
+  }
+
+  [Test]
+  public void RotateAzimuth_WrapsPositiveOverflowIntoZeroToThreeSixtyRange() {
+    var camera = new Camera();
+
+    camera.RotateAzimuth(350f);
+    camera.RotateAzimuth(30f);
+
+    Assert.That(camera.Azimuth, Is.EqualTo(20f).Within(Epsilon));
+  }
+
+  [Test]
+  public void RotateAzimuth_WrapsNegativeUnderflowIntoZeroToThreeSixtyRange() {
+    var camera = new Camera();
+
+    camera.RotateAzimuth(10f);
+    camera.RotateAzimuth(-30f);
+
+    Assert.That(camera.Azimuth, Is.EqualTo(340f).Within(Epsilon));
+  }
+
+  [Test]
+  public void RotateAzimuth_KeepsTheSameEyeToTargetDistance() {
+    var camera = new Camera();
+    camera.Frame(Vector3.Zero, distance: 250f);
+
+    camera.RotateAzimuth(137f);
+
+    Assert.That(Vector3.Distance(camera.Eye, camera.Target), Is.EqualTo(250f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Zoom_MovesEyeCloserForNegativeDelta() {
+    var camera = new Camera();
+    camera.Frame(Vector3.Zero, distance: 200f);
+
+    camera.Zoom(-50f);
+
+    Assert.That(Vector3.Distance(camera.Eye, camera.Target), Is.EqualTo(150f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Zoom_MovesEyeFartherForPositiveDelta() {
+    var camera = new Camera();
+    camera.Frame(Vector3.Zero, distance: 200f);
+
+    camera.Zoom(50f);
+
+    Assert.That(Vector3.Distance(camera.Eye, camera.Target), Is.EqualTo(250f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Zoom_ClampsToAMinimumDistanceSoTheEyeCannotReachTheTarget() {
+    var camera = new Camera();
+    camera.Frame(Vector3.Zero, distance: 10f);
+
+    camera.Zoom(-1000f);
+
+    Assert.That(Vector3.Distance(camera.Eye, camera.Target), Is.GreaterThan(0f));
+  }
+
+  [Test]
+  public void Zoom_IsUnclampedByDefaultWhenZoomingOut() {
+    // MaxDistance defaults to null - Zoom should be free to push the eye arbitrarily far away until a
+    // caller opts into a cap.
+    var camera = new Camera();
+    camera.Frame(Vector3.Zero, distance: 200f);
+
+    camera.Zoom(10_000f);
+
+    Assert.That(Vector3.Distance(camera.Eye, camera.Target), Is.EqualTo(10_200f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Zoom_ClampsToMaxDistanceWhenSet() {
+    var camera = new Camera { MaxDistance = 300f };
+    camera.Frame(Vector3.Zero, distance: 250f);
+
+    camera.Zoom(500f);
+
+    Assert.That(Vector3.Distance(camera.Eye, camera.Target), Is.EqualTo(300f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Zoom_DoesNotClampBelowMaxDistanceWhenZoomingIn() {
+    var camera = new Camera { MaxDistance = 300f };
+    camera.Frame(Vector3.Zero, distance: 250f);
+
+    camera.Zoom(-100f);
+
+    Assert.That(Vector3.Distance(camera.Eye, camera.Target), Is.EqualTo(150f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Forward_IsUnitLengthAndFlatOnTheGroundPlane() {
+    var camera = new Camera();
+
+    Assert.That(camera.Forward.Length(), Is.EqualTo(1f).Within(Epsilon));
+    Assert.That(camera.Forward.Z, Is.EqualTo(0f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Right_IsUnitLengthAndFlatOnTheGroundPlane() {
+    var camera = new Camera();
+
+    Assert.That(camera.Right.Length(), Is.EqualTo(1f).Within(Epsilon));
+    Assert.That(camera.Right.Z, Is.EqualTo(0f).Within(Epsilon));
+  }
+
+  [Test]
+  public void ForwardAndRight_AreOrthogonal() {
+    var camera = new Camera();
+
+    Assert.That(Vector3.Dot(camera.Forward, camera.Right), Is.EqualTo(0f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Forward_MatchesExpectedDirectionAtDefaultAzimuth() {
+    // DefaultViewOffset is (20, -20, 50), i.e. eye sits South-East of target - Forward (eye toward target,
+    // projected flat) should point North-West: (-1, 1, 0) normalized.
+    var camera = new Camera();
+
+    var expected = Vector3.Normalize(new Vector3(-1, 1, 0));
+    Assert.That(Vector3.Distance(camera.Forward, expected), Is.EqualTo(0f).Within(Epsilon));
+  }
+
+  [Test]
+  public void ForwardAndRight_RotateWithAzimuth() {
+    var camera = new Camera();
+    var forwardBefore = camera.Forward;
+    var rightBefore = camera.Right;
+
+    camera.RotateAzimuth(90f);
+
+    var rotation = Matrix4x4.CreateRotationZ(90f * MathF.PI / 180f);
+    var expectedForward = Vector3.Normalize(Vector3.Transform(forwardBefore, rotation));
+    var expectedRight = Vector3.Normalize(Vector3.Transform(rightBefore, rotation));
+
+    Assert.That(Vector3.Distance(camera.Forward, expectedForward), Is.EqualTo(0f).Within(Epsilon));
+    Assert.That(Vector3.Distance(camera.Right, expectedRight), Is.EqualTo(0f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Pan_TranslatesTargetByDelta() {
+    var camera = new Camera();
+    var delta = new Vector3(30, -15, 0);
+
+    camera.Pan(delta);
+
+    Assert.That(Vector3.Distance(camera.Target, delta), Is.EqualTo(0f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Pan_TranslatesEyeByTheSameDelta_KeepingDistanceAndAzimuthUnchanged() {
+    var camera = new Camera();
+    camera.Frame(new Vector3(5, 5, 0), distance: 400f);
+    camera.RotateAzimuth(60f);
+    var eyeBefore = camera.Eye;
+    var delta = new Vector3(30, -15, 0);
+
+    camera.Pan(delta);
+
+    Assert.That(Vector3.Distance(camera.Eye, eyeBefore + delta), Is.EqualTo(0f).Within(Epsilon));
+    Assert.That(Vector3.Distance(camera.Eye, camera.Target), Is.EqualTo(400f).Within(Epsilon));
+    Assert.That(camera.Azimuth, Is.EqualTo(60f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Elevation_DefaultsToTheOriginalFixedViewOffsetAngle() {
+    // The pre-Tilt implementation used a fixed (20, -20, 50) offset; Elevation's default must reproduce
+    // that exact angle (atan2(50, |(20,-20)|)) so existing framing/rotation behavior is unchanged.
+    var camera = new Camera();
+
+    var expectedDegrees = MathF.Atan2(50f, new Vector2(20f, -20f).Length()) * 180f / MathF.PI;
+    Assert.That(camera.Elevation, Is.EqualTo(expectedDegrees).Within(Epsilon));
+  }
+
+  [Test]
+  public void Tilt_PositiveDegreesIncreasesElevation() {
+    var camera = new Camera();
+    var before = camera.Elevation;
+
+    camera.Tilt(10f);
+
+    Assert.That(camera.Elevation, Is.EqualTo(before + 10f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Tilt_NegativeDegreesDecreasesElevation() {
+    var camera = new Camera();
+    var before = camera.Elevation;
+
+    camera.Tilt(-10f);
+
+    Assert.That(camera.Elevation, Is.EqualTo(before - 10f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Tilt_ClampsToAMinimumElevationNearTheHorizon() {
+    var camera = new Camera();
+
+    camera.Tilt(-1000f);
+
+    Assert.That(camera.Elevation, Is.GreaterThan(0f));
+  }
+
+  [Test]
+  public void Tilt_ClampsToAMaximumElevationNearStraightDown() {
+    var camera = new Camera();
+
+    camera.Tilt(1000f);
+
+    Assert.That(camera.Elevation, Is.LessThan(90f));
+  }
+
+  [Test]
+  public void Tilt_KeepsTheSameEyeToTargetDistance() {
+    var camera = new Camera();
+    camera.Frame(Vector3.Zero, distance: 300f);
+
+    camera.Tilt(20f);
+
+    Assert.That(Vector3.Distance(camera.Eye, camera.Target), Is.EqualTo(300f).Within(Epsilon));
+  }
+
+  [Test]
+  public void Tilt_DoesNotChangeAzimuth() {
+    var camera = new Camera();
+    camera.RotateAzimuth(123f);
+
+    camera.Tilt(20f);
+
+    Assert.That(camera.Azimuth, Is.EqualTo(123f).Within(Epsilon));
+  }
+
+  [Test]
+  public void RotateAzimuth_DoesNotChangeElevation() {
+    var camera = new Camera();
+    camera.Tilt(15f);
+    var elevationBefore = camera.Elevation;
+
+    camera.RotateAzimuth(90f);
+
+    Assert.That(camera.Elevation, Is.EqualTo(elevationBefore).Within(Epsilon));
+  }
+
+  [Test]
+  public void Tilt_TowardStraightDown_RaisesEyeAboveTarget() {
+    var camera = new Camera();
+    camera.Frame(Vector3.Zero, distance: 300f);
+
+    camera.Tilt(1000f);
+
+    // A steep elevation should put the eye almost directly above the target.
+    Assert.That(camera.Eye.Z, Is.GreaterThan(camera.Target.Z));
+    var horizontalDistance = new Vector2(camera.Eye.X - camera.Target.X, camera.Eye.Y - camera.Target.Y).Length();
+    Assert.That(horizontalDistance, Is.LessThan(Vector3.Distance(camera.Eye, camera.Target) * 0.2f));
+  }
 }

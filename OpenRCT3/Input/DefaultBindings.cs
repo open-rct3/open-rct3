@@ -47,6 +47,34 @@ public static class DefaultBindings {
   public const string TogglePause = "toggle-pause";
   public const string CloseTopmostWindow = "close-topmost-window";
 
+  // Mouse camera movement, per camera mode (see the game manual's "Camera Movement" tables). Action names
+  // are per-mode since the same gesture means different things per mode (e.g. RMB-hold alone strafes in
+  // Normal/Isometric but rotates-around-self in Freelook). Rows that drive one combined gesture via two
+  // alternate triggers (e.g. Normal's wheel-hold and RMB+LMB-hold rotate/tilt rows) share one action with
+  // two bindings instead. Only "Normal" is consumed by InputController today; Freelook/Isometric bindings
+  // exist but aren't wired to behavior yet.
+
+  // Normal camera mode
+  /// <summary>RMB-hold + move mouse: 2D pan across the ground plane.</summary>
+  public const string StrafeCameraNormal = "strafe-camera-normal";
+  /// <summary>
+  /// Wheel-hold or RMB+LMB-hold + move mouse: horizontal drag rotates, vertical drag tilts - one combined
+  /// gesture, two alternate triggers for it (see the class remarks above).
+  /// </summary>
+  public const string RotateTiltCameraNormal = "rotate-tilt-camera-normal";
+
+  // Freelook camera mode
+  /// <summary>RMB-hold + move mouse: horizontal drag rotates the camera around its own position, vertical drag tilts it.</summary>
+  public const string RotateTiltCameraFreelook = "rotate-tilt-camera-freelook";
+  /// <summary>Wheel-hold or RMB+LMB-hold + move mouse: horizontal drag strafes, vertical drag zooms.</summary>
+  public const string StrafeZoomCameraFreelook = "strafe-zoom-camera-freelook";
+
+  // Isometric camera mode
+  /// <summary>RMB-hold + move mouse: 2D pan across the ground plane.</summary>
+  public const string StrafeCameraIsometric = "strafe-camera-isometric";
+  /// <summary>Wheel-hold or RMB+LMB-hold + move mouse: horizontal drag snap-rotates 90° left/right.</summary>
+  public const string RotateCamera90Isometric = "rotate-camera-90-isometric";
+
   /// <summary>
   /// Default action-to-binding pairs. Some actions (e.g. freelook movement) intentionally appear more
   /// than once, one entry per alternate key - <see cref="InputActionMap"/> supports multiple bindings per
@@ -89,6 +117,21 @@ public static class DefaultBindings {
     Pair(FlattenTerrainPlacingScenery, new KeyboardBinding(Key.AltLeft)),
     Pair(TogglePause, new KeyboardBinding(Key.P)),
     Pair(CloseTopmostWindow, new KeyboardBinding(Key.Backspace)),
+
+    // Mouse camera movement (see the manual's "Camera Movement" tables; ZoomIn/ZoomOut above already
+    // cover the plain "mouse wheel scroll" rows shared by Normal/Isometric).
+    // Normal
+    Pair(StrafeCameraNormal, new MouseBinding(MouseButton.Right)),
+    Pair(RotateTiltCameraNormal, new MouseBinding(MouseButton.Middle)),
+    Pair(RotateTiltCameraNormal, new MouseChordBinding(MouseButton.Right, MouseButton.Left)),
+    // Freelook
+    Pair(RotateTiltCameraFreelook, new MouseBinding(MouseButton.Right)),
+    Pair(StrafeZoomCameraFreelook, new MouseBinding(MouseButton.Middle)),
+    Pair(StrafeZoomCameraFreelook, new MouseChordBinding(MouseButton.Right, MouseButton.Left)),
+    // Isometric
+    Pair(StrafeCameraIsometric, new MouseBinding(MouseButton.Right)),
+    Pair(RotateCamera90Isometric, new MouseBinding(MouseButton.Middle)),
+    Pair(RotateCamera90Isometric, new MouseChordBinding(MouseButton.Right, MouseButton.Left)),
   };
 
   private static KeyValuePair<string, IInputBinding> Pair(string action, IInputBinding binding) => new(action, binding);

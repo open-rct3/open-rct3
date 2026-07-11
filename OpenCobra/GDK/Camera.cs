@@ -25,9 +25,22 @@ public class Camera : Uniform<Matrix4x4> {
   /// A steep, mostly-downward angle removes that ambiguity.
   /// </remarks>
   private static readonly Vector3 DefaultViewOffset = new(20, -20, 50);
-  /// <summary>The unit direction of <see cref="DefaultViewOffset"/>, used by <see cref="Frame"/>.</summary>
-  private static readonly Vector3 DefaultViewDirection = Vector3.Normalize(DefaultViewOffset);
   private static readonly float DefaultDistance = DefaultViewOffset.Length();
+  /// <summary>
+  /// The compass bearing (degrees, around Z) of <see cref="DefaultViewOffset"/>'s horizontal component -
+  /// the azimuth-zero reference direction <see cref="UpdateEye"/> rotates by <see cref="Azimuth"/>.
+  /// </summary>
+  private static readonly float DefaultBearingDegrees =
+    MathF.Atan2(DefaultViewOffset.Y, DefaultViewOffset.X) * 180f / MathF.PI;
+  /// <summary>
+  /// The angle (degrees, above the horizon) of <see cref="DefaultViewOffset"/> - the default value
+  /// <see cref="Elevation"/> starts at, computed from <see cref="DefaultViewOffset"/> so the camera's
+  /// initial direction matches it exactly (see the class remarks above for why that offset was chosen).
+  /// </summary>
+  private static readonly float DefaultElevationDegrees = MathF.Atan2(
+    DefaultViewOffset.Z,
+    new Vector2(DefaultViewOffset.X, DefaultViewOffset.Y).Length()
+  ) * 180f / MathF.PI;
 
   /// <summary>Near clip distance, in world-space meters. 1cm is close enough for any placeable object.</summary>
   private const float NearPlaneDistance = 0.01f;
@@ -43,6 +56,18 @@ public class Camera : Uniform<Matrix4x4> {
   private const float FarPlaneDistanceMargin = 2f;
   /// <summary>The closest <see cref="Zoom"/> may bring the eye to <see cref="Target"/>.</summary>
   private const float MinDistance = 1f;
+  /// <summary>
+  /// The shallowest <see cref="Tilt"/> may bring <see cref="Elevation"/> toward the horizon. Elevation
+  /// zero would put the eye level with the ground - a nearly-flat, edge-on view has the same "which way is
+  /// up" ambiguity <see cref="DefaultViewOffset"/>'s remarks describe, so tilting stops short of it.
+  /// </summary>
+  private const float MinElevationDegrees = 15f;
+  /// <summary>
+  /// The steepest <see cref="Tilt"/> may bring <see cref="Elevation"/> toward straight down. Elevation 90°
+  /// (looking straight down the Z axis) makes <see cref="Azimuth"/> meaningless - every azimuth looks
+  /// identical - so tilting stops short of it.
+  /// </summary>
+  private const float MaxElevationDegrees = 85f;
 
   /// <summary>The world-space point the camera is aimed at.</summary>
   public Vector3 Target { get; private set; } = Vector3.Zero;
@@ -58,9 +83,15 @@ public class Camera : Uniform<Matrix4x4> {
   public float? MaxDistance { get; set; }
   /// <summary>
   /// Rotation, in degrees, applied around <see cref="Target"/>'s Z axis on top of
-  /// <see cref="DefaultViewDirection"/>. See <see cref="RotateAzimuth"/>.
+  /// <see cref="DefaultBearingDegrees"/>. See <see cref="RotateAzimuth"/>.
   /// </summary>
   public float Azimuth { get; private set; }
+  /// <summary>
+  /// The camera's angle, in degrees above the horizon, looking from <see cref="Eye"/> toward
+  /// <see cref="Target"/>. Starts at <see cref="DefaultElevationDegrees"/> (matching
+  /// <see cref="DefaultViewOffset"/>'s original fixed angle) and is adjusted via <see cref="Tilt"/>.
+  /// </summary>
+  public float Elevation { get; private set; } = DefaultElevationDegrees;
 
   public Camera() {
     Value = Matrix4x4.Identity;
@@ -99,9 +130,64 @@ public class Camera : Uniform<Matrix4x4> {
     UpdateEye();
   }
 
+  /// <summary>
+  /// Adjusts <see cref="Elevation"/> by <paramref name="degrees"/> (positive tilts the eye up toward
+  /// straight-down/bird's-eye, negative tilts it down toward the horizon), keeping the same azimuth and
+  /// eye-to-target distance. Clamped to <see cref="MinElevationDegrees"/>/<see cref="MaxElevationDegrees"/>.
+  /// </summary>
+  public void Tilt(float degrees) {
+    Elevation = Math.Clamp(Elevation + degrees, MinElevationDegrees, MaxElevationDegrees);
+    UpdateEye();
+  }
+
+  /// <summary>
+  /// The camera's ground-plane (Z=0) forward direction: the horizontal component of the eye-to-target
+  /// viewing direction, normalized. Rotates with <see cref="Azimuth"/>. See <see cref="Pan"/>.
+  /// </summary>
+  public Vector3 Forward {
+    get {
+      var back = Vector3.Normalize(Eye - Target);
+      return Vector3.Normalize(new Vector3(-back.X, -back.Y, 0));
+    }
+  }
+
+  /// <summary>
+  /// The camera's ground-plane (Z=0) right direction, perpendicular to <see cref="Forward"/>. Derived the
+  /// same way <see cref="Matrix4x4.CreateLookAt"/> derives its x-axis (<c>cross(up, eye-target)</c>), so it
+  /// matches what "right" looks like on screen. See <see cref="Pan"/>.
+  /// </summary>
+  public Vector3 Right {
+    get {
+      var back = Vector3.Normalize(Eye - Target);
+      return Vector3.Normalize(new Vector3(-back.Y, back.X, 0));
+    }
+  }
+
+  /// <summary>
+  /// Translates <see cref="Target"/> (and, following it, <see cref="Eye"/>) by <paramref name="delta"/>,
+  /// panning the camera across the ground plane without changing <see cref="Azimuth"/> or the
+  /// eye-to-target distance. <paramref name="delta"/> is typically a multiple of <see cref="Forward"/>/
+  /// <see cref="Right"/>, scaled by speed and frame delta time.
+  /// </summary>
+  public void Pan(Vector3 delta) {
+    Target += delta;
+    UpdateEye();
+  }
+
+  /// <summary>
+  /// Recomputes <see cref="Eye"/> from <see cref="Target"/>, <see cref="distance"/>, <see cref="Azimuth"/>,
+  /// and <see cref="Elevation"/> - a spherical-coordinates reconstruction of the eye-to-target direction,
+  /// generalizing the fixed <see cref="DefaultViewOffset"/> direction to a rotatable/tiltable one.
+  /// </summary>
   private void UpdateEye() {
-    var rotation = Matrix4x4.CreateRotationZ(Azimuth * MathF.PI / 180f);
-    Eye = Target + Vector3.Transform(DefaultViewDirection * distance, rotation);
+    var bearingRad = (DefaultBearingDegrees + Azimuth) * MathF.PI / 180f;
+    var elevationRad = Elevation * MathF.PI / 180f;
+    var horizontalMagnitude = MathF.Cos(elevationRad);
+    var direction = new Vector3(
+      MathF.Cos(bearingRad) * horizontalMagnitude,
+      MathF.Sin(bearingRad) * horizontalMagnitude,
+      MathF.Sin(elevationRad));
+    Eye = Target + (direction * distance);
   }
 
   /// <summary>
