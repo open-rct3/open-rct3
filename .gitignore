@@ -10,7 +10,18 @@ TestResults/
 OpenCobra/Tests/TestRunner/bin/**/ovl-tests.local.json
 OpenCobra/Tests/TestRunner/ovl-tests.local.json
 
+# Shortcuts
+assets/App Data.lnk
+
+# DUB
+.dub
+docs.json
+__dummy.html
+
+############
 # Artifacts
+############
+
 bin/open-rct3
 bin/open-rct3-test-application
 bin/OpenRCT3
@@ -23,15 +34,6 @@ bin/OpenRCT3 Server
 *.a
 *.lib
 *.exe
-
-# DUB
-.dub
-docs.json
-__dummy.html
-
-############
-# Artifacts
-############
 
 # .NET
 obj/
