@@ -19,15 +19,6 @@ static and animated OVL textures onto one GDK `Texture` type, on top of the sepa
 texture pipeline is no longer a blocker for anything in this directory or for
 [`grass-from-ovl.md`](../../grass-from-ovl.md).
 
-Two other plans that previously lived here were deleted as superseded by real implementations that diverged
-from their proposed design: `ovl-flexible-textures.md` (superseded by
-[`FlexiTexture.cs`](../../../../OpenCobra/OVL/Files/FlexiTexture.cs), now an input the materials-integration
-work above consumed) and `ovl-textures.md` (its proposed `ReadResource`/`ReadBitmapTable` rewrite didn't match
-current `OVL.cs`/`BitmapTable.cs`; the real texture bugs were tracked and fixed as
-`completed-work/ovl-texture-decoding.md` above; the still-open
-[`ovl-resource-relocation.md`](../../../bugs/ovl-resource-relocation.md) covers the separate `mms`/`prt`/
-`psi`/`fct` symbol-resolution issue, unaffected by the texture pipeline fix).
-
 ## Ranked by Difficulty
 
 ### 1. Easy: [ovl-terrain-types.md](./ovl-terrain-types.md)
