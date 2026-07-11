@@ -17,6 +17,7 @@ public class Editor : IWindow {
   private const float ButtonWidth = 235;
 
   public bool Open { get; private set; } = true;
+  public event Action? Exit;
 
   public void Render() {
     if (!Open) return;
@@ -36,7 +37,7 @@ public class Editor : IWindow {
     ImGui.SameLine();
     if (ImGui.Button("Quit")) {
       open = false;
-      // TODO: Quit the game
+      Exit?.Invoke();
     }
 
     ImGui.Separator();

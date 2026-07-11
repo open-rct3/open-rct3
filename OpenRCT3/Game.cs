@@ -177,7 +177,13 @@ public class Game : IGame {
     logger.Trace("Framed camera on marker cube");
 
     // Add the scenario editor and debug windows
-    Scene.Windows.Add(new Editor());
+    var editor = new Editor();
+    editor.Exit += () => {
+      Quit();
+      // TODO: Make this cross-platform
+      Application.Exit();
+    };
+    Scene.Windows.Add(editor);
     Scene.Windows.Add(new UI.Debug(this, terrainMesh));
   }
 
