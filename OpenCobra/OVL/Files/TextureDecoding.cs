@@ -512,7 +512,10 @@ internal static class TextureDecoding {
     var textures = new Texture[table.Length];
     for (var i = 0; i < table.Length; i++) {
       var flic = headersReader.ReadFlicHeader();
-      var mipCount = Convert.ToUInt32(ComputeMipCount(flic));
+      // btbl.rs::decode_entry uses the on-disk FlicHeader.MipCount directly (not a derived
+      // log2(width)+1 guess like the standalone-flic path) - a BTBL entry's mip loop length is
+      // exactly this stored field, and the pixel chunk has exactly that many mips concatenated.
+      var mipCount = flic.MipCount;
       textures[i] = new Texture(name, flic.Format, flic.Width, flic.Height, mipCount);
 
       // Reference (rct3tex.cpp::ReadTextures) sizes each mip independently. The base W/H are
