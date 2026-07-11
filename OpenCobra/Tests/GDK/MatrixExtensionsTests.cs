@@ -6,9 +6,9 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Numerics;
 using NUnit.Framework;
-using OpenRCT3.OpenGL;
+using OpenCobra.GDK;
 
-namespace OpenRCT3.Tests.OpenGL;
+namespace OpenCobra.Tests.GDK;
 
 [TestFixture]
 public class MatrixExtensionsTests {

@@ -249,10 +249,34 @@ and Godot's `ImmediateGeometry` (see Research) — API is call-per-shape, Canvas
 begin/end triple. Renamed `DebugDraw` → `ImDraw` (release-build player-facing gizmo use, not debug-only)
 and redesigned lines as screen-space-constant-width triangles (clip-space vertex-shader expansion)
 instead of `GL_LINES`, per known future consumers: route/waypoint visualization, peep pathfinding debug,
-general dev gizmos, and the player-facing scenery "advanced move" translate/rotate gizmo. Generalized
-that same clip-space-offset math to shape *extent* too (`screenSpaceExtent` on `Axis`/`Circle`/`Arrow`),
-since it's the same per-vertex pixel-offset technique as thickness — no longer deferred to the gizmo
-plan; only hit-testing/drag interaction remains deferred there. Added a per-call `alwaysOnTop` depth
-override flag; resolved the degenerate-line-direction edge case (collapse to zero-area quad) and the
-buffer-growth strategy (grow-on-demand `BufferSubData`, following Dear ImGui's OpenGL3 backend over
-buffer-orphaning or bgfx-style hard caps — see Research).
+general dev gizmos, and the player-facing scenery "advanced move" translate/rotate gizmo. Added
+`screenSpaceExtent` on `Axis`/`Circle`/`Arrow` so shape *extent* (not just thickness) can be constant
+on-screen size — no longer deferred to the gizmo plan; only hit-testing/drag interaction remains deferred
+there. Added a per-call `alwaysOnTop` depth override flag; resolved the degenerate-line-direction edge
+case (collapse to zero-area quad) and the buffer-growth strategy (grow-on-demand `BufferSubData`,
+following Dear ImGui's OpenGL3 backend over buffer-orphaning or bgfx-style hard caps — see Research).
+
+**Implemented.** [`OpenCobra/GDK/ImDraw.cs`](../../../../OpenCobra/GDK/ImDraw.cs),
+[`OpenCobra/GDK/Scene.cs`](../../../../OpenCobra/GDK/Scene.cs) (`Scene.ImDraw`, alongside `Scene.Camera`),
+[`OpenRCT3/OpenGL/Renderer.cs`](../../../../OpenRCT3/OpenGL/Renderer.cs) (`InitializeImDraw`/
+`RenderImDraw`/`UploadImDraw`, `#region ImDraw`). Two corrections found during implementation, not
+foreseeable on paper:
+- **`screenSpaceExtent` ended up CPU-side distance/FOV scaling, not a literal reuse of the line-thickness
+  vertex-shader offset.** The thickness technique needs a screen-projected reference direction (the
+  line's `OtherPosition`) that a single-origin shape like `Axis`'s marker or `Circle`'s radius doesn't
+  have at the vertex level. Implemented instead as the standard editor-gizmo formula
+  (`pixels * 2 * distance * tan(fov/2) / viewportHeight`, computed once per frame from `Scene.Camera.Eye`
+  via `ImDraw.BeginFrame`) applied to `size`/`radius` before generating world-space `Line` calls — same
+  "reuse info already available every frame" spirit, different mechanism than what Goals originally
+  described.
+- **Draw order isn't "before `RenderGui`."** `ImDraw` shapes are submitted *by* `IWindow.Render()` (a
+  terrain tool's brush cursor, drawn from inside its own window `Render()`), which only runs *inside*
+  `RenderGui`'s window loop — so drawing before `RenderGui` would render last frame's (or an empty)
+  buffer. `Renderer.RenderGui` now calls `scene.ImDraw.BeginFrame(...)`, then the windows loop (shapes
+  get submitted here), then `RenderImDraw`, then `scene.ImDraw.Clear()`, then `gui.Render()` — geometry
+  ends up over the 3D scene and under ImGui's composited overlay, matching the original intent, just
+  sequenced correctly relative to when shapes actually arrive.
+
+Not yet exercised by a real caller (`raise-lower-smoothing-tools.md`'s brush cursor is still not started)
+— compiles and the render path is wired up, but visual verification with an actual submitted shape is
+still open.

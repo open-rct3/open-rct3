@@ -20,6 +20,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Numerics;
 using GUI = OpenCobra.GDK.GUI;
 using Materials = OpenCobra.GDK.Materials;
 
@@ -112,7 +113,7 @@ public class Renderer : ThreadAffine, IRenderer {
     gl.BindVertexArray(0);
     gl.UseProgram(0);
 
-    RenderGui(scene.Windows);
+    RenderGui(scene, viewProj.Value);
 
     var vsync = Game.Instance!.VSync;
     if (appliedVSync != vsync) {
@@ -122,14 +123,30 @@ public class Renderer : ThreadAffine, IRenderer {
     context.SwapBuffers();
   });
 
-  private void RenderGui(List<GUI.IWindow> windows) {
+  /// <remarks>
+  /// <see cref="ImDraw"/> shapes (e.g. a terrain tool's brush cursor) are submitted by
+  /// <c>IWindow.Render()</c> below, not before it — so <see cref="ImDraw.Render"/> has to run after that
+  /// loop, not "before <c>RenderGui</c>" as an earlier draft of this design assumed. Drawing between the
+  /// windows loop and <see cref="Controller.Render"/> puts <see cref="ImDraw"/> geometry over the 3D
+  /// scene but under ImGui's own composited overlay, which is the intended layering. All of
+  /// <see cref="ImDraw"/>'s GPU resource handling (shader, VAO/VBO, draw calls) lives in
+  /// <c>OpenCobra.GDK.ImDraw</c> itself, not here — this is just the orchestration point, same division
+  /// of labor as <c>Mesh</c> owning its own upload/VAO/VBO.
+  /// </remarks>
+  private void RenderGui(Scene scene, Matrix4x4 viewProj) {
     using var _ = GLState.Push();
     gl.CheckError("Before GUI render");
 
     gui.StartFrame();
     gl.CheckError("Begin ImGui frame");
-    foreach (var window in windows) window.Render();
+
+    scene.ImDraw.BeginFrame(scene.Camera.Eye, Camera.FieldOfView, FramebufferSize.Height);
+    foreach (var window in scene.Windows) window.Render();
     gl.CheckError("Rendered GUI windows");
+
+    scene.ImDraw.Render(viewProj, new Vector2(FramebufferSize.Width, FramebufferSize.Height));
+    scene.ImDraw.Clear();
+
     gui.Render();
     gl.CheckError("Rendered ImGui");
   }

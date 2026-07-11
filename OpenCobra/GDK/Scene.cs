@@ -18,6 +18,7 @@ public class Scene : IResource, IDisposable {
   public State State { get; private set; } = State.Uninitialized;
 
   public readonly Camera Camera = new();
+  public readonly ImDraw ImDraw = new();
   public List<Model> Models { get; } = [];
   public List<IWindow> Windows { get; } = [];
 
@@ -41,6 +42,7 @@ public class Scene : IResource, IDisposable {
 
     foreach (var model in Models) model.Dispose();
     Models.Clear();
+    ImDraw.Dispose();
     GC.SuppressFinalize(this);
     State = State.Disposed;
   }

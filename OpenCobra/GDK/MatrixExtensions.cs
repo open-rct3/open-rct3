@@ -7,9 +7,15 @@
 
 using System.Numerics;
 
-namespace OpenRCT3.OpenGL;
+namespace OpenCobra.GDK;
 
-internal static class MatrixExtensions {
+/// <remarks>
+/// Lives in the engine layer, not the app layer, because every GDK type that produces a
+/// <see cref="Matrix4x4"/> destined for a GLSL uniform (<see cref="Camera"/>, <see cref="ImDraw"/>)
+/// needs this same row-vector-to-column-major conversion — it's GPU-serialization knowledge tied to
+/// what those types produce, not something specific to any one renderer.
+/// </remarks>
+public static class MatrixExtensions {
   /// <summary>
   /// Convert this 4x4 matrix into the column-major float array GLSL expects, transposed to account for
   /// <see cref="Matrix4x4"/>'s row-vector convention (translation in <c>M41</c>/<c>M42</c>/<c>M43</c>)

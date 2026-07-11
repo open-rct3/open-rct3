@@ -2,6 +2,7 @@
 
 ## Rules
 
+- NEVER run any `git` command — including read-only or seemingly-harmless ones like `git stash`, `git stash pop`, `git add`, `git status`, `git diff` — without first stopping and asking the user for explicit permission for that specific command. This applies even mid-task, even to verify something, even if it seems reversible. Ask first, every time, no exceptions.
 - Do NOT remove extant code comments. Move and reword them, if absolutely necessary.
 - Do NOT create summary documents, unless explicitly requested.
 - Adapt working examples end-to-end, rather than inferring or deriving file formats from scratch. Reference implementations (e.g. `rct3-importer`'s `libOVLng`, `rct3tex.cpp`) already solve these formats correctly - port their logic directly instead of reverse-engineering it from raw byte dumps.

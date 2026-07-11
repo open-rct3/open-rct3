@@ -10,19 +10,13 @@ using NLog;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Input;
-using OpenCobra.GDK.Materials;
-using OpenCobra.GDK.Meshes;
 using OpenCobra.GDK.Platform;
 using OpenRCT3.Input;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
-using OpenRCT3.Scenario;
-using OpenRCT3.Simulation;
 using Silk.NET.Input;
-using System.Drawing;
 using System.Numerics;
 using System.Threading;
-using UI = OpenRCT3.UI;
 
 #if WINDOWS
 using System.Windows.Forms;
@@ -38,12 +32,6 @@ namespace OpenRCT3;
 public class Game : IGame {
   /// <summary>The maximum number of simulation ticks to process in one instant.</summary>
   private const int MaxSimulationTicks = 8;
-  /// <summary>
-  /// <see cref="IoC"/> service key the terrain <see cref="Mesh"/> is registered under - keyed rather
-  /// than by bare <see cref="Mesh"/> type so a later feature registering some other <see cref="Mesh"/>
-  /// instance can't collide with (or be shadowed by) this one.
-  /// </summary>
-  private const string TerrainMeshServiceKey = "Terrain";
   /// <summary>The minimum time between lag warning messages.</summary>
   /// <remarks>This prevents spamming the log with warnings about lag.</remarks>
   private readonly TimeSpan lagWarningDebounceInterval = TimeSpan.FromSeconds(10);
@@ -134,75 +122,6 @@ public class Game : IGame {
     // TODO: Show a progress bar while loading
     World.Load();
     logger.Trace("Game world loaded");
-
-    // Build a mesh from the loaded terrain's corner-height grid (solid-colored prototype;
-    // surface painting isn't wired up yet)
-    var grass = Color.FromArgb(79, 129, 14).ToGl();
-    Debug.Assert(World.Terrain != null);
-    var hasGrassTexture = World.Terrain.GrassTexture != null;
-    var terrainMesh = TerrainMeshBuilder.Build(World.Terrain, hasGrassTexture ? Color.White.ToGl() : grass);
-    IoC.RegisterInstance(terrainMesh, serviceKey: TerrainMeshServiceKey);
-    var ground = new Model(terrainMesh) {
-      Material = hasGrassTexture
-        ? new Textured { AlbedoTexture = World.Terrain.GrassTexture }
-        : new Flat()
-    };
-    Scene.Models.Add(ground);
-    logger.Trace("Added terrain mesh");
-
-    // Proof-of-concept marker: a unit cube placed off-center in one quadrant of the buildable area, so
-    // Q/E map rotation (above) is visually obvious - a centered object wouldn't appear to move at all.
-    Debug.Assert(World.Park != null);
-    var (boundsMin, boundsMax) = World.Park.BuildableBounds;
-    var markerPosition = new Vector3(
-      boundsMin.X + (boundsMax.X - boundsMin.X) * 0.75f,
-      boundsMin.Y + (boundsMax.Y - boundsMin.Y) * 0.75f,
-      1f);
-    var markerCenter = markerPosition + new Vector3(0, 0, 0.5f);
-    var marker = new Model(Primitives.Cube(name: "RotationMarker", color: Color.FromArgb(200, 30, 30).ToGl())) {
-      Material = new Flat(),
-      Transform = new Transform { Matrix = Matrix4x4.CreateTranslation(markerPosition) }
-    };
-    Scene.Models.Add(marker);
-    logger.Trace("Added rotation marker cube");
-
-    // "Fully zoomed out" distance framing the whole park - bounds Zoom and sizes the far clip plane
-    // (Camera.FarPlaneReferenceDistance) even though default framing below targets the marker cube.
-    // Margin compensates for Camera's fixed 45° azimuth foreshortening the near corner; picked empirically.
-    const float FramingDistanceMargin = 1.25f;
-    Debug.Assert(World.Park != null);
-    var bounds = World.Park.BuildableBounds;
-    var parkDiagonal = Vector2.Distance(bounds.Min, bounds.Max);
-    var maxFramingDistance = parkDiagonal * FramingDistanceMargin;
-    Scene.Camera.MaxDistance = maxFramingDistance;
-
-    // Default framing targets the marker cube (currently the only placed object worth focusing on)
-    // rather than the whole park. Primitives.Cube spans -1..1 on each local axis (corner-to-corner
-    // diagonal 2*sqrt(3)); the same margin as the whole-park framing keeps every corner on-screen.
-    var markerDiagonal = 2f * MathF.Sqrt(3);
-    var markerFramingDistance = markerDiagonal * FramingDistanceMargin;
-    Scene.Camera.Frame(markerCenter, markerFramingDistance);
-    logger.Trace("Framed camera on marker cube");
-
-    // Add the scenario editor and debug windows
-    var editor = new Editor();
-    editor.Exit += () => {
-      Quit();
-      // TODO: Make this cross-platform
-      Application.Exit();
-    };
-    Scene.Windows.Add(editor);
-
-    // Made.Of statically checks Debug's constructor at compile time (rather than reflection-based
-    // Parameters.Of), matching the IInputContext/GUI.Controller registrations above - Game and the
-    // terrain Mesh are resolved from the instances just registered, PlatformWindow/IInputContext from
-    // the registrations GameWindow.cs/GLSurface.cs already made.
-    IoC.Register<UI.Debug>(Made.Of(() => new UI.Debug(
-      Arg.Of<Game>(),
-      Arg.Of<Mesh>(TerrainMeshServiceKey),
-      Arg.Of<IWindow>(),
-      Arg.Of<IInputContext>())));
-    Scene.Windows.Add(IoC.Resolve<UI.Debug>());
   }
 
   /// <summary>
@@ -271,6 +190,12 @@ public class Game : IGame {
       // Rendering can happen at arbitrary points between updates, and frames can
       // be dropped if the machine is slow.
       Scene.Update(delta: elapsed);
+
+      // Proof-of-concept: an ImDraw.Axis marker at the rotation-marker cube's center, exercising
+      // ImDraw end-to-end (see OpenCobra/GDK/ImDraw.cs). screenSpaceExtent keeps it a fixed 80px size
+      // regardless of camera distance, unlike the marker cube it's attached to.
+      Scene.ImDraw.Axis(World.MarkerCenter, Quaternion.Identity, size: 80f, screenSpaceExtent: true);
+
       renderer.Render(Scene);
 
       // Reduce CPU usage by sleeping when ahead of schedule
