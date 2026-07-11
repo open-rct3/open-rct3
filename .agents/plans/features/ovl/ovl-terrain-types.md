@@ -1,11 +1,15 @@
-# Plan: Decode TerrainType (TER) Entries
+# Decode TerrainType (TER) Entries
 
-**See also**: [`grass-texture-from-terrain-ovl.md`](../../../research/grass-texture-from-terrain-ovl.md) —
-research on `Terrain_RCT3.*.ovl`'s 32 `TerrainType` entries (`Terrain_00`..`Terrain_25` +
-`Cliff_00`..`Cliff_05`) and the `type` field (Ground Unblended/Cliff/Ground Blended), already consumed by
-[`features/terrain-heightmap.md`](../terrain-heightmap.md)'s `SurfaceIndex`/`CliffIndex` corner storage. That
-research covers *what the data means*; this plan is still the one that owns actually parsing `ter` bytes into
-a `TerrainType` record — not yet implemented (no `TerrainTypes.cs` exists).
+**See also**:
+- [`grass-from-ovl.md`](../../../research/grass-from-ovl.md) — research on `Terrain_RCT3.*.ovl`'s 32
+  `TerrainType` entries (`Terrain_00`..`Terrain_25` + `Cliff_00`..`Cliff_05`) and the `type` field (Ground
+  Unblended/Cliff/Ground Blended), already consumed by [`features/terrain-heightmap.md`](../terrain-heightmap.md)'s
+  `SurfaceIndex`/`CliffIndex` corner storage. That research covers *what the data means*; this plan is still
+  the one that owns actually parsing `ter` bytes into a `TerrainType` record — not yet implemented (no
+  `TerrainTypes.cs` exists).
+- [`grass-from-ovl.md`](../../grass-from-ovl.md) (the implementation plan, not the research doc) — risk #5
+  there ("`Terrain_00` is grass" is an unverified guess) is exactly the gap this plan closes: once `ter`
+  entries decode, `TerrainType.texture` gives an authoritative name instead of a guess.
 
 ## Problem
 
@@ -115,7 +119,7 @@ Current convention (see `ovl-materials-integration.md`'s test plan for a live ex
 fixtures) — mirroring how `TexturesTests`/`ExtractResources` are structured today. Cover: synthetic-struct
 decode of a single `TerrainType`, symbol reference resolution (TXT/GSI/TEX), and — against real data — that
 every `ter`-tagged symbol in `Terrain_RCT3.*.ovl` decodes to a non-empty name and a `type` value matching one
-of Ground Unblended/Cliff/Ground Blended per `grass-texture-from-terrain-ovl.md`.
+of Ground Unblended/Cliff/Ground Blended per `grass-from-ovl.md`.
 
 ### Success Criteria
 

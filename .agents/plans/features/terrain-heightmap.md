@@ -5,7 +5,7 @@
 **See also**:
 - [`terrain/tools.md`](terrain/tools.md) — RCT3 terrain tool reference used to derive the height unit and
   smoothing behavior below.
-- [`.agents/research/grass-texture-from-terrain-ovl.md`](../../research/grass-texture-from-terrain-ovl.md) —
+- [`.agents/research/grass-from-ovl.md`](../../research/grass-from-ovl.md) —
   `TerrainType` OVL research; source of the surface/cliff paint-index model below and the `type` field
   (Ground Unblended / Cliff / Ground Blended) that drives paint-index count and blending.
 
@@ -32,7 +32,7 @@ placement, and building will all read from — data model only, no texture paint
   - `TerrainCorner` layout: `{ short Height; byte SurfaceIndex; byte CliffIndex; }` (4 bytes, packs cleanly).
     `SurfaceIndex`/`CliffIndex` are paint-type indices into the `ter` entries decoded from
     `Terrain_RCT3.*.ovl` (32 entries observed: `Terrain_00`..`Terrain_25` + `Cliff_00`..`Cliff_05`, per
-    [`grass-texture-from-terrain-ovl.md`](../../research/grass-texture-from-terrain-ovl.md)) — a `byte` covers
+    [`grass-from-ovl.md`](../../research/grass-from-ovl.md)) — a `byte` covers
     that range with headroom. `CliffIndex` is stored on every corner unconditionally (simpler than
     conditional storage); it's only meaningful to the renderer where an edge is actually detached, and is
     otherwise don't-care/unused.
@@ -182,7 +182,7 @@ make sure the corner/tile API shape doesn't foreclose them, not to resolve them.
   wiring up the height-ceiling query requires the ride/building data model, which doesn't exist yet.
 - **Blended rendering**: how the renderer resolves texture across a tile whose corners have differing
   `SurfaceIndex` values ("Ground Blended", `TerrainType.type == 2`) is a rendering-plan concern, additionally
-  blocked on the BTBL bitmap-table question in `grass-texture-from-terrain-ovl.md`.
+  blocked on the BTBL bitmap-table question in `grass-from-ovl.md`.
 - **Water pool perimeter tracing (flood-fill placement)**: the water tool traces a pool's boundary by
   flood-filling a connected low region from a seed tile and snapping the result to 1 m increments (see Goals,
   "Water is per-pool"). That tracing/placement algorithm is not implemented — `Park.TryPlaceWaterPool` takes an

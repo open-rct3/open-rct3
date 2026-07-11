@@ -17,7 +17,7 @@ static and animated OVL textures onto one GDK `Texture` type, on top of the sepa
 `tex`/`flic`/`btbl` relocation bugs
 ([`completed-work/ovl-texture-decoding.md`](../../../summaries/completed-work/ovl-texture-decoding.md)). The
 texture pipeline is no longer a blocker for anything in this directory or for
-[`grass-texture-from-terrain-ovl.md`](../../grass-texture-from-terrain-ovl.md).
+[`grass-from-ovl.md`](../../grass-from-ovl.md).
 
 Two other plans that previously lived here were deleted as superseded by real implementations that diverged
 from their proposed design: `ovl-flexible-textures.md` (superseded by
@@ -36,7 +36,7 @@ current `OVL.cs`/`BitmapTable.cs`; the real texture bugs were tracked and fixed 
 - **Complexity**: ~80 lines of spec
 - **Key work**: Simple struct with color parameters and texture references
 - **Verdict**: Low complexity, straightforward parsing. Research on what the data means is already done —
-  see [`grass-texture-from-terrain-ovl.md`](../../../research/grass-texture-from-terrain-ovl.md).
+  see [`grass-from-ovl.md`](../../../research/grass-from-ovl.md).
 
 ### 2. Moderately Difficult: [ovl-static-shapes.md](./ovl-static-shapes.md)
 
@@ -67,10 +67,13 @@ current `OVL.cs`/`BitmapTable.cs`; the real texture bugs were tracked and fixed 
 ## Recommendation
 
 Start with `ovl-terrain-types.md` for a quick win — under 100 lines of C#, validates the extraction pattern.
-Note it's no longer on the critical path for grass texturing: `grass-texture-from-terrain-ovl.md` found that
-each `ter` entry's `texture_ref` points to a `tex` entry with the same name, and `tex` already decodes
-cleanly, so the grass-texture work doesn't wait on this plan. `ter` decoding is still worth doing for its own
-sake (proper `TerrainType` metadata), just not blocking.
+It's not on the critical path for grass texturing to *render*: `grass-from-ovl.md` found that each `ter`
+entry's `texture_ref` points to a `tex` entry with the same name, and `tex` already decodes cleanly, so the
+grass-texture work doesn't wait on this plan to ship. It does, however, resolve that plan's one remaining
+open risk — `"Terrain_00" is grass` is currently a guess (first `tex` entry, no `Cliff` prefix, BTBL index 0),
+not a verified mapping; decoding `ter` gives an authoritative `TerrainType.texture` reference instead. `grass-
+from-ovl.md` proceeds with the guess and confirms visually in the meantime, so this plan is parallel
+verification work, not a blocker.
 
 ## Testing Approach
 

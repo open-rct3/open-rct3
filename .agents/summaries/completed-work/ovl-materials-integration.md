@@ -55,5 +55,5 @@ regression introduced here; still open separately.
 
 This work, combined with the separately-fixed `tex`/`flic`/`btbl` relocation bugs (see
 [`ovl-texture-decoding.md`](ovl-texture-decoding.md)), is what
-[`grass-texture-from-terrain-ovl.md`](../../plans/grass-texture-from-terrain-ovl.md) now builds on to wire a
+[`grass-from-ovl.md`](../../plans/grass-from-ovl.md) now builds on to wire a
 real decoded grass texture into the terrain mesh — previously blocked, now just three small follow-up edits.
