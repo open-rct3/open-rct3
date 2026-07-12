@@ -63,6 +63,10 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   private Version version;
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly Dictionary<OvlFile, uint> entryDataPtrs = [];
+  // Reverse of entryDataPtrs - lets callers turn a relocated pointer to another symbol's data
+  // (e.g. StaticShapeMesh.ftx_ref/txs_ref) back into the OvlFile that owns it. Built alongside
+  // entryDataPtrs since every entry has exactly one data pointer.
+  private readonly Dictionary<uint, OvlFile> symbolsByDataPointer = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
   private readonly List<Version> allVersions = [];
@@ -227,6 +231,16 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
   /// <summary>Looks up a resolved resource's own (relative offset) data pointer address.</summary>
   public bool TryGetDataPointer(OvlFile file, out uint dataPtr) => entryDataPtrs.TryGetValue(file, out dataPtr);
+
+  /// <summary>
+  /// Reverse of <see cref="TryGetDataPointer"/>: resolves a relocated pointer value that points
+  /// directly at another symbol's data (e.g. a relocation-gated field like
+  /// <c>StaticShapeMesh.ftx_ref</c>/<c>txs_ref</c>, already resolved via
+  /// <see cref="TryGetRelocationSource"/>) back to the <see cref="OvlFile"/> symbol that owns
+  /// that address, so callers can recover the referenced symbol's name.
+  /// </summary>
+  public bool TryFindSymbol(uint dataPtr, [MaybeNullWhen(false)] out OvlFile file) =>
+    symbolsByDataPointer.TryGetValue(dataPtr, out file);
 
   /// <summary>
   /// Resolves a relocated string pointer to its text value.
@@ -591,6 +605,11 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
             effectiveSize
           );
           entryDataPtrs[file] = dataPtr;
+          // Common/unique halves of a pack can both resolve to the same data address for
+          // duplicated resource types (e.g. StaticShape - see ovl-static-shapes.md's Production
+          // OVLs section); first symbol registered for a given address wins, which is fine since
+          // both halves decode identically in that case.
+          symbolsByDataPointer.TryAdd(dataPtr, file);
         }
 
         if (loaderSymbolRemaining > 0) loaderSymbolRemaining--;
@@ -627,6 +646,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     if (disposing) {
       entries.Clear();
       entryDataPtrs.Clear();
+      symbolsByDataPointer.Clear();
       allFileTypeBlocks.Clear();
       allLoaderHeaders.Clear();
       allExtraData.Clear();

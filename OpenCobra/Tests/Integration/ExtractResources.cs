@@ -115,6 +115,93 @@ public class ExtractResources {
       yield return new TestCaseData(file);
   }
 
+  // shs (StaticShape) data is confirmed duplicated identically across a pack's common.ovl/
+  // unique.ovl halves (see ovl-static-shapes.md's Production OVLs section) - scanning *.unique.ovl
+  // only halves the runtime for zero extra coverage versus scanning both halves of every pack.
+  private static IEnumerable<TestCaseData> GetUniqueOvlFixtures() {
+    if (File.Exists(Constants.EnvFilePath))
+      Env.NoClobber().Load(Constants.EnvFilePath);
+
+    var rct3Path = Rct3Path();
+    if (string.IsNullOrEmpty(rct3Path)) {
+      yield return new TestCaseData(string.Empty)
+        .Explicit("Cannot find RCT3. Skipping integration test.")
+        .Ignore("Cannot find RCT3. Skipping integration test.");
+      yield break;
+    }
+
+    var files = Directory.GetFiles(rct3Path, "*.unique.ovl", SearchOption.AllDirectories);
+    if (files.Length == 0) {
+      yield return new TestCaseData(string.Empty).Ignore("No unique.ovl fixtures found.");
+      yield break;
+    }
+
+    foreach (var file in files)
+      yield return new TestCaseData(file);
+  }
+
+  [TestCaseSource(nameof(GetUniqueOvlFixtures))]
+  public void StaticShapes_AreDecodable(string ovlPath) {
+    Assert.That(ovlPath, Does.Exist, $"OVL not found: {ovlPath}");
+
+    using var ovl = Ovl.Load(ovlPath);
+    var shsCount = ovl.Keys.Count(key => key.Type == FileType.StaticShape);
+    if (shsCount == 0)
+      Assert.Ignore($"No StaticShape (shs) resources found in {Path.GetFileName(ovlPath)}.");
+
+    var shapes = StaticShapes.Extract(ovl);
+    using (Assert.EnterMultipleScope()) {
+      // A symbol that fails to decode is dropped from the result rather than throwing (see
+      // StaticShapes.Extract's failures-bag handling) - assert nothing was silently dropped,
+      // since every shs symbol in this fixture is already known to decode (manually verified
+      // during implementation against test/Shapes.unique.ovl and ACAM/ACAM.unique.ovl).
+      Assert.That(shapes, Has.Count.EqualTo(shsCount),
+        $"Expected every shs symbol in {Path.GetFileName(ovlPath)} to decode; some were dropped as failures.");
+
+      foreach (var shape in shapes) {
+        // A shape can legitimately have zero meshes - confirmed against real data (e.g.
+        // "invisibleproxy" in Enclosures/Shelters, and vehicle "Bogey"/"_ME" track-joint pieces),
+        // not a decode failure. Only assert non-empty Vertices/Triangles for shapes that do have
+        // meshes; a mesh-less shape has nothing further to check here.
+        if (shape.Meshes.Count == 0) continue;
+        Assert.That(shape.Meshes.Any(m => m.Vertices.Count > 0), Is.True,
+          $"{shape.Name}: expected at least one mesh with non-empty Vertices");
+        Assert.That(shape.Meshes.Any(m => m.Triangles.Count > 0), Is.True,
+          $"{shape.Name}: expected at least one mesh with non-empty Triangles");
+      }
+    }
+  }
+
+  [Test]
+  public void Load_ACAMHull_DecodesRealShapeWithGenuinelyNullSymbolRefs() {
+    var rct3 = Rct3Path();
+    if (rct3 == null)
+      Assert.Ignore("Cannot find RCT3. Skipping integration test.");
+
+    var acamPath = Path.Combine(rct3, "ACAM", "ACAM.unique.ovl");
+    Assert.That(File.Exists(acamPath), Is.True, $"ACAM.unique.ovl not found at: {acamPath}");
+
+    using var ovl = Ovl.Load(acamPath);
+    var file = ovl.Find("ACAMHull", FileType.StaticShape);
+    Assert.That(file, Is.Not.Null, "ACAMHull symbol not found");
+
+    var shape = StaticShapes.TryExtractOne(ovl, file!);
+    Assert.That(shape, Is.Not.Null, "Failed to decode ACAMHull");
+
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(shape!.Value.Meshes, Has.Count.EqualTo(3), "ACAMHull is known to have 3 meshes");
+      Assert.That(shape.Value.Meshes.Sum(m => m.Vertices.Count), Is.EqualTo(305),
+        "ACAMHull is known to have 305 total vertices");
+      Assert.That(shape.Value.Meshes.Sum(m => m.Triangles.Count), Is.EqualTo(486),
+        "ACAMHull is known to have 486 total triangles");
+      Assert.That(shape.Value.Effects, Has.Count.EqualTo(5), "ACAMHull is known to have 5 effects");
+      // ACAMHull's mesh 0 has no ftx_ref/txs_ref listed in the relocation table at all (confirmed
+      // during implementation, not assumed) - a genuinely absent reference, not a resolution bug.
+      Assert.That(shape.Value.Meshes[0].FtxRef, Is.Null);
+      Assert.That(shape.Value.Meshes[0].TxsRef, Is.Null);
+    }
+  }
+
   /// <remarks>
   /// A small number of real archives (e.g. "MapColourRed" in Style.common.ovl, "PlatformHeight" in
   /// tracks/Platforms/Vanilla/*.ovl) have non-texture symbols mislabeled as FileType.FlexibleTexture,
