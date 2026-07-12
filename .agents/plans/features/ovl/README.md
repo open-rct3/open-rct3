@@ -66,6 +66,29 @@ not a verified mapping; decoding `ter` gives an authoritative `TerrainType.textu
 from-ovl.md` proceeds with the guess and confirms visually in the meantime, so this plan is parallel
 verification work, not a blocker.
 
+## Reference Source: `rct3-importer`
+
+Plans in this directory cite the `rct3-importer` C++ reference implementation (struct layouts,
+allocation order, line numbers) by GitHub URL, but that is **not the only copy** — a local
+checkout already exists as a sibling of this repo, at `../../../../../rct3-importer` (i.e.
+`rct3-importer/` next to `open-rct3/`). Read struct definitions and `Manager*.cpp` decoders
+directly from there (e.g. `../../../../../rct3-importer/RCT3 Importer/include/staticshape.h` and
+`.../src/libOVLng/ManagerSHS.cpp` for the `shs` plan) instead of fetching the GitHub URL — it's
+faster, works offline, and avoids citing line numbers from a fetch that isn't preserved anywhere
+else in this repo. Verify a plan's line-number citations against this local copy before trusting
+them in a fresh session, since nothing in `.agents/` vendors or caches the source itself.
+
+## Dumper Plugin Requirement
+
+Every OVL decoder plan in this directory must ship a matching `<tag>-viewer` Extism plugin under
+[`plugins/`](../../../../plugins/) — see [`plugins/README.md`](../../../../plugins/README.md) for
+the plugin contract (`name`/`version`/`file_types`/`render`) and template structure. This is not
+optional follow-up work: a decoder plan's Goals section should include the plugin, and its
+Post-Implementation Steps should mark the plugin `✅ Completed` in `plugins/README.md`'s status
+table (moving it out of `📋 Planned`). Reference an existing plugin close in complexity to the new
+decoder (e.g. `mam-viewer` for vertex/face-count-shaped data) rather than starting from the bare
+template.
+
 ## Testing Approach
 
 The `TestRunner`/`OpenCobra/Tests/TestRunner/Tests/Read<Feature>.cs`/`OvlTest[]` pattern these plans originally
