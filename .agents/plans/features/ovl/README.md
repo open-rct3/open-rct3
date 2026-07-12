@@ -4,12 +4,11 @@ This directory contains plans for decoding OVL archive file types.
 
 ## Plans
 
-| Plan                                                          | OVL Tag | File Type | Status      |
-| ----------------------------------------------------------- | ------- | --------- | ----------- |
-| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"` | Terrain   | Not started |
-| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"` | Shape     | Not started |
-| [ovl-scenery-item-visuals.md](./ovl-scenery-item-visuals.md) | `"svd"` | Visual    | Not started |
-| [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"` | Scenery   | Not started |
+| Plan                                                          | OVL Tag         | File Type        | Status      |
+| ----------------------------------------------------------- | --------------- | ---------------- | ----------- |
+| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"`         | Terrain           | Not started |
+| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"`         | Shape             | Not started |
+| [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"`/`"svd"` | Scenery + Visual  | Not started |
 
 The `tex`/`ftx` texture pipeline is done and moved out of this directory:
 [`ovl-materials-integration.md`](../../../summaries/completed-work/ovl-materials-integration.md) unified
@@ -38,22 +37,20 @@ texture pipeline is no longer a blocker for anything in this directory or for
 - **Dependencies**: Relocation resolution, symbol reference resolution
 - **Verdict**: Multi-level pointer chasing, requires cross-block data access
 
-### 3. More Difficult: [ovl-scenery-items.md](./ovl-scenery-items.md)
+### 3. Most Difficult: [ovl-scenery-items.md](./ovl-scenery-items.md)
 
-- **Task**: Decode scenery item entries (tag: `"sid"`)
-- **Complexity**: 149 lines of spec
-- **Key work**: Extensive metadata (UI, positioning, colors, tiles, sounds, SVDs, parameters), 3 struct versions
-  (v0/v1/v2), 40+ unknown fields. `sizeflag` (placement footprint/height-sampling) is confirmed to live here,
-  not on `svd` — see [`scenery-placement-registry.md`](../scenery-placement-registry.md).
-- **Dependencies**: Relocation resolution, symbol reference resolution for TXT/GSI/SVD/SND
-- **Verdict**: Second-most complex, significant unknown fields
-
-### 4. Also unranked-difficulty: [ovl-scenery-item-visuals.md](./ovl-scenery-item-visuals.md)
-
-- **Task**: Decode LOD-based visual definitions (tag: `"svd"`) referencing StaticShape, BoneShape, or
-  Billboard meshes.
-- Feeds [`scenery-placement-registry.md`](../scenery-placement-registry.md), which already keys registry
-  entries on raw `svd` symbol names.
+- **Task**: Decode scenery item entries (tag: `"sid"`) together with the LOD-based visual definitions they
+  reference (tag: `"svd"`) — merged into one plan because they're tightly coupled in the real game (every
+  `sid` holds `svd` symbol refs; an `svd` has no meaning without its owning `sid`)
+- **Key work (SID)**: Extensive metadata (UI, positioning, colors, tiles, sounds, SVDs, parameters), 3 struct
+  versions (v0/v1/v2), 40+ unknown fields. `sizeflag` (placement footprint/height-sampling) is confirmed to
+  live here, not on `svd` — see [`scenery-placement-registry.md`](../scenery-placement-registry.md).
+- **Key work (SVD)**: References StaticShape, BoneShape, or Billboard meshes with distance-based LOD
+  switching and animation references; feeds `scenery-placement-registry.md`, which already keys registry
+  entries on raw `svd` symbol names
+- **Dependencies**: Relocation resolution, symbol reference resolution for TXT/GSI/SVD/SND/SHS/BSH/FTX/TXS/BAN/MAM
+- **Verdict**: Most complex, significant unknown fields, plus cross-resource symbol-ref validation between
+  SID and SVD
 
 ## Recommendation
 
