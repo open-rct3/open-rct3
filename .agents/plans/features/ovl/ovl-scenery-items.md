@@ -216,10 +216,11 @@ public static class SceneryItemVisuals {
 
 - Existing relocation resolution
 - Symbol reference resolution for TXT, GSI, SVD, SND, SHS, BSH, FTX, TXS, BAN, MAM
-- **SHS: unblocked.** `ovl-static-shapes.md` is done — `OpenCobra.OVL.Files.StaticShapes.Extract`
-  and `Ovl.TryFindSymbol` are implemented and verified against every real `shs` symbol under
-  `RCT3_PATH`, so `svd`'s `meshtype == 0` (StaticShape) case can resolve `staticshape` symbol refs
-  directly via `StaticShapes.Extract`/`TryExtractOne` rather than needing new decoder work here.
+- **SHS: unblocked.** [`ovl-static-shapes.md`](../../../summaries/completed-work/ovl-static-shapes.md)
+  is done — `OpenCobra.OVL.Files.StaticShapes.Extract` and `Ovl.TryFindSymbol` are implemented and
+  verified against every real `shs` symbol under `RCT3_PATH`, so `svd`'s `meshtype == 0`
+  (StaticShape) case can resolve `staticshape` symbol refs directly via
+  `StaticShapes.Extract`/`TryExtractOne` rather than needing new decoder work here.
   BSH (BoneShape), FTX, TXS, BAN, MAM remain undecoded and still block the other `meshtype` cases.
 
 ### Regression Prevention

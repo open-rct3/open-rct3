@@ -16,9 +16,10 @@ and object-registry design proceed without depending on the texture decoding wor
 plan was written and has since been fixed
 ([`completed-work/ovl-texture-decoding.md`](../../summaries/completed-work/ovl-texture-decoding.md),
 [`completed-work/ovl-materials-integration.md`](../../summaries/completed-work/ovl-materials-integration.md)).
-The underlying reason this plan's design doesn't depend on that pipeline still holds, though: `svd`/`shs`
+The underlying reason this plan's design doesn't depend on that pipeline still holds, though: `svd`
 mesh decoding (which is what actually resolves a scenery item's geometry) remains unimplemented — see
-[`ovl-scenery-item-visuals.md`](ovl/ovl-scenery-item-visuals.md)/[`ovl-static-shapes.md`](ovl/ovl-static-shapes.md)
+[`ovl-scenery-items.md`](ovl/ovl-scenery-items.md) (`svd`'s `meshtype == 0` case is unblocked by
+[`shs` decoding](../../summaries/completed-work/ovl-static-shapes.md), but `svd` itself isn't done)
 — so the object registry designed here is still ahead of, not blocked by, mesh resolution.
 
 **Scenery is not scalable.** RCT3's scenery catalog has a Small/Medium/Large enum, but that's a catalog

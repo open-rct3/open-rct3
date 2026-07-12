@@ -7,16 +7,21 @@ This directory contains plans for decoding OVL archive file types.
 | Plan                                                          | OVL Tag         | File Type        | Status      |
 | ----------------------------------------------------------- | --------------- | ---------------- | ----------- |
 | [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"`         | Terrain           | Not started |
-| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"`         | Shape             | ✅ Done |
 | [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"`/`"svd"` | Scenery + Visual  | Not started |
 
-The `tex`/`ftx` texture pipeline is done and moved out of this directory:
+The `tex`/`ftx` texture pipeline and `shs` (StaticShape) decoding are done and moved out of this
+directory:
 [`ovl-materials-integration.md`](../../../summaries/completed-work/ovl-materials-integration.md) unified
 static and animated OVL textures onto one GDK `Texture` type, on top of the separately-fixed
 `tex`/`flic`/`btbl` relocation bugs
 ([`completed-work/ovl-texture-decoding.md`](../../../summaries/completed-work/ovl-texture-decoding.md)). The
 texture pipeline is no longer a blocker for anything in this directory or for
 [`grass-from-ovl.md`](../../grass-from-ovl.md).
+[`ovl-static-shapes.md`](../../../summaries/completed-work/ovl-static-shapes.md) decoded `shs`
+entries (`StaticShapes.Extract`, `Ovl.TryFindSymbol`, the `shs-viewer` Dumper plugin, and the
+general "ovl" host-function surface future pointer-heavy decoders should reuse — see Dumper
+Plugin Requirement below); `ovl-scenery-items.md`'s SHS-symbol dependency (for `svd`'s
+`meshtype == 0` case) is unblocked as a result.
 
 ## Ranked by Difficulty
 
@@ -28,20 +33,7 @@ texture pipeline is no longer a blocker for anything in this directory or for
 - **Verdict**: Low complexity, straightforward parsing. Research on what the data means is already done —
   see [`grass-from-ovl.md`](../../../research/grass-from-ovl.md).
 
-### 2. Moderately Difficult: [ovl-static-shapes.md](./ovl-static-shapes.md) — ✅ Done
-
-- **Task**: Decode static 3D shape entries (tag: `"shs"`)
-- **Complexity**: 118 lines of spec
-- **Key work**: Two-level struct hierarchy (`StaticShape` → `StaticShapeMesh[]`), vertex/index arrays, symbol refs to
-  FTX/TXS
-- **Dependencies**: Relocation resolution, symbol reference resolution
-- **Verdict**: Multi-level pointer chasing, requires cross-block data access — done. `StaticShapes.Extract`
-  (`OpenCobra/OVL/Files/StaticShapes.cs`) and `Ovl.TryFindSymbol` are implemented and verified against every
-  real `shs` symbol under `RCT3_PATH`; the `shs-viewer` Dumper plugin and its reusable "ovl" host-function
-  surface (see Dumper Plugin Requirement below) shipped alongside it. `ovl-scenery-items.md`'s SHS-symbol
-  dependency (for `svd`'s `meshtype == 0` case) is unblocked.
-
-### 3. Most Difficult: [ovl-scenery-items.md](./ovl-scenery-items.md)
+### 2. Most Difficult: [ovl-scenery-items.md](./ovl-scenery-items.md)
 
 - **Task**: Decode scenery item entries (tag: `"sid"`) together with the LOD-based visual definitions they
   reference (tag: `"svd"`) — merged into one plan because they're tightly coupled in the real game (every
@@ -93,7 +85,8 @@ template.
 **Pointer-heavy resource types** (anything relying on relocated pointers for its interesting
 data — `svd`, `sid`, `ftx`, and `shs` before it): don't fall back to a header-only/hex-dump-only
 viewer just because `render(bytes)` only gets a resource's own raw bytes. `shs-viewer`
-(`ovl-static-shapes.md`) established a general "ovl" host-function surface for exactly this —
+([`ovl-static-shapes.md`](../../../summaries/completed-work/ovl-static-shapes.md)) established a
+general "ovl" host-function surface for exactly this —
 `Dumper/Plugins/ViewerPlugin.cs`'s `resolve_pointer`/`get_relocation_source`/`find_symbol`/
 `read_resource`/`current_resource_address`, wrapped for AssemblyScript by `plugins/lib/ovl.ts`'s
 `Ovl` class — that lets a plugin request further archive data on demand against whichever archive
