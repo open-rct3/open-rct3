@@ -73,6 +73,7 @@ public partial class MainForm : Form {
 
   private void LoadOvl(Ovl ovl) {
     currentOvl = ovl;
+    pluginManager.CurrentOvl = ovl;
     _nodeEntries.Clear();
     contentPanel.ShowEmpty(true);
 
@@ -428,8 +429,10 @@ Try again or continue anyway?",
         return;
       }
 
+      pluginManager.CurrentFile = entry;
       contentPanel.ShowContent(fileName, viewers, data);
     } else {
+      pluginManager.CurrentFile = null;
       // Group node or no entry, show empty
       contentPanel.ShowEmpty(currentOvl != null);
     }
