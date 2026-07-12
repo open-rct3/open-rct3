@@ -1,5 +1,7 @@
 # Decode TerrainType (TER) Entries
 
+**Roadmap**: Phase 1, "Render fluctuating terrain"
+
 **See also**:
 - [`grass-from-ovl.md`](../../../research/grass-from-ovl.md) — research on `Terrain_RCT3.*.ovl`'s 32
   `TerrainType` entries (`Terrain_00`..`Terrain_25` + `Cliff_00`..`Cliff_05`) and the `type` field (Ground

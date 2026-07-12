@@ -10,8 +10,10 @@
 // Usage:
 //   deno run --allow-read --allow-net --allow-env .agents/scripts/rank-plans.ts [--top=N] [--json] [--dir=<path>]
 //
-// (--allow-net/--allow-env are only needed the first time, to resolve and
-// cache the jsr:@std/path import; subsequent runs work offline from cache.)
+// (--allow-net/--allow-env are needed to resolve/cache the jsr:@std/path
+// import AND, on every run, to fetch the project roadmap wiki page. If the
+// roadmap fetch fails — offline, rate-limited, etc. — the script warns and
+// falls back to scoring without the roadmap-item-match term.)
 //
 // Flags:
 //   --top=N     Only show the top N plans (default: all).
@@ -20,7 +22,8 @@
 //
 // Scoring (see `computeScore` for the authoritative formula):
 //   score = inboundLinks * 10        // how many OTHER .agents docs reference this plan
-//         + roadmapWeight * 4        // Phase 1 > Phase 2 > Phase 3 > unspecified
+//         + roadmapWeight * 4        // Phase 1 > Phase 2 > Phase 3 > unspecified (manual **Roadmap** annotation)
+//         + roadmapItemWeight        // match against a live, undone item on the project roadmap wiki
 //         + resolvedBullets * 1      // design maturity: settled decisions ready to implement
 //         + (inProgress ? 5 : 0)     // momentum bonus for work already underway
 //
@@ -98,6 +101,9 @@ interface Plan {
   inProgress: boolean;
   inboundLinks: number;
   inboundFrom: string[];
+  roadmapItemWeight: number;
+  roadmapItemMatch?: string; // matched roadmap wiki item text, for display
+  roadmapItemPhase?: string;
   score: number;
 }
 
@@ -178,9 +184,142 @@ function computeScore(plan: Omit<Plan, "score">): number {
   return (
     plan.inboundLinks * 10 +
     plan.roadmapWeight * 4 +
+    plan.roadmapItemWeight +
     plan.resolvedBullets * 1 +
     (plan.inProgress ? 5 : 0)
   );
+}
+
+// ---------------------------------------------------------------------------
+// Roadmap wiki integration
+// ---------------------------------------------------------------------------
+
+const ROADMAP_WIKI_URL = "https://raw.githubusercontent.com/wiki/open-rct3/open-rct3/Roadmap.md";
+
+interface RoadmapItem {
+  phaseName: string;
+  phaseWeight: number; // same scale as roadmapWeight: Phase 1 = 3 ... Distant Future = 0
+  index: number; // position within phase, 0-based; earlier = higher priority
+  itemCount: number; // total items in this phase, for position scaling
+  text: string;
+  done: boolean;
+}
+
+function phaseWeightFor(phaseHeading: string): number {
+  if (/distant future/i.test(phaseHeading)) return 0;
+  if (/phase\s*1/i.test(phaseHeading)) return 3;
+  if (/phase\s*2/i.test(phaseHeading)) return 2;
+  if (/phase\s*3/i.test(phaseHeading)) return 1;
+  return 1;
+}
+
+/** Strips markdown links/checkboxes/issue refs down to plain item text. */
+function cleanRoadmapItemText(raw: string): string {
+  return raw
+    .replace(/\[([xX ])\]\s*/g, "") // checkbox markers
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // [text](url) -> text
+    .replace(/\(#\d+\)/g, "") // issue refs like (#3)
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Fetches and parses the project roadmap wiki page into a flat, ordered item list. */
+async function fetchRoadmapItems(): Promise<RoadmapItem[]> {
+  const res = await fetch(ROADMAP_WIKI_URL);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const content = await res.text();
+
+  const items: RoadmapItem[] = [];
+  const headingRegex = /^#\s+(.+)$/gm;
+  const headings: { title: string; start: number }[] = [];
+  let hMatch: RegExpExecArray | null;
+  while ((hMatch = headingRegex.exec(content)) !== null) {
+    headings.push({ title: hMatch[1].trim(), start: hMatch.index + hMatch[0].length });
+  }
+
+  for (let i = 0; i < headings.length; i++) {
+    const title = cleanRoadmapItemText(headings[i].title);
+    const { start } = headings[i];
+    const end = i + 1 < headings.length ? headings[i + 1].start : content.length;
+    // Cut back to before the next heading's "# " line.
+    const sectionEnd = i + 1 < headings.length ? content.lastIndexOf("\n#", end) : end;
+    const section = content.slice(start, sectionEnd === -1 ? end : sectionEnd);
+
+    const phaseWeight = phaseWeightFor(title);
+    const lineRegex = /^\s*(?:\d+\.|-)\s+(.+)$/gm;
+    const rawItems: { text: string; done: boolean }[] = [];
+    let lMatch: RegExpExecArray | null;
+    while ((lMatch = lineRegex.exec(section)) !== null) {
+      const raw = lMatch[1];
+      const done = /^\[x\]/i.test(raw.trim());
+      const text = cleanRoadmapItemText(raw);
+      if (text) rawItems.push({ text, done });
+    }
+
+    rawItems.forEach((item, index) => {
+      items.push({
+        phaseName: title,
+        phaseWeight,
+        index,
+        itemCount: rawItems.length,
+        text: item.text,
+        done: item.done,
+      });
+    });
+  }
+
+  return items;
+}
+
+const STOPWORDS = new Set([
+  "with", "that", "this", "from", "into", "shall", "then", "additional",
+  "design", "features", "such", "using", "including", "than", "have",
+  "also", "will", "each", "more", "over", "and", "the", "for",
+]);
+
+function tokenize(text: string): Set<string> {
+  const words = text.toLowerCase().match(/[a-z]{4,}/g) ?? [];
+  return new Set(words.filter((w) => !STOPWORDS.has(w)));
+}
+
+/** Overlap coefficient: |A ∩ B| / min(|A|, |B|) — forgiving when one side is short. */
+function overlapCoefficient(a: Set<string>, b: Set<string>): { overlap: number; common: number } {
+  if (a.size === 0 || b.size === 0) return { overlap: 0, common: 0 };
+  let common = 0;
+  for (const w of a) if (b.has(w)) common++;
+  return { overlap: common / Math.min(a.size, b.size), common };
+}
+
+interface RoadmapMatch {
+  weight: number;
+  itemText: string;
+  phaseName: string;
+}
+
+const ROADMAP_MATCH_THRESHOLD = 0.25;
+const ROADMAP_MATCH_MIN_COMMON_WORDS = 2;
+
+/** Finds the best-matching (undone) roadmap item for a plan's title+content, if any clears the threshold. */
+function matchRoadmapItem(title: string, content: string, roadmapItems: RoadmapItem[]): RoadmapMatch | null {
+  const docTokens = tokenize(`${title} ${content.slice(0, 3000)}`);
+  let best: RoadmapMatch | null = null;
+  let bestOverlap = 0;
+
+  for (const item of roadmapItems) {
+    if (item.done || item.phaseWeight <= 0) continue;
+    const itemTokens = tokenize(item.text);
+    const { overlap, common } = overlapCoefficient(itemTokens, docTokens);
+    if (overlap < ROADMAP_MATCH_THRESHOLD || common < ROADMAP_MATCH_MIN_COMMON_WORDS || overlap <= bestOverlap) continue;
+
+    // Earlier items within a phase carry more weight (up to 50% falloff by the phase's last item).
+    const positionScale = 1 - (item.index / Math.max(item.itemCount, 1)) * 0.5;
+    const itemWeight = item.phaseWeight * 4 * positionScale;
+
+    bestOverlap = overlap;
+    best = { weight: itemWeight * overlap, itemText: item.text, phaseName: item.phaseName };
+  }
+
+  return best;
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +373,13 @@ async function main() {
   // more load-bearing than one nobody points to.
   const allDocs = await walkFiles(agentsDir, { extensions: [".md"] });
 
+  let roadmapItems: RoadmapItem[] = [];
+  try {
+    roadmapItems = await fetchRoadmapItems();
+  } catch (err) {
+    console.error(`warn: could not fetch roadmap wiki (${(err as Error).message}); scoring without roadmap-item-match term`);
+  }
+
   const planPathSet = new Set(planFiles.map(normalizeForCompare));
   const inboundByPlan = new Map<string, Set<string>>();
   for (const p of planFiles) inboundByPlan.set(normalizeForCompare(p), new Set());
@@ -273,6 +419,7 @@ async function main() {
     const resolvedBullets = countResolvedBullets(content);
     const inboundSet = inboundByPlan.get(normalizeForCompare(filePath)) ?? new Set<string>();
     const inboundFrom = [...inboundSet].map((p) => relative(repoRoot, p));
+    const roadmapMatch = matchRoadmapItem(title, content, roadmapItems);
 
     const base = {
       path: filePath,
@@ -287,6 +434,9 @@ async function main() {
       inProgress,
       inboundLinks: inboundFrom.length,
       inboundFrom,
+      roadmapItemWeight: roadmapMatch?.weight ?? 0,
+      roadmapItemMatch: roadmapMatch?.itemText,
+      roadmapItemPhase: roadmapMatch?.phaseName,
     };
     plans.push({ ...base, score: computeScore(base) });
   }
@@ -302,13 +452,19 @@ async function main() {
   }
 
   console.log(`\nOpen plans ranked by impact (${open.length} open, ${closed.length} closed/excluded)`);
-  console.log(`Formula: score = inboundLinks*10 + roadmapWeight*4 + resolvedBullets*1 + (inProgress ? 5 : 0)\n`);
+  console.log(
+    `Formula: score = inboundLinks*10 + roadmapWeight*4 + roadmapItemWeight + resolvedBullets*1 + (inProgress ? 5 : 0)\n`,
+  );
+  if (roadmapItems.length === 0) {
+    console.log(`(roadmap wiki unavailable this run — roadmapItemWeight is 0 for all plans)\n`);
+  }
 
-  const headers = ["#", "Score", "Roadmap", "In", "Res.", "Prog", "Plan"];
+  const headers = ["#", "Score", "Roadmap", "RoadmapItem", "In", "Res.", "Prog", "Plan"];
   const rows = shown.map((p, i) => [
     String(i + 1),
     String(p.score),
     p.roadmapLabel,
+    p.roadmapItemWeight > 0 ? p.roadmapItemWeight.toFixed(1) : "-",
     String(p.inboundLinks),
     String(p.resolvedBullets),
     p.inProgress ? "yes" : "-",
@@ -322,6 +478,15 @@ async function main() {
   printRow(headers);
   printRow(widths.map((w) => "-".repeat(w)));
   for (const row of rows) printRow(row);
+
+  if (shown.some((p) => p.roadmapItemWeight > 0)) {
+    console.log(`\nMatched roadmap wiki items:`);
+    for (const p of shown) {
+      if (p.roadmapItemWeight > 0) {
+        console.log(`  ${p.relPath}: [${p.roadmapItemPhase}] "${p.roadmapItemMatch}"`);
+      }
+    }
+  }
 
   if (shown.some((p) => p.inboundLinks > 0)) {
     console.log(`\nInbound references (why a plan scored the way it did):`);

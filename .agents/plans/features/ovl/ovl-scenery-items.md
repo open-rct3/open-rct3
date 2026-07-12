@@ -1,5 +1,7 @@
 # Decode SceneryItem (SID) and SceneryItemVisual (SVD) Entries
 
+**Roadmap**: Phase 1, "Render built-in static (unanimated) scenery items" and "Render built-in animated scenery items"
+
 **See also**: [`features/scenery-placement-registry.md`](../scenery-placement-registry.md) — confirms (against
 `rct3-importer`'s `scenery.h`) that `sizeflag`, the field driving placement footprint/height-sampling
 (`SIZE_FULLTILE` etc., mapped there to a `Placement` enum), lives on the `sid` struct, not `svd`. `svd` is
