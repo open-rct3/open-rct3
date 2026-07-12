@@ -13,7 +13,7 @@
   },
   {
     "label": "Test",
-    "command": "dotnet",
+    "command": "make",
     "args": ["test"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "show_summary": true
