@@ -51,9 +51,11 @@ Create Cliffs, Averager, Mountain, Ridge, Crater, Canyon, and Corner Snapping to
 
 ### Panel A — Snap Corners to Neighboring Corners
 
-- For each boundary-ring corner, look up its `Edge` toward the outside neighbor, read that neighbor's
-  matching-slot height via `Terrain.GetEdgeCornerHeights`/`GetCorner` (`Terrain.cs:284`,`120`), and
-  `RaiseCorner`/`LowerCorner` the boundary corner to match; interior corners reach their new heights
+- For each boundary-ring corner, consider both outside neighbors (both are reachable; diagonal is not
+  — see `terrain-heightmap.md`'s edge-vs-corner distinction). Snap to whichever neighbor is nearest
+  the cursor's current terrain-relative height. Look up the `Edge` toward that neighbor, read that
+  neighbor's matching-slot height via `Terrain.GetEdgeCornerHeights`/`GetCorner` (`Terrain.cs:284`,`120`),
+  and `RaiseCorner`/`LowerCorner` the boundary corner to match; interior corners reach their new heights
   through the same calls' existing propagation, not a second pass. Re-joins a freeform-edited region to
   its surroundings.
 
@@ -76,7 +78,10 @@ All three enumerate the brush once, compute a per-tool target, then propagate to
   back to the same height"), this tool is literally that re-join, invoked deliberately per corner
   rather than waiting for it to happen incidentally.
 
-### Panel C — Freeform Raise (Hill, Mesa)
+### Panel C — Freeform Raise (Hill, Mesa) [L79-96]
+
+- Hill and Mesa both use a tunable `FalloffCurve` parameter to control the falloff shape from the brush center.
+- Mesa additionally uses a tunable fraction of the brush radius to determine the plateau (flat) region vs. the falloff region.
 
 Continuous-drag, not brush-based (see `terrain-tools.md` Granularity Notes) — same per-corner primitives,
 but the decision is a heightfield sampled along the mouse path.
@@ -96,17 +101,11 @@ Both share one drag-path-sample + radial-falloff evaluator; Mesa only changes th
 ### Panel D — Freeform Lower (Trough)
 
 - **Trough**: Hill mirrored — `Park.LowerTerrainCorner`, sign flipped, with a depth cap keeping it
-  "shallow" vs. Crater/Canyon (deferred). Included to lock in the lower-side mirror pattern those tools
-  will reuse.
+  "shallow" vs. Crater/Canyon (deferred). Uses the same tunable `FalloffCurve` parameter as Hill and Mesa.
+  Included to lock in the lower-side mirror pattern those tools will reuse.
 
 ## Open Questions
 
-- **Snap Corners at a footprint corner**: each footprint corner touches two outside neighbors
-  (diagonal not reachable — see `terrain-heightmap.md`'s edge-vs-corner distinction). Whether both
-  neighbors matter or only axis-aligned ones needs confirming against real tool behavior.
-- **Hill/Mesa/Trough falloff shape and radius**: manual gives the result, not the curve — check a
-  reference implementation before locking it in, or start with a tunable `FalloffCurve` param.
-- **Mesa plateau radius**: fraction of brush radius that's flat vs. falling off — undocumented, same caveat.
 - **Trough depth cap**: undocumented; flag for reference comparison or default to ~1 m.
 - **`WorldInputLatch`'s one-frame-lagged `CaptureMouse` read**: accepted as harmless for a fixed-position
   panel (see Input wiring below) — if a future consumer of the same primitive has UI that reflows or
@@ -194,9 +193,7 @@ Both share one drag-path-sample + radial-falloff evaluator; Mesa only changes th
     Right/Middle/chords to camera pan/rotate — see `DefaultBindings.cs:124-134`), so there's no other
     left-click consumer to conflict with once the latch is in place.
   - **Brush cursor/preview**: highlight the diameter-N footprint under the picked tile using
-    [`debug-draw.md`](debug-draw.md)'s immediate-mode line/quad primitives (new plan — no such overlay
-    primitive exists today; the only precedent, `Game.cs:154`'s rotation-marker cube, is an opaque
-    `Model`, not an outline).
+    [`debug-draw.md`](debug-draw.md)'s immediate-mode line/quad primitives.
   - **Diameter spinner**: `ImGui.DragInt`/`SliderInt` bound to a `BrushDiameter` field, range 1..map
     size (`Terrain.Width`/`Height` minus `Park.OutOfBoundsBorder`).
   - **Click dispatch**: grid tools (Panel A/B) fire once per mouse-down (or per tick while held, for
