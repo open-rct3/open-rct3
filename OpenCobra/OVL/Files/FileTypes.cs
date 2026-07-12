@@ -119,18 +119,22 @@ public enum FileType : ushort {
 /// <summary>Extension methods for working with <see cref="FileType"/>.</summary>
 public static class FileTypeExtensions {
   private static readonly char[] fileTypeDelimiters = new[] { '.', ':' };
+  // Same as fileTypeDelimiters, plus '#' - used only to find where the *tag* ends, since an
+  // animation-frame suffix like "#0" must not be swallowed into the tag candidate (that made
+  // "ftx#0" fail ToFileType() and left "Foo.ftx#0" unstripped entirely - see below).
+  private static readonly char[] tagEndDelimiters = new[] { '.', ':', '#' };
 
   /// <summary>Strips an OVL file-type tag suffix (e.g. <c>.tex</c> or <c>:tex</c>) from a symbol
   /// name like <c>"Terrain_06.tex"</c> or <c>"Terrain_06:tex"</c>, returning the bare name
   /// (<c>"Terrain_06"</c>) callers use to look-up textures. Animation frame suffixes are
-  /// preserved: <c>"Foo.ftx#0"</c> → <c>"Foo#0"</c> and <c>"ftx:Example#0"</c> →
+  /// preserved: <c>"Foo.ftx#0"</c> → <c>"Foo#0"</c> and <c>"Example:ftx#0"</c> →
   /// <c>"Example#0"</c>. A name without a recognised tag (or with a non-tag suffix like
   /// <c>.bar</c>) is returned unchanged.</summary>
   public static string StripOvlTagSuffix(this string name) {
     var sep = name.IndexOfAny(fileTypeDelimiters);
     if (sep <= 0 || sep >= name.Length - 1) return name;
     var after = name[(sep + 1)..];
-    var tagEnd = after.IndexOfAny(fileTypeDelimiters);
+    var tagEnd = after.IndexOfAny(tagEndDelimiters);
     var tag = tagEnd < 0 ? after : after[..tagEnd];
     if (tag.ToFileType() == FileType.Unknown) return name;
     return tagEnd < 0 ? name[..sep] : name[..sep] + after[tagEnd..];

@@ -93,13 +93,40 @@ test-plugins: $(PLUGINS_OUT)
 TESTS_PROJ := OpenCobra/Tests/Tests.csproj
 TEST_BENCH_PROJ := OpenCobra/Tests/TestRunner/OvlTestBench.csproj
 
-TESTS_SRC := $(wildcard OpenCobra/Tests/*.cs OpenCobra/Tests/*/*.cs)
+# $(wildcard) alone doesn't recurse, and shelling out to `find` is not portable here - on Windows
+# it silently resolves to cmd.exe's builtin FIND.EXE instead of GNU find depending on PATH/shell
+# context ("FIND: Parameter format not correct"), and even GNU find's quoted -path globs can get
+# shell-expanded before find sees them depending on how $(shell ...) invokes its shell. `rwildcard`
+# recurses using only Make's own builtin $(wildcard), so there's no external-tool/PATH dependency
+# at all. Source dirs matter here because a change to e.g. OpenCobra/OVL/Files/*.cs (a
+# ProjectReference of Tests.csproj) must also trigger a rebuild, not just Tests' own sources.
+rwildcard = $(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+
+# Integration/TestRunner are separate projects (see Tests.csproj's own
+# <Compile Remove="Integration\**"/TestRunner\**" />) so excluded here too.
+TESTS_SRC := $(filter-out %/bin/% %/obj/% OpenCobra/Tests/Integration/% OpenCobra/Tests/TestRunner/%,\
+  $(call rwildcard,OpenCobra/Tests/,*.cs) $(call rwildcard,OpenCobra/OVL/,*.cs) $(call rwildcard,OpenCobra/GDK/,*.cs))
 # Extract TargetFramework from the csproj
 TESTS_TFM := $(shell grep -oEm1 "<TargetFramework>[^<]+" OpenCobra/Tests/Tests.csproj | sed "s/<TargetFramework>//")
 TESTS_DLL := OpenCobra/Tests/bin/Debug/$(TESTS_TFM)/Tests.dll
 
 $(TESTS_DLL): $(TESTS_PROJ) $(TESTS_SRC)
 	dotnet build OpenCobra/Tests/Tests.csproj
+
+OPENRCT3_TESTS_PROJ := OpenRCT3.Tests/OpenRCT3.Tests.csproj
+OPENRCT3_TESTS_SRC := $(filter-out %/bin/% %/obj/%,\
+  $(call rwildcard,OpenRCT3.Tests/,*.cs) $(call rwildcard,OpenRCT3/,*.cs) $(call rwildcard,OpenCobra/OVL/,*.cs) $(call rwildcard,OpenCobra/GDK/,*.cs))
+ifeq ($(PLATFORM),Darwin)
+  OPENRCT3_TESTS_TFM := net9.0-macos
+else ifeq ($(PLATFORM),Windows)
+  OPENRCT3_TESTS_TFM := net8.0-windows10.0.17763.0
+else
+  OPENRCT3_TESTS_TFM := net8.0
+endif
+OPENRCT3_TESTS_DLL := OpenRCT3.Tests/bin/Debug/$(OPENRCT3_TESTS_TFM)/OpenRCT3.Tests.dll
+
+$(OPENRCT3_TESTS_DLL): $(OPENRCT3_TESTS_PROJ) $(OPENRCT3_TESTS_SRC)
+	dotnet build $(OPENRCT3_TESTS_PROJ) -p:SolutionDir=$(CURDIR)/
 
 # Extract TargetFramework from the project files
 TEST_BENCH_TFM := $(shell grep -oEm1 "<TargetFramework>[^<]+" $(TEST_BENCH_PROJ) | sed "s/<TargetFramework>//")
@@ -118,7 +145,7 @@ else
 endif
 
 .PHONY: test
-test: $(TESTS_DLL)
+test: $(TESTS_DLL) $(OPENRCT3_TESTS_DLL)
 	deno check clients/desktop/main.ts
 	dotnet test OpenRCT3.tests.slnf --no-build /p:SolutionDir=$(CURDIR)
 

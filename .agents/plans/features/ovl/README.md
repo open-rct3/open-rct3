@@ -7,7 +7,7 @@ This directory contains plans for decoding OVL archive file types.
 | Plan                                                          | OVL Tag         | File Type        | Status      |
 | ----------------------------------------------------------- | --------------- | ---------------- | ----------- |
 | [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"`         | Terrain           | Not started |
-| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"`         | Shape             | Not started |
+| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"`         | Shape             | ✅ Done |
 | [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"`/`"svd"` | Scenery + Visual  | Not started |
 
 The `tex`/`ftx` texture pipeline is done and moved out of this directory:
@@ -28,14 +28,18 @@ texture pipeline is no longer a blocker for anything in this directory or for
 - **Verdict**: Low complexity, straightforward parsing. Research on what the data means is already done —
   see [`grass-from-ovl.md`](../../../research/grass-from-ovl.md).
 
-### 2. Moderately Difficult: [ovl-static-shapes.md](./ovl-static-shapes.md)
+### 2. Moderately Difficult: [ovl-static-shapes.md](./ovl-static-shapes.md) — ✅ Done
 
 - **Task**: Decode static 3D shape entries (tag: `"shs"`)
 - **Complexity**: 118 lines of spec
 - **Key work**: Two-level struct hierarchy (`StaticShape` → `StaticShapeMesh[]`), vertex/index arrays, symbol refs to
   FTX/TXS
 - **Dependencies**: Relocation resolution, symbol reference resolution
-- **Verdict**: Multi-level pointer chasing, requires cross-block data access
+- **Verdict**: Multi-level pointer chasing, requires cross-block data access — done. `StaticShapes.Extract`
+  (`OpenCobra/OVL/Files/StaticShapes.cs`) and `Ovl.TryFindSymbol` are implemented and verified against every
+  real `shs` symbol under `RCT3_PATH`; the `shs-viewer` Dumper plugin and its reusable "ovl" host-function
+  surface (see Dumper Plugin Requirement below) shipped alongside it. `ovl-scenery-items.md`'s SHS-symbol
+  dependency (for `svd`'s `meshtype == 0` case) is unblocked.
 
 ### 3. Most Difficult: [ovl-scenery-items.md](./ovl-scenery-items.md)
 
@@ -85,6 +89,19 @@ Post-Implementation Steps should mark the plugin `✅ Completed` in `plugins/REA
 table (moving it out of `📋 Planned`). Reference an existing plugin close in complexity to the new
 decoder (e.g. `mam-viewer` for vertex/face-count-shaped data) rather than starting from the bare
 template.
+
+**Pointer-heavy resource types** (anything relying on relocated pointers for its interesting
+data — `svd`, `sid`, `ftx`, and `shs` before it): don't fall back to a header-only/hex-dump-only
+viewer just because `render(bytes)` only gets a resource's own raw bytes. `shs-viewer`
+(`ovl-static-shapes.md`) established a general "ovl" host-function surface for exactly this —
+`Dumper/Plugins/ViewerPlugin.cs`'s `resolve_pointer`/`get_relocation_source`/`find_symbol`/
+`read_resource`/`current_resource_address`, wrapped for AssemblyScript by `plugins/lib/ovl.ts`'s
+`Ovl` class — that lets a plugin request further archive data on demand against whichever archive
+is currently open, without the host having to pre-flatten everything a plugin might want. Reuse
+these rather than adding new per-type host functions; keep struct-layout/decode-quirk knowledge
+centralized in the .NET decoder (plugins should only walk pointers via these functions, not
+reinterpret struct layouts themselves — see `StaticShapes.cs`'s sort-tail ambiguity for why that
+matters).
 
 ## Testing Approach
 

@@ -1,4 +1,4 @@
-# Plan: Decode StaticShape (SHS) Entries
+# Decode StaticShape (SHS) Entries
 
 **See also**:
 - [`ovl-scenery-item-visuals.md`](./ovl-scenery-item-visuals.md) — `SVD` references `SHS` directly
@@ -115,12 +115,32 @@ precedent.
   3. `effect_positions[]` (relocated → `MATRIX[effect_count]`) — only if `effect_count > 0`.
   4. Per effect, in order: padded 4-byte-aligned null-terminated ASCII name.
 
-- **Top-level struct layout**: `StaticShape` struct (60 bytes — bounding box 24B + 4×uint32 +
-  pointer to `sh[]` + 3 more fields), resolved via `Ovl.TryGetDataPointer`. `sh[]` is a relocated
-  pointer to `StaticShapeMesh*[mesh_count]` in the same block (`ManagerSHS.cpp:343-356`). Per the
-  Production OVLs section below, this resolves identically whether the archive handed to
-  `Ovl.Load` is the `common.ovl` or `unique.ovl` half of a pack — SHS data is duplicated across
-  both, not split between them, so there is no "unique-only" block to call out here.
+- **Top-level struct layout**: `StaticShape` struct is **56 bytes**, not 60 (corrected — an
+  earlier revision miscounted). Confirmed by summing the 10 fields in `staticshape.h`, all 4-byte
+  aligned with no padding:
+  | Offset | Field | Size |
+  |---|---|---|
+  | 0 | `bounding_box_min` | 12 |
+  | 12 | `bounding_box_max` | 12 |
+  | 24 | `total_vertex_count` | 4 |
+  | 28 | `total_index_count` | 4 |
+  | 32 | `mesh_count2` | 4 |
+  | 36 | `mesh_count` | 4 |
+  | 40 | `sh` (relocated ptr) | 4 |
+  | 44 | `effect_count` | 4 |
+  | 48 | `effect_positions` (relocated ptr) | 4 |
+  | 52 | `effect_names` (relocated ptr) | 4 |
+
+  Resolved via `Ovl.TryGetDataPointer`. `sh` is a relocated pointer to `StaticShapeMesh*[mesh_count]`
+  (an array of pointers, each individually relocated to a 40-byte `StaticShapeMesh` — see below) in
+  the same block (`ManagerSHS.cpp:343-356`). Per the Production OVLs section below, this resolves
+  identically whether the archive handed to `Ovl.Load` is the `common.ovl` or `unique.ovl` half of
+  a pack — SHS data is duplicated across both, not split between them, so there is no
+  "unique-only" block to call out here.
+
+  `StaticShapeMesh` is **40 bytes** (10×4-byte fields, same no-padding reasoning): `support_type`
+  (0), `ftx_ref` ptr (4), `txs_ref` ptr (8), `transparency` (12), `texture_flags` (16), `sides`
+  (20), `vertex_count` (24), `index_count` (28), `vertexes` ptr (32), `indices` ptr (36).
 
 - **`VECTOR`/`VERTEX`/`MATRIX` byte layout** — confirmed directly against `vertex.h`, not assumed:
   `VECTOR` is 3×`float` (12 bytes, no padding — matches the 24-byte bounding box above being two
@@ -130,8 +150,21 @@ precedent.
   `System.Numerics.Matrix4x4` uses the same row-major `M11..M44` layout, so `effect_positions[i]`
   reads straight into a `Matrix4x4` with no transpose or field reordering needed.
 
-- **`ftx_ref`/`txs_ref` resolution**: `Ovl.TryGetRelocationSource` first, fall back to
-  `Ovl.TryResolveRelocation` — same chain as `FlexiTexture.cs:49-83`.
+- **`ftx_ref`/`txs_ref` resolution — corrected**: an earlier revision cited `FlexiTexture.cs:49-83`
+  as "the same chain," but that code only resolves a pointer to raw bytes (`TryResolveRelocation`)
+  — it never turns a pointer into a *symbol name*. `ftx_ref`/`txs_ref` are relocated pointers
+  directly to the referenced symbol's *data* address (`loader.assignSymbolReference(...)` in
+  `ManagerSHS.cpp:387-388` writes exactly that), so recovering the *name* needs a pointer → symbol
+  reverse lookup. Rather than have this decoder build one locally, `Ovl` itself now exposes
+  `public bool TryFindSymbol(uint dataPtr, out OvlFile file)` (`OpenCobra/OVL/OVL.cs`) — the
+  reverse of the existing `TryGetDataPointer`, backed by a `Dictionary<uint, OvlFile>` populated
+  alongside `entryDataPtrs` in `IngestArchive`/`ExtractResources` (first symbol registered for a
+  given address wins; harmless for SHS's confirmed common/unique duplication, see Production OVLs
+  below). This *is* a change to `Ovl.cs` — supersedes this plan's earlier "No changes to `Ovl.cs`"
+  goal, since a reverse lookup is generally useful to any future decoder resolving a
+  relocated-pointer-to-symbol reference, not SHS-specific. `Ovl.TryGetRelocationSource` still
+  gates the field's raw pointer value first (same double-hop pattern as
+  `TextureDecoding.cs:399-406`); a pointer that doesn't resolve to any known symbol yields `null`.
 
 - **No per-loader extra data** — SHS has no `HasExtraData` `LoaderStruct`; don't call
   `Ovl.TryReadExtraData`.
@@ -157,35 +190,68 @@ precedent.
   `Meshes: []`/`Effects: []`" description undersold it — per the precedents, a symbol that fails
   to decode is dropped from the result entirely, not returned as an empty-shell `StaticShape`).
 
-- **No changes to `Ovl.cs`** — all resolution via existing public surface. Forward-only parsing
-  per `AGENTS.md` (no `BaseStream.Position` rewinds, no `while` loops on untrusted counts).
+- **One addition to `Ovl.cs`: `TryFindSymbol`** (see `ftx_ref`/`txs_ref` resolution above) —
+  otherwise all resolution is via existing public surface. Forward-only parsing per `AGENTS.md`
+  (no `BaseStream.Position` rewinds, no `while` loops on untrusted counts).
 
 - **New Dumper plugin: `plugins/shs-viewer/`** (per the parent
   [`README.md`](./README.md#dumper-plugin-requirement) requirement — every decoder ships a
-  matching viewer). `shs-viewer` is already listed as priority 4 in
-  [`plugins/README.md`](../../../../plugins/README.md), described there as "mesh metadata with
-  vertex/index arrays" — moderate complexity. Renders: shape name, bounding box, mesh count,
-  effect count, and per-mesh vertex/triangle counts + `FtxRef`/`TxsRef`/`Sides` (a table, not a
-  3D preview — matches `mam-viewer`'s "vertex/face counts and bounding box" precedent, the
-  closest existing plugin in shape). Reference `mam-viewer`'s `index.ts`/`index.test.ts`
-  structure directly rather than the bare template.
+  matching viewer). **Revised twice**: first assumed per-mesh data was directly renderable from
+  raw resource bytes (wrong — `render(bytes)` only ever gets a resource's own unresolved bytes,
+  confirmed via `Dumper/MainForm.cs`), then scoped down to a header-only view as a result. Neither
+  is where this landed — instead, `Dumper/Plugins/ViewerPlugin.cs` gained a small set of **"ovl"
+  host functions** (`resolve_pointer`/`get_relocation_source`/`find_symbol`/`read_resource`/
+  `current_resource_address`), wrapped for AssemblyScript callers by `plugins/lib/ovl.ts`'s `Ovl`
+  class, so any plugin can request further archive data on demand against whichever archive is
+  currently open (`PluginManager.CurrentOvl`/`CurrentFile`, updated by `MainForm.LoadOvl`/
+  `OvlTree_AfterSelect`). `shs-viewer` uses these to walk `sh[]` live and render a real per-mesh
+  table (vertex/index counts, support type, sides, resolved `FtxRef`/`TxsRef` symbol names) on top
+  of the inline 56-byte header (bounding box, counts). Struct-layout/decode-quirk knowledge stays
+  centralized in .NET (`StaticShapes.cs` remains the source of truth for e.g. the sort-tail
+  ambiguity) — plugins only walk pointers via these host functions, they don't reinterpret struct
+  layouts themselves. Full byte-level decoding (vertices, triangles, sort-tail handling) is still
+  `StaticShapes.Extract`'s job, not this plugin's — `shs-viewer` is a summary/inspector view.
+  See [`plugins/README.md`](../../../../plugins/README.md)'s `shs-viewer` note for the host
+  function list; future pointer-heavy decoders (`svd-viewer`, `ftx-viewer`, `sid-viewer`) should
+  reuse the same "ovl" host functions rather than growing per-type host code.
 
 ## Gaps and Risks
 
-1. **Sort-algo index-copy tail** is untested against real data until a `shs` with
-   `SortedByY`/`SortedByZ` non-empty is decoded and diffed against a known-transparent mesh.
-   Path stays unit-tested via synthetic input in the meantime.
+1. **Sort-algo index-copy tail presence cannot be determined from the archive alone — confirmed
+   during implementation, not just theorized.** `algo_x`/`algo_y`/`algo_z` (`ManagerSHS.h:64-66`)
+   live only on the writer's in-memory `cStaticShape2`, never serialized to the on-disk
+   `StaticShapeMesh`. `transparency != 0` is necessary but **not sufficient** for a sort tail to
+   exist: tested against real data (`test/Shapes.unique.ovl`, `ACAM/ACAM.unique.ovl`),
+   `SwingShipHLod`, `SwingShipMLod`, `Straight4mTP01`, and `OldACAMWheel` all have
+   `transparency != 0` with **no sort tail actually present** — the decoder's first version
+   assumed `transparency != 0` ⇒ sort tail and crashed (`ArgumentOutOfRangeException` in
+   `ReadTriangles`) reading past the resolved block on all four. **Current mitigation, not a real
+   fix**: `StaticShapes.cs` only commits to the "raw index count + sort tail" interpretation when
+   `transparency != 0` AND the 3× tail actually fits within the resolved block's remaining bytes;
+   otherwise it falls back to "index_count is already a triangle count." This never crashes and
+   passes on all 13 known real symbols, but it's a bounds-check heuristic, not a verified decode
+   rule — a mesh where the wrong interpretation *also* happens to fit in bounds would silently
+   decode wrong data. **Still open**: find an authoritative signal (if one exists) or accept this
+   heuristic permanently; not blocking, since it degrades to a plausible-if-unverified read rather
+   than a crash or silent corruption in all cases tested so far.
 2. **`mesh_count2`** is a derived "meshes with no support" counter (`ManagerSHS.cpp:220-225`), not
    a redundant count — the decoder computes it from decoded meshes rather than trusting the
-   on-disk value.
+   on-disk value. **Corrected**: `SupportType::None` is `0xFFFFFFFF` (`rct3constants.h:233`), not
+   `0` — an earlier revision of the unit test below assumed `0`, which would have asserted the
+   wrong `MeshCount2`.
 3. **Per-mesh `Name`**: C++ has no mesh name field at all (meshes are identified only by index);
    the decoder always synthesizes `$"{parent.Name}.mesh{i}"`.
 4. **`txs_ref`** is whatever Texture Style the artist assigned — can be empty/`null`. The decoder
    does not assume `BillboardStandard` (that's an SVD-side claim, not SHS).
 5. **No `shs` symbols in `style.common.ovl`/`style.unique.ovl`** (the repo's existing fixture
-   pair) — unit tests use synthetic `BinaryWriter`-built input with manually installed relocation
-   fixups. Not a blocker for the integration test: see Production OVLs below, which now has real
-   targets to decode against.
+   pair) — not a blocker: see Production OVLs below, which has real targets to decode against, and
+   Testing below for why this plan ended up integration-test-only (no synthetic unit tests).
+6. **Some shapes legitimately have zero meshes** — confirmed against real data, not a decode bug:
+   `invisibleproxy` (`Enclosures/Shelters`), vehicle "Bogey" pieces (`Cars/CoasterCars`,
+   `Cars/TrackedRideCars`), and track-joint `_ME` pieces all decode successfully with
+   `Meshes.Count == 0`. An early version of the integration test below wrongly asserted every
+   shape has ≥1 mesh and failed on 106 real symbols as a result — fixed by only asserting
+   non-empty `Vertices`/`Triangles` for shapes that do have meshes.
 
 ## Deferred
 
@@ -194,63 +260,67 @@ precedent.
 
 ## Testing
 
-Per `AGENTS.md` and `README.md` convention (NUnit unit tests + integration check):
+**Deviated from `AGENTS.md`/`README.md`'s usual "unit tests + integration check" convention —
+integration-only, deliberately.** No synthetic-OVL-with-relocations unit-test harness exists
+anywhere in this codebase (checked `FlexiTexture`/`ParticleEffects`/`CharacterSkins`: none have
+unit tests either), and real fixture archives already cover the decoder thoroughly — building a
+byte-level synthetic-archive harness from scratch was explicitly decided against as unnecessary
+effort given that. All testing landed in `OpenCobra/Tests/Integration/ExtractResources.cs` (gated
+by `RCT3_PATH`), as implemented:
 
-### Unit tests: `OpenCobra/Tests/OVL/StaticShapesTests.cs` (synthetic, no `RCT3_PATH`)
-
-- **`Extract_EmptyOvl_ReturnsEmpty`**
-- **`Extract_SingleMeshOneTriangle_DecodesAllFields`** — one mesh, 3 vertices, 1 triangle,
-  `support_type = 1`, `sides = 3`, `transparency = 0`, `ftx_ref` resolving to
-  `"FooTexture:ftx"`.
-- **`Extract_ResolvesFtxAndTxsSymbolRefs`**
-- **`Extract_NullFtxRef_ReturnsNullFtxRef`** — zero relocation entry → `null`, not `""`.
-- **`Extract_TwoMeshes_AreDecodedInOrder`** — two meshes, each with its own vertices+indices
-  written back-to-back (mesh 0 `vertexes`, mesh 0 `indices`, mesh 1 `vertexes`, mesh 1
-  `indices` — the real interleaved layout, not a batched one); assert mesh 0's vertices/triangles
-  decode independently of mesh 1's, and `Name == "{parent}.mesh0"`.
-- **`Extract_TransparentMeshWithSortAlgo_DecodesSortedByYAndZ`** — `transparency = 1`, sort algo
-  set, `index_count` written as the **raw** index count (not divided by 3, per
-  `ManagerSHS.cpp:129-141`), followed by `2 * index_count` extra uint32s; assert
-  `Triangles.Count == index_count / 3`, `SortedByY.Count == index_count / 3`,
-  `SortedByZ.Count == index_count / 3`, and all three are distinct triangle orderings.
-- **`Extract_NoSortAlgo_SortedByYAndZAreEmpty`** — `transparency = 0` (or no sort algo);
-  `index_count` written as a **triangle** count directly (per the no-sort-algo branch); assert
-  `Triangles.Count == index_count`, `SortedByY.Count == 0` and `SortedByZ.Count == 0`, no extra
-  bytes read.
-- **`Extract_TriangleSortTail_IsSkippedOver`** — same synthetic layout as
-  `Extract_TransparentMeshWithSortAlgo_DecodesSortedByYAndZ` (raw `index_count` + `2 *
-  index_count` extra uint32s); assert the next mesh's `vertexes[]` is still found at the right
-  offset, i.e. immediately after this mesh's sort tail, not immediately after its `indices[]`.
-- **`Extract_TriangleCountSemantics_NoSortAlgo_IndexCountIsAlreadyTriangleCount`** — no sort tail
-  present, `index_count = 1`, 3 raw uint32s → `Triangles.Count == 1` (the decoder must NOT divide
-  by 3 again in this branch).
-- **`Extract_EffectsWithNames_DecodesMatrixAndName`**
-- **`Extract_NoEffects_EffectsIsEmpty`**
-- **`Extract_MeshCount2_IsComputedNotTrusted`** — 3 meshes, `SupportType = 0, 1, 0`, on-disk
-  `mesh_count2 = 99` → `MeshCount2 == 2`.
-
-### Integration test: append to `OpenCobra/Tests/Integration/ExtractResources.cs` (gated by `RCT3_PATH`)
-
-- **`StaticShape_DecodesEveryShsSymbolInProductionArchives`** — scan every `*.unique.ovl` under
-  `$RCT3_PATH/` (not `*.common.ovl` — confirmed duplicate data per the Production OVLs section
-  below, so scanning both halves would just double the runtime for zero extra coverage), decode
-  every `shs` symbol, assert no throw and every shape has ≥1 mesh with non-empty
-  `Vertices`/`Triangles`. Real targets are cataloged below (~16,306 unique shapes across 5,757
-  archives) — no longer expected to report `Inconclusive`.
-- **`StaticShape_KnownSymbol_ResolvesFtxRef`** — named spot checks beyond the blanket scan, since
-  synthetic unit tests can't catch real-world relocation-resolution regressions: decode
-  `ACAMHull` from `ACAM/ACAM.unique.ovl` and `Rhino` from `test/Shapes.unique.ovl`, assert at
-  least one mesh on each has a non-null `FtxRef`. (Confirm the exact expected symbol values by
-  running the decoder once real data is available — this test's assertions may need the actual
-  `FtxRef` string filled in rather than just "non-null" once observed.)
+- **`StaticShapes_AreDecodable(string ovlPath)`** — `[TestCaseSource]`-driven over every
+  `*.unique.ovl` under `$RCT3_PATH/` (not `*.common.ovl` — confirmed duplicate data per the
+  Production OVLs section below, so scanning both halves would just double the runtime for zero
+  extra coverage), mirroring the existing `FtxResources_AreDecodable`/`GetOvlFixtures` pattern.
+  Per archive: `Ignore`s if no `shs` symbols present; otherwise decodes via `StaticShapes.Extract`
+  and asserts (a) every symbol decoded (none silently dropped into `Extract`'s `failures` bag) and
+  (b) for shapes that do have meshes, at least one mesh has non-empty `Vertices`/`Triangles`. Does
+  **not** assert every shape has ≥1 mesh — an early version did and failed on 106 real symbols
+  that legitimately have zero (see Gaps #6). Run against the full install: **passes on every
+  `*.unique.ovl` fixture**, including `test/Shapes.unique.ovl` and `ACAM/ACAM.unique.ovl`.
+- **`Load_ACAMHull_DecodesRealShapeWithGenuinelyNullSymbolRefs`** — named spot check via
+  `StaticShapes.TryExtractOne`, asserting the exact known values observed during implementation:
+  3 meshes, 305 total vertices, 486 total triangles, 5 effects, and mesh 0's `FtxRef`/`TxsRef`
+  both `null` (confirmed genuinely absent from the relocation table, not a resolution bug — see
+  Implementation Notes). Passes.
 
 ## Implementation Notes
 
-TBD.
+- `OpenCobra/OVL/Files/StaticShapes.cs` implemented and manually verified (via a scratch console
+  tool, not committed test code) against all 13 real `shs` symbols in
+  `test/Shapes.unique.ovl` (11) and `ACAM/ACAM.unique.ovl` (2) — no crashes, plausible
+  vertex/triangle/effect counts, correct null-`FtxRef`/`TxsRef` handling confirmed against raw
+  relocation-table entries (not just a resolution-code guess).
+- `Ovl.TryFindSymbol` added to `OpenCobra/OVL/OVL.cs` (see `ftx_ref`/`txs_ref` resolution in
+  Goals above) — the reverse of `TryGetDataPointer`, generally reusable by future decoders.
+- Found and fixed a real crash (see Gaps #1) during this verification pass, not caught by
+  planning alone — `transparency != 0` does not imply a sort tail is present on disk.
+- **`shs-viewer` Dumper plugin implemented**, twice-revised in scope (see Goals above) — landed
+  as a real per-mesh live-resolving viewer, not the header-only fallback originally planned.
+  Required adding general "ovl" host functions to `Dumper/Plugins/ViewerPlugin.cs`
+  (`resolve_pointer`/`get_relocation_source`/`find_symbol`/`read_resource`/
+  `current_resource_address`) plus `PluginManager.CurrentOvl`/`CurrentFile` live references and a
+  `plugins/lib/ovl.ts` AssemblyScript wrapper — all reusable by future pointer-heavy decoders
+  (`svd-viewer`, `ftx-viewer`, `sid-viewer`), not shs-specific. Verified end-to-end with a real
+  Deno test (`shs-viewer/index.test.ts`) mocking the host functions and asserting the rendered
+  HTML contains resolved per-mesh vertex/index counts and a resolved `TxsRef` symbol name — not
+  just that the plugin loads.
+- **Integration tests added** to `OpenCobra/Tests/Integration/ExtractResources.cs` (see Testing
+  above) — `StaticShapes_AreDecodable` and `Load_ACAMHull_DecodesRealShapeWithGenuinelyNullSymbolRefs`,
+  both passing against the full `RCT3_PATH` install. Caught a real test-writing bug along the way
+  (not a decoder bug): the first version of `StaticShapes_AreDecodable` assumed every shape has
+  ≥1 mesh and failed on 106 real symbols that legitimately have zero (`invisibleproxy`, vehicle
+  "Bogey" pieces, track-joint `_ME` pieces) — fixed by only asserting non-empty
+  `Vertices`/`Triangles` for shapes that do have meshes. No synthetic unit tests were written —
+  decided against deliberately (see Testing above), not left undone.
 
 ## Status
 
-Not started. Blocks `ovl-scenery-item-visuals.md`'s `meshtype == 0` resolution. Production OVLs
+**Implementation complete.** Core decoder (`StaticShapes.cs`), its `Ovl.TryFindSymbol` dependency,
+the `shs-viewer` Dumper plugin (including new general-purpose "ovl" host functions), and
+integration tests (`ExtractResources.cs`) are all implemented and verified against real archives.
+Remaining work is exclusively the Post-Implementation Steps below (summary doc, README status
+rows) and unblocking `ovl-scenery-item-visuals.md`'s `meshtype == 0` resolution. Production OVLs
 containing `shs` entries catalogued (see below).
 
 ## Production OVLs with Entries
@@ -283,7 +353,12 @@ useful only as a negative-case fixture).
 
 ## Post-Implementation Steps
 
-Add a results summary under [`.agents/summaries/`](../../../summaries/) and update this plan's
-status row in [`README.md`](./README.md). Move `shs-viewer` from `📋 Planned` to `✅ Completed` in
-[`plugins/README.md`](../../../../plugins/README.md)'s status table once the Dumper plugin ships.
-Then unblock [`ovl-scenery-item-visuals.md`](./ovl-scenery-item-visuals.md)'s `meshtype == 0` path.
+- [x] Update this plan's status row in [`README.md`](./README.md) — now `✅ Done`.
+- [x] Move `shs-viewer` from `📋 Planned` to `✅ Completed` in
+      [`plugins/README.md`](../../../../plugins/README.md)'s status table.
+- [x] Unblock `ovl-scenery-items.md`'s SHS dependency (note: `ovl-scenery-item-visuals.md` was
+      consolidated into [`ovl-scenery-items.md`](./ovl-scenery-items.md) — that plan's
+      Dependencies section now notes SHS is unblocked).
+- [ ] Add a results summary under [`.agents/summaries/`](../../../summaries/) documenting this
+      decoder (struct layout, the sort-tail heuristic, the "ovl" host-function surface) — not yet
+      written.
