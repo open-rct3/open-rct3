@@ -5,9 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 //
-// Decodes "shs" (StaticShape) entries per rct3-importer's staticshape.h/ManagerSHS.cpp - see
-// .agents/plans/features/ovl/ovl-static-shapes.md for the struct layout, allocation-order, and
-// index_count semantics this mirrors.
+// Decodes "shs" (StaticShape) entries per rct3-importer's staticshape.h/ManagerSHS.cpp.
 using System.Collections.Concurrent;
 using System.Numerics;
 using NLog;
@@ -155,10 +153,11 @@ public static class StaticShapes {
     var vertexCount = BitConverter.ToUInt32(span[24..28]);
     var indexCount = BitConverter.ToUInt32(span[28..32]);
 
-    var ftxRef = ovl.TryGetRelocationSource(meshAddress + 4, out var ftxAddress)
-      && ovl.TryFindSymbol(ftxAddress, out var ftxFile) ? ftxFile.Name : null;
-    var txsRef = ovl.TryGetRelocationSource(meshAddress + 8, out var txsAddress)
-      && ovl.TryFindSymbol(txsAddress, out var txsFile) ? txsFile.Name : null;
+    // ftx_ref/txs_ref are assignSymbolReference-driven cross-resource references (ManagerSHS.cpp), not
+    // intra-block pointers - resolved via the archive's symbol-reference table, not the base
+    // relocation-fixup table TryGetRelocationSource reads. See Ovl.TryResolveSymbolReference.
+    var ftxRef = ovl.TryResolveSymbolReference(meshAddress + 4, out var ftxFile) ? ftxFile.Name : null;
+    var txsRef = ovl.TryResolveSymbolReference(meshAddress + 8, out var txsFile) ? txsFile.Name : null;
 
     var vertices = new List<Vertex>(Convert.ToInt32(vertexCount));
     if (vertexCount > 0 && ovl.TryGetRelocationSource(meshAddress + 32, out var vertexesAddress)

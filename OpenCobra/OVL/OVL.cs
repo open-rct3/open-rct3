@@ -37,9 +37,12 @@ internal class FileBlock {
   /// Size of the block in bytes.
   /// </summary>
   public uint Size;
-  // FIXME: Is this summary correct?
   /// <summary>
-  /// Offset within the OVL archive, relative to the end of the last block.
+  /// This block's start position in the flat, concatenated relocation address space formed by
+  /// every block's <see cref="Data"/> in on-disk order (common file's blocks, then unique file's) -
+  /// i.e. the running sum of every prior block's <see cref="Size"/>. This is the address space
+  /// relocation-fixup values and symbol data pointers are expressed in, distinct from <see cref="Offset"/>,
+  /// which is this block's physical byte position within its own file on disk.
   /// </summary>
   public uint RelativeOffset;
   public int TypeIndex;
@@ -63,24 +66,29 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   private Version version;
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly Dictionary<OvlFile, uint> entryDataPtrs = [];
-  // Reverse of entryDataPtrs - lets callers turn a relocated pointer to another symbol's data
-  // (e.g. StaticShapeMesh.ftx_ref/txs_ref) back into the OvlFile that owns it. Built alongside
-  // entryDataPtrs since every entry has exactly one data pointer.
+  /// <summary>
+  /// Reverse of <see cref="entryDataPtrs"/>: a resolved data pointer's own address back to the
+  /// <see cref="OvlFile"/> it belongs to. Built alongside <see cref="entryDataPtrs"/> since every
+  /// entry has exactly one data pointer.
+  /// </summary>
   private readonly Dictionary<uint, OvlFile> symbolsByDataPointer = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
   private readonly List<Version> allVersions = [];
   private readonly List<Dictionary<uint, List<byte[]>>> allExtraData = [];
-  // Relocation-fixup table (Part 6 Finding 3 / rct3tex.cpp:1830-1842's DoReloc): a flat
-  // sourceAddress -> rawValueAtThatAddress map. "Source address" here is a location in block data
-  // that the archive's own linker flagged as needing pointer interpretation; the raw bytes stored
-  // there are only trustworthy as a real pointer if the address is listed here - unlisted locations
-  // are unpatched placeholder bytes (e.g. Tex fields for textureless entries like render targets).
+  /// <summary>
+  /// Relocation-fixup table: a flat source-address to raw-value-at-that-address map. A location in
+  /// block data is only trustworthy as a real pointer if it's listed here - see
+  /// <see cref="TryGetRelocationSource"/>.
+  /// </summary>
   private readonly Dictionary<uint, uint> relocations = [];
-  // Ordered (per file, in on-disk LoaderStruct order) (Tag, DataAddress) pairs - see Part 6
-  // Finding 4: "btbl"/"flic" are loader-category tags only, never discoverable as classified
-  // symbols, so callers that need every loader instance (not just symbol-backed resources) must
-  // walk this instead of ovl.Keys.
+  /// <summary>
+  /// Cross-resource symbol-reference table: a field's own address to the <see cref="OvlFile"/> its
+  /// SymbolRefStruct entry names as the target. Distinct from <see cref="relocations"/>, which only
+  /// resolves pointers within the archive's own block data - see <see cref="TryResolveSymbolReference"/>.
+  /// </summary>
+  private readonly Dictionary<uint, OvlFile> symbolReferenceTargets = [];
+  /// <summary>Backing field for <see cref="LoaderEntriesInOrder"/>.</summary>
   private readonly List<(string Tag, uint DataAddress)> loaderEntriesInOrder = [];
   private uint relocationOffset;
   private bool disposed = false;
@@ -241,6 +249,20 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// </summary>
   public bool TryFindSymbol(uint dataPtr, [MaybeNullWhen(false)] out OvlFile file) =>
     symbolsByDataPointer.TryGetValue(dataPtr, out file);
+
+  /// <summary>
+  /// Resolves a cross-resource symbol-reference field (e.g. <c>StaticShapeMesh.FtxRef</c>'s own
+  /// address, or one element of <c>SceneryItem.SvdRefs</c>) to the <see cref="OvlFile"/> its
+  /// SymbolRefStruct entry names, via the archive's symbol-reference table - NOT the base
+  /// relocation-fixup table <see cref="TryGetRelocationSource"/> reads, which only resolves pointers
+  /// to other data within the archive's own blocks. See <see cref="symbolReferenceTargets"/> for why
+  /// these are genuinely different tables.
+  /// </summary>
+  /// <param name="fieldAddress">Relative offset address of the field being referenced (the field's
+  /// own address, not its on-disk stored value, which is an unresolved placeholder until this lookup
+  /// substitutes in the real target).</param>
+  public bool TryResolveSymbolReference(uint fieldAddress, [MaybeNullWhen(false)] out OvlFile file) =>
+    symbolReferenceTargets.TryGetValue(fieldAddress, out file);
 
   /// <summary>
   /// Resolves a relocated string pointer to its text value.
@@ -615,6 +637,70 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
         if (loaderSymbolRemaining > 0) loaderSymbolRemaining--;
       }
     }
+
+    ReadSymbolReferences();
+  }
+
+  /// <summary>
+  /// Parses the archive's SymbolRefStruct/SymbolRefStruct2 table into <see cref="symbolReferenceTargets"/>.
+  /// Must run after <see cref="entries"/> is fully populated, since resolving a symbol name to its
+  /// <see cref="OvlFile"/> needs the complete archive-wide symbol set.
+  /// </summary>
+  private void ReadSymbolReferences() {
+    if (entries.Count == 0) return;
+
+    // First registrant for a given (name, type) wins, mirroring symbolsByDataPointer's
+    // common/unique-duplicate handling above.
+    var byNameAndType = new Dictionary<(string Name, FileType Type), OvlFile>();
+    foreach (var file in entries.Keys) byNameAndType.TryAdd((file.Name, file.Type), file);
+
+    for (var fileIndex = 0; fileIndex < allFileTypeBlocks.Count; fileIndex++) {
+      var blocks = allFileTypeBlocks[fileIndex];
+      // The SymbolRefStruct table is block type-index 2's third sub-block, right after the symbol
+      // table (index 0) and loader table (index 1) that ReadLoaderExtraData already reads from the
+      // same type-index.
+      if (blocks.Length <= 2 || blocks[2].Blocks.Count <= 2) continue;
+
+      var symrefBlock = blocks[2].Blocks[2];
+      if (symrefBlock.Data == null || symrefBlock.Size == 0) continue;
+
+      // Same version-driven sizing rule as the symbol table above: v1 uses the 12-byte
+      // SymbolRefStruct (reference*, Symbol*, ldr*); v4/v5 use the 16-byte SymbolRefStruct2, which
+      // adds a 4-byte symbol-name hash.
+      var version = fileIndex < allVersions.Count ? allVersions[fileIndex] : Version.Unknown;
+      var symrefSize = version == Version.One ? 12 : 16;
+      if (symrefBlock.Size % symrefSize != 0) continue;
+
+      var count = Convert.ToInt32(symrefBlock.Size) / symrefSize;
+      for (var i = 0; i < count; i++) {
+        var entryAddress = symrefBlock.RelativeOffset + Convert.ToUInt32(i * symrefSize);
+
+        // Each entry names a field elsewhere in the archive (`reference`) and the symbol
+        // ("Name:Tag", via `Symbol`) it should resolve to.
+        if (!TryGetRelocationSource(entryAddress, out var referenceFieldAddress)) continue;
+        if (!TryGetRelocationSource(entryAddress + 4, out var symbolStringAddress)) continue;
+        if (!TryResolveString(symbolStringAddress, out var rawName)) continue;
+
+        var (name, fileType) = SplitSymbolNameTag(rawName);
+        if (fileType == FileType.Unknown) continue;
+        if (!byNameAndType.TryGetValue((name, fileType), out var targetFile)) continue;
+
+        symbolReferenceTargets[referenceFieldAddress] = targetFile;
+      }
+    }
+  }
+
+  /// <summary>
+  /// Splits a symbol name in <c>"Name:Tag"</c> form (e.g. <c>"RomPil_1H:svd"</c>, the format every
+  /// symbol name is written in regardless of archive version) into its name and <see cref="FileType"/> -
+  /// see <see cref="ExtractResources"/>'s matching logic for why the tag suffix is authoritative.
+  /// </summary>
+  private static (string Name, FileType Type) SplitSymbolNameTag(string rawName) {
+    var colonIndex = rawName.LastIndexOf(':');
+    if (colonIndex < 0) return (rawName, FileType.Unknown);
+
+    var candidateType = rawName[(colonIndex + 1)..].ToFileType();
+    return candidateType != FileType.Unknown ? (rawName[..colonIndex], candidateType) : (rawName, FileType.Unknown);
   }
 
   private static string? ReadString(List<FileBlock> blocks, uint ptr) {
@@ -647,6 +733,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
       entries.Clear();
       entryDataPtrs.Clear();
       symbolsByDataPointer.Clear();
+      symbolReferenceTargets.Clear();
       allFileTypeBlocks.Clear();
       allLoaderHeaders.Clear();
       allExtraData.Clear();
