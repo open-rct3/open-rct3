@@ -19,8 +19,10 @@ export const hostFunctions = {
   "ovl": {
     "resolve_pointer": (_ctx: CallContext, _dataPtr: bigint) => NOT_FOUND,
     "get_relocation_source": (_ctx: CallContext, _address: bigint) => NOT_FOUND,
+    "resolve_symbol_reference": (_ctx: CallContext, _fieldAddress: bigint) => NOT_FOUND,
     "find_symbol": (_ctx: CallContext, _dataPtr: bigint) => NOT_FOUND,
     "read_resource": (_ctx: CallContext, _namePtr: bigint, _nameLen: bigint, _tagPtr: bigint, _tagLen: bigint) => NOT_FOUND,
+    "symbol_address": (_ctx: CallContext, _namePtr: bigint, _nameLen: bigint, _tagPtr: bigint, _tagLen: bigint) => NOT_FOUND,
     "current_resource_address": (_ctx: CallContext) => NOT_FOUND,
   },
 };

@@ -10,6 +10,10 @@ export function readU32LE(data: Uint8Array, offset: i32): u32 {
     (u32(data[offset + 3]) << 24));
 }
 
+export function readI32LE(data: Uint8Array, offset: i32): i32 {
+  return i32(readU32LE(data, offset));
+}
+
 export function readF32LE(data: Uint8Array, offset: i32): f32 {
   let bits = readU32LE(data, offset);
   return f32.reinterpret_i32(i32(bits));

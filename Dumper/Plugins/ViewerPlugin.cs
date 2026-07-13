@@ -186,6 +186,30 @@ sealed class ViewerPlugin : IViewerPlugin {
       }
     ).WithNamespace("ovl"),
 
+    // resolve_symbol_reference(fieldAddress: i64) -> i64 offset (NotFound if the field has no
+    // SymbolRefStruct entry, or its target symbol lives in an OVL not currently loaded). Wraps
+    // Ovl.TryResolveSymbolReference - the archive's cross-resource symbol-reference table, distinct
+    // from get_relocation_source's base relocation-fixup table (see Ovl.cs's symbolReferenceTargets
+    // doc comment). Any assignSymbolReference-driven field (ftx_ref, txs_ref, shs_ref, svds_ref[i],
+    // name_ref, etc.) must use this, not get_relocation_source, to resolve correctly against real
+    // archives.
+    new HostFunction(
+      "resolve_symbol_reference",
+      [ExtismValType.I64],
+      [ExtismValType.I64],
+      null,
+      (plugin, inputs, outputs) => {
+        var ovl = getCurrentOvl();
+        var fieldAddress = Convert.ToUInt32(inputs[0].v.i64);
+        if (ovl == null || !ovl.TryResolveSymbolReference(fieldAddress, out var symbol)) {
+          outputs[0].v.i64 = NotFound;
+          return;
+        }
+        var json = JsonSerializer.Serialize(new { name = symbol.Name, tag = symbol.Type.ToTagString() });
+        outputs[0].v.i64 = plugin.WriteBytes(Encoding.UTF8.GetBytes(json));
+      }
+    ).WithNamespace("ovl"),
+
     // find_symbol(dataPtr: i64) -> i64 offset (NotFound if no symbol owns that address).
     // Wraps Ovl.TryFindSymbol; writes UTF8 JSON `{"name":"...","tag":"..."}` into plugin memory.
     new HostFunction(
@@ -221,6 +245,29 @@ sealed class ViewerPlugin : IViewerPlugin {
         var symbol = ovl?.Find(name, fileType);
         var data = symbol != null ? ovl!.ReadResource(symbol) : null;
         outputs[0].v.i64 = data != null ? plugin.WriteBytes(data) : NotFound;
+      }
+    ).WithNamespace("ovl"),
+
+    // symbol_address(namePtr: i64, nameLen: i64, tagPtr: i64, tagLen: i64) -> i64 address
+    // (NotFound if no matching symbol). Wraps Ovl.Find + Ovl.TryGetDataPointer - for plugins that
+    // need to walk pointers *inside* a different resource (e.g. sid-viewer resolving a
+    // SceneryItem.SvdRefs entry, then reading that SVD's own lods[] array), which requires the
+    // target's own archive address, not just its raw bytes (read_resource) or name (find_symbol/
+    // resolve_symbol_reference).
+    new HostFunction(
+      "symbol_address",
+      [ExtismValType.I64, ExtismValType.I64, ExtismValType.I64, ExtismValType.I64],
+      [ExtismValType.I64],
+      null,
+      (plugin, inputs, outputs) => {
+        var ovl = getCurrentOvl();
+        var name = Encoding.UTF8.GetString(plugin.ReadBytes(inputs[0].v.i64)[..Convert.ToInt32(inputs[1].v.i64)]);
+        var tag = Encoding.UTF8.GetString(plugin.ReadBytes(inputs[2].v.i64)[..Convert.ToInt32(inputs[3].v.i64)]);
+        var fileType = tag.ToFileType();
+        var symbol = ovl?.Find(name, fileType);
+        outputs[0].v.i64 = symbol != null && ovl!.TryGetDataPointer(symbol, out var address)
+          ? address
+          : NotFound;
       }
     ).WithNamespace("ovl"),
 
