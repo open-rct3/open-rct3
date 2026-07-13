@@ -84,21 +84,45 @@ public class Terrain {
     Debug.Assert(config.InstallPath != null);
 
     var terrain = new Terrain();
-    // Load textures from terrain/RCT3/Terrain_RCT3.common.ovl
     var terrainOvl = Path.Combine(config.InstallPath, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
-    using var ovl = Ovl.Load(terrainOvl);
-    var textures = Textures.Extract(ovl);
-    // Terrain_06 is grass (confirmed against assets/prod/terrain/Terrain_06.png); Terrain_00 is dirt.
-    if (textures.Names.Contains("Terrain_06")) {
-      var tex = textures["Terrain_06"];
-      // TakeMip transfers ownership of mip 0 to GrassTexture and nulls the source slot, so
-      // disposing `tex` below (with every other extracted texture) can't double-dispose it.
-      var mip0 = tex.TakeMip(0);
-      terrain.GrassTexture = new OpenCobra.GDK.Materials.Texture(tex.Name, (int)tex.Width, (int)tex.Height, mip0, tex.Recolorable);
+    using (var ovl = Ovl.Load(terrainOvl)) {
+      var terrainTypes = TerrainTypes.Extract(ovl);
+      var textures = Textures.Extract(ovl);
+
+      // Identify grass via decoded metadata: Type==GroundBlended + nearest-color to 0xFF4F810E
+      var grassColor = 0xFF4F810Eu;
+      var groundBlended = terrainTypes.Where(t => t.Type == TerrainType.GroundBlended).ToList();
+      if (groundBlended.Count > 0) {
+        var grassEntry = groundBlended.OrderBy(t => ColorDistance(t.Parameters.ColourSimple, grassColor)).First();
+        if (grassEntry.TextureRef != null && textures.Names.Contains(grassEntry.TextureRef)) {
+          var tex = textures[grassEntry.TextureRef];
+          // TakeMip transfers ownership of mip 0 to GrassTexture and nulls the source slot, so
+          // disposing `tex` below (with every other extracted texture) can't double-dispose it.
+          var mip0 = tex.TakeMip(0);
+          terrain.GrassTexture = new OpenCobra.GDK.Materials.Texture(tex.Name, (int)tex.Width, (int)tex.Height, mip0, tex.Recolorable);
+        }
+      }
+
+      foreach (var texture in textures) texture.Dispose();
     }
-    foreach (var texture in textures) texture.Dispose();
 
     return terrain;
+  }
+
+  private static uint ColorDistance(uint c1, uint c2) {
+    var r1 = (byte)((c1 >> 16) & 0xFF);
+    var g1 = (byte)((c1 >> 8) & 0xFF);
+    var b1 = (byte)(c1 & 0xFF);
+
+    var r2 = (byte)((c2 >> 16) & 0xFF);
+    var g2 = (byte)((c2 >> 8) & 0xFF);
+    var b2 = (byte)(c2 & 0xFF);
+
+    var dr = (int)r1 - r2;
+    var dg = (int)g1 - g2;
+    var db = (int)b1 - b2;
+
+    return (uint)(dr * dr + dg * dg + db * db);
   }
 
   /// <summary>
