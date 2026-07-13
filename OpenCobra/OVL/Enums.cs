@@ -69,19 +69,6 @@ public enum SvdFlags : uint {
   SoakedOrWild = 0x03000000
 }
 
-/// <summary>Scenery item tile positioning.</summary>
-public enum SidPosition {
-  TileFull = 0,
-  PathEdgeInner = 1,
-  PathEdgeOuter = 2,
-  Wall = 3,
-  TileQuarter = 4,
-  TileHalf = 5,
-  PathCenter = 6,
-  Corner = 7,
-  PathEdgeJoin = 8
-}
-
 [Flags]
 public enum SidFlags : uint {
   Unknown01 = 0x00000001,

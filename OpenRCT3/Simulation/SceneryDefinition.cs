@@ -4,12 +4,13 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+using OpenCobra.OVL;
+
 namespace OpenRCT3.Simulation;
 
 /// <summary>
 /// A placeable object's registry entry: footprint shape and animation category, decoupled from
-/// whether its mesh/texture has actually been resolved yet (see
-/// <c>.agents/plans/features/scenery-placement-registry.md</c>). Looked up by raw OVL <c>sid</c>/<c>svd</c>
+/// whether its mesh/texture has actually been resolved yet. Looked up by raw OVL <c>sid</c>/<c>svd</c>
 /// symbol name via <see cref="SceneryRegistry"/> — there is no separate internal ID.
 /// </summary>
 /// <remarks>
@@ -20,7 +21,7 @@ namespace OpenRCT3.Simulation;
 public struct SceneryDefinition {
   /// <summary>
   /// The footprint/snap-position and height-sampling rule for this object, sourced from the <c>sid</c>
-  /// entry's <c>sizeflag</c> field. See <see cref="Simulation.Placement"/>.
+  /// entry's <c>sizeflag</c> field. See <see cref="OpenCobra.OVL.Placement"/>.
   /// </summary>
   public Placement Placement;
 
@@ -29,8 +30,8 @@ public struct SceneryDefinition {
 
   /// <summary>
   /// The object's footprint width in tiles, before rotation. Only meaningful when
-  /// <see cref="Placement"/> is <see cref="Simulation.Placement.FullTile"/>; every other
-  /// <see cref="Simulation.Placement"/> value places at a fixed sub-tile offset derived from the enum
+  /// <see cref="Placement"/> is <see cref="OpenCobra.OVL.Placement.FullTile"/>; every other
+  /// <see cref="OpenCobra.OVL.Placement"/> value places at a fixed sub-tile offset derived from the enum
   /// value itself, not a footprint size. Defaults to 1 (single-tile).
   /// </summary>
   public int FootprintWidth;

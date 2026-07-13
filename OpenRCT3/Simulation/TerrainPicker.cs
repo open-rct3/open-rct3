@@ -16,8 +16,7 @@ namespace OpenRCT3.Simulation;
 /// <param name="TileY">The hit tile's Y index in the OOB-inclusive grid.</param>
 /// <param name="Point">
 /// The exact world-space intersection point - not just the tile snap - so corner-precise tools (e.g. a
-/// future size-1 single-corner drag, per <c>.agents/research/terrain-tools.md</c>) don't need a second
-/// picking pass.
+/// future size-1 single-corner drag) don't need a second picking pass.
 /// </param>
 /// <param name="A">The first corner of the hit triangle.</param>
 /// <param name="B">The second corner of the hit triangle.</param>

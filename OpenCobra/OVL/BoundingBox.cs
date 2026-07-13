@@ -9,7 +9,7 @@ using System.ComponentModel;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace OpenCobra.GDK.Meshes;
+namespace OpenCobra.OVL;
 
 /// <summary>
 /// Represents an axis-aligned bounding box in 3D space.

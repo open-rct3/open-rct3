@@ -38,9 +38,8 @@ namespace OpenRCT3.Simulation;
 public class Terrain {
   /// <summary>
   /// The height of one corner step, in meters. One corner-height unit = 1 cm; the freeform sculpting
-  /// tools in <c>.agents/plans/features/terrain/tools.md</c> are continuous drag-based, so the
-  /// corner grid has to be finer than the 1m "ramp rise" snap granularity to let gentle hills and
-  /// valleys resolve smoothly.
+  /// tools are continuous drag-based, so the corner grid has to be finer than the 1m "ramp rise"
+  /// snap granularity to let gentle hills and valleys resolve smoothly.
   /// </summary>
   public const float HeightStep = 0.01f;
 

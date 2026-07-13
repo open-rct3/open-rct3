@@ -14,8 +14,7 @@ namespace OpenRCT3.Simulation;
 /// <remarks>
 /// <para>
 /// Water is not a single map-wide plane. Each pool is an independent overlay traced over the terrain
-/// at creation time; the terrain height under a pool is unaffected by the pool's existence. See
-/// <c>.agents/plans/features/terrain-heightmap.md</c>, "Water is per-pool".
+/// at creation time; the terrain height under a pool is unaffected by the pool's existence.
 /// </para>
 /// <para>
 /// A pool's tile set is exact (grid-snapped at creation), the same shape <see cref="Park.Paths"/> uses

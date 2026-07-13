@@ -4,19 +4,20 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-namespace OpenRCT3.Simulation;
+namespace OpenCobra.OVL;
 
 /// <summary>
 /// The placement/footprint shape a scenery object's <c>sid</c> entry declares via its <c>sizeflag</c>
 /// field (<c>rct3-importer</c>'s <c>SIZE_*</c> defines). Drives both where an object snaps within a
-/// tile and how its height is sampled — see <see cref="SceneryDefinition"/>.
+/// tile and how its height is sampled.
 /// </summary>
 public enum Placement {
   /// <summary>
   /// Occupies one whole tile, or a rectangular run of tiles for multi-tile objects (see
-  /// <see cref="SceneryDefinition.FootprintWidth"/>/<see cref="SceneryDefinition.FootprintHeight"/>).
+  /// <see cref="OpenRCT3.Simulation.SceneryDefinition.FootprintWidth"/>/
+  /// <see cref="OpenRCT3.Simulation.SceneryDefinition.FootprintHeight"/>).
   /// Single-sample height; a multi-tile footprint additionally requires a level pad (see
-  /// <see cref="Park.TryPlaceScenery"/>).
+  /// <see cref="OpenRCT3.Simulation.Park.TryPlaceScenery"/>).
   /// </summary>
   FullTile = 0,
 

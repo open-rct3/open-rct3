@@ -12,10 +12,9 @@ namespace OpenRCT3.Simulation;
 /// </summary>
 /// <remarks>
 /// Stores no Z. Height is derived from a <see cref="Terrain"/> query each time it's needed (see
-/// <see cref="Park.GetSceneryHeight"/>), the same "queryable, not cached" treatment
-/// <c>.agents/plans/features/terrain-heightmap.md</c> gives terrain height generally. This is
-/// one-directional: scenery reads terrain height but does not constrain later terrain edits the way
-/// ride footprints do.
+/// <see cref="Park.GetSceneryHeight"/>) rather than cached, the same treatment terrain height gets
+/// generally. This is one-directional: scenery reads terrain height but does not constrain later
+/// terrain edits the way ride footprints do.
 /// </remarks>
 public struct SceneryPlacement {
   /// <summary>The raw OVL <c>sid</c>/<c>svd</c> symbol name identifying the placed object.</summary>
@@ -32,7 +31,7 @@ public struct SceneryPlacement {
   /// <see cref="Simulation.Edge"/> as the four-state rotation value.
   /// </summary>
   /// <remarks>
-  /// For edge-mounted <see cref="Simulation.Placement"/> values (<c>PathEdgeInner</c>/
+  /// For edge-mounted <see cref="OpenCobra.OVL.Placement"/> values (<c>PathEdgeInner</c>/
   /// <c>PathEdgeOuter</c>/<c>PathEdgeJoin</c>/<c>Wall</c>), this directly names the tile edge the
   /// object sits on. For <c>FullTile</c> multi-tile footprints, it's a plain 4-state orientation: the
   /// South/North pair leaves <see cref="SceneryDefinition.FootprintWidth"/>/

@@ -7,6 +7,7 @@
 
 using System.Collections.Generic;
 using System.Numerics;
+using OpenCobra.OVL;
 
 namespace OpenRCT3.Simulation;
 
@@ -55,9 +56,7 @@ public class Park {
   /// <see cref="Terrain.HeightStep"/> units (100 units = 1m).
   /// </summary>
   /// <remarks>
-  /// Sourced from
-  /// <c>.agents/plans/features/path-network.md</c>: "players can only place path pieces on terrain
-  /// shallower than 1m rise".
+  /// Players can only place path pieces on terrain shallower than 1m rise.
   /// </remarks>
   public const ushort AtGradePathMaxRise = 100;
 
@@ -82,7 +81,7 @@ public class Park {
 
   /// <summary>
   /// Every placed <see cref="SceneryPlacement"/>. Placement data lives directly on <see cref="Park"/>,
-  /// not a separate "scenery layer" type — see <c>.agents/plans/features/scenery-placement-registry.md</c>.
+  /// not a separate "scenery layer" type.
   /// </summary>
   public List<SceneryPlacement> SceneryPlacements { get; } = [];
 
@@ -170,8 +169,8 @@ public class Park {
   /// </summary>
   /// <remarks>
   /// Terrain height is untouched by this call; a pool is a separate overlay traced over existing
-  /// terrain shape at creation time (see <c>.agents/plans/features/terrain-heightmap.md</c>, "Water is
-  /// per-pool"). Perimeter-tracing/flood-fill from a seed tile is not implemented here — the caller
+  /// terrain shape at creation time (water is tracked per-pool, not per-tile). Perimeter-tracing/
+  /// flood-fill from a seed tile is not implemented here — the caller
   /// supplies the already-decided tile set, the same way <see cref="TryPlacePath"/> takes an
   /// already-decided <see cref="PathTile"/> rather than routing one.
   /// </remarks>
@@ -199,10 +198,9 @@ public class Park {
   /// tile it covers.
   /// </summary>
   /// <remarks>
-  /// A terrain edit invalidates the whole pool it touches, not just the edited tile — see
-  /// <c>.agents/plans/features/terrain-heightmap.md</c>, "Terrain edits invalidate whole pools, not
-  /// partial regions." Re-creating a pool after an edit means re-running placement, not reshaping this
-  /// one.
+  /// A terrain edit invalidates the whole pool it touches, not just the edited tile or a partial
+  /// region of the pool. Re-creating a pool after an edit means re-running placement, not reshaping
+  /// this one.
   /// </remarks>
   /// <returns><c>true</c> if a pool was found and removed.</returns>
   public bool InvalidateWaterPoolAt(int tileX, int tileY) {
@@ -268,7 +266,7 @@ public class Park {
   /// Attempts to place a scenery instance per <paramref name="placement"/>.
   /// </summary>
   /// <remarks>
-  /// A multi-tile <see cref="Simulation.Placement.FullTile"/> footprint (see
+  /// A multi-tile <see cref="OpenCobra.OVL.Placement.FullTile"/> footprint (see
   /// <see cref="SceneryDefinition.FootprintWidth"/>/<see cref="SceneryDefinition.FootprintHeight"/>)
   /// requires a level pad: every corner across the rotated footprint's covered tiles must agree, or
   /// placement is rejected outright — mirroring the "Flatten for Scenery and Rides" terrain tool and
@@ -296,17 +294,17 @@ public class Park {
 
   /// <summary>
   /// Returns the terrain height(s) a placed scenery instance should render at, per the sampling rule
-  /// its <see cref="Simulation.Placement"/> implies.
+  /// its <see cref="OpenCobra.OVL.Placement"/> implies.
   /// </summary>
   /// <remarks>
-  /// <see cref="Simulation.Placement.FullTile"/>/<see cref="Simulation.Placement.Quarter"/>/
-  /// <see cref="Simulation.Placement.Half"/>/<see cref="Simulation.Placement.Corner"/>/
-  /// <see cref="Simulation.Placement.PathCenter"/> are single-sample: both returned values are the
+  /// <see cref="OpenCobra.OVL.Placement.FullTile"/>/<see cref="OpenCobra.OVL.Placement.Quarter"/>/
+  /// <see cref="OpenCobra.OVL.Placement.Half"/>/<see cref="OpenCobra.OVL.Placement.Corner"/>/
+  /// <see cref="OpenCobra.OVL.Placement.PathCenter"/> are single-sample: both returned values are the
   /// average height across the anchor tile's four corners (exactly the anchor corner's height when the
   /// tile is flat, which a multi-tile <c>FullTile</c> footprint is guaranteed to be by
-  /// <see cref="TryPlaceScenery"/>). <see cref="Simulation.Placement.PathEdgeInner"/>/
-  /// <see cref="Simulation.Placement.PathEdgeOuter"/>/<see cref="Simulation.Placement.PathEdgeJoin"/>/
-  /// <see cref="Simulation.Placement.Wall"/> are edge-conforming: the two returned values are the
+  /// <see cref="TryPlaceScenery"/>). <see cref="OpenCobra.OVL.Placement.PathEdgeInner"/>/
+  /// <see cref="OpenCobra.OVL.Placement.PathEdgeOuter"/>/<see cref="OpenCobra.OVL.Placement.PathEdgeJoin"/>/
+  /// <see cref="OpenCobra.OVL.Placement.Wall"/> are edge-conforming: the two returned values are the
   /// heights of the two corners bounding <see cref="SceneryPlacement.Rotation"/>'s edge, so the
   /// object's mesh can follow the terrain's slope along that edge instead of sitting at one flat
   /// height.
