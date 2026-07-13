@@ -124,6 +124,8 @@ inseparable from deciding what the spline query API needs to expose.
 
 ## Status
 
-Not started — stub only, now scoped with a concrete dual-rail spline design and resolved decisions on bake
-heuristic, arc-length addressing, IK scope boundary, and tangent authoring. Needs implementation planning
-(data structures, file layout, editor authoring workflow) before work begins.
+In progress — implementation work is underway on branch `prototype/rides/track-splines`.
+
+Design is scoped
+with a concrete dual-rail spline design and resolved decisions on bake heuristic, arc-length addressing, IK
+scope boundary, and tangent authoring.
