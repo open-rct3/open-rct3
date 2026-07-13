@@ -16,7 +16,7 @@ each file type is the default viewer.
 
 ## Plugin Status
 
-### ✅ Completed (6/11)
+### ✅ Completed (7/11)
 
 | Plugin     | Tag     | Type          | Source                                     |
 | ---------- | ------- | ------------- | ------------------------------------------ |
@@ -26,6 +26,7 @@ each file type is the default viewer.
 | snd-viewer | `"snd"` | Sound         | WAVEFORMATEX audio format metadata         |
 | mam-viewer | `"mam"` | Manifold Mesh | Vertex/face counts and bounding box        |
 | shs-viewer | `"shs"` | Static Shape  | Bounding box/counts header plus a live per-mesh table (vertex/index counts, support type, sides, resolved `FtxRef`/`TxsRef`) |
+| ter-viewer | `"ter"` | Terrain Type  | Metadata table (Version, Addon, Number, Type as enum name, colour swatches) with resolved `TextureRef`/`DescriptionName`/`IconName` symbol names |
 
 **`shs-viewer` scope note**: `StaticShape`'s mesh/effect data and `FtxRef`/`TxsRef` all live
 behind relocated pointers into *other* archive blocks - a plugin operating only on its own
@@ -41,14 +42,13 @@ via these functions, they don't reinterpret struct layouts themselves. Full byte
 (vertices, triangles, sort-tail handling) remains `OpenCobra.OVL.Files.StaticShapes.Extract`'s
 job, not this plugin's - `shs-viewer` is a summary view, not a full mesh dump.
 
-### 📋 Planned (5/11)
+### 📋 Planned (4/11)
 
 Plugins are planned in priority order based on implementation difficulty (from the
 [OVL Decoding plans](.opencode/plans/OVL%20Decoding/)):
 
 | Priority | Plugin     | Tag     | Type                | Complexity     | Status  |
 | -------- | ---------- | ------- | ------------------- | -------------- | ------- |
-| 3        | ter-viewer | `"ter"` | Terrain             | Easy           | Planned |
 | 5        | sid-viewer | `"sid"` | Scenery Item        | Difficult      | Planned |
 | 6        | tex-viewer | `"tex"` | Texture             | Very Difficult | Planned |
 | —        | ftx-viewer | `"ftx"` | Flexible Texture    | Difficult      | Planned |

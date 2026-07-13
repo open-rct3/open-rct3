@@ -6,7 +6,7 @@ This directory contains plans for decoding OVL archive file types.
 
 | Plan                                                          | OVL Tag         | File Type        | Status      |
 | ----------------------------------------------------------- | --------------- | ---------------- | ----------- |
-| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"`         | Terrain           | Not started |
+| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"`         | Terrain           | Completed   |
 | [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"`/`"svd"` | Scenery + Visual  | Not started |
 
 The `tex`/`ftx` texture pipeline and `shs` (StaticShape) decoding are done and moved out of this
