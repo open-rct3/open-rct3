@@ -13,8 +13,19 @@
   },
   {
     "label": "Test",
-    "command": "dotnet",
+    "command": "make",
     "args": ["test"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "env": {
+      // We want this task to run without scanning actual installs, to keep it fast
+      "RCT3_PATH": "",
+    },
+    "show_summary": true
+  },
+  {
+    "label": "Test Integrations",
+    "command": "make",
+    "args": ["integration"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "show_summary": true
   },
