@@ -12,6 +12,7 @@ Use this skill when drafting Git commits for this repository.
 ### Required formatting rules
 
 - Describe each change beginning with a descriptive _present tense_ verb
+- Limit the subject line to about 50 characters
 - Do NOT use periods in subject lines nor for bullet points
 - Use GitHub Flavored Markdown (GFM) for bullets and other formatting in commit bodies
 - Use backticks when referencing named code constructs, e.g. `paramName` or `SymbolName`
