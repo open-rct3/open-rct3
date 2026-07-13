@@ -23,6 +23,14 @@ non-obvious calls (why this shape and not the more obvious one). Confirmed facts
 in-game observation are worth flagging inline (`**Confirmed (user, ...)**:`) so later edits know
 which parts are load-bearing vs. inferred.
 
+<!--
+If Goals sketches type/struct shapes in pseudo-code, that pseudo-code is the contract only —
+don't write out full XML doc summaries/remarks inline. Note once, near the pseudo-code, that the
+implementation step adds real XML doc comments on every public type and member (per the
+codebase's existing convention, e.g. StaticShapes.cs, TerrainTypes.cs) as a given, not something
+that needs to be spelled out signature-by-signature in the plan.
+-->
+
 ## Gaps and Risks
 
 <!-- Optional: only for plans substantial enough to warrant a pre-execution review pass. -->
