@@ -61,9 +61,9 @@ public class ExtractResources {
     // through Ovl.TryResolveRelocation rather than reading the resource's raw bytes sequentially.
     var collection = FlexiTextureList.Load(resources, ftxEntry.Key);
     using (Assert.EnterMultipleScope()) {
-      Assert.That(collection.Count, Is.GreaterThan(0), "FlexiTexture must have at least one frame");
+      Assert.That(collection, Is.Not.Empty, "FlexiTexture must have at least one frame");
 
-      var frame = collection.First();
+      var frame = collection[0];
       var frameMip = frame.MipLevels[0];
       Assert.That(frameMip, Is.Not.Null);
       Assert.That(Convert.ToInt32(frame.Width), Is.GreaterThan(0).And.EqualTo(Convert.ToInt32(frame.Height)));
@@ -205,8 +205,8 @@ public class ExtractResources {
   /// <remarks>
   /// A small number of real archives (e.g. "MapColourRed" in Style.common.ovl, "PlatformHeight" in
   /// tracks/Platforms/Vanilla/*.ovl) have non-texture symbols mislabeled as FileType.FlexibleTexture,
-  /// a separate pre-existing resource-classification bug (tracked as a follow-up, in the same family as
-  /// ".agents/bugs/ovl-resource-relocation.md"). Those entries fail even the cheap raw-header
+  /// a separate pre-existing resource-classification bug (tracked as a follow-up). Those entries fail
+  /// even the cheap raw-header
   /// plausibility check (square, power-of-two dimensions) that every real FTX resource passes, so they
   /// are skipped here rather than asserted on.
   /// </remarks>
@@ -230,9 +230,9 @@ public class ExtractResources {
         if (!isPlausibleFtxHeader) continue;
 
         var collection = FlexiTextureList.Load(ovl, entry);
-        Assert.That(collection.Count, Is.GreaterThan(0),
+        Assert.That(collection, Is.Not.Empty,
           $"{entry.Name} in {Path.GetFileName(ovlPath)}: expected at least one decoded frame");
-        var frame = collection.First();
+        var frame = collection[0];
         Assert.That(Convert.ToInt32(frame.Width), Is.EqualTo(Convert.ToInt32(width)),
           $"{entry.Name} in {Path.GetFileName(ovlPath)}: decoded width does not match header");
         Assert.That(Convert.ToInt32(frame.Height), Is.EqualTo(Convert.ToInt32(height)),

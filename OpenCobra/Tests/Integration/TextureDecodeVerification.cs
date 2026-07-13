@@ -5,9 +5,8 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 //
-// Fix plan Step 7 (.agents/plans/fix/ovl-texture-decoding.md): verifies the Steps 2+4 fix
-// (relocation-fixup table + Tex.FlicPtr two-hop chase) against the two single-file repro targets
-// bug doc Part 4/5 identified, without needing the full 7,490-file scan.
+// Verifies the relocation-fixup table + Tex.FlicPtr two-hop chase fix against two known single-file
+// repro targets, without needing the full 7,490-file scan.
 using DotNetEnv;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;

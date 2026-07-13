@@ -16,11 +16,9 @@ public class MatrixExtensionsTests {
 
   [Test]
   public void ToGl_TranslationLandsInLastColumnNotLastRow() {
-    // Regression test: Matrix4x4 is a row-vector matrix (translation in M41/M42/M43), but GLSL's
-    // `mat4 * vec4` is column-vector and needs translation in the last column. ToGl() must actually
-    // transpose the matrix, not just relabel its storage order as column-major - a bug that shipped
-    // silently because no prior test ever inspected ToGl()'s output directly (see
-    // .agents/bugs/terrain-render-black-and-misoriented.md).
+    // Matrix4x4 is a row-vector matrix (translation in M41/M42/M43), but GLSL's `mat4 * vec4` is
+    // column-vector and needs translation in the last column. ToGl() must actually transpose the
+    // matrix, not just relabel its storage order as column-major.
     var translation = Matrix4x4.CreateTranslation(2f, 3f, 4f);
 
     var glArray = translation.ToGl();

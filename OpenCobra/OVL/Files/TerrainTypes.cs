@@ -5,9 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 //
-// Decodes "ter" (TerrainType) entries per rct3-importer's terraintype.h/ManagerTER.cpp - see
-// .agents/plans/features/ovl/ovl-terrain-types.md for the struct layout, production OVL discovery,
-// and unknown-field investigation that this decoder mirrors.
+// Decodes "ter" (TerrainType) entries per rct3-importer's terraintype.h/ManagerTER.cpp.
 using System.Collections.Concurrent;
 using NLog;
 

@@ -35,10 +35,10 @@ public struct ImDrawVertex {
 
 /// <summary>
 /// Accumulate-then-flush immediate-mode draw primitives: <see cref="Line"/>, and the
-/// <see cref="Axis"/>/<see cref="Circle"/>/<see cref="Arrow"/> shapes composed from it. Not debug-only —
-/// see <c>.agents/plans/features/terrain/debug-draw.md</c> for why this is named <c>ImDraw</c> (echoing
-/// ImGui) rather than a debug-only name: a planned future consumer (the scenery "advanced move" gizmo)
-/// is release-build and player-facing, not a dev aid.
+/// <see cref="Axis"/>/<see cref="Circle"/>/<see cref="Arrow"/> shapes composed from it. Not
+/// debug-only, hence the name <c>ImDraw</c> (echoing ImGui) rather than a debug-only name: a
+/// planned future consumer (the scenery "advanced move" gizmo) is release-build and player-facing,
+/// not a dev aid.
 /// </summary>
 /// <remarks>
 /// Callers append shapes once per frame; <c>OpenRCT3.OpenGL.Renderer</c> calls <see cref="Render"/> once
@@ -398,8 +398,7 @@ void main() {
   /// (<see cref="GL.BufferData{TData}(BufferTargetARB, nuint, TData[], BufferUsageARB)"/>) to a doubled
   /// capacity when it doesn't. Chosen over per-frame reallocation or buffer-orphaning after surveying
   /// Dear ImGui's OpenGL3 backend, which settled on this shape after orphaning + <c>glBufferSubData</c>
-  /// caused NVIDIA multi-viewport glitches — see .agents/plans/features/terrain/debug-draw.md's Research
-  /// section.
+  /// caused NVIDIA multi-viewport glitches.
   /// </remarks>
   private void Upload(GL gl, List<ImDrawVertex> data) {
     gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);

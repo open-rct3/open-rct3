@@ -11,6 +11,9 @@
 - All references (file paths, documentation, online resources) MUST be hyperlinked when relevant to the context.
 - When you need to know a third-party library's API (e.g. an enum member or method overload), look it up via its docs/source on the web (WebFetch/WebSearch) FIRST. Do NOT dig through decompiled DLLs, `strings`, or reflection/MetadataLoadContext gymnastics to reverse-engineer an API that's already documented online.
 - Always increase test coverage, not just maintain it. Any plan or change that touches untested code — especially in `OpenCobra/OVL` and `OpenCobra/GDK` — MUST add unit tests for the code paths it touches, not just for newly-added code.
+- Implementation source comments (`.cs`/`.ts`/etc.) must NEVER reference `.agents/` plan, bug, research, or summary docs. Those docs are working notes for planning a change, not part of the shipped codebase's own explanation of itself, and source control already records what changed and why. NEVER narrate changelog/bug history: No "used to be", "the old implementation", "previously misclassified", "a bug that shipped because no prior test...", etc.
+
+    > A comment's job is to explain the *current* code's non-obvious behavior or invariant, not to point at a doc or be a changelog. State the actual fact, decision, or reasoning directly (e.g. write regression-test comments as the invariant being protected, "the far clip plane must scale with framing distance", not the bug's backstory).
 
 ### Brevity
 

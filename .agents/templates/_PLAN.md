@@ -65,6 +65,19 @@ not just the new code it adds. Existing untested code this plan modifies (especi
 Where this landed in the codebase (file links), and any deviations from the Goals above — each
 deviation stated plainly with the reason, not silently reconciled.
 
+<!--
+Implementation source comments (.cs/.ts/etc.) must NEVER cite this plan doc or any other
+.agents/ path. Plans are working notes for deciding a change, not part of the shipped codebase's
+own explanation of itself — they go stale, get deleted, or get superseded, and a source comment
+pointing at one rots the moment that happens. Carry the actual fact/decision/reasoning into the
+comment itself instead of a pointer to where it's written down here.
+
+Source comments also must NOT narrate this plan's changelog/bug history — no "used to be", "the
+old implementation", "previously misclassified". Source control already records what changed and
+why. A comment explains the current code's non-obvious behavior or invariant, not the story of how
+it got that way. See AGENTS.md.
+-->
+
 ## Status
 
 One paragraph: what's implemented, what's tested (link the test file / test count), what's

@@ -25,7 +25,7 @@ namespace OpenCobra.Tests.Integration;
 /// resolution issue in <see cref="Ovl"/>'s loader-tag-based grouping (it does not yet distinguish a
 /// top-level SVD struct from its referenced sub-resources, e.g. "Foo:shs", "Foo:bsh"), not a gap in the
 /// documented enum. Byte-level enum-coverage assertions should wait until that resolution issue is
-/// fixed and/or a dedicated SVD decoder exists (see ".agents/plans/OVL Decoding/ovl-scenery-item-visuals.md").
+/// fixed and/or a dedicated SVD decoder exists.
 /// </remarks>
 [TestFixture]
 public class EnumCoverage {

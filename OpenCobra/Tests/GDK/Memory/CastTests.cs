@@ -7,10 +7,7 @@ namespace OpenCobra.Tests.GDK.Memory;
 public class CastTests {
   [Test]
   public void To_WidensSignedToLargerSigned_PreservesValue() {
-    // Regression test: this is exactly the int -> nint offset cast that Mesh.Upload passes to
-    // glVertexAttribPointer. The old Unsafe.As-based implementation read 4 bytes of stack garbage past
-    // the 4-byte int, so this returned garbage instead of 32 (see
-    // .agents/bugs/terrain-render-black-and-misoriented.md).
+    // This is exactly the int -> nint offset cast that Mesh.Upload passes to glVertexAttribPointer.
     Assert.That(CastFrom<int>.To<nint>(32), Is.EqualTo((nint)32));
     Assert.That(CastFrom<int>.To<nint>(0), Is.EqualTo((nint)0));
     Assert.That(CastFrom<int>.To<long>(int.MaxValue), Is.EqualTo((long)int.MaxValue));

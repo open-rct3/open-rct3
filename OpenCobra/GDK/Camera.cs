@@ -55,7 +55,7 @@ public class Camera : Uniform<Matrix4x4> {
   /// fixed constant. <see cref="Frame"/> callers (see <c>Game.cs</c>) already pick a distance that keeps
   /// an entire park's mesh on-screen, scaled to that park's actual size — so deriving the far plane from
   /// that same distance automatically scales with it too, instead of clipping larger maps that a fixed
-  /// constant wasn't sized for (see .agents/bugs/terrain-render-black-and-misoriented.md). The 2x margin
+  /// constant wasn't sized for (a prior fixed far-plane distance clipped larger maps). The 2x margin
   /// leaves room for a future cube-mapped skybox drawn just outside a park's total (OOB-inclusive)
   /// bounds, without needing to be revisited once one exists.
   /// </summary>

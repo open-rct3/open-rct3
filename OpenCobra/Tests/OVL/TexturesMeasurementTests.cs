@@ -5,12 +5,12 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 //
-// Locks in the current fixture-decode count as a regression check while
-// .agents/plans/fix/ovl-texture-decoding.md is implemented. Not a success metric: the fixtures
-// don't exercise the mms/prt/fct-adjacent patterns the bug is actually about (see the plan's
-// "Fixture coverage is real but narrow" note). [Explicit] keeps this out of `make test`'s default
-// run; invoke with `--filter Category=Measurement` (which also requires passing the NUnit
-// TestExplicitAttribute filter) or by fully-qualified name to run it deliberately.
+// Locks in the current fixture-decode count as a regression check for an in-progress texture
+// decoding fix. Not a success metric: the fixtures don't exercise the mms/prt/fct-adjacent
+// patterns the underlying bug is actually about - coverage here is real but narrow. [Explicit]
+// keeps this out of `make test`'s default run; invoke with `--filter Category=Measurement` (which
+// also requires passing the NUnit TestExplicitAttribute filter) or by fully-qualified name to run
+// it deliberately.
 using NUnit.Framework;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;

@@ -5,12 +5,12 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 //
-// Fix plan Step 1 (.agents/plans/fix/ovl-texture-decoding.md): empirically checks bug doc Part 6
-// Finding 1 against Main.common.ovl before ExtractResources is rewritten to rely on it. Reads
-// Ovl's private allFileTypeBlocks/allLoaderHeaders fields via reflection rather than
-// InternalsVisibleTo, since this is a read-only diagnostic, not production code.
+// Empirically checks whether LoaderStruct.LoaderType is a reliable index into loaderHeaders,
+// against Main.common.ovl, before ExtractResources is rewritten to rely on it. Reads Ovl's private
+// allFileTypeBlocks/allLoaderHeaders fields via reflection rather than InternalsVisibleTo, since
+// this is a read-only diagnostic, not production code.
 //
-// Result (recorded here since it changes the fix plan's Step 3 priority): LoaderStruct.LoaderType
+// Result: LoaderStruct.LoaderType
 // IS a direct, correct index into loaderHeaders by array *position* - no desync, no out-of-range
 // values. But "tex" and "fct" (and "gsi"/"shs") never appear as a LoaderType value anywhere in
 // Main.common.ovl's LoaderStruct[] array, despite 84 tex-tagged and 6 fct-tagged symbols existing

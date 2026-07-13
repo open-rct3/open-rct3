@@ -95,7 +95,7 @@ public class CameraTests {
 
   [Test]
   public void Update_TargetProjectsNearScreenCenter_UnderColumnVectorConvention() {
-    // Regression test for the class of bug found in .agents/bugs/terrain-render-black-and-misoriented.md:
+    // Regression test for a row-vector/column-vector convention mismatch bug class:
     // Camera.Value is a row-vector matrix (v' = v * M, per System.Numerics.Matrix4x4), but the GPU
     // consumes it as a column-vector matrix (v' = Mgl * v) via OpenRCT3.OpenGL.MatrixExtensions.ToGl(),
     // which the GDK project cannot reference directly. This test proves Camera's own math is at least
@@ -138,11 +138,9 @@ public class CameraTests {
 
   [Test]
   public void Update_FarPlaneScalesWithFramingDistance() {
-    // Regression test: the far clip plane used to be a fixed 1000-unit constant, which the default
-    // 128x128 park's framing distance (~1303, see .agents/bugs/terrain-render-black-and-misoriented.md)
-    // already exceeded, silently culling the entire terrain mesh. Camera.Update now derives the far
-    // plane as a multiple of the current eye-to-target distance, so it must scale with whatever distance
-    // Frame() was given - proven here across several very different distances, not just the default map.
+    // The far clip plane must scale with whatever distance Frame() was given, not a fixed constant -
+    // a fixed 1000-unit plane would cull the default 128x128 park's terrain mesh (framing distance
+    // ~1303). Proven here across several very different distances, not just the default map.
     foreach (var distance in new[] { 100f, 1303f, 5000f }) {
       var camera = new Camera();
       camera.Frame(Vector3.Zero, distance);
