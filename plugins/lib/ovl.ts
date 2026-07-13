@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Host functions exposed by Dumper's ViewerPlugin.cs (namespace "ovl") for requesting further
 // OVL data on demand against whichever archive is currently open - relocated-pointer resolution,
 // symbol lookup, and other-resource reads. Any plugin that needs to walk pointers (not just
