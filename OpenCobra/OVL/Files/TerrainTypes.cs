@@ -21,8 +21,8 @@ public enum TerrainType : uint {
 }
 
 public readonly record struct TerrainParameters(
-  uint ColourSimple,
-  uint ColourMap,
+  uint ColorSimple,
+  uint ColorMap,
   float InvWidth,
   float InvHeight
 );
@@ -93,11 +93,9 @@ public static class TerrainTypes {
   }
 
   private static TerrainTypeEntry ReadTerrainType(Ovl ovl, OvlFile file) {
-    if (!ovl.TryResolveRelocation(
-      ovl.TryGetDataPointer(file, out var address) ? address : throw new InvalidOperationException($"Failed to resolve data pointer for {file.Name}"),
-      out var block,
-      out var offset
-    ))
+    if (!ovl.TryGetDataPointer(file, out var address))
+      throw new InvalidOperationException($"Failed to resolve data pointer for {file.Name}");
+    if (!ovl.TryResolveRelocation(address, out var block, out var offset))
       throw new InvalidOperationException($"Failed to resolve TerrainType block for {file.Name}");
 
     var o = Convert.ToInt32(offset);
@@ -109,18 +107,25 @@ public static class TerrainTypes {
     var addon = BitConverter.ToUInt32(block, o + 8);
     var number = BitConverter.ToUInt32(block, o + 12);
     var type = (TerrainType)BitConverter.ToUInt32(block, o + 16);
-    var textureRef = ReadRelocationString(ovl, block, o + 20);
+
+    // texture_ref (offset 20, per terraintype.h) is a relocated TextureStruct* - but in every
+    // production Terrain_RCT3/Terrain_CT archive sampled, this field is zero on disk (no
+    // relocation-fixup entry at all, not just a null pointer): it's unused/unpopulated in shipped
+    // data. The actual ter<->tex link is the shared symbol name (e.g. ter "Terrain_06" and tex
+    // "Terrain_06"), which Terrain.cs's texture lookup uses via TerrainTypeEntry.Name instead.
+    var textureRef = ovl.TryGetRelocationSource(address + 20, out var textureAddress)
+      && ovl.TryFindSymbol(textureAddress, out var textureFile) ? textureFile.Name : null;
     var descriptionName = ReadRelocationString(ovl, block, o + 24);
     var iconName = ReadRelocationString(ovl, block, o + 28);
-    var colourSimple = BitConverter.ToUInt32(block, o + 32);
-    var colourMap = BitConverter.ToUInt32(block, o + 36);
+    var colorSimple = BitConverter.ToUInt32(block, o + 32);
+    var colorMap = BitConverter.ToUInt32(block, o + 36);
     var invWidth = BitConverter.ToSingle(block, o + 40);
     var invHeight = BitConverter.ToSingle(block, o + 44);
     var unk13 = BitConverter.ToSingle(block, o + 48);
     var unk14 = BitConverter.ToSingle(block, o + 52);
     var unk15 = BitConverter.ToSingle(block, o + 56);
 
-    var parameters = new TerrainParameters(colourSimple, colourMap, invWidth, invHeight);
+    var parameters = new TerrainParameters(colorSimple, colorMap, invWidth, invHeight);
     var unknowns = new TerrainUnknowns(unk02, unk13, unk14, unk15);
 
     return new TerrainTypeEntry(

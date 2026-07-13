@@ -17,7 +17,6 @@ using Silk.NET.Input;
 using System.Drawing;
 using System.Numerics;
 using GDK = OpenCobra.GDK;
-using UI = OpenRCT3.UI;
 
 #if WINDOWS
 using System.Windows.Forms;

@@ -1,7 +1,7 @@
-using NUnit.Framework;
+using System.Diagnostics;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
-using System.Text;
+using OVL.Tests;
 
 namespace OpenCobra.Tests.OVL;
 
@@ -68,17 +68,20 @@ public class TerrainTypesTests {
     using var tempFile = new TempFileHolder(data);
     using var ovl = Ovl.Load(tempFile.Path);
 
-    // Since this is synthetic data, we can't directly test Extract() without
-    // a real OVL file with ter entries. This test verifies struct layout offsets.
-    Assert.That(BitConverter.ToUInt32(data, 0), Is.EqualTo(1u), "Version");
-    Assert.That(BitConverter.ToUInt32(data, 4), Is.EqualTo(0u), "Unk02");
-    Assert.That(BitConverter.ToUInt32(data, 8), Is.EqualTo(0u), "Addon");
-    Assert.That(BitConverter.ToUInt32(data, 12), Is.EqualTo(6u), "Number");
-    Assert.That(BitConverter.ToUInt32(data, 16), Is.EqualTo(2u), "Type");
-    Assert.That(BitConverter.ToUInt32(data, 32), Is.EqualTo(0xFF487D10u), "ColourSimple");
-    Assert.That(BitConverter.ToSingle(data, 48), Is.EqualTo(0.3f).Within(0.0001f), "Unk13");
-    Assert.That(BitConverter.ToSingle(data, 52), Is.EqualTo(1.0f).Within(0.0001f), "Unk14");
-    Assert.That(BitConverter.ToSingle(data, 56), Is.EqualTo(0.8f).Within(0.0001f), "Unk15");
+    using (Assert.EnterMultipleScope()) {
+      // Since this is synthetic data, we can't directly test Extract() without
+      // a real OVL file with ter entries. This test verifies struct layout offsets.
+      Assert.That(BitConverter.ToUInt32(data, 0), Is.EqualTo(1u), "Version");
+      Assert.That(BitConverter.ToUInt32(data, 4), Is.Zero, "Unk02");
+      Assert.That(BitConverter.ToUInt32(data, 8), Is.Zero, "Addon");
+      Assert.That(BitConverter.ToUInt32(data, 12), Is.EqualTo(6u), "Number");
+      Assert.That(BitConverter.ToUInt32(data, 16), Is.EqualTo(2u), "Type");
+      Assert.That(BitConverter.ToUInt32(data, 32), Is.EqualTo(0xFF487D10u), "ColourSimple");
+      Assert.That(BitConverter.ToSingle(data, 48), Is.EqualTo(0.3f).Within(0.0001f), "Unk13");
+      Assert.That(BitConverter.ToSingle(data, 52), Is.EqualTo(1.0f).Within(0.0001f), "Unk14");
+      Assert.That(BitConverter.ToSingle(data, 56), Is.EqualTo(0.8f).Within(0.0001f), "Unk15");
+    }
+
   }
 
   [Test]
@@ -96,14 +99,17 @@ public class TerrainTypesTests {
     var entries = TerrainTypes.Extract(ovl);
 
     Assert.That(entries, Is.Not.Null, "Extract should return non-null collection");
-    Assert.That(entries.Count, Is.GreaterThan(0), "Should have decoded at least one entry");
+    Assert.That(entries, Is.Not.Empty, "Should have decoded at least one entry");
 
     // Verify all entries have valid data
     foreach (var entry in entries) {
-      Assert.That(entry.Name, Is.Not.Empty, $"Entry should have Name");
-      Assert.That(entry.Version, Is.EqualTo(1u), $"{entry.Name}: Version");
-      Assert.That(entry.Type, Is.AnyOf(TerrainType.GroundUnblended, TerrainType.Cliff, TerrainType.GroundBlended),
-        $"{entry.Name}: Type out of range");
+      using (Assert.EnterMultipleScope()) {
+        Assert.That(entry.Name, Is.Not.Empty, $"Entry should have Name");
+        Assert.That(entry.Version, Is.EqualTo(1u), $"{entry.Name}: Version");
+        Assert.That(entry.Type, Is.AnyOf(TerrainType.GroundUnblended, TerrainType.Cliff, TerrainType.GroundBlended),
+          $"{entry.Name}: Type out of range");
+      }
+
     }
   }
 
@@ -122,7 +128,7 @@ public class TerrainTypesTests {
     var entries = TerrainTypes.Extract(ovl);
 
     Assert.That(entries, Is.Not.Null, "Extract should return non-null collection");
-    Assert.That(entries.Count, Is.EqualTo(6), "Terrain_CT should have exactly 6 entries");
+    Assert.That(entries, Has.Count.EqualTo(6), "Terrain_CT should have exactly 6 entries");
 
     // Verify Terrain_CT addon flag (all Soaked/1)
     foreach (var entry in entries) {
@@ -131,11 +137,10 @@ public class TerrainTypesTests {
   }
 
   [Test]
-  [Explicit("Requires RCT3_PATH")]
+  [SkipIfEnvironmentMissing("RCT3_PATH")]
   public void GrassIdentification_FindsTerrain06() {
     var rct3Path = Environment.GetEnvironmentVariable("RCT3_PATH");
-    if (string.IsNullOrEmpty(rct3Path))
-      Assert.Inconclusive("RCT3_PATH not set");
+    Debug.Assert(rct3Path != null, "RCT3_PATH not set");
 
     var terrainPath = Path.Combine(rct3Path, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
     if (!File.Exists(terrainPath))
@@ -146,11 +151,15 @@ public class TerrainTypesTests {
 
     // Filter to GroundBlended entries
     var groundBlended = entries.Where(e => e.Type == TerrainType.GroundBlended).ToList();
-    Assert.That(groundBlended.Count, Is.GreaterThan(0), "Should have GroundBlended entries");
+    Assert.That(groundBlended, Is.Not.Empty, "Should have GroundBlended entries");
 
-    // Find nearest-color match to grass color (0xFF4F810E)
-    var targetColor = 0xFF4F810Eu;
-    var nearest = groundBlended.OrderBy(e => ColorDistance(e.Parameters.ColourSimple, targetColor)).First();
+    // Find nearest-color match to grass color. 0xFF487D10 is Terrain_06's own decoded
+    // ColourSimple, verified against a real Terrain_RCT3.common.ovl (see Terrain.cs's
+    // GrassColor doc comment) - NOT a guessed/approximate value. The previous constant here
+    // (0xFF4F810E) was an inexact guess that put Terrain_10 (a near-identical but
+    // flower-flecked green, see assets/prod/terrain/Terrain_10.png) closer than Terrain_06.
+    var targetColor = 0xFF487D10u;
+    var nearest = groundBlended.OrderBy(e => ColorDistance(e.Parameters.ColorSimple, targetColor)).First();
 
     Assert.That(nearest.Name, Is.EqualTo("Terrain_06"), "Nearest-color match should be Terrain_06");
   }
@@ -164,9 +173,9 @@ public class TerrainTypesTests {
     var g2 = (byte)((c2 >> 8) & 0xFF);
     var b2 = (byte)(c2 & 0xFF);
 
-    var dr = (int)r1 - r2;
-    var dg = (int)g1 - g2;
-    var db = (int)b1 - b2;
+    var dr = r1 - r2;
+    var dg = g1 - g2;
+    var db = b1 - b2;
 
     return (uint)(dr * dr + dg * dg + db * db);
   }

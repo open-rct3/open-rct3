@@ -89,13 +89,21 @@ public class Terrain {
       var terrainTypes = TerrainTypes.Extract(ovl);
       var textures = Textures.Extract(ovl);
 
-      // Identify grass via decoded metadata: Type==GroundBlended + nearest-color to 0xFF4F810E
-      var grassColor = 0xFF4F810Eu;
+      // Identify grass via decoded metadata: Type==GroundBlended + nearest-color to Terrain_06's
+      // own decoded ColourSimple, verified against a real Terrain_RCT3.common.ovl (see
+      // TerrainTypesTests.GrassIdentification_FindsTerrain06 for the exact value/verification).
+      //
+      // ter.texture_ref (the pointer the struct layout implies should link directly to the tex
+      // entry) is zero/unpopulated in every shipped archive sampled, so it cannot be used here.
+      // Instead, the texture lookup uses the decoded entry's own symbol Name: Ground ter/tex pairs
+      // share a symbol name on disk (e.g. ter "Terrain_06" names the tex "Terrain_06"), so no
+      // separate pointer chain is needed once the correct entry is identified by color.
+      var grassColor = 0xFF487D10u;
       var groundBlended = terrainTypes.Where(t => t.Type == TerrainType.GroundBlended).ToList();
       if (groundBlended.Count > 0) {
-        var grassEntry = groundBlended.OrderBy(t => ColorDistance(t.Parameters.ColourSimple, grassColor)).First();
-        if (grassEntry.TextureRef != null && textures.Names.Contains(grassEntry.TextureRef)) {
-          var tex = textures[grassEntry.TextureRef];
+        var grassEntry = groundBlended.OrderBy(t => ColorDistance(t.Parameters.ColorSimple, grassColor)).First();
+        if (textures.Names.Contains(grassEntry.Name)) {
+          var tex = textures[grassEntry.Name];
           // TakeMip transfers ownership of mip 0 to GrassTexture and nulls the source slot, so
           // disposing `tex` below (with every other extracted texture) can't double-dispose it.
           var mip0 = tex.TakeMip(0);
