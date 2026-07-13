@@ -36,10 +36,11 @@ function renderMeshRow(index: i32, meshAddr: i64): string {
   const vertexCount = readU32LE(meshBytes, 24);
   const indexCount = readU32LE(meshBytes, 28);
 
-  const ftxAddr = Ovl.getRelocationSource(u32(meshAddr) + 4);
-  const ftxSymbol = ftxAddr != NOT_FOUND ? Ovl.findSymbol(ftxAddr) : null;
-  const txsAddr = Ovl.getRelocationSource(u32(meshAddr) + 8);
-  const txsSymbol = txsAddr != NOT_FOUND ? Ovl.findSymbol(txsAddr) : null;
+  // ftx_ref/txs_ref are assignSymbolReference-driven cross-resource references (ManagerSHS.cpp),
+  // resolved via the symbol-reference table - NOT getRelocationSource, which only resolves pointers
+  // to other data within the archive's own blocks.
+  const ftxSymbol = Ovl.resolveSymbolReference(u32(meshAddr) + 4);
+  const txsSymbol = Ovl.resolveSymbolReference(u32(meshAddr) + 8);
 
   let html = "<tr>";
   html += "<td>" + index.toString() + "</td>";

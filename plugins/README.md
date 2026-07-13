@@ -32,24 +32,42 @@ each file type is the default viewer.
 behind relocated pointers into *other* archive blocks - a plugin operating only on its own
 resource's raw bytes (`render(bytes)`) can't dereference those. Rather than accept that limit,
 Dumper's host now exposes a small set of **"ovl" host functions**
-(`resolve_pointer`/`get_relocation_source`/`find_symbol`/`read_resource`/
-`current_resource_address` - see `Dumper/Plugins/ViewerPlugin.cs`) that any plugin can call to
-request further data from the currently-open archive on demand, wrapped by
-`plugins/lib/ovl.ts`'s `Ovl` class for AssemblyScript callers. `shs-viewer` uses this to walk
-`sh[]` live and render a real per-mesh table. Struct-layout/decode-quirk knowledge (e.g.
-`StaticShapes.cs`'s sort-tail ambiguity) stays centralized in .NET - plugins only walk pointers
-via these functions, they don't reinterpret struct layouts themselves. Full byte-level decoding
-(vertices, triangles, sort-tail handling) remains `OpenCobra.OVL.Files.StaticShapes.Extract`'s
-job, not this plugin's - `shs-viewer` is a summary view, not a full mesh dump.
+(`resolve_pointer`/`get_relocation_source`/`resolve_symbol_reference`/`find_symbol`/
+`read_resource`/`symbol_address`/`current_resource_address` - see
+`Dumper/Plugins/ViewerPlugin.cs`) that any plugin can call to request further data from the
+currently-open archive on demand, wrapped by `plugins/lib/ovl.ts`'s `Ovl` class for
+AssemblyScript callers. `shs-viewer` uses this to walk `sh[]` live and render a real per-mesh
+table. Struct-layout/decode-quirk knowledge (e.g. `StaticShapes.cs`'s sort-tail ambiguity) stays
+centralized in .NET - plugins only walk pointers via these functions, they don't reinterpret
+struct layouts themselves. Full byte-level decoding (vertices, triangles, sort-tail handling)
+remains `OpenCobra.OVL.Files.StaticShapes.Extract`'s job, not this plugin's - `shs-viewer` is a
+summary view, not a full mesh dump.
 
-### 📋 Planned (4/11)
+**`resolve_symbol_reference`/`symbol_address` note**: `get_relocation_source` (the base
+relocation-fixup table) only resolves pointers to *other data within the archive's own blocks* -
+it does **not** resolve assignSymbolReference-driven cross-resource fields (`ftx_ref`, `txs_ref`,
+`shs_ref`, `svds_ref[i]`, `name_ref`, etc.), which are populated from a separate on-disk
+SymbolRefStruct table. `shs-viewer`'s `FtxRef`/`TxsRef` and `ter-viewer`'s `TextureRef` previously
+used `get_relocation_source` for these and silently resolved to nothing against real archives;
+both now use `resolve_symbol_reference` instead (see `OpenCobra/OVL/OVL.cs`'s
+`TryResolveSymbolReference` for the underlying .NET fix). `symbol_address` is the companion for
+walking *into* a different resolved resource (e.g. `sid-viewer` reading a linked SVD's own
+`lods[]`), since neither `read_resource` (raw bytes only) nor `find_symbol`/
+`resolve_symbol_reference` (name/tag only) exposes the target's own archive address.
+
+### 🚧 In progress (1/11)
+
+| Plugin     | Tag     | Type         | Source |
+| ---------- | ------- | ------------ | ------ |
+| sid-viewer | `"sid"` | Scenery Item | Metadata table (name/icon/group, resolved via the new `resolve_symbol_reference`/`symbol_address` host functions), an SVG placement diagram, and an LOD table (mesh type, distance, resolved shs/fts/txs refs) per linked SVD. **Known issue**: `render()` crashes the Extism JS test harness with `RangeError: Offset is outside the bounds of the DataView` — every piece of the render logic passes in isolation when bisected into standalone minimal plugins, but the crash reproduces once combined in the real file; the exact interaction hasn't been pinned down. The two `render()` tests are `Deno.test.ignore`d in `sid-viewer/index.test.ts` with a note; `name()`/`file_types()` still pass. See `.agents/plans/features/ovl/ovl-scenery-items.md`. |
+
+### 📋 Planned (3/11)
 
 Plugins are planned in priority order based on implementation difficulty (from the
 [OVL Decoding plans](.opencode/plans/OVL%20Decoding/)):
 
 | Priority | Plugin     | Tag     | Type                | Complexity     | Status  |
 | -------- | ---------- | ------- | ------------------- | -------------- | ------- |
-| 5        | sid-viewer | `"sid"` | Scenery Item        | Difficult      | Planned |
 | 6        | tex-viewer | `"tex"` | Texture             | Very Difficult | Planned |
 | —        | ftx-viewer | `"ftx"` | Flexible Texture    | Difficult      | Planned |
 | —        | svd-viewer | `"svd"` | Scenery Item Visual | Moderate       | Planned |

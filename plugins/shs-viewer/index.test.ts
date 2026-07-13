@@ -34,8 +34,11 @@ Deno.test("shs-viewer: render() walks sh[] via ovl host functions for a real per
       "get_relocation_source": (_ctx: unknown, address: bigint) => {
         if (address === 1040n) return 2000n; // shapeAddr + 40 (sh field) -> sh[] array address
         if (address === 2000n) return 3000n; // sh[0] slot -> meshAddr
-        if (address === 3008n) return 4000n; // meshAddr + 8 (txs_ref) -> symbol address
-        return NOT_FOUND; // meshAddr + 4 (ftx_ref): no ftx
+        return NOT_FOUND;
+      },
+      "resolve_symbol_reference": (ctx: { store: (v: Uint8Array) => bigint }, fieldAddress: bigint) => {
+        if (fieldAddress !== 3008n) return NOT_FOUND; // meshAddr + 8 (txs_ref)
+        return ctx.store(new TextEncoder().encode(JSON.stringify({ name: "BillboardStandard", tag: "txs" })));
       },
       "resolve_pointer": (ctx: { store: (v: Uint8Array) => bigint }, dataPtr: bigint) => {
         if (dataPtr !== 3000n) return NOT_FOUND;
@@ -47,10 +50,7 @@ Deno.test("shs-viewer: render() walks sh[] via ovl host functions for a real per
         view.setUint32(28, 12, true); // index_count
         return ctx.store(meshBytes);
       },
-      "find_symbol": (ctx: { store: (v: Uint8Array) => bigint }, dataPtr: bigint) => {
-        if (dataPtr !== 4000n) return NOT_FOUND;
-        return ctx.store(new TextEncoder().encode(JSON.stringify({ name: "BillboardStandard", tag: "txs" })));
-      },
+      "find_symbol": () => NOT_FOUND,
       "read_resource": () => NOT_FOUND,
     },
   };

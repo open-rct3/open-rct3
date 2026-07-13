@@ -69,26 +69,23 @@ function renderTerrainType(data: Uint8Array): string {
 
   let resourceAddr = Ovl.currentResourceAddress();
   if (resourceAddr != NOT_FOUND) {
+    // texture_ref is assignSymbolReference-driven (ManagerTER.cpp), a cross-resource reference
+    // resolved via the symbol-reference table - NOT getRelocationSource, which only resolves
+    // pointers to other data within the archive's own blocks.
     if (textureRefPtr != 0) {
-      let textureAddr = Ovl.getRelocationSource(u32(resourceAddr) + 20);
-      if (textureAddr != NOT_FOUND) {
-        let symbol = Ovl.findSymbol(textureAddr);
-        if (symbol != null) textureRefName = escapeHtml(symbol.name);
-      }
+      let symbol = Ovl.resolveSymbolReference(u32(resourceAddr) + 20);
+      if (symbol != null) textureRefName = escapeHtml(symbol.name);
     }
+    // description_name/icon_name are STRINGLIST_ASSIGN-populated relocated ASCII strings
+    // (ManagerTER.cpp), not assignSymbolReference-driven symbol references - resolved as raw
+    // string data via resolveString, not findSymbol.
     if (descriptionNamePtr != 0) {
-      let descAddr = Ovl.getRelocationSource(u32(resourceAddr) + 24);
-      if (descAddr != NOT_FOUND) {
-        let symbol = Ovl.findSymbol(descAddr);
-        if (symbol != null) descriptionName = escapeHtml(symbol.name);
-      }
+      let name = Ovl.resolveString(i64(descriptionNamePtr));
+      if (name != null) descriptionName = escapeHtml(name);
     }
     if (iconNamePtr != 0) {
-      let iconAddr = Ovl.getRelocationSource(u32(resourceAddr) + 28);
-      if (iconAddr != NOT_FOUND) {
-        let symbol = Ovl.findSymbol(iconAddr);
-        if (symbol != null) iconName = escapeHtml(symbol.name);
-      }
+      let name = Ovl.resolveString(i64(iconNamePtr));
+      if (name != null) iconName = escapeHtml(name);
     }
   }
 
