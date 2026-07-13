@@ -4,6 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+#pragma warning disable CS0067 // Event is never used (interface implementation requirement)
 using System.Numerics;
 using Silk.NET.Input;
 
