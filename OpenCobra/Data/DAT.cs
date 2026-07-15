@@ -134,6 +134,7 @@ public sealed record StructEntry(string Name, FieldValue Value) {
   public FieldKind Kind => Value.Kind;
 
   public bool AsBool() => Value is BoolValue v ? v.Value : throw WrongType(FieldKind.Bool);
+  public byte AsUInt8() => Value is UInt8Value v ? v.Value : throw WrongType(FieldKind.UInt8);
   public int AsInt32() => Value is Int32Value v ? v.Value : throw WrongType(FieldKind.Int32);
   public StructValue AsStruct() => Value as StructValue ?? throw WrongType(FieldKind.Struct);
   public ArrayValue AsArray() => Value as ArrayValue ?? throw WrongType(FieldKind.Array);
