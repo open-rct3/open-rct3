@@ -10,6 +10,13 @@
   (`Terrain.RaiseCorner`/`LowerCorner`/`SetCornerHeight`, `Park.RaiseTerrainCorner`/`LowerTerrainCorner`/
   `SetTerrainCornerHeight`).
 - [`water-tool.md`](water-tool.md) — sibling plan, same shape (primitives done, tool decision layer missing).
+- [`rct3-terrain-getterrain-layout.md`](../../../research/rct3-terrain-getterrain-layout.md) —
+  saved-park file-format evidence (not this plan's live in-memory model) that Panel A's ("Adjust
+  Terrain Tiles") "Snap terrain tiles in increments for rides and scenery" tool steps a corner's
+  on-disk `float32` height by exactly `+1.0` (one meter) per click. Panel A isn't in this plan's
+  scope beyond Snap Corners to Neighboring Corners, but the same 1 m increment is what this plan's
+  Panel B **Flatten for Scenery and Rides** rounds to — see that bullet below for what this
+  confirms.
 
 ## Context
 
@@ -71,6 +78,15 @@ All three enumerate the brush once, compute a per-tool target, then propagate to
   same constant `water-tool.md` reuses, and the same flatness gate `Park.IsAtGradePathPlaceable`
   (`Park.cs:118`) and the level-pad check in `Park.TryPlaceScenery` (`Park.cs:282`, `IsFootprintLevel`)
   already assume, so a flattened area is guaranteed placeable without duplicating that logic here.
+  **Confirmed (user, in-game observation + file-format evidence)**: Panel A's "Snap terrain tiles
+  in increments for rides and scenery" tool (single-tile brush icon, "Adjust Terrain Tiles"
+  sub-panel — see `terrain-tools.md`) shares this same 1 m snap concept. Using it to raise one
+  corner and re-saving showed the corner's on-disk `float32` height step by exactly `+1.0` per
+  click — see
+  [rct3-terrain-getterrain-layout.md](../../../research/rct3-terrain-getterrain-layout.md). That's
+  independent, real-world confirmation that a 1 m snap increment is correct for this class of tool,
+  i.e. `Park.AtGradePathMaxRise`'s existing 1 m value is right, not just an assumption carried over
+  from `terrain-tools.md`'s manual-derived Granularity Notes.
 - **Remove Cliffs**: for any corner where `Terrain.IsEdgeDetached` (`Terrain.cs:152`) is true on one of
   its edges, `RaiseCorner`/`LowerCorner` it to match the neighbor instead of leaving it set via
   `SetCornerHeight` — inverse of Create Cliffs (deferred). Per `Terrain.SetCornerHeight`'s own doc

@@ -12,16 +12,26 @@ Based on the official RCT3 manual, cross-referenced with the in-game panel layou
 
 ## The Four Panel Tabs
 
-### A — Grid-Based Tools (bounded to grid squares)
-Part of the "Tweak Terrain" tool group. Set the brush size, position the pointer, then drag up or down. At brush size 1, you can drag a single tile's edge or corner directly.
+### A — Adjust Terrain Tiles (bounded to grid squares)
 
+**Confirmed (user)**: this panel's in-game name is "Adjust Terrain Tiles". Part of the "Tweak
+Terrain" tool group. Set the brush size, position the pointer, then drag up or down. At brush size
+1, you can drag a single tile's edge or corner directly.
+
+- **Snap terrain tiles in increments for rides and scenery** — **Confirmed (user, in-game
+  tooltip + file-format evidence)**: this is the single-tile brush icon's exact in-game tooltip
+  text, resolving the "unknown increment" noted below — see
+  [`rct3-terrain-getterrain-layout.md`](rct3-terrain-getterrain-layout.md): using this tool to
+  raise one corner steps its on-disk `float32` height by exactly `+1.0` (one meter) per click,
+  confirming the increment is 1 m, matching the Granularity Notes' ramp-step assumption below.
 - **Freeform Corner-Pulling** — raises or lowers a highlighted grid area
 - **Snap Corners to Neighboring Corners** — smooths terrain previously shaped with freeform corner-pulling
 - **Corner Snapping to Scenery** — snaps a highlighted area to the height of nearby placed scenery
 - **Corner Snapping to Coasters** — snaps to the height of nearby ride entrances
 - **Spray Mode** — raises/lowers progressively the longer you hold the mouse button, with adjustable speed
 
-*This is the "snapped to some unknown increment" tool — grid/corner-based rather than freeform, and it's what auto-aligns to ride/scenery heights.*
+*This panel is grid/corner-based rather than freeform, and it's what auto-aligns to ride/scenery
+heights.*
 
 ### B — Smoothing Tools
 Six icons:

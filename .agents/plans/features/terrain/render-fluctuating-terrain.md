@@ -66,17 +66,48 @@ locating well-known folders via `Environment.GetFolderPath`.
 
 ## Gaps and Risks
 
-1. **Unresolved**: `GETerrain`/`PathTileList` byte layout is unknown; `dat.rs` treats them as
-   opaque. This is the single largest risk — the whole plan depends on reverse-engineering these
-   two field kinds from sample saved-park `.dat` files before any C# decoder can be written.
-2. **Unresolved**: whether RCT3 saves are compressed/encrypted at the container level — see
-   [rct3-non-ovl-dat-format.md](../../../research/rct3-non-ovl-dat-format.md); unknown until a
-   sample file's header is inspected.
+1. **Partially resolved**: `GETerrain`'s corner-height layout is now known — see
+   [rct3-terrain-getterrain-layout.md](../../../research/rct3-terrain-getterrain-layout.md),
+   reverse-engineered from paired fixture saves under
+   [`Fixtures/Parks/Reverse Engineering/`](../../../../OpenCobra/Tests/Fixtures/Parks/Reverse%20Engineering)
+   by byte-diffing isolated in-game edits. Confirmed: `RCT3Terrain.EngineTerrain` is a fixed
+   393,234-byte blob; per-corner height is a `float32` on a 12-byte stride, `+1.0` per raise-tool
+   click; a separate 4-float, 4-byte-stride sub-structure holds water data. Still unresolved: the
+   other 8 bytes of each 12-byte corner record, the surface-type field's exact offset/meaning
+   within that record, water's sign convention, and `PathTileList`/`PathNodeArray` (no path-edit
+   fixtures exist yet - deferred, see that doc's "Still unattempted" section). `PathTileList` is
+   the larger remaining risk now that terrain height decoding has a concrete starting point.
+2. **Resolved**: RCT3 saves are not compressed/encrypted at the container level — `Dat.Load` reads
+   `Rivendell.dat` and `Fun Valley Amusment park.dat` (both real, unmodified saves, see
+   `OpenCobra/Tests/Fixtures/Parks/`) end-to-end with plain `BinaryReader` calls and produces a
+   non-empty, well-formed entry list for both (`DatTests.cs`, 2/2 passing) — if either file were
+   compressed or encrypted, the struct-table/entry-list framing would have failed to parse rather
+   than silently succeeding, since a compressed byte stream wouldn't coincidentally match the
+   expected string-length-prefix/field-kind/size framing this reader expects at every step.
 3. **Resolved**: rendering path is not a gap — `TerrainMeshBuilder` and the path rendering model
    (decal for at-grade, piece models for raised, per `path-network.md`) already exist; this plan
    only needs to call into them after populating `Park`.
 
 ## Open Questions
+
+- How to reverse-engineer `GETerrain`/`PathTileList`/`PathNodeArray`'s byte layout (Gap #1).
+  **Decided (user)**: search first for existing community decoders beyond `dat.rs` and
+  belgabor's writeup (OpenRCT2-adjacent tooling, forks of `dat.rs`, older RCT3 map-editor
+  projects) before doing original reverse-engineering; fall back to hex-diffing two saves with a
+  known, isolated terrain edit if nothing turns up. **Searched (2026-07-15), found nothing**: GitHub
+  code search (`gh search code`) for `PathTileList`/`PathNodeArray`/`GE_Terrain` turns up no hits
+  outside this repo's own `dat.rs`; the local [`rct3-importer`](../../../../../rct3-importer)
+  checkout's `libRawParse`/`libOVL` only cover OVL-format scenery import, not save parsing;
+  belgabor's format writeup documents only the generic container framing, with no terrain/path
+  section. **Fallback executed (2026-07-15)**: the user got RCT3 running again and captured six
+  paired saves (baseline + 5 isolated terrain edits) under
+  [`Fixtures/Parks/Reverse Engineering/`](../../../../OpenCobra/Tests/Fixtures/Parks/Reverse%20Engineering).
+  Byte-diffing them (via a throwaway console tool referencing `OpenCobra.Data`, per the
+  scratch-scanner pattern) resolved `GETerrain`'s corner-height layout — see
+  [rct3-terrain-getterrain-layout.md](../../../research/rct3-terrain-getterrain-layout.md) for the
+  full writeup. Path edits weren't captured this round (deferred by the user); the same
+  hex-diffing approach should work for `PathTileList`/`PathNodeArray` once path-edit fixture
+  pairs exist.
 
 - Non-Windows saved-parks folder location (macOS `~/Library/Application Support/...` vs. Linux
   equivalent under Proton/Wine) — not yet confirmed; only the Windows
@@ -105,12 +136,15 @@ locating well-known folders via `Environment.GetFolderPath`.
 
 ## Testing
 
-- `OpenCobra.Data.Dat` (already implemented, port of `dat.rs`, currently untested): unit tests over
-  one or more captured sample saved-park `.dat` files (checked into a test-fixtures location, not
-  `RCT3_PATH` or the user's live `Parks` folder, since CI can't assume the game is installed)
-  covering: header parse (both extended-header versions if both exist in the wild), struct-table
-  parse producing the expected struct/field count and names, and entry-list parse producing the
-  expected entry count.
+- `OpenCobra.Data.Dat` (implemented, port of `dat.rs`): [`DatTests.cs`](../../../../OpenCobra/Tests/Data/DatTests.cs)
+  covers the happy path — auto-discovers every embedded `.dat` fixture under
+  [`Fixtures/Parks/`](../../../../OpenCobra/Tests/Fixtures/Parks) (currently `Rivendell.dat` and
+  `Fun Valley Amusment park.dat`, both attributed) and asserts `Dat.Load` parses without throwing
+  and returns a non-empty entry list. Still missing: assertions on *which* struct/field names and
+  counts are expected (so a framing regression fails loudly instead of just "still non-empty"),
+  coverage of the extended-header version-byte branch if a fixture using the other version
+  (`0x1A` vs `0x2A`) turns up, and a failure-case test (truncated/corrupt file raises `DatException`
+  rather than an unhandled `EndOfStreamException` or index-out-of-range).
 - `GETerrain` decoder: known-good case (a save with a hand-verified height at a known tile,
   cross-checked against loading the same save in RCT3 itself or against `terrain-heightmap.md`'s
   existing corner-height conventions), edge case (a save containing water/cliffs), failure case
@@ -126,10 +160,22 @@ locating well-known folders via `Environment.GetFolderPath`.
 
 ## Status
 
-Not started. This is a planning-only pass: the file-open UI, folder-location helper, and
-data-model wiring are straightforward given existing patterns, but the plan cannot move to
-implementation until Gaps and Risks #1–2 are resolved — i.e. until sample saved-park `.dat` files
-are obtained (`Rivendell.dat` is already on hand) and their `GETerrain`/`PathTileList` byte layout
-is reverse-engineered. That
-reverse-engineering is the first implementation step, not something this planning pass could
-determine from source alone.
+In progress. Implemented and tested: the `OpenCobra.Data` project
+([`Data.csproj`](../../../../OpenCobra/Data/Data.csproj)) with
+[`Dat`](../../../../OpenCobra/Data/DAT.cs), a full port of `dat.rs`'s header/struct-table/entry-list
+framing (`DatFieldKind`, `DatValue` hierarchy, `DatOpaqueValue` for the still-undecoded kinds).
+Validated against two real, attributed saved-park fixtures under
+[`OpenCobra/Tests/Fixtures/Parks/`](../../../../OpenCobra/Tests/Fixtures/Parks) via
+[`DatTests.cs`](../../../../OpenCobra/Tests/Data/DatTests.cs) (2/2 passing) — this also resolved
+Gap #2 (saves are not compressed/encrypted at the container level).
+
+Also done: `GETerrain`'s corner-height layout is reverse-engineered (float32, 12-byte corner
+stride, +1.0/click) via byte-diffing real fixture pairs — see
+[rct3-terrain-getterrain-layout.md](../../../research/rct3-terrain-getterrain-layout.md). Still
+open within that: the rest of the 12-byte corner record, surface-type's exact offset, and water's
+sign convention.
+
+Not yet started: a `GETerrain` decoder in `OpenCobra.Data` (or `ParkFile`) that turns those known
+offsets into structured data, `PathTileList`/`PathNodeArray` decoding (no path-edit fixtures
+captured yet), `ParkFile.Load`, the "Open" button,
+`ParkFileDialog`, and `RCT3Paths.SavedParksDirectory`.

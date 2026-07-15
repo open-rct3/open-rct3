@@ -10,7 +10,7 @@ using System.Text;
 namespace OpenCobra.Data;
 
 /// <summary>Type tag for a DAT struct field, matching the on-disk field-kind name table.</summary>
-public enum DatFieldKind {
+public enum FieldKind {
   Bool,
   Int8,
   Int16,
@@ -42,145 +42,149 @@ public enum DatFieldKind {
   BlockingScenery,
 }
 
-internal static class DatFieldKindParser {
+/// <summary>Extension methods for working with <see cref="FieldKind"/>.</summary>
+internal static class FieldKindExtensions {
   /// <summary>
-  /// Maps an on-disk field-kind name to its <see cref="DatFieldKind"/>. Names are matched
-  /// case-sensitively as written in DAT field definitions (e.g. <c>GE_Terrain</c>, not
+  /// Maps an on-disk field-kind name to its <see cref="FieldKind"/>.
+  /// </summary>
+  /// <remarks>
+  /// Names are matched case-sensitively as written in DAT field definitions (e.g. <c>GE_Terrain</c>, not
   /// <c>ge_terrain</c>) - the casing is inconsistent between kinds (mostly lowercase primitives,
   /// PascalCase container kinds), but that inconsistency is what's actually on disk.
-  /// </summary>
-  public static DatFieldKind ToDatFieldKind(this string kindName) => kindName switch {
-    "array" => DatFieldKind.Array,
-    "list" => DatFieldKind.List,
-    "bool" => DatFieldKind.Bool,
-    "float32" => DatFieldKind.Float32,
-    "int8" => DatFieldKind.Int8,
-    "int16" => DatFieldKind.Int16,
-    "int32" => DatFieldKind.Int32,
-    "managedobjectptr" => DatFieldKind.ManagedObjectPtr,
-    "matrix44" => DatFieldKind.Matrix44,
-    "orientation" => DatFieldKind.Orientation,
-    "reference" => DatFieldKind.Reference,
-    "uint8" => DatFieldKind.UInt8,
-    "uint16" => DatFieldKind.UInt16,
-    "uint32" => DatFieldKind.UInt32,
-    "vector3" => DatFieldKind.Vector3,
-    "struct" => DatFieldKind.Struct,
-    "string" => DatFieldKind.String,
-    "graphedValue" => DatFieldKind.GraphedValue,
-    "WaterManager" => DatFieldKind.WaterManager,
-    "GE_Terrain" => DatFieldKind.GETerrain,
-    "SkirtTrees" => DatFieldKind.SkirtTrees,
-    "PathTileList" => DatFieldKind.PathTileList,
-    "waypointlist" => DatFieldKind.WaypointList,
-    "flexicachelist" => DatFieldKind.FlexiCacheList,
-    "managedImage" => DatFieldKind.ManagedImage,
-    "pathnodearray" => DatFieldKind.PathNodeArray,
-    "resourcesymbol" => DatFieldKind.ResourceSymbol,
-    "stringTable" => DatFieldKind.StringTable,
-    "BlockingScenery" => DatFieldKind.BlockingScenery,
+  /// </remarks>
+  public static FieldKind ToFieldKind(this string kindName) => kindName switch {
+    "array" => FieldKind.Array,
+    "list" => FieldKind.List,
+    "bool" => FieldKind.Bool,
+    "float32" => FieldKind.Float32,
+    "int8" => FieldKind.Int8,
+    "int16" => FieldKind.Int16,
+    "int32" => FieldKind.Int32,
+    "managedobjectptr" => FieldKind.ManagedObjectPtr,
+    "matrix44" => FieldKind.Matrix44,
+    "orientation" => FieldKind.Orientation,
+    "reference" => FieldKind.Reference,
+    "uint8" => FieldKind.UInt8,
+    "uint16" => FieldKind.UInt16,
+    "uint32" => FieldKind.UInt32,
+    "vector3" => FieldKind.Vector3,
+    "struct" => FieldKind.Struct,
+    "string" => FieldKind.String,
+    "graphedValue" => FieldKind.GraphedValue,
+    "WaterManager" => FieldKind.WaterManager,
+    "GE_Terrain" => FieldKind.GETerrain,
+    "SkirtTrees" => FieldKind.SkirtTrees,
+    "PathTileList" => FieldKind.PathTileList,
+    "waypointlist" => FieldKind.WaypointList,
+    "flexicachelist" => FieldKind.FlexiCacheList,
+    "managedImage" => FieldKind.ManagedImage,
+    "pathnodearray" => FieldKind.PathNodeArray,
+    "resourcesymbol" => FieldKind.ResourceSymbol,
+    "stringTable" => FieldKind.StringTable,
+    "BlockingScenery" => FieldKind.BlockingScenery,
     _ => throw new DatException($"Unknown DAT field kind '{kindName}'"),
   };
 }
 
-/// <summary>A single decoded field value within a <see cref="DatStructEntry"/>.</summary>
-public abstract record DatValue(DatFieldKind Kind);
+/// <summary>A single decoded field value within a <see cref="StructEntry"/>.</summary>
+public abstract record FieldValue(FieldKind Kind);
 
-public sealed record DatBoolValue(bool Value) : DatValue(DatFieldKind.Bool);
-public sealed record DatInt8Value(sbyte Value) : DatValue(DatFieldKind.Int8);
-public sealed record DatInt16Value(short Value) : DatValue(DatFieldKind.Int16);
-public sealed record DatInt32Value(int Value) : DatValue(DatFieldKind.Int32);
-public sealed record DatUInt8Value(byte Value) : DatValue(DatFieldKind.UInt8);
-public sealed record DatUInt16Value(ushort Value) : DatValue(DatFieldKind.UInt16);
-public sealed record DatUInt32Value(uint Value) : DatValue(DatFieldKind.UInt32);
-public sealed record DatFloat32Value(float Value) : DatValue(DatFieldKind.Float32);
-public sealed record DatVector3Value(Vector3 Value) : DatValue(DatFieldKind.Vector3);
-public sealed record DatMatrix44Value(Matrix4x4 Value) : DatValue(DatFieldKind.Matrix44);
-public sealed record DatOrientationValue(Vector3 Value) : DatValue(DatFieldKind.Orientation);
-public sealed record DatManagedObjectPtrValue(ulong Value) : DatValue(DatFieldKind.ManagedObjectPtr);
-public sealed record DatReferenceValue(ulong Value) : DatValue(DatFieldKind.Reference);
-public sealed record DatStringValue(string Value) : DatValue(DatFieldKind.String);
+public sealed record BoolValue(bool Value) : FieldValue(FieldKind.Bool);
+public sealed record Int8Value(sbyte Value) : FieldValue(FieldKind.Int8);
+public sealed record Int16Value(short Value) : FieldValue(FieldKind.Int16);
+public sealed record Int32Value(int Value) : FieldValue(FieldKind.Int32);
+public sealed record UInt8Value(byte Value) : FieldValue(FieldKind.UInt8);
+public sealed record UInt16Value(ushort Value) : FieldValue(FieldKind.UInt16);
+public sealed record UInt32Value(uint Value) : FieldValue(FieldKind.UInt32);
+public sealed record Float32Value(float Value) : FieldValue(FieldKind.Float32);
+public sealed record Vector3Value(Vector3 Value) : FieldValue(FieldKind.Vector3);
+public sealed record Matrix44Value(Matrix4x4 Value) : FieldValue(FieldKind.Matrix44);
+public sealed record OrientationValue(Vector3 Value) : FieldValue(FieldKind.Orientation);
+public sealed record ManagedObjectPtrValue(ulong Value) : FieldValue(FieldKind.ManagedObjectPtr);
+public sealed record ReferenceValue(ulong Value) : FieldValue(FieldKind.Reference);
+public sealed record StringValue(string Value) : FieldValue(FieldKind.String);
 
-/// <summary>A fixed-size (<see cref="Length"/>) collection of <see cref="DatStructValue"/> elements.</summary>
-public sealed record DatArrayValue(int Size, int Length, IReadOnlyList<DatStructValue> Elements) : DatValue(DatFieldKind.Array);
+/// <summary>A fixed-size (<see cref="Length"/>) collection of <see cref="StructValue"/> elements.</summary>
+public sealed record ArrayValue(int Size, int Length, IReadOnlyList<StructValue> Elements) : FieldValue(FieldKind.Array);
 
-/// <summary>A variable-length collection of <see cref="DatStructValue"/> elements.</summary>
-public sealed record DatListValue(int Size, int Length, IReadOnlyList<DatStructValue> Elements) : DatValue(DatFieldKind.List);
+/// <summary>A variable-length collection of <see cref="StructValue"/> elements.</summary>
+public sealed record ListValue(int Size, int Length, IReadOnlyList<StructValue> Elements) : FieldValue(FieldKind.List);
 
 /// <summary>A nested struct value - either a named field's inline body, or an array/list element.</summary>
-public sealed record DatStructValue(int Size, IReadOnlyList<DatStructEntry> Entries) : DatValue(DatFieldKind.Struct) {
-  public IEnumerable<DatStructEntry> ByName(string name) => Entries.Where(e => e.Name == name);
-  public DatStructEntry FirstByName(string name) =>
+public sealed record StructValue(int Size, IReadOnlyList<StructEntry> Entries) : FieldValue(FieldKind.Struct) {
+  public IEnumerable<StructEntry> ByName(string name) => Entries.Where(e => e.Name == name);
+  public StructEntry FirstByName(string name) =>
     Entries.FirstOrDefault(e => e.Name == name) ?? throw new DatException($"No field named '{name}'");
 }
 
 /// <summary>
 /// A field body whose internal layout isn't decoded here - the raw bytes are preserved so a
 /// caller (or a later library revision) can decode them without re-parsing the surrounding
-/// struct/entry table. Covers <see cref="DatFieldKind.GraphedValue"/>, <see cref="DatFieldKind.WaterManager"/>,
-/// <see cref="DatFieldKind.GETerrain"/>, <see cref="DatFieldKind.SkirtTrees"/>,
-/// <see cref="DatFieldKind.PathTileList"/>, <see cref="DatFieldKind.WaypointList"/>,
-/// <see cref="DatFieldKind.FlexiCacheList"/>, <see cref="DatFieldKind.ManagedImage"/>,
-/// <see cref="DatFieldKind.PathNodeArray"/>, <see cref="DatFieldKind.ResourceSymbol"/>,
-/// <see cref="DatFieldKind.StringTable"/>, and <see cref="DatFieldKind.BlockingScenery"/>.
+/// struct/entry table. Covers <see cref="FieldKind.GraphedValue"/>, <see cref="FieldKind.WaterManager"/>,
+/// <see cref="FieldKind.GETerrain"/>, <see cref="FieldKind.SkirtTrees"/>,
+/// <see cref="FieldKind.PathTileList"/>, <see cref="FieldKind.WaypointList"/>,
+/// <see cref="FieldKind.FlexiCacheList"/>, <see cref="FieldKind.ManagedImage"/>,
+/// <see cref="FieldKind.PathNodeArray"/>, <see cref="FieldKind.ResourceSymbol"/>,
+/// <see cref="FieldKind.StringTable"/>, and <see cref="FieldKind.BlockingScenery"/>.
 /// </summary>
-public sealed record DatOpaqueValue(DatFieldKind Kind, int Size, byte[] Data) : DatValue(Kind);
+public sealed record OpaqueValue(FieldKind Kind, int Size, byte[] Data) : FieldValue(Kind);
 
-/// <summary>A named field value within a <see cref="DatStructValue"/> or top-level <see cref="DatEntry"/>.</summary>
-public sealed record DatStructEntry(string Name, DatValue Value) {
-  public DatFieldKind Kind => Value.Kind;
+/// <summary>A named field value within a <see cref="StructValue"/> or top-level <see cref="Entry"/>.</summary>
+public sealed record StructEntry(string Name, FieldValue Value) {
+  public FieldKind Kind => Value.Kind;
 
-  public bool AsBool() => Value is DatBoolValue v ? v.Value : throw WrongType(DatFieldKind.Bool);
-  public int AsInt32() => Value is DatInt32Value v ? v.Value : throw WrongType(DatFieldKind.Int32);
-  public DatStructValue AsStruct() => Value as DatStructValue ?? throw WrongType(DatFieldKind.Struct);
-  public DatArrayValue AsArray() => Value as DatArrayValue ?? throw WrongType(DatFieldKind.Array);
-  public string AsString() => Value is DatStringValue v ? v.Value : throw WrongType(DatFieldKind.String);
-  public ulong AsPtr() => Value is DatManagedObjectPtrValue v ? v.Value : throw WrongType(DatFieldKind.ManagedObjectPtr);
-  public ulong AsRef() => Value is DatReferenceValue v ? v.Value : throw WrongType(DatFieldKind.Reference);
+  public bool AsBool() => Value is BoolValue v ? v.Value : throw WrongType(FieldKind.Bool);
+  public int AsInt32() => Value is Int32Value v ? v.Value : throw WrongType(FieldKind.Int32);
+  public StructValue AsStruct() => Value as StructValue ?? throw WrongType(FieldKind.Struct);
+  public ArrayValue AsArray() => Value as ArrayValue ?? throw WrongType(FieldKind.Array);
+  public string AsString() => Value is StringValue v ? v.Value : throw WrongType(FieldKind.String);
+  public ulong AsPtr() => Value is ManagedObjectPtrValue v ? v.Value : throw WrongType(FieldKind.ManagedObjectPtr);
+  public ulong AsRef() => Value is ReferenceValue v ? v.Value : throw WrongType(FieldKind.Reference);
+  public OpaqueValue AsOpaque() => Value as OpaqueValue ?? throw new DatException($"Field '{Name}' is {Value.Kind}, expected an opaque field");
 
-  private DatException WrongType(DatFieldKind expected) =>
+  private DatException WrongType(FieldKind expected) =>
     new($"Field '{Name}' is {Value.Kind}, expected {expected}");
 }
 
 /// <summary>A named, decoded record within a loaded <see cref="Dat"/> file.</summary>
-public sealed record DatEntry(ulong Id, string Name, IReadOnlyList<DatStructEntry> Values) {
-  public IEnumerable<DatStructEntry> ByName(string name) => Values.Where(v => v.Name == name);
-  public DatStructEntry FirstByName(string name) =>
+public sealed record Entry(ulong Id, string Name, IReadOnlyList<StructEntry> Values) {
+  public IEnumerable<StructEntry> ByName(string name) => Values.Where(v => v.Name == name);
+  public StructEntry FirstByName(string name) =>
     Values.FirstOrDefault(v => v.Name == name) ?? throw new DatException($"No field named '{name}'");
 }
 
-/// <summary>Definition of one field within a <see cref="DatStructDefinition"/> or a container field's element type.</summary>
-internal sealed record DatFieldDefinition(string Name, DatFieldKind Kind, int Size, IReadOnlyList<DatFieldDefinition> Fields) {
-  public static DatFieldDefinition ReadDefinition(BinaryReader reader) {
+/// <summary>Definition of one field within a <see cref="StructDefinition"/> or a container field's element type.</summary>
+internal sealed record FieldDefinition(string Name, FieldKind Kind, int Size, IReadOnlyList<FieldDefinition> Fields) {
+  public static FieldDefinition ReadDefinition(BinaryReader reader) {
     var name = DatReader.ReadPascalString(reader);
-    var kind = DatReader.ReadPascalString(reader).ToDatFieldKind();
+    var kind = DatReader.ReadPascalString(reader).ToFieldKind();
     var size = (int)reader.ReadUInt32();
     var fieldCount = reader.ReadUInt32();
-    var fields = new List<DatFieldDefinition>((int)fieldCount);
+    var fields = new List<FieldDefinition>((int)fieldCount);
     for (var i = 0; i < fieldCount; i++) fields.Add(ReadDefinition(reader));
-    return new DatFieldDefinition(name, kind, size, fields);
+    return new FieldDefinition(name, kind, size, fields);
   }
 
-  public DatStructEntry ReadEntry(BinaryReader reader) => new(Name, ReadValue(reader));
+  public StructEntry ReadEntry(BinaryReader reader) => new(Name, ReadValue(reader));
 
-  private DatValue ReadValue(BinaryReader reader) => Kind switch {
-    DatFieldKind.Bool => new DatBoolValue(reader.ReadBoolean()),
-    DatFieldKind.Int8 => new DatInt8Value(reader.ReadSByte()),
-    DatFieldKind.Int16 => new DatInt16Value(reader.ReadInt16()),
-    DatFieldKind.Int32 => new DatInt32Value(reader.ReadInt32()),
-    DatFieldKind.UInt8 => new DatUInt8Value(reader.ReadByte()),
-    DatFieldKind.UInt16 => new DatUInt16Value(reader.ReadUInt16()),
-    DatFieldKind.UInt32 => new DatUInt32Value(reader.ReadUInt32()),
-    DatFieldKind.Float32 => new DatFloat32Value(reader.ReadSingle()),
-    DatFieldKind.Vector3 => new DatVector3Value(DatReader.ReadVector3(reader)),
-    DatFieldKind.Matrix44 => new DatMatrix44Value(DatReader.ReadMatrix44(reader)),
-    DatFieldKind.Orientation => new DatOrientationValue(DatReader.ReadVector3(reader)),
-    DatFieldKind.ManagedObjectPtr => new DatManagedObjectPtrValue(reader.ReadUInt64()),
-    DatFieldKind.Reference => new DatReferenceValue(reader.ReadUInt64()),
-    DatFieldKind.String => new DatStringValue(DatReader.ReadLengthPrefixedString(reader)),
-    DatFieldKind.Array => ReadArrayOrList(reader, isArray: true),
-    DatFieldKind.List => ReadArrayOrList(reader, isArray: false),
-    DatFieldKind.Struct => ReadStruct(reader),
+  private FieldValue ReadValue(BinaryReader reader) => Kind switch {
+    FieldKind.Bool => new BoolValue(reader.ReadBoolean()),
+    FieldKind.Int8 => new Int8Value(reader.ReadSByte()),
+    FieldKind.Int16 => new Int16Value(reader.ReadInt16()),
+    FieldKind.Int32 => new Int32Value(reader.ReadInt32()),
+    FieldKind.UInt8 => new UInt8Value(reader.ReadByte()),
+    FieldKind.UInt16 => new UInt16Value(reader.ReadUInt16()),
+    FieldKind.UInt32 => new UInt32Value(reader.ReadUInt32()),
+    FieldKind.Float32 => new Float32Value(reader.ReadSingle()),
+    FieldKind.Vector3 => new Vector3Value(DatReader.ReadVector3(reader)),
+    FieldKind.Matrix44 => new Matrix44Value(DatReader.ReadMatrix44(reader)),
+    FieldKind.Orientation => new OrientationValue(DatReader.ReadVector3(reader)),
+    FieldKind.ManagedObjectPtr => new ManagedObjectPtrValue(reader.ReadUInt64()),
+    FieldKind.Reference => new ReferenceValue(reader.ReadUInt64()),
+    FieldKind.String => new StringValue(DatReader.ReadLengthPrefixedString(reader)),
+    FieldKind.Array => ReadArrayOrList(reader, isArray: true),
+    FieldKind.List => ReadArrayOrList(reader, isArray: false),
+    FieldKind.Struct => ReadStruct(reader),
     _ => ReadOpaque(reader),
   };
 
@@ -189,46 +193,46 @@ internal sealed record DatFieldDefinition(string Name, DatFieldKind Kind, int Si
   /// elements each shaped like <see cref="Fields"/> - unlike <see cref="ReadStruct"/>, elements
   /// have no per-element size prefix of their own.
   /// </summary>
-  private DatValue ReadArrayOrList(BinaryReader reader, bool isArray) {
+  private FieldValue ReadArrayOrList(BinaryReader reader, bool isArray) {
     var size = (int)reader.ReadUInt32();
     var length = (int)reader.ReadUInt32();
-    var elements = new List<DatStructValue>(length);
+    var elements = new List<StructValue>(length);
     for (var i = 0; i < length; i++) {
       var entries = Fields.Select(field => field.ReadEntry(reader)).ToList();
-      elements.Add(new DatStructValue(0, entries));
+      elements.Add(new StructValue(0, entries));
     }
     return isArray
-      ? new DatArrayValue(size, length, elements)
-      : new DatListValue(size, length, elements);
+      ? new ArrayValue(size, length, elements)
+      : new ListValue(size, length, elements);
   }
 
-  private DatValue ReadStruct(BinaryReader reader) {
+  private FieldValue ReadStruct(BinaryReader reader) {
     var size = Size == 0 ? (int)reader.ReadUInt32() : Size;
     var entries = Fields.Select(field => field.ReadEntry(reader)).ToList();
-    return new DatStructValue(size, entries);
+    return new StructValue(size, entries);
   }
 
   /// <summary>
   /// Reads (and preserves, rather than discards) the raw body of a field kind this library
-  /// doesn't decode - see <see cref="DatOpaqueValue"/>.
+  /// doesn't decode - see <see cref="OpaqueValue"/>.
   /// </summary>
-  private DatValue ReadOpaque(BinaryReader reader) {
+  private FieldValue ReadOpaque(BinaryReader reader) {
     var size = Size == 0 ? (int)reader.ReadUInt32() : Size;
-    return new DatOpaqueValue(Kind, size, reader.ReadBytes(size));
+    return new OpaqueValue(Kind, size, reader.ReadBytes(size));
   }
 }
 
 /// <summary>Definition of one named struct (a DAT "class") in a file's struct table.</summary>
-internal sealed record DatStructDefinition(string Name, IReadOnlyList<DatFieldDefinition> Fields) {
-  public static DatStructDefinition ReadDefinition(BinaryReader reader) {
+internal sealed record StructDefinition(string Name, IReadOnlyList<FieldDefinition> Fields) {
+  public static StructDefinition ReadDefinition(BinaryReader reader) {
     var name = DatReader.ReadPascalString(reader);
     var fieldCount = reader.ReadUInt32();
-    var fields = new List<DatFieldDefinition>((int)fieldCount);
-    for (var i = 0; i < fieldCount; i++) fields.Add(DatFieldDefinition.ReadDefinition(reader));
-    return new DatStructDefinition(name, fields);
+    var fields = new List<FieldDefinition>((int)fieldCount);
+    for (var i = 0; i < fieldCount; i++) fields.Add(FieldDefinition.ReadDefinition(reader));
+    return new StructDefinition(name, fields);
   }
 
-  public DatEntry ReadEntry(BinaryReader reader, ulong id) =>
+  public Entry ReadEntry(BinaryReader reader, ulong id) =>
     new(id, Name, Fields.Select(field => field.ReadEntry(reader)).ToList());
 }
 
@@ -238,7 +242,7 @@ internal static class DatReader {
     Encoding.ASCII.GetString(reader.ReadBytes(reader.ReadUInt16()));
 
   /// <summary>
-  /// Reads a <see cref="DatFieldKind.String"/> field value: a little-endian <c>u32</c> byte
+  /// Reads a <see cref="FieldKind.String"/> field value: a little-endian <c>u32</c> byte
   /// length, ASCII-encoded unless immediately followed by the <c>0xEFEFEFEF</c> marker, in which
   /// case the remaining bytes (after consuming the marker) are UTF-16 encoded instead.
   /// </summary>
@@ -278,17 +282,15 @@ internal static class DatReader {
 public sealed class DatException(string message) : Exception(message);
 
 /// <summary>
-/// Represents a loaded RCT3 non-OVL DAT file.
-/// </summary>
-/// <remarks>
-/// This is the container format used by saved parks
+/// Represents a loaded RCT3 non-OVL DAT file - the container format used by saved parks
 /// (<c>Documents\RCT3\Parks\*.dat</c>), coaster track designs (<c>*.trk</c>), and firework files
-/// (<c>*.fwd</c>, <c>*.frw</c>).
-/// </remarks>
+/// (<c>*.fwd</c>, <c>*.frw</c>). Distinct from the OVL archive format read by
+/// <see cref="OpenCobra.OVL.Ovl"/>. See <c>OpenCobra/Data/README.md</c> for a format reference.
+/// </summary>
 public sealed class Dat {
-  public IReadOnlyList<DatEntry> Entries { get; }
+  public IReadOnlyList<Entry> Entries { get; }
 
-  private Dat(IReadOnlyList<DatEntry> entries) => Entries = entries;
+  private Dat(IReadOnlyList<Entry> entries) => Entries = entries;
 
   /// <summary>Loads and fully decodes a DAT file's struct table and entry list.</summary>
   public static Dat Load(string path) {
@@ -316,11 +318,11 @@ public sealed class Dat {
     }
 
     var structCount = reader.ReadUInt32();
-    var structs = new List<DatStructDefinition>((int)structCount);
-    for (var i = 0; i < structCount; i++) structs.Add(DatStructDefinition.ReadDefinition(reader));
+    var structs = new List<StructDefinition>((int)structCount);
+    for (var i = 0; i < structCount; i++) structs.Add(StructDefinition.ReadDefinition(reader));
 
     var entryCount = reader.ReadUInt32();
-    var entries = new List<DatEntry>((int)entryCount);
+    var entries = new List<Entry>((int)entryCount);
     for (var i = 0; i < entryCount; i++) {
       var structIndex = (int)reader.ReadUInt32();
       var id = reader.ReadUInt64();
@@ -330,9 +332,9 @@ public sealed class Dat {
     return new Dat(entries);
   }
 
-  public IEnumerable<DatEntry> ByName(string name) => Entries.Where(e => e.Name == name);
-  public DatEntry FirstByName(string name) =>
+  public IEnumerable<Entry> ByName(string name) => Entries.Where(e => e.Name == name);
+  public Entry FirstByName(string name) =>
     Entries.FirstOrDefault(e => e.Name == name) ?? throw new DatException($"No entry named '{name}'");
-  public DatEntry ById(ulong id) =>
+  public Entry ById(ulong id) =>
     Entries.FirstOrDefault(e => e.Id == id) ?? throw new DatException($"No entry with id {id}");
 }
