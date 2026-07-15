@@ -131,6 +131,10 @@ public class World : GDK.Game.World {
     };
     scene.Windows.Add(editor);
 
+    var parkChooser = new ParkChooser();
+    editor.OpenPark += parkChooser.Show;
+    scene.Windows.Add(parkChooser);
+
     // Made.Of statically checks Debug's constructor at compile time (rather than reflection-based
     // Parameters.Of), matching the IInputContext/GUI.Controller registrations above - Game and the
     // terrain Mesh are resolved from the instances just registered, PlatformWindow/IInputContext from

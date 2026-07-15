@@ -17,6 +17,8 @@ public class Editor : IWindow {
   private const float ButtonWidth = 235;
 
   public bool Open { get; private set; } = true;
+  public event Action? OpenPark;
+  public event Action? SavePark;
   public event Action? Exit;
 
   public void Render() {
@@ -31,8 +33,12 @@ public class Editor : IWindow {
     ImGui.Begin("Scenario Editor", ref open, ImGuiWindowFlags.NoResize);
 
     // Row of icon buttons
+    if (ImGui.Button("Open")) {
+      OpenPark?.Invoke();
+    }
+    ImGui.SameLine();
     if (ImGui.Button("Save")) {
-      // TODO: Save scenario
+      SavePark?.Invoke();
     }
     ImGui.SameLine();
     if (ImGui.Button("Quit")) {
