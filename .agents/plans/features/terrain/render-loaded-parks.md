@@ -47,13 +47,16 @@ exposes every `Documents\RCT3\*` subfolder (`ParksDirectory`, `ScenariosDirector
   (a static method on the existing `Park` type, not a separate `ParkFile` type), layered on
   [`OpenCobra.Data.Dat`](../../../../OpenCobra/Data/DAT.cs) (the non-OVL `.dat` container reader,
   implemented in the `OpenCobra.Data` project alongside `OpenCobra.OVL`) and
-  [`OpenCobra.Data.Parks.Paths`](../../../../OpenCobra/Data/Parks/Paths.cs) (path-tile decoding).
-  Wired end-to-end: `ParkChooser.ParkSelected` → `World.Load(string parkPath)` (a new overload;
-  `World.Load()` still loads the default flat park) → `Park.Load(parkPath)`. Currently populates
-  `Park.Paths` only - terrain height integration is this plan's next step (see Testing/Status).
-- Loading a park replaces the active `Park`/`Paths` and (once terrain integration lands) should
-  trigger a `TerrainMeshBuilder` rebuild so the existing renderer picks up the new data with no
-  separate "park renderer" — rendering is already correct once the data model is populated.
+  [`OpenCobra.Data.Parks.Paths`](../../../../OpenCobra/Data/Parks/Paths.cs) (path-tile decoding)
+  and [`OpenCobra.Data.Parks.Terrain`](../../../../OpenCobra/Data/Parks/Terrain.cs) (corner-height
+  decoding). Wired end-to-end: `ParkChooser.ParkSelected` → `World.Load(string parkPath)` (a new
+  overload; `World.Load()` still loads the default flat park) → `Park.Load(parkPath)` +
+  `Terrain.Load(parkPath)`.
+- ~~Loading a park replaces the active `Park`/`Paths` and (once terrain integration lands) should
+  trigger a `TerrainMeshBuilder` rebuild~~ **Done**: `World.BuildScene` rebuilds the terrain mesh
+  from the newly-loaded `Terrain` every call and replaces the previous scene rather than appending
+  to it (Gap #4) — no separate "park renderer" needed, rendering was already correct once the data
+  model was populated.
 - Scope is read-only load of terrain + paths for rendering. Scenery, rides, guests, finances, and
   save (write) support are explicitly out of scope (see Deferred).
 
@@ -61,16 +64,18 @@ exposes every `Documents\RCT3\*` subfolder (`ParksDirectory`, `ScenariosDirector
 
 1. **Resolved**: both `GETerrain` and `PathTileList`/`PathNodeArray` have working decoders in
    [`OpenCobra.Data.Parks`](../../../../OpenCobra/Data/Parks).
-   - `GETerrain`'s corner-height layout — see
+   - `GETerrain`'s full per-tile corner-height layout — see
      [rct3-terrain-data-layout.md](../../../research/rct3-terrain-data-layout.md) and
      [`Terrain.cs`](../../../../OpenCobra/Data/Parks/Terrain.cs). Confirmed: `RCT3Terrain.EngineTerrain`
-     is a fixed 393,234-byte blob; per-corner height is a `float32` on a 12-byte stride, `+1.0` per
-     raise-tool click; a separate 4-float, 4-byte-stride sub-structure holds water data. Still
-     unresolved: the other 8 bytes of each 12-byte corner record, the surface-type field's exact
-     offset/meaning within that record, water's sign convention, and the grid's width/height (the
-     32,769-corner count doesn't factor into an obviously-square grid - see that doc's "Still
-     unattempted"). This last unknown is what currently blocks integrating decoded corners into
-     `OpenRCT3.Simulation.Terrain`, which needs an explicit width/height.
+     = a 6-byte mini-header (`Width`/`Height` in tiles) + a 12-byte preamble record (purpose
+     unresolved) + `Width x Height` tile slots, each holding four independently-steppable corner
+     heights (`SouthEast`/`SouthWest`/`NorthEast`/`NorthWest`, `+1.0` per raise-tool click) and a
+     `SurfaceType` byte. Verified exact against three real parks' total blob length and against
+     every known-edit fixture, including four corner-isolating captures
+     (`01-near-left/right-corner-up.dat`, `01-far-left-corner-up.dat`, `01-one-far-corner-up.dat`).
+     Water is not stored here at all — it lives in a separate `WaterManager` top-level entry. Small
+     residual unknowns remain (preamble record, a handful of still-unknown bytes, `NorthEast` was
+     deduced by elimination rather than independently isolated) but don't block ingestion.
    - `PathTileList`/`PathNodeArray` turned out not to need byte-level decoding at all — see
      [rct3-path-tile-layout.md](../../../research/rct3-path-tile-layout.md) and
      [`Paths.cs`](../../../../OpenCobra/Data/Parks/Paths.cs). Path data lives as ordinary top-level
@@ -85,12 +90,25 @@ exposes every `Documents\RCT3\*` subfolder (`ParksDirectory`, `ScenariosDirector
 3. **Resolved**: rendering path is not a gap — `TerrainMeshBuilder` and the path rendering model
    (decal for at-grade, piece models for raised, per `path-network.md`) already exist; this plan
    only needs to call into them once terrain data is populated too.
-4. **New**: `World.Load(parkPath)` re-runs `BuildScene()`, which unconditionally appends a new
-   terrain mesh, marker cube, and window set to `scene.Models`/`scene.Windows` rather than
-   replacing what's there — see the `TODO` in `World.cs`'s `BuildScene`. Harmless for the one-time
-   startup call `World.Load()` still makes, but selecting a park via the chooser mid-session
-   currently duplicates scene content instead of swapping it. Needs a scene-teardown step before
-   `ParkChooser` is safe to use more than once per run.
+4. **Resolved**: `World.Load(parkPath)` used to re-run `BuildScene()` unconditionally appending a
+   new terrain mesh, marker cube, and window set to `scene.Models`/`scene.Windows` rather than
+   replacing what's there. `BuildScene` now clears/disposes `scene.Models` and `scene.Windows` at
+   the top of every call, reuses the `Editor`/`ParkChooser` instances (created once, event handlers
+   wired once) rather than recreating them, and registers the terrain mesh/`UI.Debug` factory with
+   `IfAlreadyRegistered.Replace`/a one-time guard respectively — so selecting a different park via
+   `ParkChooser` now replaces the scene instead of duplicating it.
+5. **New, deliberately scoped down**: `ParkChooser.ParkSelected` calling `World.Load(path)` directly
+   hung the whole app — `Renderer`/`ThreadAffine` marshals each frame onto the WinForms UI thread,
+   so `ParkChooser`'s click handling (and thus `ParkSelected`) runs there, and `World.Load`'s
+   blocking `.Wait()` froze that thread's message pump entirely. A first fix (deferring the load to
+   `Game.Run()`'s loop via a `pendingParkLoad` field/`ProcessPendingLoad()`) was reverted as too
+   janky. Current state: `ParkChooser.ParkSelected` → `World.ReplaceTerrain(path)`, which hand-loads
+   only `Terrain` (via `Terrain.LoadFromSave`, no OVL texture I/O) and swaps just the terrain mesh
+   model — small enough on-thread work not to visibly hang, but `Park`/paths/water/scenery/camera
+   framing/grass texture are all left stale, flagged with a `TODO` at the `ParkSelected` wiring in
+   `World.BuildScene`. See [`world-system-scheduling.md`](../world-system-scheduling.md) for the
+   plan that replaces this with a real `ISystem`/`Scheduler`-driven full reload (already scaffolded
+   in the codebase but never wired up) - not started.
 
 ## Open Questions
 
@@ -111,10 +129,10 @@ exposes every `Documents\RCT3\*` subfolder (`ParksDirectory`, `ScenariosDirector
   "scope to `Parks/` only, leave scenarios to a future plan" decision. Whether/how to visually
   distinguish scenarios from saved parks in the chooser is left open - "we can enhance the
   differences later" (user, when this was implemented).
-- What `Terrain`'s actual grid width/height is, needed to integrate decoded `GETerrain` corners
-  into `OpenRCT3.Simulation.Terrain` — see Gap #1. Likely needs either a grid-position-isolating
-  edit (raise a corner at a known, in-game-reported tile coordinate) or working out the header/
-  corner-count arithmetic more rigorously against a second, differently-sized map.
+- Whether decoded `GETerrain` tiles map to `OpenRCT3.Simulation.Terrain`'s buildable size directly
+  or need an OOB-border offset, and whether the DAT's row-major tile index maps to simulation
+  `(tileX, tileY)` as `(col, row)` with no rotation/flip — neither independently confirmed by any
+  fixture; see `Park.Load`'s doc comment for the assumption made when this integration landed.
 
 ## Deferred
 
@@ -135,12 +153,13 @@ exposes every `Documents\RCT3\*` subfolder (`ParksDirectory`, `ScenariosDirector
   loudly instead of just "still non-empty"), coverage of the extended-header version-byte branch if
   a fixture using the other version (`0x1A` vs `0x2A`) turns up, and a failure-case test
   (truncated/corrupt file raises `DatException` rather than an unhandled exception).
-- `OpenCobra.Data.Parks.Terrain`: **no committed test yet** - validated only via a throwaway
-  scratch tool during reverse-engineering. Needs a `TerrainTests.cs` mirroring `PathsTests.cs`'s
-  approach: known-good case against the `01-one-corner-up.dat`/`01-one-corner-and-other-corner-up.dat`
-  fixtures (corner heights `1.0`/`2.0` at the diff-confirmed indices), edge case (water/cliffs, once
-  those sub-fields are decoded), failure case (truncated/corrupt terrain block raises a clear
-  exception).
+- `OpenCobra.Data.Parks.Terrain`: [`TerrainTests.cs`](../../../../OpenCobra/Tests/Data/TerrainTests.cs),
+  10/10 passing — known-good cases for every corner-isolating fixture (each of the four corners
+  individually, a map-edge tile, two corners on one tile independently, surface-type repaint
+  leaving heights untouched, water-added flattening all four corners), plus a path-edit case
+  confirming `EngineTerrain` is byte-identical when only paths change, and a real-vendored-park
+  blob-length sanity check. Still missing: a failure case (truncated/corrupt terrain block raises a
+  clear exception).
 - `OpenCobra.Data.Parks.Paths`: [`PathsTests.cs`](../../../../OpenCobra/Tests/Data/PathsTests.cs) -
   known-good cases for one and two adjacent at-grade tiles and one raised tile, against the
   `02-*.dat` fixtures. Still missing: a failure case and a path-removal case (not yet captured).
@@ -151,13 +170,21 @@ exposes every `Documents\RCT3\*` subfolder (`ParksDirectory`, `ScenariosDirector
   once that integration lands, and a failure case (missing/corrupt file).
 - `ParkChooser`: no automated UI test (ImGui windows aren't covered elsewhere in this repo either);
   verified manually in-app.
+- `Terrain.LoadFromSave` (the DAT-to-simulation conversion half of `Terrain.Load(string?)`):
+  [`TerrainLoadTests.cs`](../../../../OpenRCT3.Tests/Simulation/TerrainLoadTests.cs), 6/6 passing -
+  exact-index assertions against the same reverse-engineering fixtures (dimensions with OOB border,
+  single/double corner steps, surface-type mapping, negative-height clamping, a real non-square
+  park). `Terrain.Load(string?)` itself (the OVL texture-loading wrapper around it) has no
+  automated test - it requires a real RCT3 install via `AppConfig.Instance`, same as the
+  pre-existing parameterless `Terrain.Load()`.
 - `World.Load(parkPath)`: no automated test - `World` depends on a live `Game`/IoC/GL context
   (`BuildScene` resolves `Game.Instance!`), making it awkward to unit test in isolation. Manual
   verification only so far.
 
 ## Status
 
-Mostly working end-to-end for paths; terrain height is the remaining piece.
+Terrain and path decoding are both solid; wiring a *selected* park into the running game is
+deliberately scoped down to terrain-only for now (see Gap #5).
 
 **Implemented and tested**:
 - `OpenCobra.Data` project ([`Data.csproj`](../../../../OpenCobra/Data/Data.csproj)) with
@@ -168,16 +195,27 @@ Mostly working end-to-end for paths; terrain height is the remaining piece.
   under [`Fixtures/Parks/Reverse Engineering/`](../../../../OpenCobra/Tests/Fixtures/Parks/Reverse%20Engineering) -
   see [rct3-terrain-data-layout.md](../../../research/rct3-terrain-data-layout.md) and
   [rct3-path-tile-layout.md](../../../research/rct3-path-tile-layout.md).
+- [`Park.Load(string path)`](../../../../OpenRCT3/Simulation/Park.cs) (populates `Park.Paths` from
+  both at-grade and raised tiles) and [`Terrain.Load(string?)`](../../../../OpenRCT3/Simulation/Terrain.cs)/
+  `Terrain.LoadFromSave` (populates all four corner heights and `SurfaceIndex` per tile) both exist
+  and are tested, and both run at startup via `World.Load(null)` → the default flat park path.
+  Neither is currently reachable with a real `parkPath` from inside a running game session, though -
+  see the next bullet.
 - [`Editor.OpenPark`](../../../../OpenRCT3/Scenario/Editor.cs) → [`ParkChooser`](../../../../OpenRCT3/Scenario/ParkChooser.cs)
-  → `ParkChooser.ParkSelected` → [`World.Load(string parkPath)`](../../../../OpenRCT3/Simulation/World.cs)
-  → [`Park.Load(string path)`](../../../../OpenRCT3/Simulation/Park.cs), wired end-to-end and
-  building. `Park.Load` populates `Park.Paths` from both at-grade and raised tiles.
+  → `ParkChooser.ParkSelected` → [`World.ReplaceTerrain(string parkPath)`](../../../../OpenRCT3/Simulation/World.cs),
+  **not** the full `World.Load(string?)` pipeline (Gap #5) - `ReplaceTerrain` calls
+  `Terrain.LoadFromSave` directly and swaps just the terrain mesh model, leaving `Park`/paths/
+  water/scenery/camera framing/grass texture untouched. `BuildScene` (used only by the
+  startup `World.Load(null)` path today) still replaces the previous scene rather than duplicating
+  it, so it's safe to call more than once per run whenever something does call it again.
 
 **Not yet done**:
-- Terrain height integration: `Park.Load` doesn't touch `OpenCobra.Data.Parks.Terrain` yet, so a
-  loaded park's terrain is always the default flat grid regardless of what's in the save - blocked
-  on the grid width/height unknown (Gap #1/Open Questions).
-- The scene-duplication issue (Gap #4) if `ParkChooser` is used more than once per run.
-- `TerrainTests.cs` for `OpenCobra.Data.Parks.Terrain` (Testing section).
+- A real, non-blocking full reload reachable from `ParkChooser` - see Gap #5 and
+  [`world-system-scheduling.md`](../world-system-scheduling.md) (not started).
 - Non-Windows saved-parks paths, `.prf` confirmation, scenario/park list differentiation (Open
   Questions).
+- The DAT-tile-to-simulation-tile mapping assumption flagged in `Terrain.Load`'s doc comment
+  (buildable-size vs. OOB-inclusive, row-major with no rotation/flip) - unconfirmed by any fixture.
+- The residual `EngineTerrain` unknowns noted in `rct3-terrain-data-layout.md` (preamble record,
+  a few still-undecoded bytes, `NorthEast` deduced by elimination) and `WaterManager`'s per-pool
+  record layout - none block rendering, all are candidates for future cleanup.

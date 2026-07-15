@@ -1,13 +1,12 @@
-// Park
-//
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
+// Represents a park within the game world: buildable area, paths, water, and scenery.
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System.Collections.Generic;
 using System.Numerics;
+using OpenCobra.Data;
 using OpenCobra.OVL;
+using DatParks = OpenCobra.Data.Parks;
 
 namespace OpenRCT3.Simulation;
 
@@ -36,6 +35,9 @@ public class Park {
   /// <summary>
   /// The width of the out-of-bounds border in tiles.
   /// </summary>
+  /// <remarks>
+  /// "Skirt" is classic terrain-engine jargon for border geometry that hides the edge of the world.
+  /// </remarks>
   public const int OutOfBoundsBorder = 5;
   /// <summary>
   /// The position of the park entrance.
@@ -93,6 +95,37 @@ public class Park {
       new Vector2(-halfWidth, borderOffset),
       new Vector2(halfWidth, borderOffset + (buildableHeight * TileSize))
     );
+  }
+
+  /// <summary>
+  /// Loads a saved-park <c>.dat</c> file's path data into a new <see cref="Park"/>.
+  /// </summary>
+  /// <remarks>
+  /// Map size isn't derived from the save yet - this still sizes <see cref="BuildableBounds"/> via
+  /// the default constructor, and reuses each tile's on-disk <c>ColIndex</c>/<c>RowIndex</c>
+  /// directly as its <see cref="Paths"/> key without any coordinate-system translation, since none
+  /// has been confirmed against the OOB-inclusive grid <see cref="Terrain"/> uses. Raised-tile
+  /// height/slope decoding is similarly a first pass, confirmed against only a single raised-tile
+  /// sample: <see cref="DatParks.PathFlyingTile.QuantisedHeight"/> is assumed 1:1 with
+  /// <see cref="Terrain.HeightStep"/> units, and <see cref="DatParks.PathFlyingTile.Direction"/> is
+  /// assumed to already match <see cref="Edge"/>'s numbering.
+  /// </remarks>
+  public static Park Load(string path) {
+    var dat = Dat.Load(path);
+    var park = new Park();
+
+    foreach (var tile in DatParks.Paths.ExtractAtGrade(dat))
+      park.Paths[(tile.ColIndex, tile.RowIndex)] = new PathTile();
+
+    foreach (var tile in DatParks.Paths.ExtractRaised(dat))
+      park.Paths[(tile.ColIndex, tile.RowIndex)] = new PathTile {
+        Raised = true,
+        RaisedHeight = (ushort)tile.QuantisedHeight,
+        RaisedSlope = (PathRaisedSlope)tile.SlopeType,
+        RaisedSlopeDirection = (Edge)tile.Direction,
+      };
+
+    return park;
   }
 
   /// <summary>

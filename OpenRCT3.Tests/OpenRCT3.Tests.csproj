@@ -46,6 +46,7 @@
     </PackageReference>
     <PackageReference Include="NUnit3TestAdapter" Version="6.2.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+    <PackageReference Include="ThisAssembly.Constants" Version="2.1.2" />
     <PackageReference Include="coverlet.collector" Version="10.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -59,5 +60,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OpenRCT3\OpenRCT3.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Constant Include="SolutionDir" Value="$(SolutionDir)" />
   </ItemGroup>
 </Project>

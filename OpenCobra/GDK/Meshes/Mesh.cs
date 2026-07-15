@@ -33,7 +33,7 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
   [Category("Data")]
   public List<uint> Indices { get; init; } = indices;
   [Category("Data")]
-  public BoundingBox BoundingBox { get; } = ComputeBoundingBox(vertices);
+  public BoundingBox BoundingBox { get; private set; } = ComputeBoundingBox(vertices);
 
   /// <summary>
   /// GPU-resident handles allocated on first upload.
@@ -140,6 +140,30 @@ public class Mesh(List<Vertex> vertices, List<uint> indices) : IResource {
     gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
 
     State = State.Ready;
+  }
+
+  /// <summary>
+  /// Replaces this mesh's vertex/index data in place and, if already GPU-uploaded, tears down its
+  /// GL buffers and reverts to <see cref="Meshes.State.Uninitialized"/> so <see cref="Scene.UninitializedModels"/>
+  /// picks it back up and re-uploads the new data on the next render.
+  /// </summary>
+  public void Replace(List<Vertex> vertices, List<uint> indices) {
+    Vertices.Clear();
+    Vertices.AddRange(vertices);
+    Indices.Clear();
+    Indices.AddRange(indices);
+    BoundingBox = ComputeBoundingBox(vertices);
+    if (State != State.Ready) return;
+
+    var gl = IGame.IoC.Resolve<GL>();
+    gl.DeleteVertexArray(Vao);
+    Vao = 0;
+    gl.DeleteBuffer(Vbo);
+    Vbo = 0;
+    gl.DeleteBuffer(Ebo);
+    Ebo = 0;
+
+    State = State.Uninitialized;
   }
 
   public void Dispose() {

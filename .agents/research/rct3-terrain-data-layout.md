@@ -3,9 +3,11 @@
 Reverse-engineered by byte-diffing paired saved-park `.dat` fixtures under
 [`OpenCobra/Tests/Fixtures/Parks/Reverse Engineering/`](../../OpenCobra/Tests/Fixtures/Parks/Reverse%20Engineering)
 — a `baseline.dat` and several variants, each differing from the baseline by exactly one known,
-isolated in-game edit. Loaded via [`OpenCobra.Data.Dat`](../../OpenCobra/Data/DAT.cs), which parses
-the surrounding struct/entry framing but leaves the `GETerrain` field itself as an opaque
-[`DatOpaqueValue`](../../OpenCobra/Data/DAT.cs) blob — this doc is what fills that blob in.
+isolated in-game edit — cross-checked against two real, differently-sized parks
+(`Rivendell.dat`, `Fun Valley Amusment Park.dat`). Loaded via [`OpenCobra.Data.Dat`](../../OpenCobra/Data/DAT.cs),
+which parses the surrounding struct/entry framing but leaves the `GETerrain` field itself as an
+opaque [`OpaqueValue`](../../OpenCobra/Data/DAT.cs) blob — this doc is what fills that blob in.
+Implemented in [`OpenCobra/Data/Parks/Terrain.cs`](../../OpenCobra/Data/Parks/Terrain.cs).
 
 **Used by**:
 - [`render-loaded-parks.md`](../plans/features/terrain/render-loaded-parks.md) —
@@ -13,99 +15,238 @@ the surrounding struct/entry framing but leaves the `GETerrain` field itself as 
 
 ## Where it lives
 
-Top-level `DatEntry` named `RCT3Terrain`, field `EngineTerrain`. In every fixture tested (baseline
-and all terrain-edit variants), this blob is a fixed **393,234 bytes**, regardless of what terrain
-edit was made — confirms it's a flat, pre-allocated grid, not a variable-length list.
+Top-level `DatEntry` named `RCT3Terrain`, field `EngineTerrain`.
 
-## Per-corner height
+## Overall structure
 
-A `float32`, one per grid corner, arranged in a **12-byte stride** (i.e. each corner's record is
-(at least) 12 bytes; the height float is the first field of that record — not confirmed independently
-of the stride, since no fixture yet isolates a *non-first* field at a known offset within one record).
+```
+[6-byte mini-header][12-byte preamble record][Width x Height tile slots, 24 bytes each]
+```
 
-**Evidence**:
+- **Mini-header** (6 bytes): byte 0 = declared grid `Width` in tiles, byte 1 = declared grid
+  `Height` in tiles, bytes 2-5 unknown (constant across every sample so far - never observed to
+  change).
+- **Preamble record** (12 bytes, byte offset 6-17): unknown purpose; constant across every sample
+  so far.
+- **Tile array** (byte offset 18 onward): exactly `Width x Height` slots, each 24 bytes = two
+  back-to-back 12-byte records.
 
-| Fixture | Offset | Base | Variant | Delta |
-|---|---|---|---|---|
-| `01-one-corner-up.dat` | `0x11022` | `0.0` | `1.0` | `+1.0` |
-| `01-one-corner-up-again.dat` (from `01-one-corner-up`) | `0x11022` | `0.0`* | `2.0` | `+1.0` from the 1.0 state |
-| `01-one-corner-and-other-corner-up.dat` | `0x11022` | `0.0` | `2.0` | (same corner as above) |
-| `01-one-corner-and-other-corner-up.dat` | `0x1102E` | `0.0` | `1.0` | `+1.0` |
+This exactly accounts for the blob's total byte length in every sample checked:
+`18 + Width x Height x 24`. Confirmed exact for three independent parks:
 
-\* "Base" here is `baseline.dat`'s value (0.0); the diff was computed against `baseline.dat` for
-every variant, not chained variant-to-variant, so `01-one-corner-up-again`'s on-disk value is
-`2.0`, reached via two in-game raise-clicks from the 0.0 baseline.
+| Park | Width x Height | Blob size (bytes) | `18 + W*H*24` |
+|---|---|---|---|
+| baseline.dat / Rivendell.dat | 128 x 128 | 393,234 | 393,234 |
+| Fun Valley Amusment Park.dat | 95 x 122 | 278,178 | 278,178 |
+
+This resolves an earlier, incorrect model that treated the blob as one flat array of independent
+12-byte corner records starting after a 6-byte header - that model's derived corner count didn't
+factor into a tile-grid shape for Fun Valley's map (23,181 = 3 x 7727), which is what led to
+re-deriving the structure here.
+
+## Per-tile records
+
+Each tile owns two adjacent 12-byte records = 24 bytes. A scratch tool
+(`Dat.Load` on `baseline.dat` and each `01-*.dat`/`02-*.dat` variant, full-array byte diff of the
+raw `EngineTerrain` blob, tile index computed from the confirmed `18 + i*24` formula) produced
+these exact diffs:
+
+`01-one-corner-up.dat` vs `baseline.dat` - only 2 bytes differ, both in tile 2902's first record:
+```
+offset=  69668  base=0x00  var=0x80  tile 2902 (first record), offsetInRecord=2
+offset=  69669  base=0x00  var=0x3F  tile 2902 (first record), offsetInRecord=3
+```
+Bytes 0-1 of that `float32` are already `0x00` in the baseline, so this is offset-0's `float32`
+going from `0.0` to `1.0` (`00 00 80 3F`).
+
+`01-one-corner-and-other-corner-up.dat` vs `baseline.dat` - 3 bytes differ, all still tile 2902:
+```
+offset=  69669  base=0x00  var=0x40  tile 2902 (first record), offsetInRecord=3
+offset=  69680  base=0x00  var=0x80  tile 2902 (second record), offsetInRecord=2
+offset=  69681  base=0x00  var=0x3F  tile 2902 (second record), offsetInRecord=3
+```
+First record's offset-0 `float32` is now `2.0` (two raise-clicks); second record's offset-0
+`float32` (`Height`) went from `0.0` to `1.0`.
+
+`01-water-added.dat` vs `baseline.dat` - 8 bytes differ, all tile 2766:
+```
+offset=  66404  base=0x00  var=0x80  tile 2766 (first record), offsetInRecord=2
+offset=  66405  base=0x00  var=0xBF  tile 2766 (first record), offsetInRecord=3
+offset=  66408  base=0x00  var=0x80  tile 2766 (first record), offsetInRecord=6
+offset=  66409  base=0x00  var=0xBF  tile 2766 (first record), offsetInRecord=7
+offset=  66412  base=0x00  var=0x80  tile 2766 (first record), offsetInRecord=10
+offset=  66413  base=0x00  var=0xBF  tile 2766 (first record), offsetInRecord=11
+offset=  66416  base=0x00  var=0x80  tile 2766 (second record), offsetInRecord=2
+offset=  66417  base=0x00  var=0xBF  tile 2766 (second record), offsetInRecord=3
+```
+This is the finding that overturns the old model: the first record's bytes 4-7 and 8-11 *also*
+move here (each `00 00 80 BF` = `-1.0`), even though `01-one-corner-up.dat` only ever touched
+bytes 0-3. That rules out "one float32 + 8 unknown bytes" for the first record - it's **three**
+back-to-back `float32`s (offsets 0, 4, 8), independently steppable (only the first moves for a
+single-corner raise; all three move together here).
+
+**Confirmed structure per tile (24 bytes)**:
+- First record (offset 0-11 of slot): three `float32`s - `SouthEast`@0, `SouthWest`@4, `NorthEast`@8.
+  All default to `0.0`.
+- Second record (offset 12-23 of slot): `NorthWest` (`float32`@0) and `SurfaceType`
+  (`byte`@4, defaults to `0x0B`/11). Bytes 5-11 (7 bytes) still not decoded - every variant tested
+  leaves them unchanged from baseline's `00`.
 
 **Conclusions**:
-- One raise-tool click = **exactly `+1.0`** in this float, confirming it's a direct meters value
-  (matches [`terrain-heightmap.md`](../plans/features/terrain-heightmap.md)'s 1m corner-height
-  step from [`terrain-tools.md`](terrain-tools.md)), not a scaled/quantized integer.
-- A second corner (the user's "other corner of the same tile" edit) has its height float exactly
-  **12 bytes (`0xC`)** after the first corner's — i.e. `0x1102E - 0x11022 = 12`. This is the
-  corner-to-corner stride within the grid, not necessarily "the two corners of one tile" in the
-  narrow sense — it's equally consistent with "the next corner in row-major order" if the user's
-  in-game click happened to land on an adjacent grid corner. Either reading gives the same 12-byte
-  stride fact; which corner-adjacency relationship it represents (same-row neighbor vs. diagonal
-  tile corner) isn't yet distinguished.
+- One raise-tool click = exactly `+1.0` on whichever of the four floats it targets (matches
+  [`terrain-heightmap.md`](../plans/features/terrain-heightmap.md)'s 1m corner-height step from
+  [`terrain-tools.md`](terrain-tools.md)).
+- A tile has four independently-steppable height floats, not two. `01-one-corner-and-other-corner-up.dat`'s
+  "raise a second corner" edit touched `SouthEast` (again) and `NorthWest` on the *same*
+  tile - not a different tile - confirming these are per-tile fields, not per-grid-corner ones.
+- `01-water-added.dat`'s in-game edit lowered the tile by one raise/lower-tool click (1m) before
+  placing water on it: all four corner floats become `-1.0` uniformly (ordinary flatten/lower, not
+  a water-specific sentinel). The actual water-placement data lives in the separate top-level
+  `WaterManager` entry instead (see Water below), not in `EngineTerrain` at all.
 
-**Unresolved**: the other 8 bytes of each 12-byte corner record. Not yet isolated to specific
-fields - could be a `Vector3` (X, Y, Height) with height as the 3rd component, a packed
-normal/slope value, or something else. A save with only a horizontal-position-relevant edit (none
-attempted yet) would help isolate this.
+### Corner identity (`01-one-far-corner-up.dat`, `01-near-left/right-corner-up.dat`, `01-far-left-corner-up.dat`)
+
+The game has no in-editor coordinate readout or compass, so these fixtures instead identify each
+corner relative to the fixed camera facing at a new park's start (camera is inside the park,
+facing outward toward the boundary skirt/entrance).
+
+`01-one-far-corner-up.dat` raised "the tile corner furthest to the left of the park's entrance,"
+on a tile at the park boundary:
+```
+=== 01-one-far-corner-up.dat ===
+Total differing bytes: 2
+  offset=   3072  base=0x00  var=0x80  tile 127 (first record), offsetInRecord=6
+  offset=   3073  base=0x00  var=0x3F  tile 127 (first record), offsetInRecord=7
+Distinct tiles touched: [127]
+```
+Tile index 127, under the confirmed row-major `index = row*Width + col` layout with `Width=128`,
+is row 0, column 127 - literally one of the map's four corner tiles, consistent with the user's
+report that the map's boundary skirt mesh visually reacted to this edit (checked: the separate
+`RCT3Terrain.SkirtTrees` opaque field is byte-identical, `00000000`, in both files - the skirt
+reaction is the renderer responding live to `EngineTerrain` height near the map edge, not a
+second stored copy of the height).
+
+Three follow-up fixtures then isolated each of tile 2902's (the same interior tile used
+throughout) four corners individually, described by the user relative to that tile:
+"near-left" = the corner matching the far-corner edit above; "near-right" = the corner nearest the
+park entrance; "far-left" = the corner opposite near-right, nearest the camera, furthest from the
+entrance. Full-array diffs against `baseline.dat`:
+```
+=== 01-near-left-corner-up.dat ===
+Total differing bytes: 2
+  offset=  69672  base=0x00  var=0x80  tile 2902 (first record), offsetInRecord=6
+  offset=  69673  base=0x00  var=0x3F  tile 2902 (first record), offsetInRecord=7
+=== 01-near-right-corner-up.dat ===
+Total differing bytes: 2
+  offset=  69668  base=0x00  var=0x80  tile 2902 (first record), offsetInRecord=2
+  offset=  69669  base=0x00  var=0x3F  tile 2902 (first record), offsetInRecord=3
+=== 01-far-left-corner-up.dat ===
+Total differing bytes: 2
+  offset=  69680  base=0x00  var=0x80  tile 2902 (second record), offsetInRecord=2
+  offset=  69681  base=0x00  var=0x3F  tile 2902 (second record), offsetInRecord=3
+```
+
+**Resolved mapping**:
+- `SouthEast` (first record, offset 0) - directly diffed via `01-near-right-corner-up.dat` and
+  `01-one-corner-up.dat` (same slot).
+- `SouthWest` (first record, offset 4) - directly diffed via `01-near-left-corner-up.dat` and
+  `01-one-far-corner-up.dat` (same slot, on the map-edge tile).
+- `NorthWest` (second record, offset 0) - directly diffed via `01-far-left-corner-up.dat`.
+- `NorthEast` (first record, offset 8) - **deduced by elimination**, not independently diffed: a
+  tile has exactly four corners, and the other three are each pinned to a distinct slot above, so
+  the one remaining slot (first record, offset 8) must be `NorthEast`. No fixture isolates this
+  slot alone.
+
+The user's original "near/far"/"left/right" labels (matching the fixture filenames above) are
+relative to the fixed camera facing at a new park's start, not compass directions - the game
+exposes no absolute coordinate system to derive true NE/NW/SE/SW from, and the local
+`rct3-importer` C++ reference checkout was checked and contains no terrain corner/height code to
+cross-reference (`grep -i corner` there only matches scenery/path code, not `GE_Terrain`).
+`Terrain.cs`'s `SouthEast`/`SouthWest`/`NorthEast`/`NorthWest` field names are a naming-convention
+alignment with `OpenRCT3.Simulation.TerrainCornerSlot`'s SW/SE/NW/NE scheme (mapping
+near→south, far→north, left→west, right→east) for consistency across the codebase, not an
+independently-verified world-space compass claim.
 
 ## Surface type
 
-A single byte (top 3 bytes of its containing `uint16`-ish window are zero) that changes from
-`0x0B` to `0x1F` when repainting a tile's terrain texture in `01-surface-changed.dat`. Appears at
-the same relative offset in each of several adjacent corner records (offsets `0xEBA0`, `0xEBB8`,
-`0xF788`, `0xF7A0`, `0x10388`, `0x103A0`, `0x10F88`, `0x10FA0` — each pair 12 bytes apart within
-one edit, consistent with the corner stride above; the gap between pairs, e.g. `0xEBB8` to
-`0xF788` = `0xBD0` = 3024 bytes = 252 corners, is a plausible terrain-grid row width, unconfirmed).
+A single byte (`SurfaceType`, second-record offset 4) that changes from `0x0B` to `0x1F` when
+repainting a tile's terrain texture in `01-surface-changed.dat`. A fresh full-array byte diff (not
+reused old numbers) against `baseline.dat` finds exactly 11 differing bytes, one per tile, at
+these tile indices:
 
-Two things worth noting:
-- Multiple corners changed for a single "repaint one tile" edit (11 bytes total across 4 offset
-  pairs) — repainting likely touches every corner of the affected tile(s), or the brush affected
-  more than one tile.
-  `01-surface-changed.dat`'s top-level entry count also grew by 2 (3945 → 3947) versus baseline,
-  separate from the `EngineTerrain` blob itself (which stayed the same 393,234-byte size) — likely
-  a new terrain-type reference entry added elsewhere in the file, not investigated further here.
-- `0x0B` = 11, `0x1F` = 31 — plausible small terrain-type-table indices, but not yet cross-checked
-  against `OpenCobra.OVL`'s `TerrainType`/`ter` OVL resources or in-game terrain-type ordering.
+```
+Distinct tiles touched: [2512, 2513, 2639, 2640, 2641, 2767, 2768, 2769, 2895, 2896, 2897]
+Gaps between consecutive touched tiles: [1, 126, 1, 1, 126, 1, 1, 126, 1, 1]
+```
 
-**Unresolved**: exact byte offset of this field within the 12-byte corner record (relative to the
-height float), and its full value range/meaning.
+Four clusters (`[2512,2513]`, `[2639,2640,2641]`, `[2767,2768,2769]`, `[2895,2896,2897]`), each
+cluster's start landing 126 tiles after the previous cluster's start - `128 (Width) - 2`. With
+row-major indexing this means each successive row of the paint brush starts 2 columns further left
+than the row above it: a diamond/circle-shaped brush growing from 2 tiles wide to 3, not a
+row-stride bug. This resolves the earlier open question about the 126-vs-128 spacing.
 
-## Water
+`0x0B` = 11, `0x1F` = 31 - plausible small terrain-type-table indices, not yet cross-checked
+against `OpenCobra.OVL`'s `TerrainType`/`ter` OVL resources or in-game terrain-type ordering.
 
-Four consecutive `float32` fields, each exactly **4 bytes apart** (not the 12-byte corner stride
-above — a separate, tightly-packed sub-structure), all flipping from `0.0` to `-1.0` in
+`01-surface-changed.dat`'s top-level entry count also grew by 2 (3945 → 3947) versus baseline,
+separate from the `EngineTerrain` blob itself (whose byte length is unchanged) - likely a new
+terrain-type reference entry added elsewhere in the file, not investigated further here.
+
+## Water (`WaterManager`, a separate top-level entry, not `RCT3Terrain`)
+
+Not stored in `EngineTerrain` - lives in its own top-level `DatEntry` named `WaterManager`, field
+`WaterManager` (also an opaque blob). Grows from 6 bytes in `baseline.dat` to 22 bytes in
 `01-water-added.dat`:
 
-| Offset | Base | Variant |
-|---|---|---|
-| `0x10362` | `0.0` | `-1.0` |
-| `0x10366` | `0.0` | `-1.0` |
-| `0x1036A` | `0.0` | `-1.0` |
-| `0x1036E` | `0.0` | `-1.0` |
+| Fixture | Bytes |
+|---|---|
+| `baseline.dat` | `80 80 00 00 00 00` |
+| `01-water-added.dat` | `80 80 01 00 00 00 00 00 00 00 02 00 00 00 4E 15 00 07 4E 15 01 07` |
 
-Four floats, likely one per tile corner (contiguous rather than 12-byte-strided, unlike the height
-grid), most plausibly a water-surface height/flag using `-1.0` as a "no water" or
-"below/at-ground" sentinel rather than an absolute elevation — an absolute water height would be
-expected to vary with the actual water level added, not land on the same round sentinel across
-all 4 corners regardless of where the tile sits.
+Bytes 0-1 (`80 80` = 128, 128) match `EngineTerrain`'s own `Width`/`Height` mini-header exactly.
+Byte 2 flips `0x00` → `0x01` when the one water pool is added - a pool count. The 16 bytes appended
+after that (`00 00 00 00 00 00 02 00 00 00 4E 15 00 07 4E 15 01 07`, only present in the
+water-added variant) are presumably one pool record; not decoded further, but `0x154E` (5454)
+appears twice within it (at what would be offsets 2 and 6 into the 16-byte record, read as `u16`),
+suggesting a repeated coordinate/index field.
 
-**Unresolved**: whether `-1.0` means "water present here" or "water absent here" (i.e. sign
-convention), how this 4-float block's position relates to the height grid's corner indexing (its
-offset, `0x10362`, is *before* the height-diff fixtures' `0x11022`/`0x1102E`, so it isn't simply
-"the water level at the same corner index" - it may be a wholly separate sub-array), and whether
-non-sentinel values ever appear (untested - only a single water tile add/no-add pair exists so
-far).
+## Path edits don't touch `EngineTerrain`
+
+Full-array byte diff of `02-one-tile-added.dat`, `02-two-tiles.dat`, and `02-one-raised-tile.dat`
+(each a path-placement edit, see fixtures README) against `baseline.dat` finds **zero** differing
+bytes in `EngineTerrain` for all three - confirmed live:
+
+```
+=== 02-one-tile-added.dat ===
+Total differing bytes: 0
+=== 02-two-tiles.dat ===
+Total differing bytes: 0
+=== 02-one-raised-tile.dat ===
+Total differing bytes: 0
+```
+
+Path data lives entirely outside `EngineTerrain`, per [rct3-path-tile-layout.md](rct3-path-tile-layout.md).
+
+## Still unresolved
+
+- The preamble record's (byte offset 6-17) purpose - confirmed byte-identical to baseline across
+  all 8 variants tested (`01-one-corner-up`, `01-one-corner-up-again`,
+  `01-one-corner-and-other-corner-up`, `01-water-added`, `01-surface-changed`,
+  `02-one-tile-added`, `02-two-tiles`, `02-one-raised-tile`), but its purpose is still unknown.
+- Bytes 2-5 of the mini-header (also unchanged across the same 8 variants).
+- The second record's 7 bytes after `SurfaceType` (`TerrainTile.Unknown`, bytes 5-11) - unchanged
+  across every variant tested.
+- `NorthEast` (first record, offset 8) was deduced by elimination, not independently diffed - no
+  fixture isolates that slot alone.
+- Absolute (compass/world-space) identity of `SouthEast`/`SouthWest`/`NorthEast`/`NorthWest` - these
+  are only known relative to the fixed camera facing at a new park's start, since the game exposes
+  no coordinate system to derive absolute directions from.
+- `WaterManager`'s 16-byte per-pool record layout beyond the repeated `0x154E` field noted above -
+  only one sample (a single one-tile pool) exists so far.
 
 ## Still unattempted
 
-- Path edits (`PathTileList`/`PathNodeArray`) - deferred per the plan; no path-edit fixture pairs
-  exist yet.
-- A grid-position-isolating edit (e.g. a corner at a known, reported in-game tile coordinate) to
-  derive the grid's width/height and confirm the row-stride hypothesis under Surface type above.
-- A fixture pair with a non-sentinel water height, to determine whether the water floats store an
-  absolute elevation or a flag.
+- A fixture isolating `NorthEast` (first record, offset 8) alone, to move it from "deduced by
+  elimination" to independently diffed.
+- A second, differently-placed/differently-sized water pool, to isolate `WaterManager`'s per-pool
+  record fields (position, extent, height) from the single sample decoded so far.

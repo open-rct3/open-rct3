@@ -1,7 +1,4 @@
-// World
-//
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
+// Represents the game world: the current park, terrain, objects, and people.
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
@@ -36,6 +33,7 @@ public class World : GDK.Game.World {
   /// <see cref="Mesh"/> instance can't collide with (or be shadowed by) this one.
   /// </summary>
   private const string TerrainMeshServiceKey = "Terrain";
+  private readonly static Vector4 GrassColor = Color.FromArgb(79, 129, 14).ToGl();
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
   public Terrain? Terrain { get; private set; }
@@ -47,11 +45,22 @@ public class World : GDK.Game.World {
   /// </summary>
   public Vector3 MarkerCenter { get; private set; }
 
+  /// <summary>
+  /// The scenario editor and park chooser windows, created once on <see cref="BuildScene"/> (called
+  /// once, from <see cref="Load"/>) and wired to <see cref="ReplaceTerrain"/> for opening a different
+  /// park later.
+  /// </summary>
+  private Editor? editor;
+  private ParkChooser? parkChooser;
+  /// <summary>The terrain <see cref="Model"/> added to the scene by <see cref="BuildScene"/>, whose <see cref="Mesh"/> <see cref="ReplaceTerrain"/> updates in place.</summary>
+  private Model? groundModel;
+
   // FIXME: Load() blocks until every task completes since callers (e.g. Game's constructor) dereference
   // Terrain/Park synchronously right after calling it. Progress.MeasureTasks runs tasks on a background
   // Task.Run and returns immediately without waiting; without this .Wait(), Terrain/Park may still be
   // null when the caller reads them. Revisit once a progress bar actually consumes Progress
   // asynchronously (see the TODO in Game.cs) instead of blocking here.
+  /// <summary>Loads the default flat park and builds the scene.</summary>
   public override void Load() {
     var measurement = Progress.MeasureTasks([
       new(() => Park = new Park(), "Loading park"),
@@ -62,31 +71,23 @@ public class World : GDK.Game.World {
     measurement.Task.Wait();
   }
 
-  /// <summary>
-  /// Builds the initial <see cref="OpenRCT3.Game.Scene"/> content from the just-loaded
-  /// <see cref="Terrain"/>/<see cref="Park"/>: the terrain mesh, a placeholder rotation-marker cube,
-  /// camera framing, and the scenario editor/debug windows. Extracted out of <see cref="Game"/>'s
-  /// constructor (which was otherwise doing scene-building work well beyond "load the world") so
-  /// <see cref="Load"/> is the single place that turns loaded simulation data into what the renderer
-  /// actually draws.
-  /// </summary>
+  /// <summary>Builds the terrain mesh, rotation-marker cube, camera framing, and windows for <see cref="Game.Scene"/>.</summary>
+  /// <remarks>
+  /// Called once, from <see cref="Load"/>. Opening a different park afterward goes through
+  /// <see cref="ReplaceTerrain"/>, which updates the terrain mesh in place rather than calling this again.
+  /// </remarks>
   private void BuildScene() {
     var game = Game.Instance!;
     var scene = game.Scene;
 
-    // Build a mesh from the loaded terrain's corner-height grid (solid-colored prototype;
-    // surface painting isn't wired up yet)
-    var grass = Color.FromArgb(79, 129, 14).ToGl();
     Debug.Assert(Terrain != null);
     var hasGrassTexture = Terrain.GrassTexture != null;
-    var terrainMesh = TerrainMeshBuilder.Build(Terrain, hasGrassTexture ? Color.White.ToGl() : grass);
+    var terrainMesh = TerrainMeshBuilder.Build(Terrain, hasGrassTexture ? Color.White.ToGl() : GrassColor);
     Game.IoC.RegisterInstance(terrainMesh, serviceKey: TerrainMeshServiceKey);
-    var ground = new Model(terrainMesh) {
-      Material = hasGrassTexture
-        ? new Textured { AlbedoTexture = Terrain.GrassTexture }
-        : new Flat()
+    groundModel = new Model(terrainMesh) {
+      Material = hasGrassTexture ? new Textured { AlbedoTexture = Terrain.GrassTexture } : new Flat()
     };
-    scene.Models.Add(ground);
+    scene.Models.Add(groundModel);
     logger.Trace("Added terrain mesh");
 
     // Proof-of-concept marker: a unit cube placed off-center in one quadrant of the buildable area, so
@@ -122,8 +123,8 @@ public class World : GDK.Game.World {
     scene.Camera.Frame(MarkerCenter, markerFramingDistance);
     logger.Trace("Framed camera on marker cube");
 
-    // Add the scenario editor and debug windows
-    var editor = new Editor();
+    // Add the scenario editor and park chooser windows.
+    editor = new Editor();
     editor.Exit += () => {
       game.Quit();
       // TODO: Make this cross-platform
@@ -131,8 +132,9 @@ public class World : GDK.Game.World {
     };
     scene.Windows.Add(editor);
 
-    var parkChooser = new ParkChooser();
+    parkChooser = new ParkChooser();
     editor.OpenPark += parkChooser.Show;
+    parkChooser.ParkSelected += ReplaceTerrain;
     scene.Windows.Add(parkChooser);
 
     // Made.Of statically checks Debug's constructor at compile time (rather than reflection-based
@@ -145,6 +147,21 @@ public class World : GDK.Game.World {
       Arg.Of<GDK.Platform.IWindow>(),
       Arg.Of<IInputContext>())));
     scene.Windows.Add(Game.IoC.Resolve<UI.Debug>());
+  }
+
+  /// <summary>Replaces <see cref="Terrain"/> and updates the existing terrain <see cref="Model"/>'s mesh in place with <paramref name="parkPath"/>'s saved corner-height grid.</summary>
+  /// <remarks>
+  /// Does not touch <see cref="Park"/>/paths/water/scenery or camera framing. Reuses
+  /// <see cref="groundModel"/>'s existing <see cref="Model.Material"/> as-is (rather than rebuilding
+  /// it from the newly-loaded <see cref="Terrain"/>, which never has a
+  /// <see cref="OpenRCT3.Simulation.Terrain.GrassTexture"/> of its own) - vertex color is picked to
+  /// match whichever material is already there.
+  /// </remarks>
+  private void ReplaceTerrain(string parkPath) {
+    Terrain = Terrain.LoadFromSave(parkPath);
+    var hasGrassTexture = groundModel!.Material is Textured;
+    var mesh = TerrainMeshBuilder.Build(Terrain, hasGrassTexture ? Color.White.ToGl() : GrassColor);
+    groundModel.Mesh.Replace(mesh.Vertices, mesh.Indices);
   }
 
   protected virtual void Dispose(bool disposing) {

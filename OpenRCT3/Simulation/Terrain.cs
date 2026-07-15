@@ -6,9 +6,11 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Collections.Generic;
 using System.Linq;
+using OpenCobra.Data;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 using OpenRCT3.Platforms;
+using DatParks = OpenCobra.Data.Parks;
 
 namespace OpenRCT3.Simulation;
 
@@ -74,9 +76,7 @@ public class Terrain {
       _corners[i] = new TerrainCorner { Height = initialHeight };
   }
 
-  /// <summary>
-  /// Loads the terrain data and textures.
-  /// </summary>
+  /// <summary>Loads the default flat terrain grid and textures.</summary>
   /// <returns>A loaded <see cref="Terrain"/> instance.</returns>
   public static Terrain Load() {
     var config = AppConfig.Instance;
@@ -115,6 +115,33 @@ public class Terrain {
 
     return terrain;
   }
+
+  /// <summary>Builds a <see cref="Terrain"/> sized and shaped from a saved park's decoded corner-height grid.</summary>
+  internal static Terrain LoadFromSave(string path) {
+    var dat = Dat.Load(path);
+    var grid = DatParks.Terrain.Extract(dat);
+
+    // TODO: Optimize this with new `Terrain.FromPark` static factory method that accepts a pre-populated corner grid
+    var terrain = new Terrain(grid.Width, grid.Height);
+    for (var row = 0; row < grid.Height; row++) {
+      for (var col = 0; col < grid.Width; col++) {
+        var tile = grid.Tiles[(row * grid.Width) + col];
+        terrain.SetCorner(col, row, TerrainCornerSlot.SouthWest, new TerrainCorner(ToHeightStepUnits(tile.SouthWest), tile.SurfaceType));
+        terrain.SetCorner(col, row, TerrainCornerSlot.SouthEast, new TerrainCorner(ToHeightStepUnits(tile.SouthEast), tile.SurfaceType));
+        terrain.SetCorner(col, row, TerrainCornerSlot.NorthWest, new TerrainCorner(ToHeightStepUnits(tile.NorthWest), tile.SurfaceType));
+        terrain.SetCorner(col, row, TerrainCornerSlot.NorthEast, new TerrainCorner(ToHeightStepUnits(tile.NorthEast), tile.SurfaceType));
+      }
+    }
+
+    return terrain;
+  }
+
+  /// <summary>
+  /// Converts a saved corner height in meters to <see cref="HeightStep"/> units, clamped to 0 -
+  /// <see cref="TerrainCorner.Height"/> is unsigned and can't represent a below-zero elevation.
+  /// </summary>
+  private static ushort ToHeightStepUnits(float meters) =>
+    (ushort)Math.Clamp(MathF.Round(meters / HeightStep), 0, ushort.MaxValue);
 
   private static uint ColorDistance(uint c1, uint c2) {
     var r1 = (byte)((c1 >> 16) & 0xFF);

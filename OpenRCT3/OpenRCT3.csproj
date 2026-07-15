@@ -44,6 +44,7 @@
   <ItemGroup>
     <ProjectReference Include="../OpenCobra/GDK/GDK.csproj" />
     <ProjectReference Include="../OpenCobra/OVL/OVL.csproj" />
+    <ProjectReference Include="../OpenCobra/Data/Data.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="HidSharp" Version="2.6.4" />
