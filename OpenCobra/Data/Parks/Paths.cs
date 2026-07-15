@@ -1,7 +1,4 @@
-// Paths
-//
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
+// Decodes at-grade and raised path tiles from a park `Dat`.
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 namespace OpenCobra.Data.Parks;
@@ -12,7 +9,9 @@ namespace OpenCobra.Data.Parks;
 /// struct entry, already fully decoded by <see cref="Dat"/>.
 /// </summary>
 public readonly record struct PathTile(
+  /// <summary>The tile's grid column.</summary>
   byte ColIndex,
+  /// <summary>The tile's grid row.</summary>
   byte RowIndex,
   /// <summary>Always 0 in every sample captured so far - meaning not yet confirmed.</summary>
   byte Direction,
@@ -31,9 +30,13 @@ public readonly record struct PathTile(
 /// support piece rendered under them.
 /// </summary>
 public readonly record struct PathFlyingTile(
+  /// <summary>The tile's grid column.</summary>
   byte ColIndex,
+  /// <summary>The tile's grid row.</summary>
   byte RowIndex,
+  /// <summary>Always 1 in the single sample captured so far - meaning not yet confirmed.</summary>
   byte Direction,
+  /// <summary>Path theme/type index. Always 1 in the single sample captured so far.</summary>
   byte PathType,
   /// <summary>Always -1 in the single sample captured so far - meaning not yet confirmed.</summary>
   int BaseHeight,
@@ -41,8 +44,11 @@ public readonly record struct PathFlyingTile(
   int QuantisedHeight,
   /// <summary>0 (flat) in the single sample captured so far; other values not yet observed.</summary>
   byte SlopeType,
+  /// <summary>Reference to the underlying terrain surface this tile sits on.</summary>
   ulong Surface,
+  /// <summary>Always 255 (a "none" sentinel, unconfirmed) in the single sample captured so far.</summary>
   byte SurfaceType,
+  /// <summary>Always <c>false</c> in the single sample captured so far - meaning not yet confirmed.</summary>
   bool UndergroundFlag,
   /// <summary>Reference to the companion <c>SceneryItem</c> entry for this tile's 3D support piece.</summary>
   ulong SceneryItem

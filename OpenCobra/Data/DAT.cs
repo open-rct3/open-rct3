@@ -1,7 +1,4 @@
-// DAT.cs
-//
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
+// Reads RCT3's non-OVL DAT container format (park saves, track designs, firework files, etc.).
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Numerics;
@@ -89,19 +86,33 @@ internal static class FieldKindExtensions {
 /// <summary>A single decoded field value within a <see cref="StructEntry"/>.</summary>
 public abstract record FieldValue(FieldKind Kind);
 
+/// <summary>A <see cref="FieldKind.Bool"/> field value.</summary>
 public sealed record BoolValue(bool Value) : FieldValue(FieldKind.Bool);
+/// <summary>A <see cref="FieldKind.Int8"/> field value.</summary>
 public sealed record Int8Value(sbyte Value) : FieldValue(FieldKind.Int8);
+/// <summary>A <see cref="FieldKind.Int16"/> field value.</summary>
 public sealed record Int16Value(short Value) : FieldValue(FieldKind.Int16);
+/// <summary>A <see cref="FieldKind.Int32"/> field value.</summary>
 public sealed record Int32Value(int Value) : FieldValue(FieldKind.Int32);
+/// <summary>A <see cref="FieldKind.UInt8"/> field value.</summary>
 public sealed record UInt8Value(byte Value) : FieldValue(FieldKind.UInt8);
+/// <summary>A <see cref="FieldKind.UInt16"/> field value.</summary>
 public sealed record UInt16Value(ushort Value) : FieldValue(FieldKind.UInt16);
+/// <summary>A <see cref="FieldKind.UInt32"/> field value.</summary>
 public sealed record UInt32Value(uint Value) : FieldValue(FieldKind.UInt32);
+/// <summary>A <see cref="FieldKind.Float32"/> field value.</summary>
 public sealed record Float32Value(float Value) : FieldValue(FieldKind.Float32);
+/// <summary>A <see cref="FieldKind.Vector3"/> field value.</summary>
 public sealed record Vector3Value(Vector3 Value) : FieldValue(FieldKind.Vector3);
+/// <summary>A <see cref="FieldKind.Matrix44"/> field value.</summary>
 public sealed record Matrix44Value(Matrix4x4 Value) : FieldValue(FieldKind.Matrix44);
+/// <summary>A <see cref="FieldKind.Orientation"/> field value.</summary>
 public sealed record OrientationValue(Vector3 Value) : FieldValue(FieldKind.Orientation);
+/// <summary>A <see cref="FieldKind.ManagedObjectPtr"/> field value.</summary>
 public sealed record ManagedObjectPtrValue(ulong Value) : FieldValue(FieldKind.ManagedObjectPtr);
+/// <summary>A <see cref="FieldKind.Reference"/> field value.</summary>
 public sealed record ReferenceValue(ulong Value) : FieldValue(FieldKind.Reference);
+/// <summary>A <see cref="FieldKind.String"/> field value.</summary>
 public sealed record StringValue(string Value) : FieldValue(FieldKind.String);
 
 /// <summary>A fixed-size (<see cref="Length"/>) collection of <see cref="StructValue"/> elements.</summary>
@@ -112,7 +123,9 @@ public sealed record ListValue(int Size, int Length, IReadOnlyList<StructValue> 
 
 /// <summary>A nested struct value - either a named field's inline body, or an array/list element.</summary>
 public sealed record StructValue(int Size, IReadOnlyList<StructEntry> Entries) : FieldValue(FieldKind.Struct) {
+  /// <summary>Finds every field named <paramref name="name"/> among <see cref="Entries"/>.</summary>
   public IEnumerable<StructEntry> ByName(string name) => Entries.Where(e => e.Name == name);
+  /// <summary>Finds the first field named <paramref name="name"/> among <see cref="Entries"/>.</summary>
   public StructEntry FirstByName(string name) =>
     Entries.FirstOrDefault(e => e.Name == name) ?? throw new DatException($"No field named '{name}'");
 }
@@ -131,16 +144,26 @@ public sealed record OpaqueValue(FieldKind Kind, int Size, byte[] Data) : FieldV
 
 /// <summary>A named field value within a <see cref="StructValue"/> or top-level <see cref="Entry"/>.</summary>
 public sealed record StructEntry(string Name, FieldValue Value) {
+  /// <summary>The field kind <see cref="Value"/> was decoded as.</summary>
   public FieldKind Kind => Value.Kind;
 
+  /// <summary>Casts <see cref="Value"/> to a <see cref="bool"/>, or throws if it isn't a <see cref="BoolValue"/>.</summary>
   public bool AsBool() => Value is BoolValue v ? v.Value : throw WrongType(FieldKind.Bool);
+  /// <summary>Casts <see cref="Value"/> to a <see cref="byte"/>, or throws if it isn't a <see cref="UInt8Value"/>.</summary>
   public byte AsUInt8() => Value is UInt8Value v ? v.Value : throw WrongType(FieldKind.UInt8);
+  /// <summary>Casts <see cref="Value"/> to an <see cref="int"/>, or throws if it isn't an <see cref="Int32Value"/>.</summary>
   public int AsInt32() => Value is Int32Value v ? v.Value : throw WrongType(FieldKind.Int32);
+  /// <summary>Casts <see cref="Value"/> to a <see cref="StructValue"/>, or throws if it isn't one.</summary>
   public StructValue AsStruct() => Value as StructValue ?? throw WrongType(FieldKind.Struct);
+  /// <summary>Casts <see cref="Value"/> to an <see cref="ArrayValue"/>, or throws if it isn't one.</summary>
   public ArrayValue AsArray() => Value as ArrayValue ?? throw WrongType(FieldKind.Array);
+  /// <summary>Casts <see cref="Value"/> to a <see cref="string"/>, or throws if it isn't a <see cref="StringValue"/>.</summary>
   public string AsString() => Value is StringValue v ? v.Value : throw WrongType(FieldKind.String);
+  /// <summary>Casts <see cref="Value"/> to its <see cref="ManagedObjectPtrValue"/> pointer, or throws if it isn't one.</summary>
   public ulong AsPtr() => Value is ManagedObjectPtrValue v ? v.Value : throw WrongType(FieldKind.ManagedObjectPtr);
+  /// <summary>Casts <see cref="Value"/> to its <see cref="ReferenceValue"/> id, or throws if it isn't one.</summary>
   public ulong AsRef() => Value is ReferenceValue v ? v.Value : throw WrongType(FieldKind.Reference);
+  /// <summary>Casts <see cref="Value"/> to an <see cref="OpaqueValue"/>, or throws if it isn't one.</summary>
   public OpaqueValue AsOpaque() => Value as OpaqueValue ?? throw new DatException($"Field '{Name}' is {Value.Kind}, expected an opaque field");
 
   private DatException WrongType(FieldKind expected) =>
@@ -149,13 +172,16 @@ public sealed record StructEntry(string Name, FieldValue Value) {
 
 /// <summary>A named, decoded record within a loaded <see cref="Dat"/> file.</summary>
 public sealed record Entry(ulong Id, string Name, IReadOnlyList<StructEntry> Values) {
+  /// <summary>Finds every field named <paramref name="name"/> among <see cref="Values"/>.</summary>
   public IEnumerable<StructEntry> ByName(string name) => Values.Where(v => v.Name == name);
+  /// <summary>Finds the first field named <paramref name="name"/> among <see cref="Values"/>.</summary>
   public StructEntry FirstByName(string name) =>
     Values.FirstOrDefault(v => v.Name == name) ?? throw new DatException($"No field named '{name}'");
 }
 
 /// <summary>Definition of one field within a <see cref="StructDefinition"/> or a container field's element type.</summary>
 internal sealed record FieldDefinition(string Name, FieldKind Kind, int Size, IReadOnlyList<FieldDefinition> Fields) {
+  /// <summary>Reads one field definition (name, kind, size, nested field definitions) from the struct table.</summary>
   public static FieldDefinition ReadDefinition(BinaryReader reader) {
     var name = DatReader.ReadPascalString(reader);
     var kind = DatReader.ReadPascalString(reader).ToFieldKind();
@@ -166,6 +192,7 @@ internal sealed record FieldDefinition(string Name, FieldKind Kind, int Size, IR
     return new FieldDefinition(name, kind, size, fields);
   }
 
+  /// <summary>Reads this field's value from an entry, per this definition's <see cref="Kind"/>.</summary>
   public StructEntry ReadEntry(BinaryReader reader) => new(Name, ReadValue(reader));
 
   private FieldValue ReadValue(BinaryReader reader) => Kind switch {
@@ -189,11 +216,11 @@ internal sealed record FieldDefinition(string Name, FieldKind Kind, int Size, IR
     _ => ReadOpaque(reader),
   };
 
-  /// <summary>
-  /// Array/list container bodies carry their own size/length prefix, then <see cref="Length"/>
-  /// elements each shaped like <see cref="Fields"/> - unlike <see cref="ReadStruct"/>, elements
+  /// <summary>Reads an array or list container body: a size/length prefix, then that many elements.</summary>
+  /// <remarks>
+  /// Each element is shaped like <see cref="Fields"/> - unlike <see cref="ReadStruct"/>, elements
   /// have no per-element size prefix of their own.
-  /// </summary>
+  /// </remarks>
   private FieldValue ReadArrayOrList(BinaryReader reader, bool isArray) {
     var size = (int)reader.ReadUInt32();
     var length = (int)reader.ReadUInt32();
@@ -225,6 +252,7 @@ internal sealed record FieldDefinition(string Name, FieldKind Kind, int Size, IR
 
 /// <summary>Definition of one named struct (a DAT "class") in a file's struct table.</summary>
 internal sealed record StructDefinition(string Name, IReadOnlyList<FieldDefinition> Fields) {
+  /// <summary>Reads one struct definition (a DAT "class": name plus field definitions) from the struct table.</summary>
   public static StructDefinition ReadDefinition(BinaryReader reader) {
     var name = DatReader.ReadPascalString(reader);
     var fieldCount = reader.ReadUInt32();
@@ -233,10 +261,12 @@ internal sealed record StructDefinition(string Name, IReadOnlyList<FieldDefiniti
     return new StructDefinition(name, fields);
   }
 
+  /// <summary>Reads one top-level entry's field values, per this struct's <see cref="Fields"/>.</summary>
   public Entry ReadEntry(BinaryReader reader, ulong id) =>
     new(id, Name, Fields.Select(field => field.ReadEntry(reader)).ToList());
 }
 
+/// <summary>Low-level binary readers shared by the DAT struct-table and entry-value decoders.</summary>
 internal static class DatReader {
   /// <summary>Reads a Pascal-style length-prefixed ASCII string: a little-endian <c>u16</c> length, then that many ASCII bytes.</summary>
   public static string ReadPascalString(BinaryReader reader) =>
@@ -258,9 +288,11 @@ internal static class DatReader {
     return encoding.GetString(reader.ReadBytes(length));
   }
 
+  /// <summary>Reads three consecutive <see cref="float"/>s as a <see cref="Vector3"/>.</summary>
   public static Vector3 ReadVector3(BinaryReader reader) =>
     new(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
 
+  /// <summary>Reads sixteen consecutive <see cref="float"/>s as a row-major <see cref="Matrix4x4"/>.</summary>
   public static Matrix4x4 ReadMatrix44(BinaryReader reader) {
     Span<float> m = stackalloc float[16];
     for (var i = 0; i < 16; i++) m[i] = reader.ReadSingle();
@@ -272,6 +304,7 @@ internal static class DatReader {
     );
   }
 
+  /// <summary>Reads a <see cref="uint"/> without advancing the stream position.</summary>
   public static uint PeekUInt32(BinaryReader reader) {
     var value = reader.ReadUInt32();
     reader.BaseStream.Seek(-4, SeekOrigin.Current);
@@ -289,6 +322,7 @@ public sealed class DatException(string message) : Exception(message);
 /// <see cref="OpenCobra.OVL.Ovl"/>. See <c>OpenCobra/Data/README.md</c> for a format reference.
 /// </summary>
 public sealed class Dat {
+  /// <summary>Every top-level entry decoded from the file, in on-disk order.</summary>
   public IReadOnlyList<Entry> Entries { get; }
 
   private Dat(IReadOnlyList<Entry> entries) => Entries = entries;
@@ -300,13 +334,13 @@ public sealed class Dat {
     return Read(reader);
   }
 
-  /// <summary>
+  /// <summary>Reads a DAT file's header, struct table, and entry list from an open stream.</summary>
+  /// <remarks>
   /// An extended header is present whenever the first <c>u32</c> in the file is zero; it's
   /// followed by 8 reserved bytes and a version byte selecting a fixed struct-table offset
   /// (<c>0x1A</c> → 0x40, <c>0x2A</c> → 0x50). Files without this marker have no header at all -
-  /// the struct table starts at byte 0. Both cases are still unverified against a real saved-park
-  /// <c>.dat</c> (see the terrain plan's Gaps and Risks); this ports the reference decoder as-is.
-  /// </summary>
+  /// the struct table starts at byte 0.
+  /// </remarks>
   internal static Dat Read(BinaryReader reader) {
     if (DatReader.PeekUInt32(reader) == 0) {
       reader.BaseStream.Seek(8, SeekOrigin.Current);
@@ -333,9 +367,12 @@ public sealed class Dat {
     return new Dat(entries);
   }
 
+  /// <summary>Finds every top-level entry named <paramref name="name"/>.</summary>
   public IEnumerable<Entry> ByName(string name) => Entries.Where(e => e.Name == name);
+  /// <summary>Finds the first top-level entry named <paramref name="name"/>.</summary>
   public Entry FirstByName(string name) =>
     Entries.FirstOrDefault(e => e.Name == name) ?? throw new DatException($"No entry named '{name}'");
+  /// <summary>Finds the top-level entry with the given <paramref name="id"/>.</summary>
   public Entry ById(ulong id) =>
     Entries.FirstOrDefault(e => e.Id == id) ?? throw new DatException($"No entry with id {id}");
 }

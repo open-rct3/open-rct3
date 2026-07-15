@@ -1,3 +1,6 @@
+// Verifies Paths' at-grade/raised tile extraction against real reverse-engineering fixtures.
+//
+// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Reflection;
 using NUnit.Framework;
 using OpenCobra.Data;

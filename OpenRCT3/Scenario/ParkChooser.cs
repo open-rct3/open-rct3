@@ -1,7 +1,4 @@
-// Park Chooser
-//
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
+// Lists saved-park `.dat` files for the user to pick one to open.
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
@@ -24,7 +21,9 @@ public class ParkChooser : IWindow {
   private const float WindowWidth = 400;
   private const int MaxVisibleRows = 12;
 
+  /// <summary>Whether the chooser window is currently shown.</summary>
   public bool Open { get; private set; }
+  /// <summary>Raised with the chosen file's path when the user opens a park, via double-click or the "Open" button.</summary>
   public event Action<string>? ParkSelected;
 
   private List<string> parkFiles = [];
@@ -37,6 +36,7 @@ public class ParkChooser : IWindow {
     Open = true;
   }
 
+  /// <summary>Draws the chooser window, if <see cref="Open"/>.</summary>
   public void Render() {
     if (!Open) return;
 

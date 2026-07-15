@@ -1,3 +1,6 @@
+// Verifies Dat.Load parses every embedded saved-park fixture without throwing.
+//
+// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Reflection;
 using NUnit.Framework;
 using OpenCobra.Data;
