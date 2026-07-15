@@ -62,6 +62,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GDK\GDK.csproj" />
     <ProjectReference Include="..\OVL\OVL.csproj" />
+    <ProjectReference Include="..\Data\Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -71,5 +72,7 @@
   <ItemGroup>
     <None Remove="Fixtures\OVL\**\*.ovl" />
     <EmbeddedResource Include="Fixtures\OVL\**\*.ovl" />
+    <None Remove="Fixtures\Parks\**\*.dat" />
+    <EmbeddedResource Include="Fixtures\Parks\**\*.dat" />
   </ItemGroup>
 </Project>
