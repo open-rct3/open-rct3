@@ -46,7 +46,7 @@ public class ParkChooser : IWindow {
     var windowPos = viewport.WorkPos + viewport.WorkSize / 2;
     ImGui.SetNextWindowPos(windowPos, ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
     ImGui.SetNextWindowSize(new Vector2(WindowWidth, 0), ImGuiCond.Appearing);
-    ImGui.Begin("Open Park", ref open, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.AlwaysAutoResize);
+    ImGui.Begin("Open Park", ref open, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize);
 
     if (parkFiles.Count == 0) {
       ImGui.TextDisabled("No saved parks found.");
