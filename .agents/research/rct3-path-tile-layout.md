@@ -4,11 +4,11 @@ Reverse-engineered by diffing paired saved-park `.dat` fixtures under
 [`OpenCobra/Tests/Fixtures/Parks/Reverse Engineering/`](../../OpenCobra/Tests/Fixtures/Parks/Reverse%20Engineering)
 (`02-one-tile-added.dat`, `02-two-tiles.dat`, `02-one-raised-tile.dat`, all diffed against
 `baseline.dat`) — same fixture set and method as
-[rct3-terrain-getterrain-layout.md](rct3-terrain-getterrain-layout.md), but path data turned out
+[rct3-terrain-data-layout.md](rct3-terrain-data-layout.md), but path data turned out
 not to need byte-level diffing at all.
 
 **Used by**:
-- [`render-fluctuating-terrain.md`](../plans/features/terrain/render-fluctuating-terrain.md) — the
+- [`render-loaded-parks.md`](../plans/features/terrain/render-loaded-parks.md) — the
   `PathTileList`/`PathNodeArray` half of Gap #1.
 
 ## Where it lives
@@ -49,7 +49,7 @@ grid-adjacency rather than a stored link field).
 ## Raised tiles (`PathFlying`)
 
 A **completely separate representation**, not a variant/flag on `PathTile`. Confirms
-`render-fluctuating-terrain.md`'s existing note that raised paths render as separate 3D piece
+`render-loaded-parks.md`'s existing note that raised paths render as separate 3D piece
 models: `PathFlying` carries `BaseHeight`/`QuantisedHeight`/`SlopeType`, plus a `SceneryItem`
 (`Reference`) pointing at a companion top-level `SceneryItem` entry representing the actual 3D
 support piece placed in the world.

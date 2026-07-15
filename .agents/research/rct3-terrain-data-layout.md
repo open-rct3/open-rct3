@@ -8,7 +8,7 @@ the surrounding struct/entry framing but leaves the `GETerrain` field itself as 
 [`DatOpaqueValue`](../../OpenCobra/Data/DAT.cs) blob — this doc is what fills that blob in.
 
 **Used by**:
-- [`render-fluctuating-terrain.md`](../plans/features/terrain/render-fluctuating-terrain.md) —
+- [`render-loaded-parks.md`](../plans/features/terrain/render-loaded-parks.md) —
   Gap #1 (the `GETerrain`/`PathTileList` byte layout being unknown).
 
 ## Where it lives

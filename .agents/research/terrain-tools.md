@@ -21,7 +21,7 @@ Terrain" tool group. Set the brush size, position the pointer, then drag up or d
 - **Snap terrain tiles in increments for rides and scenery** — **Confirmed (user, in-game
   tooltip + file-format evidence)**: this is the single-tile brush icon's exact in-game tooltip
   text, resolving the "unknown increment" noted below — see
-  [`rct3-terrain-getterrain-layout.md`](rct3-terrain-getterrain-layout.md): using this tool to
+  [`rct3-terrain-data-layout.md`](rct3-terrain-data-layout.md): using this tool to
   raise one corner steps its on-disk `float32` height by exactly `+1.0` (one meter) per click,
   confirming the increment is 1 m, matching the Granularity Notes' ramp-step assumption below.
 - **Freeform Corner-Pulling** — raises or lowers a highlighted grid area
