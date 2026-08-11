@@ -1,4 +1,4 @@
-# TODOs
+# Todo List
 
 ## Community
 
@@ -59,32 +59,38 @@
 
 ### Rides & Track Splines
 
-- [ ] Build the ImGui editor window for track piece authoring + `ImDraw` rail/bake visualization
-      (`OpenRCT3/Rides/TrackSpline/`) — no editor exists yet; organic (hand-authored) pieces have no UI to set
-      control point/tangent overrides
 - [ ] Derive `TrackChaining.ChainPiece`'s newly-chained piece world-space `Bank` from the previous piece's exit
       bank instead of hardcoding `0f` (`OpenRCT3/Rides/TrackSpline/TrackChaining.cs:66`) — banked curves chained
-      in sequence currently lose world-space roll continuity; add a `TrackChainingTests` case covering it
-- [ ] Add supporting geometry for `TrackPieceType.Switch` (alternate exit rail set + active-branch metadata on
-      `TrackPiece`) once a consumer (train scheduling/block signaling) needs it
-      (`OpenRCT3/Rides/TrackSpline/SplineTypes.cs:118`)
-- [ ] Tighten `BakingConfig` tolerance defaults (`ChordHeightToleranceFraction`, `ChordHeightToleranceAbsoluteMinimum`,
-      `BankRateThreshold`) against real piece geometry once authoring content exists to validate against
-- [ ] Densify procedural curve/corkscrew geometry beyond the fixed 4 Catmull-Rom segments
-      (`OpenRCT3/Rides/TrackSpline/ProceduralPieces.cs:GenerateCurve,GenerateCorkscrew`)
+      in sequence currently lose world-space roll continuity; add a `TrackChainingTests` case covering it.
+      Cheap correctness fix; do before anything below builds on top of chained world transforms
 - [ ] Apply `TrackChaining`'s world-space `Position`/`Heading`/`Bank` transform to baked rail samples at
       draw/query time — `BakedSample` positions stay in local/model space today; this is rendering pipeline
-      integration work, not part of the track spline data model itself
-- [ ] Design 3D guest-pathfinding splines for flat-ride ramps/stairs/queues and tracked-ride station platforms
-      — simpler than ride-track splines (no physics, no arc-length parameterization), purely geometric guidance
-      to seating; separate feature from the dual-rail track model
+      integration work, not part of the track spline data model itself. Completes the "render tracked rides"
+      milestone and unblocks visual validation of everything below
+- [ ] Build the ImGui editor window for track piece authoring + `ImDraw` rail/bake visualization
+      (`OpenRCT3/Rides/TrackSpline/`) — no editor exists yet; organic (hand-authored) pieces have no UI to set
+      control point/tangent overrides. Needed to author real content for the tolerance-tuning pass below
+- [ ] Tighten `BakingConfig` tolerance defaults (`ChordHeightToleranceFraction`, `ChordHeightToleranceAbsoluteMinimum`,
+      `BankRateThreshold`) against real piece geometry once authoring content exists to validate against
+      (depends on the editor above to author that content, and the render-pipeline item above to see it in-game)
+- [ ] Densify procedural curve/corkscrew geometry beyond the fixed 4 Catmull-Rom segments
+      (`OpenRCT3/Rides/TrackSpline/ProceduralPieces.cs:GenerateCurve,GenerateCorkscrew`) — independent quality
+      improvement, no blockers
 - [ ] Flag a subrange of the track graph as a station platform or block-braking segment
       (`OpenRCT3/Rides/TrackSpline/SplineTypes.cs`) — a stated goal of the original track-spline plan that was
       never implemented (no station/block concept exists on `TrackGraph`/`TrackGraphNode`/`TrackPiece` today);
-      needed for train scheduling
+      foundational data-model gap needed before train scheduling can exist
+- [ ] Add supporting geometry for `TrackPieceType.Switch` (alternate exit rail set + active-branch metadata on
+      `TrackPiece`) once a consumer (train scheduling/block signaling) needs it
+      (`OpenRCT3/Rides/TrackSpline/SplineTypes.cs:118`) — pairs with block-section flagging above; both are
+      prerequisites for train scheduling, not scheduling itself, so lowest priority of the data-model items
 - [ ] Implement the wheel bone-posing IK solver (two-bone/point-toward) that consumes `WheelIK`'s
       `BogiContactPoint` data (`OpenRCT3/Rides/TrackSpline/WheelIK.cs`) — this plan only produces contact-point
-      queries; the actual skeletal posing is separate animation/skeleton-system work with no plan file yet
+      queries; the actual skeletal posing is separate animation/skeleton-system work with no plan file yet.
+      Consumes an API that's already complete, so it's unblocked but out of this list's own dependency chain
+- [ ] Design 3D guest-pathfinding splines for flat-ride ramps/stairs/queues and tracked-ride station platforms
+      — simpler than ride-track splines (no physics, no arc-length parameterization), purely geometric guidance
+      to seating; separate feature from the dual-rail track model, no dependency on anything above
 
 ## Phase 2: Gameplay
 

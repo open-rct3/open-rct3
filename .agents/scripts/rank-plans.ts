@@ -89,7 +89,7 @@ async function walkFiles(root: string, opts: WalkOptions = {}): Promise<string[]
 // ---------------------------------------------------------------------------
 
 interface Plan {
-  path: string; // absolute, posix-style
+  path: string; // absolute, posix-style; empty if TODO-only
   relPath: string; // relative to repo root, for display
   title: string;
   statusText: string;
@@ -105,6 +105,8 @@ interface Plan {
   roadmapItemMatch?: string; // matched roadmap wiki item text, for display
   roadmapItemPhase?: string;
   score: number;
+  todoOnly?: boolean; // true if this item comes from TODO.md only, no plan file
+  todoSection?: string; // section name in TODO.md (e.g., "Rides & Track Splines")
 }
 
 const CLOSED_KEYWORDS = ["implemented", "complete", "done", "superseded"];
@@ -180,14 +182,135 @@ function extractLinkTargets(content: string): string[] {
   return targets;
 }
 
-function computeScore(plan: Omit<Plan, "score">): number {
-  return (
+interface TodoItem {
+  text: string;
+  sectionName: string; // e.g., "Rides & Track Splines"
+  position: number; // 0-based index within section
+  sectionSize: number;
+  blockingCount: number; // number of other todos that list this as a dependency
+}
+
+/** Parse TODO.md and extract unchecked `[ ]` items with section context, tracking dependencies. */
+async function parseTodoItems(repoRoot: string): Promise<TodoItem[]> {
+  const todoPath = join(repoRoot, "TODO.md");
+  let content: string;
+  try {
+    content = await Deno.readTextFile(todoPath);
+  } catch {
+    return [];
+  }
+
+  const items: TodoItem[] = [];
+  const sections = content.split(/^### /m);
+
+  for (const sectionText of sections.slice(1)) {
+    const lines = sectionText.split("\n");
+    const sectionName = lines[0]?.trim() || "Unspecified";
+    const sectionItems: TodoItem[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^- \[ \]/.test(line)) {
+        // Unchecked item: combine this line and continuation lines
+        let text = line.replace(/^- \[ \]\s*/, "").trim();
+        let j = i + 1;
+        while (j < lines.length && /^\s{4,}/.test(lines[j])) {
+          text += " " + lines[j].trim();
+          j++;
+        }
+        sectionItems.push({
+          text,
+          sectionName,
+          position: sectionItems.length,
+          sectionSize: 0,
+          blockingCount: 0
+        });
+      }
+    }
+
+    // Count blocking dependencies within this section
+    for (let i = 0; i < sectionItems.length; i++) {
+      if (/depend|block|needed before|prerequisite|unblock/i.test(sectionItems[i].text)) {
+        for (let j = 0; j < sectionItems.length; j++) {
+          if (i !== j) {
+            const jFirstLine = sectionItems[j].text.split("—")[0].toLowerCase();
+            if (sectionItems[i].text.toLowerCase().includes(jFirstLine)) {
+              sectionItems[j].blockingCount++;
+            }
+          }
+        }
+      }
+    }
+
+    // Set sectionSize on all items
+    for (const item of sectionItems) {
+      item.sectionSize = sectionItems.length;
+    }
+
+    items.push(...sectionItems);
+  }
+
+  return items;
+}
+
+/** Match a plan title/path against a TODO item's text to see if they refer to the same work. */
+function matchesTodoItem(planTitle: string, planPath: string, todoItem: TodoItem): boolean {
+  const planLower = `${planTitle} ${planPath}`.toLowerCase();
+  const todoLower = todoItem.text.toLowerCase();
+
+  // Extract key terms from plan (plan filenames, code paths, key nouns)
+  const planTokens = (planTitle.match(/[\w-]+/g) ?? []).map(t => t.toLowerCase()).filter(t => t.length > 3);
+
+  // Check if multiple plan tokens appear in the todo item
+  const matchingTokens = planTokens.filter(token => todoLower.includes(token)).length;
+  return matchingTokens >= Math.min(2, planTokens.length);
+}
+
+function computeTodoScore(planTitle: string, planPath: string, todoItems: TodoItem[]): number {
+  for (const item of todoItems) {
+    if (matchesTodoItem(planTitle, planPath, item)) {
+      // Score = position priority (earlier items higher) + dependency weight (items blocking many others)
+      const positionScore = Math.max(0, (item.sectionSize - item.position) / Math.max(1, item.sectionSize));
+      const dependencyBonus = item.blockingCount * 0.5;
+      return (positionScore + dependencyBonus) * 10; // Scale to be comparable to other scores
+    }
+  }
+  return 0;
+}
+
+/** Create a synthetic Plan object for a TODO.md item that has no corresponding plan file. */
+function createTodoOnlyPlan(todoItem: TodoItem, repoRoot: string): Plan {
+  const todoScore = (Math.max(0, (todoItem.sectionSize - todoItem.position) / Math.max(1, todoItem.sectionSize)) + todoItem.blockingCount * 0.5) * 10;
+  return {
+    path: "",
+    relPath: `TODO.md:${todoItem.sectionName}#${todoItem.position}`,
+    title: todoItem.text.split("—")[0].trim().replace(/^- \[ \] /, ""),
+    statusText: "",
+    closed: false,
+    roadmapWeight: 0,
+    roadmapLabel: "Unspecified",
+    resolvedBullets: 0,
+    inProgress: false,
+    inboundLinks: 0,
+    inboundFrom: [],
+    roadmapItemWeight: 0,
+    score: todoScore * 0.7, // 70% weight to TODO, 30% to other signals (which are all 0 here)
+    todoOnly: true,
+    todoSection: todoItem.sectionName,
+  };
+}
+
+function computeScore(plan: Omit<Plan, "score">, todoScore: number): number {
+  const otherScore = (
     plan.inboundLinks * 10 +
     plan.roadmapWeight * 4 +
     plan.roadmapItemWeight +
     plan.resolvedBullets * 1 +
     (plan.inProgress ? 5 : 0)
   );
+
+  // 70% weight to TODO.md priority, 30% to existing signals
+  return todoScore * 0.7 + otherScore * 0.3;
 }
 
 // ---------------------------------------------------------------------------
@@ -380,6 +503,13 @@ async function main() {
     console.error(`warn: could not fetch roadmap wiki (${(err as Error).message}); scoring without roadmap-item-match term`);
   }
 
+  let todoItems: TodoItem[] = [];
+  try {
+    todoItems = await parseTodoItems(repoRoot);
+  } catch (err) {
+    console.error(`warn: could not parse TODO.md (${(err as Error).message}); scoring without todo-priority term`);
+  }
+
   const planPathSet = new Set(planFiles.map(normalizeForCompare));
   const inboundByPlan = new Map<string, Set<string>>();
   for (const p of planFiles) inboundByPlan.set(normalizeForCompare(p), new Set());
@@ -402,6 +532,9 @@ async function main() {
   }
 
   const plans: Plan[] = [];
+  const matchedTodoItems = new Set<TodoItem>();
+
+  // Process plan files (existing logic)
   for (const filePath of planFiles) {
     let content: string;
     try {
@@ -438,7 +571,23 @@ async function main() {
       roadmapItemMatch: roadmapMatch?.itemText,
       roadmapItemPhase: roadmapMatch?.phaseName,
     };
-    plans.push({ ...base, score: computeScore(base) });
+    const todoScore = computeTodoScore(title, relPath, todoItems);
+
+    // Track which TODO items matched this plan file
+    for (const todoItem of todoItems) {
+      if (matchesTodoItem(title, relPath, todoItem)) {
+        matchedTodoItems.add(todoItem);
+      }
+    }
+
+    plans.push({ ...base, score: computeScore(base, todoScore) });
+  }
+
+  // Add synthetic Plan objects for TODO.md items that don't have a plan file
+  for (const todoItem of todoItems) {
+    if (!matchedTodoItems.has(todoItem)) {
+      plans.push(createTodoOnlyPlan(todoItem, repoRoot));
+    }
   }
 
   const open = plans.filter((p) => !p.closed).sort((a, b) => b.score - a.score);
@@ -453,21 +602,27 @@ async function main() {
 
   console.log(`\nOpen plans ranked by impact (${open.length} open, ${closed.length} closed/excluded)`);
   console.log(
-    `Formula: score = inboundLinks*10 + roadmapWeight*4 + roadmapItemWeight + resolvedBullets*1 + (inProgress ? 5 : 0)\n`,
+    `Formula: score = todoScore*0.7 + otherScore*0.3\n` +
+    `  where todoScore = (position_in_todo + dependency_bonus) * 10\n` +
+    `  and otherScore = inboundLinks*10 + roadmapWeight*4 + roadmapItemWeight + resolvedBullets*1 + (inProgress ? 5 : 0)\n`,
   );
   if (roadmapItems.length === 0) {
-    console.log(`(roadmap wiki unavailable this run — roadmapItemWeight is 0 for all plans)\n`);
+    console.log(`(roadmap wiki unavailable — roadmapItemWeight is 0 for all plans)`);
+  }
+  if (todoItems.length === 0) {
+    console.log(`(TODO.md unavailable — todoScore is 0 for all plans)\n`);
   }
 
-  const headers = ["#", "Score", "Roadmap", "RoadmapItem", "In", "Res.", "Prog", "Plan"];
+  const headers = ["#", "Score", "Roadmap", "RoadmapItem", "In", "Res.", "Prog", "Type", "Plan"];
   const rows = shown.map((p, i) => [
     String(i + 1),
-    String(p.score),
+    p.score.toFixed(2),
     p.roadmapLabel,
     p.roadmapItemWeight > 0 ? p.roadmapItemWeight.toFixed(1) : "-",
     String(p.inboundLinks),
     String(p.resolvedBullets),
     p.inProgress ? "yes" : "-",
+    p.todoOnly ? "TODO" : "Plan",
     `${p.title}  (${p.relPath})`,
   ]);
 
