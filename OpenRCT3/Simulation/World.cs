@@ -65,6 +65,11 @@ public class World : GDK.Game.World, IParkLoader {
   public override void Load() => Load(parkPath: null);
 
   /// <summary>Loads a park from the given path (or the default park if path is null) and builds the scene.</summary>
+  /// <remarks>
+  /// Creates and registers <see cref="ParkLoadSystem"/> for handling subsequent park load requests safely via
+  /// the systems pipeline (Early phase), fixing the UI-thread reentrancy bug that motivated the
+  /// <see cref="ReplaceTerrain"/> workaround (which only swapped terrain, leaving Park/paths/water stale).
+  /// </remarks>
   /// <param name="parkPath">Path to the park save file, or null to load the default park.</param>
   public void Load(string? parkPath) {
     var measurement = Progress.MeasureTasks([
@@ -83,9 +88,16 @@ public class World : GDK.Game.World, IParkLoader {
 
   /// <summary>Builds the terrain mesh, rotation-marker cube, camera framing, and windows for <see cref="Game.Scene"/>.</summary>
   /// <remarks>
-  /// Called once, from <see cref="Load"/>. Opening a different park afterward is handled by
-  /// <paramref name="parkLoadSystem"/>, which requests a full park load through the systems pipeline
-  /// instead of blocking the render pass.
+  /// <para>
+  /// Called once, from <see cref="Load"/>. Wires <see cref="ParkChooser.ParkSelected"/> to
+  /// <see cref="ParkLoadSystem.RequestLoad"/> to defer subsequent park loads to the Early phase,
+  /// fixing the UI-thread reentrancy bug (the old workaround <see cref="ReplaceTerrain"/> only
+  /// swapped terrain mesh, leaving Park/paths/water/scenery/camera framing stale).
+  /// </para>
+  /// <para>
+  /// Opening a different park afterward is handled by <paramref name="parkLoadSystem"/>, which
+  /// requests a full park load through the systems pipeline instead of blocking the render pass.
+  /// </para>
   /// </remarks>
   private void BuildScene(ParkLoadSystem parkLoadSystem) {
     var game = Game.Instance!;
@@ -189,12 +201,34 @@ public class World : GDK.Game.World, IParkLoader {
 /// <summary>
 /// System that manages asynchronous park loading requests, ensuring they execute before rendering each tick.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Runs in Early phase (before Render), dequeuing pending park load requests and calling
+/// <see cref="IParkLoader.Load(string?)"/> atomically via <see cref="SafeWeakReference{T}.TryGetTarget"/>.
+/// This fixes the UI-thread reentrancy bug where <see cref="ParkChooser.ParkSelected"/> calling
+/// <see cref="World.Load(string?)"/> directly would block the render loop.
+/// </para>
+/// <para>
+/// Load requests are stored in <see cref="pendingParkPath"/> using <see cref="Interlocked.Exchange"/>
+/// for thread-safe last-write-wins semantics: if two threads call <see cref="RequestLoad"/> before the
+/// next update, only the final requested path loads.
+/// </para>
+/// </remarks>
 internal class ParkLoadSystem : GDK.Game.System {
   private GDK.Threading.SafeWeakReference<IParkLoader>? world;
+  /// <remarks>
+  /// Stores the next park path to load. Uses <see cref="Interlocked.Exchange"/> for thread-safe
+  /// updates and a sentinel value ("_NO_LOAD_") to distinguish "no pending load" from "load default park" (null).
+  /// </remarks>
   private string? pendingParkPath = "_NO_LOAD_";
 
   internal ParkLoadSystem() : base(GDK.Game.PipelinePhase.Early) { }
 
+  /// <remarks>
+  /// Wraps the world in a <see cref="SafeWeakReference{T}"/> to enforce atomic <see cref="SafeWeakReference{T}.TryGetTarget"/>
+  /// dereference in <see cref="Update"/>, preventing the race condition where <see cref="System.IsRunning"/> is checked
+  /// separately and then the world is dereferenced later (following production game engine patterns).
+  /// </remarks>
   public override void Attach(WeakReference<GDK.Game.IWorld> worldRef) {
     if (worldRef.TryGetTarget(out var w) && w is IParkLoader parkLoader) {
       world = new GDK.Threading.SafeWeakReference<IParkLoader>(parkLoader);
@@ -212,6 +246,12 @@ internal class ParkLoadSystem : GDK.Game.System {
     Interlocked.Exchange(ref pendingParkPath, parkPath);
   }
 
+  /// <remarks>
+  /// Atomically dequeues the pending park path via <see cref="Interlocked.Exchange"/>, then calls
+  /// <see cref="IParkLoader.Load(string?)"/> if a load was pending and the world is still alive.
+  /// The sentinel value "_NO_LOAD_" distinguishes "no pending load" from "load default park" (null path).
+  /// Multiple <see cref="RequestLoad"/> calls before this update run only the final requested path (last-write-wins).
+  /// </remarks>
   public override void Update(TimeSpan delta) {
     base.Update(delta);
 

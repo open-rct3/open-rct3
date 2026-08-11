@@ -28,6 +28,11 @@
 - [ ] Update framebuffer on window resize/screen changes (`OpenRCT3/Platforms/macOS/GameViewController.cs:35`)
 - [ ] Tear down graphics and other unmanaged resources (`OpenRCT3/Platforms/macOS/AppDelegate.cs:24`)
 
+### ECS & World Systems
+
+- [ ] Implement progress bar UI for park loading (`OpenRCT3/Game.cs:122`) — Create a loading-screen UI that displays `Progress` while `ParkLoadSystem` runs asynchronously. May require making `World.Load` truly async or moving it off the render loop thread.
+- [ ] Migrate additional systems to the pipeline (input, camera, water invalidation, etc.) — Identify and implement other systems that could move into the `ISystem`/`Scheduler` pipeline once the pattern has more real-world examples to follow.
+
 ## Phase 2: Gameplay
 
 See the [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap#phase-2-gameplay) for future phases.

@@ -5,28 +5,25 @@ argument-hint: "<plan-file> | <pr-url>"
 todo: |
   ## Sorting Future Work
 
-  - design ideas in future work go in the ./design docs,
-  - new architecture decisions and notes go in ./.agents/Architecture.md, and
-  - other code-related changes like refactors and other enhancements mentioning the game's source files goes in ./TODO.md
+  - new architecture decisions and notes go in ./.agents/summaries/Architecture.md
 ---
 
 # Finish Plan
 
-When a prototype plan reaches completion, archive its findings into the codebase
-and design docs, update the Roadmap, and delete the plan file (if it still
+When a prototype plan reaches completion, archive its findings into the codebase, update the todo list, and delete the plan file (if it still
 exists). This preserves implementation notes, out-of-scope decisions, and other
 context that would otherwise be siloed in the now-obsolete plan document.
 
 ## When to Apply This Skill
 
 - **Plan file exists**: The traditional case. Read the plan, extract findings,
-  update Roadmap/docs, delete the plan file.
+  update todo list/docs, delete the plan file.
 - **Plan already archived, PR is open**: The plan file was already deleted
   during development, but a PR now contains all the implementation. Use the PR
   as the source of truth: read the PR description (overview, what was
   implemented, known limitations) and review commits to understand what files
-  changed and why. Apply steps 2–4 (Roadmap updates, @remarks documentation,
-  design doc extraction) without step 6 (no plan file to delete).
+  changed and why. Apply steps 2–4 (todo list updates, <remarks> documentation,
+  todo list extraction) without step 6 (no plan file to delete).
 
 ## Procedure
 
@@ -57,33 +54,19 @@ For either source, identify and organize:
 - **Dependencies and blockers**: What's waiting on what, which systems are
   needed for next steps
 
-### 2. Update `.agents/Roadmap.md`
+### 2. Integrate implementation notes into source files
 
-Find the design doc this plan covers in the Designs table. Update its Status:
-
-- **Format**: Include phases completed (e.g. "Phases 0–1 done") and phases
-  pending, plus any key findings (e.g. "calendar math proven, clock loop
-  working, visual feedback temporary until Use.GPU lands").
-- **Clarity over brevity**: A one-line status might say "Phase 0–1 complete
-  (calendar + clock infrastructure), Phase 2+ blocked on real sun/sky pipeline"
-  rather than just "Phases 0–1 done". Help the next reader understand what's
-  _working_ vs. what's _waiting_.
-- **Link future work**: If this plan identified Future Work dependencies (e.g.
-  "blocked on Use.GPU"), add them to Roadmap's Tier 2/3 if not already there.
-
-### 3. Integrate implementation notes into source files
-
-**CRITICAL: Extract @remarks from EVERY file the plan touched, not just a few.**
+**CRITICAL: Extract <remarks> from EVERY file the plan touched, not just a few.**
 Enumerate all files (test files, implementation files, integration files) and
 add remarks to at least the core ones. A plan touching 15 files needs remarks in
 at least 8–10 of them (skip trivial test stubs, but do not skip integration
 files like store.ts or scene.ts).
 
-For each file modified by this plan, add `@remarks` comments capturing
+For each file modified by this plan, add `<remarks>` comments capturing
 non-obvious behavior, invariants, or gotchas. These remarks become the permanent
 record once the plan document is deleted.
 
-**Where to place `@remarks`:**
+**Where to place `<remarks>`:**
 
 - At the top of a file (below imports, above the first function/class) if the
   note applies broadly
@@ -95,16 +78,16 @@ record once the plan document is deleted.
 
 - [ ] Scanned plan file for ALL files it touched (grep for filenames, check
       tasks for file lists)
-- [ ] Added @remarks to core implementation files (data structures, algorithms,
+- [ ] Added <remarks> to core implementation files (data structures, algorithms,
       GPU code)
-- [ ] Added @remarks to integration files (store.ts, scene.ts, render pipeline
+- [ ] Added <remarks> to integration files (store.ts, scene.ts, render pipeline
       entry points)
-- [ ] Added @remarks to files with cross-file invariants or floating-origin/GPU
+- [ ] Added <remarks> to files with cross-file invariants or floating-origin/GPU
       precision concerns
 - [ ] Verified no file has a "TODO" or "FIXME" that wasn't captured in a remark
-      or Roadmap note
+      or todo list note
 
-**What to write in `@remarks`:**
+**What to write in `<remarks>`:**
 
 - The actual _fact_ or _decision_, self-contained and not referencing the plan
   file (which will be deleted). No "See the plan for details" — the remark must
@@ -112,16 +95,19 @@ record once the plan document is deleted.
 - Not the history (no "this used to be", "the original approach", "we tried X
   but it failed"; see AGENTS.md's Documentation rules)
 - Example:
-  `@remarks Calendar.dayPhase is derived from ticks via cosine curve to
-  keep brightness smooth at boundaries, not via linear ramp`
+  `<remarks>
+  <see cref="Calendar.DayPhase"/> is derived from ticks via cosine curve to
+  keep brightness smooth at boundaries, not via linear ramp.
+  </remarks>`
   (states the design) rather than "we got visual artifacts with linear so
   switched to cosine" (states the failure)
 - Include constraints that would surprise a reader, e.g.
-  `@remarks scrub() must
-  clamp phase to [0, 1-1e-6] to avoid rounding into the next day from user
-  scrubber interaction`
+  `<remarks>
+  <see cref="Scrub"/> must clamp phase to <c>[0, 1-1e-6]</c> to avoid rounding into
+  the next day from user scrubber interaction.
+  </remarks>`
 
-**Follow AGENTS.md's Documentation rules:**
+**Follow Documentation rules:**
 
 - No changelog/history narratives
 - No commentary on past bugs or workarounds unless the workaround is _still in
@@ -131,41 +117,20 @@ record once the plan document is deleted.
 - **Most importantly**: Do not reference the plan file in remarks — remarks are
   meant to survive the plan's deletion and stand as permanent documentation
 
-### 4. Extract out-of-scope work into design docs
+### 3. Extract out-of-scope work into `TODO.md`
 
 Find the plan's Future Work / Out-of-Scope section. For each item:
 
-- **Check if it's in the design doc already**: Search
-  `design/<docname>/index.html` for mentions. If the design doc already covers
+- **Check if it's in the todo list already**: Search
+  `TODO.md` for mentions. If the todo list already covers
   it, no action needed.
-- **If not already in the design doc**: Add a section or subsection to the
-  design doc capturing the out-of-scope work and its dependencies. Example: if
-  the plan deferred "real sun/sky lighting blocked on Use.GPU + art-lighting",
-  ensure `design/time-weather/index.html` links to both those as open
-  dependencies.
-- **Link back**: If the design doc didn't mention this specific blockers or
-  constraints before, add a note so future work knows what it depends on. The
-  design doc is the long-term home for this context, not the plan file.
+- **If not already in the todo list**: Add a section or subsection to the
+  todo list capturing the out-of-scope work and its dependencies. Example: if
+  the plan deferred "real sun/sky lighting blocked on lighting model",
+  ensure `TODO.md` includes mention of that.
+- **Link back**: `TODO.md` is the long-term home for this context, not the plan file.
 
-### 5. Update plan file status (optional, before deletion)
-
-Before deleting, you _may_ update the plan file's Status section to note the
-completion date and Roadmap update, as a transitional marker. This is optional
-because the plan is about to be deleted anyway — only do it if you want a final
-commit message that shows the plan's completion state before the delete.
-
-Example status update:
-
-```
-## Status
-
-Phase 0 and Phase 1 complete and merged. Verified via integration tests and
-manual browser testing. Implementation notes integrated into source files.
-Out-of-scope work documented in design docs and Roadmap tier rankings.
-Ready for archival. Completed 2026-07-26.
-```
-
-### 6. Delete the plan file (if it still exists)
+### 4. Delete the plan file (if it still exists)
 
 **If the plan file exists:** Delete it:
 
@@ -173,21 +138,21 @@ Ready for archival. Completed 2026-07-26.
 rm .agents/plans/<plan-file>
 ```
 
-Then commit the changes (Roadmap updates, source code remarks, design doc
+Then commit the changes (todo list updates, source code remarks, todo list
 changes, and the plan deletion) in a single commit with a clear message.
 Example:
 
 ```
 Archive time-weather prototype plan
 
-- Update Roadmap: time-weather Phase 0–1 complete
+- Update todo list: time-weather Phase 0–1 complete
 - Integrate calendar and clock implementation notes into source files
-- Extract Future Work dependencies into design docs
+- Extract Future Work dependencies into todo list
 - Delete .agents/plans/time-weather.md
 ```
 
-**If the plan file is already archived:** Commit just the Roadmap updates,
-source code remarks, and design doc changes. Example:
+**If the plan file is already archived:** Commit just the todo list updates,
+source code remarks, and todo list changes. Example:
 
 ```
 Integrate terrain prototype documentation into source code
@@ -195,8 +160,6 @@ Integrate terrain prototype documentation into source code
 - 💅 Add @remarks to core terrain files (mesh, culling, grading)
 - 💅 Add @remarks to integration files (toGpu, EaseScheduler)
 - Improve slope visualization logic for edge cases
-
-Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 ## Anti-patterns (things that wasted time before)
@@ -213,20 +176,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>
   1-1e-6]?" and you can't answer because the reasoning was in the plan you
   deleted.
 - **Over-commenting**: Adding multi-paragraph remarks for every function the
-  plan touched. A single `@remarks` per file pointing to the key invariant is
+  plan touched. A single `<remarks>` per file pointing to the key invariant is
   enough; don't duplicate the plan's entire narrative into inline comments.
-- **Forgetting design doc links**: Moving Future Work into Roadmap tier rankings
-  but forgetting to update the design doc itself. Future readers look in the
-  design doc first, not the Roadmap, for what's missing.
-- **Leaving stale Roadmap entries**: Updating the Status for the plan's own doc
+- **Leaving stale `TODO.md` entries**: Updating the Status for the plan's own doc
   but forgetting to update the Tier rankings if Future Work shifted or
-  dependencies changed. Keep the Roadmap internally consistent.
-- **Using the wrong browser for PR reading**: When reading a PR URL, use the
-  Browser pane tools (mcp__Claude_Browser___) not the Chrome extension tools
-  (mcp__claude-in-chrome___). The Browser pane is the isolated preview
-  environment for this session; Chrome tools reach your real browser. When you
-  have a PR URL, call `preview_start` or use the Browser pane's `read_page` /
-  `get_page_text` tools.
+  dependencies changed. Keep the todo list internally consistent.
 - **Skipping the PR description**: When a plan is archived, the PR comment (the
   initial description at the top of the PR, not individual commit messages) is
   the source of truth for "what was implemented" and "what was deferred". Read
