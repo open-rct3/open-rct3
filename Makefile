@@ -151,10 +151,13 @@ test: $(TESTS_DLL) $(OPENRCT3_TESTS_DLL)
 
 .PHONY: cover
 cover: $(TESTS_DLL)
-	dotnet test $(TESTS_PROJ) --no-build \
-	  /p:SolutionDir=$(CURDIR) \
-	  --collect:"XPlat Code Coverage;Format=lcov" \
-	  --results-directory "$(CURDIR)/coverage"
+	dotnet test $(TESTS_PROJ) --no-build --configuration Debug \
+	  --collect:"XPlat Code Coverage;Format=cobertura;CoverageFileName=coverage.cobertura.xml" \
+	  --results-directory coverage \
+	  --logger "console;verbosity=minimal"
+ifeq ($(CI),)
+	reportgenerator -reports:coverage/**/coverage.cobertura.xml -targetdir:coverage/report -reporttypes:Html
+endif
 
 .PHONY: integration
 $(TEST_BENCH_DLL): $(PLUGINS_OUT) test-plugins $(TEST_BENCH_PROJ) $(TESTS_SRC)
