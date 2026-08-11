@@ -67,6 +67,12 @@ public enum RailSide {
 /// A track piece: two independent rail splines, transform, and bake state.
 /// Placement in the world is via affine transform; all geometry is authored in local piece space.
 /// </summary>
+/// <remarks>
+/// <see cref="Position"/>/<see cref="Heading"/>/<see cref="Bank"/> are set by <see cref="TrackChaining"/> when
+/// the piece is added to a graph; <see cref="RailSpline.ControlPoints"/> and <see cref="RailSpline.BakedSamples"/>
+/// on <see cref="LeftRail"/>/<see cref="RightRail"/> stay in local/model space regardless and are never
+/// transformed by it — applying this piece's world transform to baked samples is the render pipeline's job.
+/// </remarks>
 public class TrackPiece {
   /// <summary>Unique identifier within the track graph.</summary>
   public int PieceId { get; set; }

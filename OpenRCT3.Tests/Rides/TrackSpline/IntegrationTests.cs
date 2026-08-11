@@ -11,6 +11,12 @@ using OpenRCT3.Rides.TrackSpline;
 
 namespace OpenRCT3.Tests.Rides.TrackSpline;
 
+/// <remarks>
+/// Chained pieces here use <c>validateContinuity: false</c> because independently-parameterized procedural
+/// pieces (e.g. a straight followed by a curve with an unrelated radius/angle) don't produce matching
+/// entry/exit tangents by construction — continuity validation is exercised separately, not implied by
+/// building a track that "looks" continuous.
+/// </remarks>
 [TestFixture]
 public class IntegrationTests {
   [Test]

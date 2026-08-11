@@ -10,137 +10,60 @@ todo: |
 
 # Finish Plan
 
-When a prototype plan reaches completion, archive its findings into the codebase, update the todo list, and delete the plan file (if it still
-exists). This preserves implementation notes, out-of-scope decisions, and other
-context that would otherwise be siloed in the now-obsolete plan document.
+Archive a completed plan's findings into the codebase, update `TODO.md`, and delete the plan file. This
+preserves implementation notes, deferred work, and design rationale that would otherwise be lost when the
+now-obsolete plan document is deleted.
 
-## When to Apply This Skill
+## When to Apply
 
-- **Plan file exists**: The traditional case. Read the plan, extract findings,
-  update todo list/docs, delete the plan file.
-- **Plan already archived, PR is open**: The plan file was already deleted
-  during development, but a PR now contains all the implementation. Use the PR
-  as the source of truth: read the PR description (overview, what was
-  implemented, known limitations) and review commits to understand what files
-  changed and why. Apply steps 2–4 (todo list updates, <remarks> documentation,
-  todo list extraction) without step 6 (no plan file to delete).
+- **Plan file exists**: read it, extract findings, update `TODO.md`/source, delete the file.
+- **Plan already archived, PR open**: no file to delete. Use the PR description (top comment, not individual
+  commits) as source of truth — overview, decisions, known limitations. Run steps 2, 3, and 5 only.
 
 ## Procedure
 
-### 1. Parse the plan file or PR
+### 1. Parse the plan (or PR)
 
-**If the plan file exists:** Read it thoroughly and identify the sections below.
+Read the whole plan (or PR description + `git diff main...<branch>` to enumerate touched files) and organize:
 
-**If the plan file is archived but a PR exists:** Read the PR description (the
-comment at the top of the PR thread, not individual commits). It should include:
+- **Implemented**: phase structure, scope, files touched
+- **Deferred**: Out-of-scope items, Future Work section
+- **Decisions**: trade-offs and rationale that shaped the work
+- **Gotchas**: edge cases, cross-file invariants, known limitations that aren't bugs
+- **Testing**: which test files cover which behaviors
+- **Dependencies**: what's blocked on what
 
-- Overview of what was implemented
-- Architecture decisions and rationale
-- Known limitations
-- Commit history and the files that changed
+### 2. Integrate implementation notes as `<remarks>`
 
-You can also use `git log <branch>...main` or review the PR diff
-(`git diff main...<branch>`) to enumerate all touched files.
+**Extract `<remarks>` from every file the plan touched, not just the "main" one** — a 15-file plan needs
+remarks in at least 8–10 (core implementation + integration files like `store.ts`/`scene.ts`; skip trivial test
+stubs). Place remarks at file top for broad notes, on the specific member for narrow ones.
 
-For either source, identify and organize:
+What to write: the current fact/invariant, self-contained, no reference to the plan file (it's being deleted).
+No history ("this used to be", "we tried X but it failed") — state the design, not the failure it replaced.
+Example: `<see cref="Scrub"/> must clamp phase to [0, 1-1e-6] to avoid rounding into the next day.` Prefer
+extending an existing comment over adding a redundant one.
 
-- **What was implemented**: Phase structure, scope, files touched
-- **What was deferred**: Out-of-scope items and Future Work section
-- **Key decisions**: Trade-offs, design rationale, constraints that shaped the
-  work
-- **Implementation notes**: Gotchas, edge cases, cross-file interactions, known
-  limitations that aren't bugs but will matter to future work
-- **Testing approach**: Which test files validate which behaviors
-- **Dependencies and blockers**: What's waiting on what, which systems are
-  needed for next steps
+Checklist:
 
-### 2. Integrate implementation notes into source files
+- [ ] Enumerated every file the plan touched (grep filenames, check task lists)
+- [ ] Remarks on core implementation files and on integration entry points
+- [ ] Remarks on files with cross-file invariants (floating-origin, GPU precision, etc.)
+- [ ] No file still has a TODO/FIXME that isn't captured in a remark or `TODO.md`
 
-**CRITICAL: Extract <remarks> from EVERY file the plan touched, not just a few.**
-Enumerate all files (test files, implementation files, integration files) and
-add remarks to at least the core ones. A plan touching 15 files needs remarks in
-at least 8–10 of them (skip trivial test stubs, but do not skip integration
-files like store.ts or scene.ts).
+### 3. Extract deferred work into `TODO.md`
 
-For each file modified by this plan, add `<remarks>` comments capturing
-non-obvious behavior, invariants, or gotchas. These remarks become the permanent
-record once the plan document is deleted.
+For each Future Work / Out-of-Scope item: search `TODO.md` first — if already covered, skip it; otherwise add
+a section/subsection with the work and its dependencies. `TODO.md` is the long-term home for this context, not
+the plan file.
 
-**Where to place `<remarks>`:**
-
-- At the top of a file (below imports, above the first function/class) if the
-  note applies broadly
-- On the specific function/variable where the note matters most
-- In a comment block scoped to a particular section if it's a cross-function
-  invariant
-
-**Checklist before moving to step 4:**
-
-- [ ] Scanned plan file for ALL files it touched (grep for filenames, check
-      tasks for file lists)
-- [ ] Added <remarks> to core implementation files (data structures, algorithms,
-      GPU code)
-- [ ] Added <remarks> to integration files (store.ts, scene.ts, render pipeline
-      entry points)
-- [ ] Added <remarks> to files with cross-file invariants or floating-origin/GPU
-      precision concerns
-- [ ] Verified no file has a "TODO" or "FIXME" that wasn't captured in a remark
-      or todo list note
-
-**What to write in `<remarks>`:**
-
-- The actual _fact_ or _decision_, self-contained and not referencing the plan
-  file (which will be deleted). No "See the plan for details" — the remark must
-  stand alone.
-- Not the history (no "this used to be", "the original approach", "we tried X
-  but it failed"; see AGENTS.md's Documentation rules)
-- Example:
-  `<remarks>
-  <see cref="Calendar.DayPhase"/> is derived from ticks via cosine curve to
-  keep brightness smooth at boundaries, not via linear ramp.
-  </remarks>`
-  (states the design) rather than "we got visual artifacts with linear so
-  switched to cosine" (states the failure)
-- Include constraints that would surprise a reader, e.g.
-  `<remarks>
-  <see cref="Scrub"/> must clamp phase to <c>[0, 1-1e-6]</c> to avoid rounding into
-  the next day from user scrubber interaction.
-  </remarks>`
-
-**Follow Documentation rules:**
-
-- No changelog/history narratives
-- No commentary on past bugs or workarounds unless the workaround is _still in
-  effect_ (then explain why it's needed, not how we discovered it)
-- Prefer existing comments over redundant new ones; if the code is already
-  clear, the remark might go in a more complex upstream function instead
-- **Most importantly**: Do not reference the plan file in remarks — remarks are
-  meant to survive the plan's deletion and stand as permanent documentation
-
-### 3. Extract out-of-scope work into `TODO.md`
-
-Find the plan's Future Work / Out-of-Scope section. For each item:
-
-- **Check if it's in the todo list already**: Search
-  `TODO.md` for mentions. If the todo list already covers
-  it, no action needed.
-- **If not already in the todo list**: Add a section or subsection to the
-  todo list capturing the out-of-scope work and its dependencies. Example: if
-  the plan deferred "real sun/sky lighting blocked on lighting model",
-  ensure `TODO.md` includes mention of that.
-- **Link back**: `TODO.md` is the long-term home for this context, not the plan file.
-
-### 4. Delete the plan file (if it still exists)
-
-**If the plan file exists:** Delete it:
+### 4. Delete the plan file
 
 ```bash
 rm .agents/plans/<plan-file>
 ```
 
-Then commit the changes (todo list updates, source code remarks, todo list
-changes, and the plan deletion) in a single commit with a clear message.
-Example:
+Commit the todo list updates, source remarks, and deletion together:
 
 ```
 Archive time-weather prototype plan
@@ -151,38 +74,32 @@ Archive time-weather prototype plan
 - Delete .agents/plans/time-weather.md
 ```
 
-**If the plan file is already archived:** Commit just the todo list updates,
-source code remarks, and todo list changes. Example:
+If the plan was already archived (PR-only case), commit just the remarks and `TODO.md` updates.
 
-```
-Integrate terrain prototype documentation into source code
+### 5. Verify complete coverage (always run this)
 
-- 💅 Add @remarks to core terrain files (mesh, culling, grading)
-- 💅 Add @remarks to integration files (toGpu, EaseScheduler)
-- Improve slope visualization logic for edge cases
-```
+Headers-only extraction misses future-work language that isn't under an "Out of Scope"/"Known Debt" heading —
+a decision bullet that ends "...belongs to a separate plan," or a stated Goal that quietly never resurfaces in
+the final status with no deferral note. Close the gap every time, even when steps 2–3 felt thorough:
 
-## Anti-patterns (things that wasted time before)
+1. Get the full original plan text: `git diff --cached -- <plan-file>` (after staging the deletion) or
+   `git show HEAD:<plan-file>`.
+2. Grep it case-insensitively: `future|deferred|out of scope|separate (feature|plan)|not built|not yet|schedule for|blocked on|TODO`.
+3. Confirm every match is tracked in `TODO.md` or a sibling plan file; add whatever's missing.
+4. Re-check the plan's original **Goals** section specifically — a goal absent from the final status with no
+   explanation is a silent drop, not an intentional cut. Flag it and add it to `TODO.md`.
+5. Report what was already covered vs. newly added, and call out silent drops explicitly for confirmation.
 
-- **Extracting remarks from only one file**: A plan may touch 15+ files
-  (implementation, tests, integration, shaders). Extracting remarks from only
-  the "main" file and skipping integration files like `store.ts` or `scene.ts`
-  loses critical context about how pieces fit together. **Enumerate all files
-  the plan touched before starting step 3.** Check task file lists, grep the
-  plan for filenames, scan commits. Add remarks to at least 8–10 files for a
-  substantial plan.
-- **Losing context**: Deleting the plan file without first extracting its
-  findings. Six months later, a developer asks "why is scrub() clamped to [0,
-  1-1e-6]?" and you can't answer because the reasoning was in the plan you
-  deleted.
-- **Over-commenting**: Adding multi-paragraph remarks for every function the
-  plan touched. A single `<remarks>` per file pointing to the key invariant is
-  enough; don't duplicate the plan's entire narrative into inline comments.
-- **Leaving stale `TODO.md` entries**: Updating the Status for the plan's own doc
-  but forgetting to update the Tier rankings if Future Work shifted or
-  dependencies changed. Keep the todo list internally consistent.
-- **Skipping the PR description**: When a plan is archived, the PR comment (the
-  initial description at the top of the PR, not individual commit messages) is
-  the source of truth for "what was implemented" and "what was deferred". Read
-  it thoroughly before drilling into commits. Commit messages are granular and
-  task-oriented; the PR description gives you the big picture.
+## Anti-patterns
+
+- **Remarks in only one file**: skipping integration files (`store.ts`, `scene.ts`) loses how pieces fit
+  together. Enumerate all touched files before step 3.
+- **Deleting before extracting**: six months later nobody can answer "why is `scrub()` clamped to
+  `[0, 1-1e-6]`" because the reasoning lived only in the deleted plan.
+- **Over-commenting**: one `<remarks>` per file on the key invariant is enough — don't restate the plan's
+  entire narrative inline.
+- **Stale `TODO.md`**: updating an item's status but not its tier/dependencies when Future Work shifted.
+- **Skipping the PR description**: it's the source of truth for "implemented" vs. "deferred," not the
+  granular, task-oriented commit messages.
+- **Trusting only the labeled sections**: future work hides in decision asides and silently-dropped Goals too
+  — that's what step 5's grep pass is for. Don't skip it because step 3 felt thorough.

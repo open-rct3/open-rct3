@@ -8,6 +8,10 @@ namespace OpenRCT3.Rides.TrackSpline;
 /// Global configuration for adaptive baking of rail splines.
 /// Controls the resolution of baked samples based on curvature and bank-angle changes.
 /// </summary>
+/// <remarks>
+/// Tolerance defaults below are provisional, chosen to unblock baking within the per-piece bake budget;
+/// they haven't been tuned against real piece content yet.
+/// </remarks>
 public static class BakingConfig {
   /// <summary>
   /// Maximum chord-height deviation, as a fraction of track gauge (wheel spacing).

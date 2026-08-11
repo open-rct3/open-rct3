@@ -13,6 +13,11 @@ namespace OpenRCT3.Rides.TrackSpline;
 /// Generate standard track pieces (straight, curve, slope, loop, corkscrew) as Catmull-Rom splines
 /// from profile curve parameters (radius, pitch, bank as functions of arc-length).
 /// </summary>
+/// <remarks>
+/// <see cref="GenerateCurve"/> and <see cref="GenerateCorkscrew"/> approximate their arc with a fixed 4
+/// Catmull-Rom segments regardless of <c>arcAngle</c>; this is independent of and coarser than the
+/// chord-height/bank-rate-driven sample density <see cref="SplineBaker"/> bakes from these control points.
+/// </remarks>
 public static class ProceduralPieces {
   /// <summary>
   /// Generate a straight piece of given length, optionally with pitch (vertical climb) and bank.
