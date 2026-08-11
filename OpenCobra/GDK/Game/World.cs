@@ -24,14 +24,13 @@ public abstract class World : IWorld {
   public Progress Progress { get; protected set; } = Progress.COMPLETE;
   public IReadOnlyCollection<ISystem> Systems => systems;
 
-  protected World() {
+  protected World() =>
     // Provide the current load progress to systems
     IGame.IoC.Register<Progress>(
       Reuse.Singleton,
       Made.Of(() => Progress),
       Setup.With(weaklyReferenced: true, preventDisposal: true)
     );
-  }
 
   /// <remarks>
   /// Calls <see cref="ISystem.Attach"/>, then <see cref="ISystem.Start"/>, in sequence to fully initialize
