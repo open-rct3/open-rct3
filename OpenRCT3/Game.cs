@@ -244,8 +244,7 @@ public class Game : IGame {
   /// <param name="delta">The time between ticks.</param>
   /// <param name="interpolation">The interpolation fraction.</param>
   private void Tick(TimeSpan delta, double interpolation) {
-    // TODO: Advance the simulation logic by a fixed time step
-    // TODO: Scheduler.Execute(delta);
+    World.Update(delta);
   }
 
   [Conditional("DEBUG")]

@@ -13,6 +13,7 @@ using OpenRCT3.Scenario;
 using Silk.NET.Input;
 using System.Drawing;
 using System.Numerics;
+using System.Threading;
 using GDK = OpenCobra.GDK;
 
 #if WINDOWS
@@ -26,7 +27,7 @@ namespace OpenRCT3.Simulation;
 /// <summary>
 /// Represents the game world including the current park, terrain, objects, and people.
 /// </summary>
-public class World : GDK.Game.World {
+public class World : GDK.Game.World, IParkLoader {
   /// <summary>
   /// <see cref="IGame.IoC"/> service key the terrain <see cref="Mesh"/> is registered under - keyed
   /// rather than by bare <see cref="Mesh"/> type so a later feature registering some other
@@ -61,11 +62,20 @@ public class World : GDK.Game.World {
   // null when the caller reads them. Revisit once a progress bar actually consumes Progress
   // asynchronously (see the TODO in Game.cs) instead of blocking here.
   /// <summary>Loads the default flat park and builds the scene.</summary>
-  public override void Load() {
+  public override void Load() => Load(parkPath: null);
+
+  /// <summary>Loads a park from the given path (or the default park if path is null) and builds the scene.</summary>
+  /// <param name="parkPath">Path to the park save file, or null to load the default park.</param>
+  public void Load(string? parkPath) {
     var measurement = Progress.MeasureTasks([
-      new(() => Park = new Park(), "Loading park"),
+      new(() => Park = Park.Load(parkPath), "Loading park"),
       new(() => Terrain = Terrain.Load(), "Loading terrain"),
-      new(BuildScene, "Creating park"),
+      new(() => {
+        // Create and register the park load system before building the scene
+        var parkLoadSystem = new ParkLoadSystem();
+        AddSystem(parkLoadSystem);
+        BuildScene(parkLoadSystem);
+      }, "Creating park"),
     ]);
     Progress = measurement.Progress;
     measurement.Task.Wait();
@@ -73,10 +83,11 @@ public class World : GDK.Game.World {
 
   /// <summary>Builds the terrain mesh, rotation-marker cube, camera framing, and windows for <see cref="Game.Scene"/>.</summary>
   /// <remarks>
-  /// Called once, from <see cref="Load"/>. Opening a different park afterward goes through
-  /// <see cref="ReplaceTerrain"/>, which updates the terrain mesh in place rather than calling this again.
+  /// Called once, from <see cref="Load"/>. Opening a different park afterward is handled by
+  /// <paramref name="parkLoadSystem"/>, which requests a full park load through the systems pipeline
+  /// instead of blocking the render pass.
   /// </remarks>
-  private void BuildScene() {
+  private void BuildScene(ParkLoadSystem parkLoadSystem) {
     var game = Game.Instance!;
     var scene = game.Scene;
 
@@ -134,7 +145,7 @@ public class World : GDK.Game.World {
 
     parkChooser = new ParkChooser();
     editor.OpenPark += parkChooser.Show;
-    parkChooser.ParkSelected += ReplaceTerrain;
+    parkChooser.ParkSelected += parkLoadSystem.RequestLoad;
     scene.Windows.Add(parkChooser);
 
     // Made.Of statically checks Debug's constructor at compile time (rather than reflection-based
@@ -172,5 +183,41 @@ public class World : GDK.Game.World {
     Terrain = null;
     Park = null;
     base.Dispose(disposing);
+  }
+}
+
+/// <summary>
+/// System that manages asynchronous park loading requests, ensuring they execute before rendering each tick.
+/// </summary>
+internal class ParkLoadSystem : GDK.Game.System {
+  private GDK.Threading.SafeWeakReference<IParkLoader>? world;
+  private string? pendingParkPath = "_NO_LOAD_";
+
+  internal ParkLoadSystem() : base(GDK.Game.PipelinePhase.Early) { }
+
+  public override void Attach(WeakReference<GDK.Game.IWorld> worldRef) {
+    if (worldRef.TryGetTarget(out var w) && w is IParkLoader parkLoader) {
+      world = new GDK.Threading.SafeWeakReference<IParkLoader>(parkLoader);
+    }
+  }
+
+  /// <summary>
+  /// Request a park load for the next update.
+  /// </summary>
+  /// <remarks>
+  /// If called multiple times before the next update, only the last requested path will be loaded (last-write-wins).
+  /// </remarks>
+  /// <param name="parkPath">Path to the park save file, or null to load the default park.</param>
+  public void RequestLoad(string? parkPath) {
+    Interlocked.Exchange(ref pendingParkPath, parkPath);
+  }
+
+  public override void Update(TimeSpan delta) {
+    base.Update(delta);
+
+    var path = Interlocked.Exchange(ref pendingParkPath, "_NO_LOAD_");
+    if (path != "_NO_LOAD_" && world?.TryGetTarget(out var parkLoader) == true) {
+      parkLoader.Load(path);
+    }
   }
 }

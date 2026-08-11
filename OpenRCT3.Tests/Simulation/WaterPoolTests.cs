@@ -105,7 +105,7 @@ public class WaterPoolTests {
     var terrain = NewTerrain();
     park.TryPlaceWaterPool([(1, 1)], height: 200, terrain);
 
-    park.RaiseTerrainCorner(terrain, 1, 1, TerrainCornerSlot.SouthWest, delta: 10);
+    Park.RaiseTerrainCorner(terrain, 1, 1, TerrainCornerSlot.SouthWest, delta: 10);
 
     Assert.That(park.WaterPools, Is.Empty);
     // The underlying terrain edit itself must still have happened.
@@ -119,7 +119,7 @@ public class WaterPoolTests {
     // Tile (1,1)'s NorthEast corner is shared with tile (2,2)'s SouthWest corner.
     park.TryPlaceWaterPool([(2, 2)], height: 200, terrain);
 
-    park.RaiseTerrainCorner(terrain, 1, 1, TerrainCornerSlot.NorthEast, delta: 10);
+    Park.RaiseTerrainCorner(terrain, 1, 1, TerrainCornerSlot.NorthEast, delta: 10);
 
     Assert.That(park.WaterPools, Is.Empty);
   }
@@ -130,7 +130,7 @@ public class WaterPoolTests {
     var terrain = NewTerrain();
     park.TryPlaceWaterPool([(0, 0)], height: 200, terrain);
 
-    park.RaiseTerrainCorner(terrain, 2, 2, TerrainCornerSlot.NorthEast, delta: 10);
+    Park.RaiseTerrainCorner(terrain, 2, 2, TerrainCornerSlot.NorthEast, delta: 10);
 
     Assert.That(park.WaterPools, Has.Count.EqualTo(1));
     Assert.That(park.WaterTiles.ContainsKey((0, 0)), Is.True);
@@ -142,7 +142,7 @@ public class WaterPoolTests {
     var terrain = NewTerrain(initialHeight: 50);
     park.TryPlaceWaterPool([(1, 1)], height: 200, terrain);
 
-    park.LowerTerrainCorner(terrain, 1, 1, TerrainCornerSlot.SouthWest, delta: 10);
+    Park.LowerTerrainCorner(terrain, 1, 1, TerrainCornerSlot.SouthWest, delta: 10);
 
     Assert.That(park.WaterPools, Is.Empty);
     Assert.That(terrain.GetCorner(1, 1, TerrainCornerSlot.SouthWest).Height, Is.EqualTo(40));

@@ -1,28 +1,21 @@
-// World
-//
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
+// A generic game world.
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using DryIoc;
 using OpenCobra.GDK.Streaming;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 
 namespace OpenCobra.GDK.Game;
 
 public abstract class World : IWorld {
-  private readonly ObservableCollection<ISystem> systems = [];
+  private readonly HashSet<ISystem> systems = [];
   private bool disposed;
 
   protected WeakReference<IWorld> WeakReference => new(this);
   public Progress Progress { get; protected set; } = Progress.COMPLETE;
-  public IReadOnlyCollection<ISystem> Systems => systems.AsReadOnly();
+  public IReadOnlyCollection<ISystem> Systems => systems;
 
   protected World() {
-    systems.CollectionChanged += SystemsChanged;
-
     // Provide the current load progress to systems
     IGame.IoC.Register<Progress>(
       Reuse.Singleton,
@@ -31,7 +24,28 @@ public abstract class World : IWorld {
     );
   }
 
+  protected bool AddSystem(ISystem system) {
+    if (!systems.Add(system))
+      return false;
+    system.Attach(WeakReference);
+    system.Start();
+    return true;
+  }
+
+  protected void RemoveSystem(ISystem system) {
+    if (systems.Remove(system))
+      system.Stop();
+  }
+
   public abstract void Load();
+
+  public void Update(TimeSpan delta) {
+    try {
+      Scheduler.Execute(systems, delta);
+    } catch (OperationCanceledException) {
+      // Execution was cancelled, safe to continue
+    }
+  }
 
   protected virtual void Dispose(bool disposing) {
     if (disposed) return;
@@ -52,16 +66,4 @@ public abstract class World : IWorld {
     GC.SuppressFinalize(this);
   }
 
-  private void SystemsChanged(object? sender, NotifyCollectionChangedEventArgs e) {
-    switch (e.Action) {
-      case NotifyCollectionChangedAction.Add:
-      case NotifyCollectionChangedAction.Remove:
-      case NotifyCollectionChangedAction.Replace:
-      case NotifyCollectionChangedAction.Reset:
-        foreach (var system in e.NewItems!.Cast<ISystem>()) system.Attach(WeakReference);
-        foreach (var system in e.OldItems!.Cast<ISystem>()) system.Stop();
-        break;
-      default: return;
-    }
-  }
 }

@@ -13,7 +13,8 @@ namespace OpenCobra.GDK.Game;
 /// <remarks>
 /// <h2>Accessing World State</h2>
 /// <para>
-/// Systems may interrogate the state of their world via <see cref="IWorld.IoC"/>.
+/// Systems may interrogate the state of their world via the <see cref="IWorld"/> interface,
+/// which provides access to <see cref="IWorld.Progress"/>, <see cref="IWorld.Systems"/>, and <see cref="IWorld.Load"/>.
 /// </para>
 /// <h2>Multi-threading</h2>
 /// <para>
@@ -21,7 +22,6 @@ namespace OpenCobra.GDK.Game;
 /// See <see cref="Parallelizable"/>.
 /// </para>
 /// </remarks>
-/// <seealso cref="DryIoc.Container"/>
 public abstract class System(PipelinePhase order) : ISystem {
   public event Action? Started;
   public event Action? Stopped;
@@ -36,7 +36,10 @@ public abstract class System(PipelinePhase order) : ISystem {
     Started?.Invoke();
   }
 
-  public virtual void Update(TimeSpan delta) { }
+  public virtual void Update(TimeSpan delta) {
+    if (!IsRunning)
+      return;
+  }
   public void Stop() {
     IsRunning = false;
     Stopped?.Invoke();

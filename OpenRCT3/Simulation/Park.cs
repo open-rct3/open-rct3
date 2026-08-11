@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using OpenCobra.Data;
 using OpenCobra.OVL;
-using DatParks = OpenCobra.Data.Parks;
+using Parks = OpenCobra.Data.Parks;
 
 namespace OpenRCT3.Simulation;
 
@@ -98,26 +98,25 @@ public class Park {
   }
 
   /// <summary>
-  /// Loads a saved-park <c>.dat</c> file's path data into a new <see cref="Park"/>.
+  /// Loads and returns a park from the given path, or creates a default park if path is null.
   /// </summary>
   /// <remarks>
-  /// Map size isn't derived from the save yet - this still sizes <see cref="BuildableBounds"/> via
-  /// the default constructor, and reuses each tile's on-disk <c>ColIndex</c>/<c>RowIndex</c>
-  /// directly as its <see cref="Paths"/> key without any coordinate-system translation, since none
-  /// has been confirmed against the OOB-inclusive grid <see cref="Terrain"/> uses. Raised-tile
-  /// height/slope decoding is similarly a first pass, confirmed against only a single raised-tile
-  /// sample: <see cref="DatParks.PathFlyingTile.QuantisedHeight"/> is assumed 1:1 with
-  /// <see cref="Terrain.HeightStep"/> units, and <see cref="DatParks.PathFlyingTile.Direction"/> is
-  /// assumed to already match <see cref="Edge"/>'s numbering.
+  /// If <paramref name="path"/> is null, creates a default empty park. Otherwise, loads the
+  /// saved-park <c>.dat</c> file's path data from the given path.
   /// </remarks>
-  public static Park Load(string path) {
+  /// <param name="path">The path to load, or null to create a default park.</param>
+  /// <returns>The loaded or default park.</returns>
+  public static Park Load(string? path) {
+    if (path == null)
+      return new Park();
+
     var dat = Dat.Load(path);
     var park = new Park();
 
-    foreach (var tile in DatParks.Paths.ExtractAtGrade(dat))
+    foreach (var tile in Parks.Paths.ExtractAtGrade(dat))
       park.Paths[(tile.ColIndex, tile.RowIndex)] = new PathTile();
 
-    foreach (var tile in DatParks.Paths.ExtractRaised(dat))
+    foreach (var tile in Parks.Paths.ExtractRaised(dat))
       park.Paths[(tile.ColIndex, tile.RowIndex)] = new PathTile {
         Raised = true,
         RaisedHeight = (ushort)tile.QuantisedHeight,
@@ -245,36 +244,32 @@ public class Park {
   }
 
   /// <summary>
-  /// Raises a terrain corner via <see cref="Terrain.RaiseCorner"/>, then invalidates any
-  /// <see cref="WaterPool"/> covering a tile whose height actually changed as a result (the edited tile
-  /// and every neighbor sharing that corner).
+  /// Raises a terrain corner via <see cref="Terrain.RaiseCorner"/>.
+  /// Caller is responsible for invalidating water pools if needed.
   /// </summary>
-  public void RaiseTerrainCorner(
+  public static void RaiseTerrainCorner(
     Terrain terrain,
     int tileX,
     int tileY,
     TerrainCornerSlot slot,
     int delta,
-    Func<int, int, TerrainCornerSlot, ushort>? maxHeightQuery = null) {
+    Func<int, int, TerrainCornerSlot, ushort>? maxHeightQuery = null
+  ) =>
     terrain.RaiseCorner(tileX, tileY, slot, delta, maxHeightQuery);
-    InvalidateWaterPoolsSharingCorner(terrain, tileX, tileY, slot);
-  }
 
   /// <summary>
-  /// Lowers a terrain corner via <see cref="Terrain.LowerCorner"/>, then invalidates any
-  /// <see cref="WaterPool"/> covering a tile whose height actually changed as a result (the edited tile
-  /// and every neighbor sharing that corner).
+  /// Lowers a terrain corner via <see cref="Terrain.LowerCorner"/>.
+  /// Caller is responsible for invalidating water pools if needed.
   /// </summary>
-  public void LowerTerrainCorner(
+  public static void LowerTerrainCorner(
     Terrain terrain,
     int tileX,
     int tileY,
     TerrainCornerSlot slot,
     int delta,
-    Func<int, int, TerrainCornerSlot, ushort>? minHeightQuery = null) {
+    Func<int, int, TerrainCornerSlot, ushort>? minHeightQuery = null
+  ) =>
     terrain.LowerCorner(tileX, tileY, slot, delta, minHeightQuery);
-    InvalidateWaterPoolsSharingCorner(terrain, tileX, tileY, slot);
-  }
 
   /// <summary>
   /// Sets a terrain corner height via <see cref="Terrain.SetCornerHeight"/> (detaching the edge, unlike
@@ -288,11 +283,6 @@ public class Park {
   public void SetTerrainCornerHeight(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot, ushort height) {
     terrain.SetCornerHeight(tileX, tileY, slot, height);
     InvalidateWaterPoolAt(tileX, tileY);
-  }
-
-  private void InvalidateWaterPoolsSharingCorner(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot) {
-    foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot))
-      InvalidateWaterPoolAt(x, y);
   }
 
   /// <summary>
