@@ -244,32 +244,38 @@ public class Park {
   }
 
   /// <summary>
-  /// Raises a terrain corner via <see cref="Terrain.RaiseCorner"/>.
-  /// Caller is responsible for invalidating water pools if needed.
+  /// Raises a terrain corner via <see cref="Terrain.RaiseCorner"/>, then invalidates any
+  /// <see cref="WaterPool"/> covering a tile affected by the edit (the edited tile and every
+  /// neighbor sharing that corner, per <see cref="Terrain.GetTilesSharingCorner"/>).
   /// </summary>
-  public static void RaiseTerrainCorner(
+  public void RaiseTerrainCorner(
     Terrain terrain,
     int tileX,
     int tileY,
     TerrainCornerSlot slot,
     int delta,
     Func<int, int, TerrainCornerSlot, ushort>? maxHeightQuery = null
-  ) =>
+  ) {
     terrain.RaiseCorner(tileX, tileY, slot, delta, maxHeightQuery);
+    foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot)) InvalidateWaterPoolAt(x, y);
+  }
 
   /// <summary>
-  /// Lowers a terrain corner via <see cref="Terrain.LowerCorner"/>.
-  /// Caller is responsible for invalidating water pools if needed.
+  /// Lowers a terrain corner via <see cref="Terrain.LowerCorner"/>, then invalidates any
+  /// <see cref="WaterPool"/> covering a tile affected by the edit (the edited tile and every
+  /// neighbor sharing that corner, per <see cref="Terrain.GetTilesSharingCorner"/>).
   /// </summary>
-  public static void LowerTerrainCorner(
+  public void LowerTerrainCorner(
     Terrain terrain,
     int tileX,
     int tileY,
     TerrainCornerSlot slot,
     int delta,
     Func<int, int, TerrainCornerSlot, ushort>? minHeightQuery = null
-  ) =>
+  ) {
     terrain.LowerCorner(tileX, tileY, slot, delta, minHeightQuery);
+    foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot)) InvalidateWaterPoolAt(x, y);
+  }
 
   /// <summary>
   /// Sets a terrain corner height via <see cref="Terrain.SetCornerHeight"/> (detaching the edge, unlike

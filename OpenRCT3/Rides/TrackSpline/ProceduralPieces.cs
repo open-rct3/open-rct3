@@ -20,29 +20,25 @@ public static class ProceduralPieces {
   public static void GenerateStraight(
     RailSpline leftRail, RailSpline rightRail,
     float length, float gauge = 0.4f, float pitch = 0f, float bank = 0f) {
-    // Straight line: 4 colinear control points
-    var p0 = new Vector3(0, pitch * length, 0);
-    var p1 = new Vector3(0, pitch * 0.5f * length, 0);
-    var p2 = new Vector3(length, pitch * 0.5f * length, 0);
-    var p3 = new Vector3(length, pitch * length, 0);
+    // Straight line: 2 real control points (start, end). BakeRailSpline supplies phantom tangent
+    // points at each end by reusing the adjacent real point; a straight line only needs these two
+    // to produce a correctly-behaved (non-degenerate) Catmull-Rom segment.
+    var start = new Vector3(0, 0, 0);
+    var end = new Vector3(length, pitch * length, 0);
 
     var dir = Vector3.UnitX;
     var leftOffset = -gauge * 0.5f * Vector3.UnitY;
     var rightOffset = gauge * 0.5f * Vector3.UnitY;
 
-    leftRail.ControlPoints = new() {
-      new() { Position = p0 + leftOffset, Tangent = dir, Bank = bank },
-      new() { Position = p1 + leftOffset, Tangent = dir, Bank = bank },
-      new() { Position = p2 + leftOffset, Tangent = dir, Bank = bank },
-      new() { Position = p3 + leftOffset, Tangent = dir, Bank = bank },
-    };
+    leftRail.ControlPoints = [
+      new() { Position = start + leftOffset, Tangent = dir, Bank = bank },
+      new() { Position = end + leftOffset, Tangent = dir, Bank = bank },
+    ];
 
-    rightRail.ControlPoints = new() {
-      new() { Position = p0 + rightOffset, Tangent = dir, Bank = bank },
-      new() { Position = p1 + rightOffset, Tangent = dir, Bank = bank },
-      new() { Position = p2 + rightOffset, Tangent = dir, Bank = bank },
-      new() { Position = p3 + rightOffset, Tangent = dir, Bank = bank },
-    };
+    rightRail.ControlPoints = [
+      new() { Position = start + rightOffset, Tangent = dir, Bank = bank },
+      new() { Position = end + rightOffset, Tangent = dir, Bank = bank },
+    ];
   }
 
   /// <summary>
@@ -131,7 +127,7 @@ public static class ProceduralPieces {
   /// </summary>
   public static void GenerateBankedCurve(
     RailSpline leftRail, RailSpline rightRail,
-    float radius, float arcAngle, float bank, float gauge = 0.4f) {
+    float radius, float arcAngle, float bank, float gauge = 0.4f
+  ) =>
     GenerateCurve(leftRail, rightRail, radius, arcAngle, gauge, bank);
-  }
 }

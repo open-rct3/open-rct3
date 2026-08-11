@@ -15,11 +15,6 @@ namespace OpenRCT3.Tests.Rides.TrackSpline;
 public class RailQueryTests {
   private const float Tolerance = 1e-3f;
 
-  [SetUp]
-  public void Setup() {
-    ArcLength.ClearCache();
-  }
-
   [Test]
   public void SampleRail_EmptyRail_ReturnsFalse() {
     var rail = new RailSpline();

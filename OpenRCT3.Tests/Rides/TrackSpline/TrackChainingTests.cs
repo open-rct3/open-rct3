@@ -13,11 +13,6 @@ namespace OpenRCT3.Tests.Rides.TrackSpline;
 
 [TestFixture]
 public class TrackChainingTests {
-  [SetUp]
-  public void Setup() {
-    ArcLength.ClearCache();
-  }
-
   [Test]
   public void CreateGraph_IsEmpty() {
     var graph = TrackChaining.CreateGraph();
@@ -40,7 +35,6 @@ public class TrackChainingTests {
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void ChainPiece_ValidContinuity_CreatesEdge() {
     var graph = TrackChaining.CreateGraph();
 
@@ -60,7 +54,6 @@ public class TrackChainingTests {
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void BakeGraph_BakesAllPieces() {
     var graph = TrackChaining.CreateGraph();
 
@@ -81,7 +74,6 @@ public class TrackChainingTests {
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void ChainMultiplePieces_BuildsValidGraph() {
     var graph = TrackChaining.CreateGraph();
 

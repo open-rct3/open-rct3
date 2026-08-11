@@ -23,7 +23,6 @@ public class WheelIKTests {
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void PlaceCarOnTrack_SingleBogie_ReturnsValidTransform() {
     var piece = CreateStraightPiece();
     var car = new TrainCar {
@@ -41,7 +40,6 @@ public class WheelIKTests {
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void PlaceCarOnTrack_TwoBogies_ReturnsStableTransform() {
     var piece = CreateStraightPiece();
     var car = new TrainCar {
@@ -72,7 +70,6 @@ public class WheelIKTests {
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void PlaceCarOnTrack_OffTrack_ReturnsFalse() {
     var piece = CreateStraightPiece();
     var car = new TrainCar {

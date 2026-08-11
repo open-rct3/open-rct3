@@ -13,13 +13,7 @@ namespace OpenRCT3.Tests.Rides.TrackSpline;
 
 [TestFixture]
 public class IntegrationTests {
-  [SetUp]
-  public void Setup() {
-    ArcLength.ClearCache();
-  }
-
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void BuildSimpleTrack_StraightCurveStraight() {
     var graph = TrackChaining.CreateGraph();
 
@@ -52,7 +46,6 @@ public class IntegrationTests {
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void PlaceTrain_OnStraightTrack() {
     var graph = TrackChaining.CreateGraph();
 
@@ -89,7 +82,6 @@ public class IntegrationTests {
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void QueryRailSamples_AlongTrack() {
     var piece = new TrackPiece { PieceType = TrackPieceType.Straight };
     ProceduralPieces.GenerateStraight(piece.LeftRail, piece.RightRail, length: 15f);
@@ -113,7 +105,6 @@ public class IntegrationTests {
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void RailContinuity_AcrossPieces() {
     var graph = TrackChaining.CreateGraph();
 
@@ -124,28 +115,32 @@ public class IntegrationTests {
 
     var s2 = new TrackPiece { PieceType = TrackPieceType.Straight };
     ProceduralPieces.GenerateStraight(s2.LeftRail, s2.RightRail, length: 10f);
-    var n2 = TrackChaining.ChainPiece(graph, n1, s2, validateContinuity: false);
+    var n2 = TrackChaining.ChainPiece(graph, n1, s2, validateContinuity: true);
     Assert.That(n2, Is.Not.Null);
 
     TrackChaining.BakeGraph(graph, useTestTolerance: true);
 
-    // Sample end of first piece and start of second piece
     var p1 = n1.Piece;
     var p2 = n2!.Piece;
 
-    var result1 = RailQuery.SampleRail(p1.LeftRail, p1.LeftRail.TotalArcLength, out var endPos1, out _, out _);
-    var result2 = RailQuery.SampleRail(p2.LeftRail, 0f, out var startPos2, out _, out _);
+    // Rails bake in local/model space — world placement (piece.Position/Heading/Bank) is a rendering-time
+    // concern, not baked into BakedSample data — so piece boundaries don't coincide spatially here. What
+    // ChainPiece's continuity check actually guarantees at the data level is tangent-direction (C1)
+    // continuity between the two pieces' local rail geometry.
+    var result1 = RailQuery.SampleRail(p1.LeftRail, p1.LeftRail.TotalArcLength, out _, out var endOrientation1, out _);
+    var result2 = RailQuery.SampleRail(p2.LeftRail, 0f, out _, out var startOrientation2, out _);
 
     Assert.That(result1, Is.True);
     Assert.That(result2, Is.True);
 
-    // Positions should be close (within tolerance of piece chaining)
-    var distance = Vector3.Distance(endPos1, startPos2);
-    Assert.That(distance, Is.LessThan(1f), "Piece boundary discontinuity too large");
+    var endForward1 = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, endOrientation1));
+    var startForward2 = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, startOrientation2));
+
+    var alignment = Vector3.Dot(endForward1, startForward2);
+    Assert.That(alignment, Is.GreaterThan(0.99f), "Piece boundary tangent discontinuity too large");
   }
 
   [Test]
-  [Ignore("Blocked by SplineBaker performance (TBD: rewrite with piecewise linear or parametric sampling)")]
   public void BankedCurve_RotationSmooth() {
     var piece = new TrackPiece { PieceType = TrackPieceType.BankedCurve };
     ProceduralPieces.GenerateBankedCurve(piece.LeftRail, piece.RightRail, radius: 5f, arcAngle: 1.57f, bank: 0.3f);

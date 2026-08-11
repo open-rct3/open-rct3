@@ -19,10 +19,10 @@ public class ProceduralPiecesTests {
 
     ProceduralPieces.GenerateStraight(left, right, length: 10f);
 
-    Assert.That(left.ControlPoints.Count, Is.EqualTo(4));
-    Assert.That(right.ControlPoints.Count, Is.EqualTo(4));
+    Assert.That(left.ControlPoints.Count, Is.EqualTo(2));
+    Assert.That(right.ControlPoints.Count, Is.EqualTo(2));
     Assert.That(left.ControlPoints[0].Position.X, Is.EqualTo(0f));
-    Assert.That(left.ControlPoints[3].Position.X, Is.EqualTo(10f));
+    Assert.That(left.ControlPoints[1].Position.X, Is.EqualTo(10f));
   }
 
   [Test]
@@ -43,8 +43,8 @@ public class ProceduralPiecesTests {
 
     ProceduralPieces.GenerateSlope(left, right, length: 10f, heightChange: 2f);
 
-    Assert.That(left.ControlPoints.Count, Is.EqualTo(4));
-    Assert.That(right.ControlPoints.Count, Is.EqualTo(4));
+    Assert.That(left.ControlPoints.Count, Is.EqualTo(2));
+    Assert.That(right.ControlPoints.Count, Is.EqualTo(2));
   }
 
   [Test]

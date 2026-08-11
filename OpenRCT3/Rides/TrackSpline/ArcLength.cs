@@ -1,63 +1,119 @@
 // Arc-Length Parameterization for Catmull-Rom Splines
 //
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
-//
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using System.Collections.Generic;
 using System.Numerics;
 
 namespace OpenRCT3.Rides.TrackSpline;
 
 /// <summary>
 /// Arc-length computation and parameter mapping for Catmull-Rom splines.
-/// Uses adaptive Simpson's quadrature for accurate distance integration.
+/// Builds a fixed-resolution lookup table (LUT) per segment via forward differencing, then answers
+/// distance/parameter queries by binary search + linear interpolation against the table. This avoids
+/// re-integrating the curve on every query, which is what made per-node adaptive quadrature during
+/// baking too slow to hit the per-piece bake budget.
 /// </summary>
 public static class ArcLength {
   /// <summary>
-  /// Default tolerance for production arc-length computation.
-  /// Tighter tolerance for accuracy-critical paths (wheel IK, train placement).
+  /// LUT sample count used when <c>useTestTolerance</c> is set, for faster (lower-fidelity) unit tests.
   /// </summary>
-  private const float ProductionTolerance = 1e-4f;
+  private const int TestSampleCount = 8;
 
   /// <summary>
-  /// Tolerance for test/preview purposes. Looser for speed (10× faster, still accurate to 0.1%).
-  /// Use ProductionTolerance for queries that affect gameplay/physics.
+  /// A fixed-resolution table mapping parameter t to cumulative arc-length, built once per curve segment.
   /// </summary>
-  private const float TestTolerance = 1e-3f;
+  internal readonly struct Lut {
+    public readonly float[] Parameters;
+    public readonly float[] CumulativeLength;
+
+    public Lut(float[] parameters, float[] cumulativeLength) {
+      Parameters = parameters;
+      CumulativeLength = cumulativeLength;
+    }
+
+    public float TotalLength => CumulativeLength[^1];
+  }
 
   /// <summary>
-  /// Cache of computed arc-lengths keyed by (p0, p1, p2, p3, t1, t2) for memoization.
-  /// Avoids redundant Simpson integrations in baking and binary search.
+  /// Build an arc-length LUT for a Catmull-Rom segment by forward-differencing at <paramref name="sampleCount"/>
+  /// fixed parameter steps and summing chord lengths. O(sampleCount), no recursion.
   /// </summary>
-  private static readonly Dictionary<string, float> ArcLengthCache = [];
+  internal static Lut BuildLut(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, int sampleCount) {
+    var count = sampleCount + 1;
+    var parameters = new float[count];
+    var cumulativeLength = new float[count];
+
+    var previousPosition = CatmullRom.Evaluate(0f, p0, p1, p2, p3);
+    parameters[0] = 0f;
+    cumulativeLength[0] = 0f;
+
+    for (int i = 1; i < count; i++) {
+      var t = (float)i / sampleCount;
+      var position = CatmullRom.Evaluate(t, p0, p1, p2, p3);
+      cumulativeLength[i] = cumulativeLength[i - 1] + Vector3.Distance(previousPosition, position);
+      parameters[i] = t;
+      previousPosition = position;
+    }
+
+    return new Lut(parameters, cumulativeLength);
+  }
+
+  /// <summary>
+  /// Interpolate cumulative arc-length at an arbitrary parameter t via binary search + lerp against the LUT.
+  /// </summary>
+  internal static float ArcLengthAt(Lut lut, float t) {
+    t = Math.Clamp(t, 0f, 1f);
+    var index = LowerBound(lut.Parameters, t);
+    if (index <= 0) return lut.CumulativeLength[0];
+    if (index >= lut.Parameters.Length) return lut.TotalLength;
+
+    var t0 = lut.Parameters[index - 1];
+    var t1 = lut.Parameters[index];
+    var fraction = t1 > t0 ? (t - t0) / (t1 - t0) : 0f;
+    return lut.CumulativeLength[index - 1] + fraction * (lut.CumulativeLength[index] - lut.CumulativeLength[index - 1]);
+  }
+
+  /// <summary>
+  /// Interpolate the parameter t at an arbitrary cumulative arc-length via binary search + lerp (inverse of
+  /// <see cref="ArcLengthAt"/>). Assumes <paramref name="distance"/> is within [0, lut.TotalLength].
+  /// </summary>
+  internal static float ParameterAt(Lut lut, float distance) {
+    var index = LowerBound(lut.CumulativeLength, distance);
+    if (index <= 0) return lut.Parameters[0];
+    if (index >= lut.CumulativeLength.Length) return lut.Parameters[^1];
+
+    var d0 = lut.CumulativeLength[index - 1];
+    var d1 = lut.CumulativeLength[index];
+    var fraction = d1 > d0 ? (distance - d0) / (d1 - d0) : 0f;
+    return lut.Parameters[index - 1] + fraction * (lut.Parameters[index] - lut.Parameters[index - 1]);
+  }
+
+  /// <summary>Smallest index i such that values[i] >= target, over a monotonically increasing array.</summary>
+  private static int LowerBound(float[] values, float target) {
+    int lo = 0, hi = values.Length;
+    while (lo < hi) {
+      int mid = (lo + hi) / 2;
+      if (values[mid] < target) lo = mid + 1; else hi = mid;
+    }
+    return lo;
+  }
+
+  /// <summary>
+  /// Build the arc-length LUT for a segment at the resolution baking/queries should use: a small fixed
+  /// count for fast/lower-fidelity unit tests, or <see cref="BakingConfig.ArcLengthSampleCount"/> otherwise.
+  /// </summary>
+  internal static Lut BuildLutForQuery(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, bool useTestTolerance) =>
+    BuildLut(p0, p1, p2, p3, useTestTolerance ? TestSampleCount : BakingConfig.ArcLengthSampleCount);
 
   /// <summary>
   /// Compute the arc-length of a Catmull-Rom spline segment from t=t1 to t=t2.
-  /// Uses Simpson's rule with adaptive subdivision for accuracy.
-  /// Results are cached to avoid redundant computation during baking and binary search.
   /// </summary>
   public static float ComputeArcLength(
     float t1, float t2,
     Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3,
     bool useTestTolerance = false) {
-    var key = $"{p0}:{p1}:{p2}:{p3}:{t1}:{t2}";
-    if (ArcLengthCache.TryGetValue(key, out var cached)) {
-      return cached;
-    }
-
-    var tolerance = useTestTolerance ? TestTolerance : ProductionTolerance;
-    var result = AdaptiveSimpson(t1, t2, p0, p1, p2, p3, tolerance);
-    ArcLengthCache[key] = result;
-    return result;
-  }
-
-  /// <summary>
-  /// Clear the arc-length cache. Call this between test cases or when spline geometry changes.
-  /// </summary>
-  public static void ClearCache() {
-    ArcLengthCache.Clear();
+    var lut = BuildLutForQuery(p0, p1, p2, p3, useTestTolerance);
+    return ArcLengthAt(lut, t2) - ArcLengthAt(lut, t1);
   }
 
   /// <summary>
@@ -70,99 +126,9 @@ public static class ArcLength {
     bool useTestTolerance = false) {
     if (targetDistance <= 0f) return 0f;
 
-    // Binary search for the parameter t
-    float tLow = 0f, tHigh = 1f;
-    float distanceLow = 0f, distanceHigh = ComputeArcLength(0f, 1f, p0, p1, p2, p3, useTestTolerance);
+    var lut = BuildLutForQuery(p0, p1, p2, p3, useTestTolerance);
+    if (targetDistance >= lut.TotalLength) return 1f;
 
-    if (targetDistance >= distanceHigh) return 1f;
-
-    // Bisection: typically converges in 20-30 iterations for good tolerance
-    for (int i = 0; i < 40; i++) {
-      float tMid = (tLow + tHigh) * 0.5f;
-      float distanceMid = ComputeArcLength(0f, tMid, p0, p1, p2, p3, useTestTolerance);
-
-      if (Math.Abs(distanceMid - targetDistance) < 1e-5f) {
-        return tMid;
-      }
-
-      if (distanceMid < targetDistance) {
-        tLow = tMid;
-        distanceLow = distanceMid;
-      } else {
-        tHigh = tMid;
-        distanceHigh = distanceMid;
-      }
-    }
-
-    return (tLow + tHigh) * 0.5f;
-  }
-
-  /// <summary>
-  /// Adaptive Simpson's quadrature for arc-length integration.
-  /// Integrates the magnitude of the tangent vector from t1 to t2.
-  /// </summary>
-  private static float AdaptiveSimpson(
-    float t1, float t2,
-    Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3,
-    float tolerance) {
-    return AdaptiveSimpsonRecursive(t1, t2, p0, p1, p2, p3, tolerance, depth: 0);
-  }
-
-  private static float AdaptiveSimpsonRecursive(
-    float t1, float t2,
-    Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3,
-    float tolerance, int depth) {
-    // Prevent infinite recursion; at depth 50, intervals are ~2^-50 which is numerical noise
-    const int MaxDepth = 50;
-    const float H_MIN = 1e-7f; // Minimum interval width
-
-    var interval = t2 - t1;
-    if (depth > MaxDepth || interval < H_MIN) {
-      // Return a single Simpson estimate without further recursion
-      var mid = (t1 + t2) * 0.5f;
-      var f_t1 = TangentMagnitude(t1, p0, p1, p2, p3);
-      var f_mid = TangentMagnitude(mid, p0, p1, p2, p3);
-      var f_t2 = TangentMagnitude(t2, p0, p1, p2, p3);
-      return (interval / 6f) * (f_t1 + 4f * f_mid + f_t2);
-    }
-
-    var c_mid = (t1 + t2) * 0.5f;
-
-    // Simpson's rule for full interval
-    var f_a = TangentMagnitude(t1, p0, p1, p2, p3);
-    var f_c = TangentMagnitude(c_mid, p0, p1, p2, p3);
-    var f_b = TangentMagnitude(t2, p0, p1, p2, p3);
-    var simpson = (interval / 6f) * (f_a + 4f * f_c + f_b);
-
-    // Subdivide: evaluate at quarter points
-    var c1 = (t1 + c_mid) * 0.5f;
-    var c2 = (c_mid + t2) * 0.5f;
-
-    var f_c1 = TangentMagnitude(c1, p0, p1, p2, p3);
-    var f_c2 = TangentMagnitude(c2, p0, p1, p2, p3);
-
-    var h_half = interval * 0.25f;
-    var left = (h_half / 6f) * (f_a + 4f * f_c1 + f_c);
-    var right = (h_half / 6f) * (f_c + 4f * f_c2 + f_b);
-    var subdivided = left + right;
-
-    // Check error and decide to subdivide or accept
-    var error = Math.Abs(subdivided - simpson);
-    if (error <= 15f * tolerance) {
-      return subdivided + error / 15f; // Richardson extrapolation
-    }
-
-    // Recurse with tighter tolerance
-    return AdaptiveSimpsonRecursive(t1, c_mid, p0, p1, p2, p3, tolerance / 2f, depth + 1) +
-           AdaptiveSimpsonRecursive(c_mid, t2, p0, p1, p2, p3, tolerance / 2f, depth + 1);
-  }
-
-  /// <summary>
-  /// Compute the magnitude of the tangent vector (derivative) at parameter t.
-  /// This is the speed along the curve and is integrated to compute arc-length.
-  /// </summary>
-  private static float TangentMagnitude(float t, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3) {
-    var tangent = CatmullRom.Tangent(t, p0, p1, p2, p3);
-    return tangent.Length();
+    return ParameterAt(lut, targetDistance);
   }
 }

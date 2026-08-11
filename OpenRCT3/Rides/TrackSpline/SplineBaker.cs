@@ -29,6 +29,7 @@ public static class SplineBaker {
     var samples = new List<BakedSample>();
     var chordTolerance = BakingConfig.ComputeChordHeightTolerance(gauge);
     var bankThreshold = BakingConfig.BankRateThreshold;
+    var arcLengthOffset = 0f;
 
     // Walk through each segment (p_i, p_{i+1}) of the Catmull-Rom spline
     for (int i = 0; i < rail.ControlPoints.Count - 1; i++) {
@@ -42,7 +43,8 @@ public static class SplineBaker {
       var b2 = rail.ControlPoints[i + 1].Bank;
       var b3 = i < rail.ControlPoints.Count - 2 ? rail.ControlPoints[i + 2].Bank : rail.ControlPoints[i + 1].Bank;
 
-      BakeSegment(samples, p0, p1, p2, p3, b0, b1, b2, b3, chordTolerance, bankThreshold, gauge, useTestTolerance);
+      BakeSegment(samples, p0, p1, p2, p3, b0, b1, b2, b3, chordTolerance, bankThreshold, gauge, arcLengthOffset, useTestTolerance);
+      arcLengthOffset = samples[^1].ArcLength;
     }
 
     rail.BakedSamples = samples;
@@ -51,33 +53,42 @@ public static class SplineBaker {
 
   /// <summary>
   /// Bake a single Catmull-Rom segment (from p1 to p2, using p0 and p3 for tangent continuity).
-  /// Recursively subdivides based on adaptive criteria.
+  /// Recursively subdivides based on adaptive criteria. Arc-length is read from a LUT built once for
+  /// the whole segment up front, rather than re-integrated at every recursion node, and continues from
+  /// <paramref name="arcLengthOffset"/> so samples stay monotonic across segment boundaries within a rail.
+  /// Bootstraps an explicit sample at this rail's true t=0 start if none has been emitted yet.
   /// </summary>
   private static void BakeSegment(
     List<BakedSample> samples,
     Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3,
     float b0, float b1, float b2, float b3,
-    float chordTolerance, float bankThreshold, float gauge, bool useTestTolerance = false) {
-    BakeSegmentRecursive(samples, p0, p1, p2, p3, b0, b1, b2, b3, chordTolerance, bankThreshold, 0f, 1f, 0f, depth: 0, useTestTolerance);
+    float chordTolerance, float bankThreshold, float gauge, float arcLengthOffset, bool useTestTolerance = false) {
+    var arcLengthLut = ArcLength.BuildLutForQuery(p0, p1, p2, p3, useTestTolerance);
+
+    if (samples.Count == 0) {
+      var startPos = CatmullRom.Evaluate(0f, p0, p1, p2, p3);
+      var startTangent = Vector3.Normalize(CatmullRom.Tangent(0f, p0, p1, p2, p3));
+      var startBank = CatmullRom.EvaluateScalar(0f, b0, b1, b2, b3);
+      EmitSample(samples, startPos, startTangent, startBank, arcLengthOffset);
+    }
+
+    BakeSegmentRecursive(samples, p0, p1, p2, p3, b0, b1, b2, b3, chordTolerance, bankThreshold, arcLengthLut, 0f, 1f, arcLengthOffset, depth: 0);
   }
 
+  /// <summary>
+  /// Adaptively subdivide [t1, t2]: if the interval is flat enough (or the recursion cap is hit), emit one
+  /// sample at t2 and stop; otherwise split at the midpoint and recurse into both halves. A sample already
+  /// exists at t1 (either the rail's bootstrapped start, or the previous accepted interval's t2), so this
+  /// only ever needs to emit the far endpoint of whatever interval it accepts — never the midpoint, which
+  /// previously left samples marching toward t2 forever instead of terminating.
+  /// </summary>
   private static void BakeSegmentRecursive(
     List<BakedSample> samples,
     Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3,
     float b0, float b1, float b2, float b3,
-    float chordTolerance, float bankThreshold,
-    float t1, float t2, float cumulativeArcLength, int depth, bool useTestTolerance = false) {
-    // Limit recursion depth to avoid pathological cases
+    float chordTolerance, float bankThreshold, ArcLength.Lut arcLengthLut,
+    float t1, float t2, float cumulativeArcLength, int depth) {
     const int MaxDepth = 30;
-    if (depth > MaxDepth) {
-      // Fall back to a single sample at t2
-      var pos = CatmullRom.Evaluate(t2, p0, p1, p2, p3);
-      var tangent = Vector3.Normalize(CatmullRom.Tangent(t2, p0, p1, p2, p3));
-      var bank = CatmullRom.EvaluateScalar(t2, b0, b1, b2, b3);
-      var arcLenDelta = ArcLength.ComputeArcLength(t1, t2, p0, p1, p2, p3, useTestTolerance);
-      EmitSample(samples, pos, tangent, bank, cumulativeArcLength + arcLenDelta);
-      return;
-    }
 
     var t_mid = (t1 + t2) * 0.5f;
 
@@ -86,9 +97,13 @@ public static class SplineBaker {
     var pos_mid = CatmullRom.Evaluate(t_mid, p0, p1, p2, p3);
     var pos2 = CatmullRom.Evaluate(t2, p0, p1, p2, p3);
 
-    // Compute arc-lengths
-    var arcLen_1_mid = ArcLength.ComputeArcLength(t1, t_mid, p0, p1, p2, p3, useTestTolerance);
-    var arcLen_mid_2 = ArcLength.ComputeArcLength(t_mid, t2, p0, p1, p2, p3, useTestTolerance);
+    // Look up arc-lengths from the precomputed LUT
+    var arcLenAt1 = ArcLength.ArcLengthAt(arcLengthLut, t1);
+    var arcLenAtMid = ArcLength.ArcLengthAt(arcLengthLut, t_mid);
+    var arcLenAt2 = ArcLength.ArcLengthAt(arcLengthLut, t2);
+    var arcLen_1_mid = arcLenAtMid - arcLenAt1;
+    var arcLen_mid_2 = arcLenAt2 - arcLenAtMid;
+    var arcLen_1_2 = arcLenAt2 - arcLenAt1;
 
     // Check chord-height deviation: distance from midpoint to spline
     var chordLine = pos2 - pos1;
@@ -114,18 +129,16 @@ public static class SplineBaker {
     // Subdivide if either criterion triggers
     bool needsSubdivision = deviation > chordTolerance || bankRate_1_mid > bankThreshold || bankRate_mid_2 > bankThreshold;
 
-    if (!needsSubdivision || arcLen_1_mid + arcLen_mid_2 < 1e-6f) {
-      // Accept: emit sample at t_mid, then recurse to t2
-      var tangent_mid = Vector3.Normalize(CatmullRom.Tangent(t_mid, p0, p1, p2, p3));
-      EmitSample(samples, pos_mid, tangent_mid, bank_mid, cumulativeArcLength + arcLen_1_mid);
-
-      // Recurse to second half
-      BakeSegmentRecursive(samples, p0, p1, p2, p3, b0, b1, b2, b3, chordTolerance, bankThreshold, t_mid, t2, cumulativeArcLength + arcLen_1_mid, depth + 1, useTestTolerance);
-    } else {
-      // Subdivide: recurse to both halves
-      BakeSegmentRecursive(samples, p0, p1, p2, p3, b0, b1, b2, b3, chordTolerance, bankThreshold, t1, t_mid, cumulativeArcLength, depth + 1, useTestTolerance);
-      BakeSegmentRecursive(samples, p0, p1, p2, p3, b0, b1, b2, b3, chordTolerance, bankThreshold, t_mid, t2, cumulativeArcLength + arcLen_1_mid, depth + 1, useTestTolerance);
+    if (depth >= MaxDepth || !needsSubdivision || arcLen_1_2 < 1e-6f) {
+      // Accept: this whole [t1, t2] span is flat enough. Emit its far endpoint and stop recursing.
+      var tangent2 = Vector3.Normalize(CatmullRom.Tangent(t2, p0, p1, p2, p3));
+      EmitSample(samples, pos2, tangent2, bank2, cumulativeArcLength + arcLen_1_2);
+      return;
     }
+
+    // Subdivide: recurse into both halves, left-to-right so samples come out in increasing arc-length order.
+    BakeSegmentRecursive(samples, p0, p1, p2, p3, b0, b1, b2, b3, chordTolerance, bankThreshold, arcLengthLut, t1, t_mid, cumulativeArcLength, depth + 1);
+    BakeSegmentRecursive(samples, p0, p1, p2, p3, b0, b1, b2, b3, chordTolerance, bankThreshold, arcLengthLut, t_mid, t2, cumulativeArcLength + arcLen_1_mid, depth + 1);
   }
 
   private static void EmitSample(List<BakedSample> samples, Vector3 position, Vector3 tangent, float bank, float arcLength) {

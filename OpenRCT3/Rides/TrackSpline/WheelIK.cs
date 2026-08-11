@@ -141,40 +141,43 @@ public static class WheelIK {
     var right = Vector3.Normalize(Vector3.Cross(up, forward));
     var trueUp = Vector3.Cross(forward, right);
 
-    // Convert basis to quaternion (Shepperd's method)
-    var trace = forward.X + trueUp.Y + right.Z;
+    // Convert basis to quaternion (Shepperd's method). Column order must be (forward, right, trueUp)
+    // to match how these vectors were derived (forward × right == trueUp), so the assembled matrix is
+    // a proper (det=+1) rotation; swapping right/trueUp here feeds Shepperd's method an improper
+    // (reflected) matrix, which produces negative sqrt arguments (NaN) or wrong-magnitude results.
+    var trace = forward.X + right.Y + trueUp.Z;
 
     if (trace > 0) {
       var s = 0.5f / (float)Math.Sqrt(trace + 1f);
       return new Quaternion(
-        (trueUp.Z - right.Y) * s,
-        (right.X - forward.Z) * s,
-        (forward.Y - trueUp.X) * s,
+        (trueUp.Y - right.Z) * s,
+        (forward.Z - trueUp.X) * s,
+        (right.X - forward.Y) * s,
         0.25f / s
       );
-    } else if (forward.X > trueUp.Y && forward.X > right.Z) {
-      var s = 2f * (float)Math.Sqrt(1f + forward.X - trueUp.Y - right.Z);
+    } else if (forward.X > right.Y && forward.X > trueUp.Z) {
+      var s = 2f * (float)Math.Sqrt(1f + forward.X - right.Y - trueUp.Z);
       return new Quaternion(
         0.25f * s,
-        (forward.Y + trueUp.X) / s,
-        (forward.Z + right.X) / s,
-        (trueUp.Z - right.Y) / s
+        (forward.Y + right.X) / s,
+        (forward.Z + trueUp.X) / s,
+        (trueUp.Y - right.Z) / s
       );
-    } else if (trueUp.Y > right.Z) {
-      var s = 2f * (float)Math.Sqrt(1f + trueUp.Y - forward.X - right.Z);
+    } else if (right.Y > trueUp.Z) {
+      var s = 2f * (float)Math.Sqrt(1f + right.Y - forward.X - trueUp.Z);
       return new Quaternion(
-        (forward.Y + trueUp.X) / s,
+        (forward.Y + right.X) / s,
         0.25f * s,
-        (trueUp.Z + right.Y) / s,
-        (right.X - forward.Z) / s
+        (right.Z + trueUp.Y) / s,
+        (forward.Z - trueUp.X) / s
       );
     } else {
-      var s = 2f * (float)Math.Sqrt(1f + right.Z - forward.X - trueUp.Y);
+      var s = 2f * (float)Math.Sqrt(1f + trueUp.Z - forward.X - right.Y);
       return new Quaternion(
-        (forward.Z + right.X) / s,
-        (trueUp.Z + right.Y) / s,
+        (forward.Z + trueUp.X) / s,
+        (right.Z + trueUp.Y) / s,
         0.25f * s,
-        (trueUp.X - forward.Y) / s
+        (right.X - forward.Y) / s
       );
     }
   }

@@ -110,6 +110,12 @@ public enum TrackPieceType {
   Corkscrew = 4,
   Twist = 5,
   BankedCurve = 6,
+
+  /// <summary>
+  /// A junction piece with more than one valid exit rail set. Branch metadata (which exit is
+  /// active/default) lives on the piece itself, not on the graph edges.
+  /// </summary>
+  Switch = 7,
   // Future: more exotic piece types
 }
 

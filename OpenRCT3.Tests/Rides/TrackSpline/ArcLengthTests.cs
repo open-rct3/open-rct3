@@ -15,11 +15,6 @@ namespace OpenRCT3.Tests.Rides.TrackSpline;
 public class ArcLengthTests {
   private const float Tolerance = 1e-3f;
 
-  [SetUp]
-  public void Setup() {
-    ArcLength.ClearCache();
-  }
-
   [Test]
   public void ComputeArcLength_StraightLine_EqualsDistance() {
     // Four collinear points: (0,0,0), (1,0,0), (2,0,0), (3,0,0)
