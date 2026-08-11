@@ -5,11 +5,8 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using NUnit.Framework;
 using OpenRCT3.Simulation;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
 namespace OpenRCT3.Tests.Simulation;
 
@@ -28,7 +25,7 @@ public class ParkLoadSystemTests {
   [TearDown]
   public void TearDown() {
     parkLoadSystem?.Dispose();
-    world.Dispose();
+    world?.Dispose();
   }
 
   #region Known-Good Case
@@ -51,7 +48,7 @@ public class ParkLoadSystemTests {
 
     parkLoadSystem.RequestLoad(null);
 
-    Assert.That(loadCount, Is.EqualTo(0), "Should not load without calling Update");
+    Assert.That(loadCount, Is.Zero, "Should not load without calling Update");
   }
 
   #endregion
@@ -60,25 +57,21 @@ public class ParkLoadSystemTests {
 
   [Test]
   public void RequestLoad_CalledTwice_OnlyLoadsLatestPath() {
-    var paths = new System.Collections.Generic.List<string?>();
-    world.OnLoadCalled += () => {
-      paths.Add(world.LastLoadedPath);
-    };
+    var paths = new List<string?>();
+    world.OnLoadCalled += () => paths.Add(world.LastLoadedPath);
 
     parkLoadSystem.RequestLoad("path1.dat");
     parkLoadSystem.RequestLoad("path2.dat");
     world.Update(TimeSpan.FromMilliseconds(16));
 
-    Assert.That(paths.Count, Is.EqualTo(1), "Should load exactly once");
+    Assert.That(paths, Has.Count.EqualTo(1), "Should load exactly once");
     Assert.That(paths[0], Is.EqualTo("path2.dat"), "Should load the last requested path");
   }
 
   [Test]
   public void RequestLoad_CalledMultipleTimes_KeepsLatest() {
-    var paths = new System.Collections.Generic.List<string?>();
-    world.OnLoadCalled += () => {
-      paths.Add(world.LastLoadedPath);
-    };
+    var paths = new List<string?>();
+    world.OnLoadCalled += () => paths.Add(world.LastLoadedPath);
 
     parkLoadSystem.RequestLoad("path1.dat");
     parkLoadSystem.RequestLoad("path2.dat");
@@ -86,7 +79,7 @@ public class ParkLoadSystemTests {
     parkLoadSystem.RequestLoad(null);
     world.Update(TimeSpan.FromMilliseconds(16));
 
-    Assert.That(paths.Count, Is.EqualTo(1), "Should load exactly once");
+    Assert.That(paths, Has.Count.EqualTo(1), "Should load exactly once");
     Assert.That(paths[0], Is.Null, "Should load the null (default) path");
   }
 
@@ -94,22 +87,37 @@ public class ParkLoadSystemTests {
 
   #region Weak Reference Edge Case
 
+  /// <remarks>
+  /// Debug builds keep a method's locals alive for the whole body, not just to last use, so a weak
+  /// reference checked in the same frame that touched <c>world</c> would never report it as dead. This
+  /// frame is kept separate (<see cref="MethodImplOptions.NoInlining"/>) so it can unwind first.
+  /// </remarks>
+  [MethodImpl(MethodImplOptions.NoInlining)]
+  private WeakReference DisposeWorldAndTrackWeakly(Action onLoad) {
+    world.OnLoadCalled += onLoad;
+    parkLoadSystem.RequestLoad(null);
+    var weak = new WeakReference(world);
+    world.Dispose();
+    world = null!;
+    return weak;
+  }
+
   [Test]
   public void Update_WhileWorldDisposed_NoOps() {
     var loadCount = 0;
-    world.OnLoadCalled += () => loadCount++;
-
-    parkLoadSystem.RequestLoad(null);
-    world.Dispose();
+    var weak = DisposeWorldAndTrackWeakly(() => loadCount++);
 
     GC.Collect();
     GC.WaitForPendingFinalizers();
+    GC.Collect();
 
-    NUnit.Framework.Assert.DoesNotThrow(
-      new System.Action(() => parkLoadSystem.Update(TimeSpan.FromMilliseconds(16))),
+    Assert.That(weak.IsAlive, Is.False, "World should be collectible once nothing references it");
+
+    Assert.DoesNotThrow(
+      new Action(() => parkLoadSystem.Update(TimeSpan.FromMilliseconds(16))),
       "Should not throw when world is disposed");
 
-    Assert.That(loadCount, Is.EqualTo(0), "Should not load if world is disposed");
+    Assert.That(loadCount, Is.Zero, "Should not load if world is disposed");
   }
 
   #endregion
@@ -138,28 +146,29 @@ public class ParkLoadSystemTests {
     Task.WaitAll(tasks);
     world.Update(TimeSpan.FromMilliseconds(16));
 
-    Assert.That(paths.Count, Is.EqualTo(1), "Should load exactly once despite concurrent requests");
-    Assert.That(pathsToRequest, Does.Contain(paths[0]),
-      "The loaded path should be one of the requested paths (last write wins via Interlocked.Exchange)");
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(paths, Has.Count.EqualTo(1), "Should load exactly once despite concurrent requests");
+      Assert.That(pathsToRequest, Does.Contain(paths[0]),
+        "The loaded path should be one of the requested paths (last write wins via Interlocked.Exchange)");
+    }
+
   }
 
   [Test]
   public void RequestLoad_Interleaved_WithUpdates_OnlyLoadsLatest() {
-    var loadedPaths = new System.Collections.Generic.List<string?>();
-    world.OnLoadCalled += () => {
-      loadedPaths.Add(world.LastLoadedPath);
-    };
+    var loadedPaths = new List<string?>();
+    world.OnLoadCalled += () => loadedPaths.Add(world.LastLoadedPath);
 
     parkLoadSystem.RequestLoad("path1.dat");
     world.Update(TimeSpan.FromMilliseconds(16));
-    Assert.That(loadedPaths.Count, Is.EqualTo(1));
+    Assert.That(loadedPaths, Has.Count.EqualTo(1));
     Assert.That(loadedPaths[0], Is.EqualTo("path1.dat"));
 
     parkLoadSystem.RequestLoad("path2.dat");
     parkLoadSystem.RequestLoad("path3.dat");
     world.Update(TimeSpan.FromMilliseconds(16));
 
-    Assert.That(loadedPaths.Count, Is.EqualTo(2));
+    Assert.That(loadedPaths, Has.Count.EqualTo(2));
     Assert.That(loadedPaths[1], Is.EqualTo("path3.dat"), "Should have loaded the latest of the two concurrent requests");
   }
 
@@ -171,9 +180,7 @@ public class ParkLoadSystemTests {
     public event Action? OnLoadCalled;
     public string? LastLoadedPath { get; private set; }
 
-    public override void Load() {
-      ((IParkLoader)this).Load(null);
-    }
+    public override void Load() => (this as IParkLoader).Load(null);
 
     void IParkLoader.Load(string? parkPath) {
       LastLoadedPath = parkPath;
