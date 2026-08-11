@@ -22,11 +22,35 @@
       [.agents/summaries/completed-work/ovl-resource-relocation.md](.agents/summaries/completed-work/ovl-resource-relocation.md)
 - [x] Create data model for inspector items (`OpenRCT3/ViewModels/Inspector.cs:14`)
 - [ ] Handle OS-dependent and game-store-dependent game paths (`src/paths.d:34,49`)
+- [ ] Investigate `mms`/`prt`/`psi` decoders' premise (assumed tex/flic/btbl-shaped, confirmed wrong)
+      (`OpenCobra/OVL/Files/CharacterSkins.cs`, `OpenCobra/OVL/Files/ParticleEffects.cs`)
+- [ ] Validate `BinaryReader.ReadBytes` returned the full requested size before `Marshal.PtrToStructure`
+      in `BinaryReaderExtensions.Read<T>` (`OpenCobra/OVL/Files/TextureDecoding.cs:188`) — currently only
+      validated for `Tex`
+- [ ] Root-cause `gsi`/`shs` showing "0 LoaderStruct entries" in `Main.common.ovl` (same signature as the
+      since-fixed `tex`/`fct` issue, not independently investigated)
 
 ### Engine & Rendering
 
 - [ ] Update framebuffer on window resize/screen changes (`OpenRCT3/Platforms/macOS/GameViewController.cs:35`)
 - [ ] Tear down graphics and other unmanaged resources (`OpenRCT3/Platforms/macOS/AppDelegate.cs:24`)
+- [ ] Verify `GLState.IsCoreProfile` detection logic (`OpenCobra/GDK/GLState.cs:73`) — flagged as possibly
+      incorrect when written
+- [ ] Build GDK meshes directly from decoded `StaticShape` vertex/triangle data
+      (`OpenCobra/OVL/Files/StaticShapes.cs`) for in-game rendering, not just Dumper preview
+- [ ] `ImDraw` (`OpenCobra/GDK/ImDraw.cs`) has no real consumers yet — default line width, circle segment
+      count, degenerate-line-direction collapse threshold, and `DynamicDraw` vs `StreamDraw` buffer usage
+      are all unturned, deferred until a real caller (brush cursor, route/waypoint visualization) exists
+
+### Camera & Input
+
+- [ ] Wire Freelook/Isometric mouse-drag camera bindings to actual camera behavior (bindings exist in
+      `OpenRCT3/Input/DefaultBindings.cs` but aren't consumed — only Normal mode is)
+- [ ] Add an explicit `CameraMode` enum/dispatch — mode-dependent effects (e.g. Q/E snap vs. continuous
+      rotate) are currently hand-coded per action rather than dispatched through a mode concept
+- [ ] Use Windows Raw Input API (`RI_MOUSE_WHEEL`/`RI_MOUSE_HWHEEL`) for finer scroll-wheel granularity
+      than WinForms' `WM_MOUSEWHEEL`-based `MouseWheel` event (`OpenRCT3/Input/InputController.cs:67`)
+- [ ] Add gamepad bindings, a rebinding UI, and binding-conflict detection to the input system
 
 ### ECS & World Systems
 
