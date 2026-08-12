@@ -5,6 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -103,6 +104,18 @@ public class TrackPiece {
   /// For procedural pieces: false (geometry is generated from profile curve).
   /// </summary>
   public bool IsOrganic { get; set; }
+
+  /// <summary>
+  /// Baked samples along the heartline of this piece, lazy-computed on first access.
+  /// </summary>
+  /// <remarks>
+  /// The heartline is the centerline of both rails, inset upward to align with the average rider's heart (middle-torso level), accounting for varied seating positions (sitting, standing, lying down).
+  /// </remarks>
+  public Lazy<BakedSample[]> Heartline { get; } = new(() => ComputeHeartline());
+
+  private static BakedSample[] ComputeHeartline() {
+    throw new NotImplementedException("Heartline computation deferred to track geometry tuning phase.");
+  }
 }
 
 /// <summary>

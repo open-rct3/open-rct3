@@ -126,7 +126,7 @@ endif
 OPENRCT3_TESTS_DLL := OpenRCT3.Tests/bin/Debug/$(OPENRCT3_TESTS_TFM)/OpenRCT3.Tests.dll
 
 $(OPENRCT3_TESTS_DLL): $(OPENRCT3_TESTS_PROJ) $(OPENRCT3_TESTS_SRC)
-	dotnet build $(OPENRCT3_TESTS_PROJ) -p:SolutionDir=$(CURDIR)/
+	dotnet build $(OPENRCT3_TESTS_PROJ) /p:Testing=true /p:SolutionDir=$(CURDIR)/
 
 # Extract TargetFramework from the project files
 TEST_BENCH_TFM := $(shell grep -oEm1 "<TargetFramework>[^<]+" $(TEST_BENCH_PROJ) | sed "s/<TargetFramework>//")
@@ -147,7 +147,7 @@ endif
 .PHONY: test
 test: $(TESTS_DLL) $(OPENRCT3_TESTS_DLL)
 	deno check clients/desktop/main.ts
-	dotnet test OpenRCT3.tests.slnf --no-build /p:SolutionDir=$(CURDIR)
+	dotnet test OpenRCT3.tests.slnf --no-build /p:Testing=true /p:SolutionDir=$(CURDIR)
 
 .PHONY: cover
 cover: $(TESTS_DLL)

@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>true</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <StartupObject>OpenRCT3.Program</StartupObject>
     <TieredCompilation>true</TieredCompilation>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Default output and startup object for non-test builds -->
+    <OutputType Condition="$(Testing) != 'true'">Exe</OutputType>
+    <StartupObject Condition="$(Testing) != 'true'">OpenRCT3.Program</StartupObject>
     <!-- Display name -->
     <ApplicationTitle>OpenRCT3</ApplicationTitle>
     <Company>OpenRCT3 Contributors</Company>
@@ -21,7 +23,7 @@
     <LangVersion>14</LangVersion>
   </PropertyGroup>
   <!-- Configure debug and release modes -->
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <CreatePackage>false</CreatePackage>
     <UseSGen>false</UseSGen>
     <WarningLevel>1</WarningLevel>
@@ -60,21 +62,21 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Panda.ico" />
-    <InternalsVisibleTo Include="OpenRCT3.Tests" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="System" />
     <Using Include="System.Diagnostics" />
     <Using Include="System.IO" />
+    <Using Include="System.Linq" />
+    <Using Include="System.Threading" />
   </ItemGroup>
   <Choose>
-    <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
+    <When Condition="$([MSBuild]::IsOSPlatform('macos')) And $(Testing) != 'true'">
       <PropertyGroup>
         <ProfileName>macOS</ProfileName>
         <DefineConstants>$(DefineConstants);MACOS;OSX</DefineConstants>
         <!-- See https://github.com/xamarin/xamarin-macios -->
         <TargetFramework>net9.0-macos</TargetFramework>
-        <ImplicitUsings>true</ImplicitUsings>
         <TargetPlatformVersion>15.0</TargetPlatformVersion>
         <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
         <LinkerBehavior>LinkFrameworkSDKsOnly</LinkerBehavior>
@@ -91,7 +93,7 @@
         <Compile Remove="Program.windows.cs" />
       </ItemGroup>
     </When>
-    <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
+    <When Condition="$([MSBuild]::IsOSPlatform('windows')) And $(Testing) != 'true'">
       <PropertyGroup>
         <ProfileName>Windows</ProfileName>
         <OutputType>WinExe</OutputType>
@@ -106,6 +108,23 @@
         <PackageReference Include="Silk.NET.WGL.Extensions.EXT" Version="2.23.0" />
       </ItemGroup>
       <ItemGroup>
+        <Compile Remove="OpenGL\GLContext.macOS.cs" />
+        <Compile Remove="**\Platforms\macOS\**\*.cs" />
+        <Compile Remove="Program.macOS.cs" />
+      </ItemGroup>
+    </When>
+    <When Condition="$(Testing) == 'true'">
+      <PropertyGroup>
+        <OutputType>Library</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+      </PropertyGroup>
+      <ItemGroup>
+        <InternalsVisibleTo Include="OpenRCT3.Tests" />
+      </ItemGroup>
+      <ItemGroup>
+        <Compile Remove="OpenGL\GLContext.windows.cs" />
+        <Compile Remove="Platforms\Windows\**\*.cs" />
+        <Compile Remove="Program.windows.cs" />
         <Compile Remove="OpenGL\GLContext.macOS.cs" />
         <Compile Remove="**\Platforms\macOS\**\*.cs" />
         <Compile Remove="Program.macOS.cs" />

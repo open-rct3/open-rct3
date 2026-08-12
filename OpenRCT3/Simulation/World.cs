@@ -13,13 +13,12 @@ using OpenRCT3.Scenario;
 using Silk.NET.Input;
 using System.Drawing;
 using System.Numerics;
-using System.Threading;
 using GDK = OpenCobra.GDK;
 
 #if WINDOWS
 using System.Windows.Forms;
-#elif OSX
-using AppKit;
+#elif MACOS
+using OpenRCT3.Platforms.macOS;
 #endif
 
 namespace OpenRCT3.Simulation;
@@ -150,8 +149,15 @@ public class World : GDK.Game.World, IParkLoader {
     editor = new Editor();
     editor.Exit += () => {
       game.Quit();
-      // TODO: Make this cross-platform
+
+      // Exit the game
+      // TODO: This doesn't belong here; move it to a new platform-agnostic abstraction
+#if WINDOWS
       Application.Exit();
+#elif MACOS
+      if (NSApplication.SharedApplication.Delegate is AppDelegate app)
+        app.Exit();
+#endif
     };
     scene.Windows.Add(editor);
 

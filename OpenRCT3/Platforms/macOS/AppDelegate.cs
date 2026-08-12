@@ -16,15 +16,17 @@ public class AppDelegate : NSApplicationDelegate {
     "CA1422:Validate platform compatibility",
     Justification = "This app requires at least macOS 10.15"
   )]
-  public override void DidFinishLaunching(NSNotification notification) {
+  public override void DidFinishLaunching(NSNotification notification) =>
     NSApplication.SharedApplication.ActivateIgnoringOtherApps(true);
-  }
 
   public override void WillTerminate(NSNotification notification) {
     // TODO: Tear down graphics and other unmanaged resources
   }
 
-  public override bool ApplicationShouldTerminateAfterLastWindowClosed(NSApplication sender) {
-    return true;
-  }
+  public override bool ApplicationShouldTerminateAfterLastWindowClosed(NSApplication sender) => true;
+
+  /// <summary>
+  /// Exits the application.
+  /// </summary>
+  public void Exit() => NSApplication.SharedApplication.Stop(this);
 }

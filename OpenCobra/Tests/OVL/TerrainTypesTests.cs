@@ -7,8 +7,9 @@ namespace OpenCobra.Tests.OVL;
 
 [TestFixture]
 public class TerrainTypesTests {
+  private static string? Rct3Path() => Environment.GetEnvironmentVariable("RCT3_PATH");
+
   private static byte[] MakeSyntheticTerrainType(
-    string name = "test",
     uint version = 1,
     uint unk02 = 0,
     uint addon = 0,
@@ -85,13 +86,13 @@ public class TerrainTypesTests {
   }
 
   [Test]
-  [Explicit("Requires RCT3_PATH")]
+  [SkipIfEnvironmentMissing("RCT3_PATH", "Cannot find RCT3. Skipping integration test.")]
   public void Extract_FromTerrainRCT3_DecodesAllEntries() {
-    var rct3Path = Environment.GetEnvironmentVariable("RCT3_PATH");
-    if (string.IsNullOrEmpty(rct3Path))
+    var rct3 = Rct3Path()!;
+    if (string.IsNullOrEmpty(rct3))
       Assert.Inconclusive("RCT3_PATH not set");
 
-    var terrainCommonPath = Path.Combine(rct3Path, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
+    var terrainCommonPath = Path.Combine(rct3, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
     if (!File.Exists(terrainCommonPath))
       Assert.Inconclusive($"Terrain_RCT3.common.ovl not found at {terrainCommonPath}");
 
@@ -114,13 +115,13 @@ public class TerrainTypesTests {
   }
 
   [Test]
-  [Explicit("Requires RCT3_PATH")]
+  [SkipIfEnvironmentMissing("RCT3_PATH", "Cannot find RCT3. Skipping integration test.")]
   public void Extract_FromTerrainCT_DecodesAllEntries() {
-    var rct3Path = Environment.GetEnvironmentVariable("RCT3_PATH");
-    if (string.IsNullOrEmpty(rct3Path))
+    var rct3 = Rct3Path()!;
+    if (string.IsNullOrEmpty(rct3))
       Assert.Inconclusive("RCT3_PATH not set");
 
-    var terrainCtPath = Path.Combine(rct3Path, "terrain", "CT", "Terrain_CT.common.ovl");
+    var terrainCtPath = Path.Combine(rct3, "terrain", "CT", "Terrain_CT.common.ovl");
     if (!File.Exists(terrainCtPath))
       Assert.Inconclusive($"Terrain_CT.common.ovl not found at {terrainCtPath}");
 
