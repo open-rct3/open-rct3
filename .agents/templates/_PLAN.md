@@ -1,3 +1,11 @@
+---
+state: design OR revise OR implement OR done
+dependencies:
+  - features/ovl/ovl-track-pieces (plain names relative to .agents/plans)
+  - features/ein
+  - ovl-extra-files
+---
+
 # <Feature or Change Name>
 
 <!--
@@ -8,6 +16,10 @@ features/terrain/water-tool.md, features/scenery-placement-registry.md).
 Delete this comment block and any sections that don't apply. Not every plan needs every
 section below — a small plan can be Context + Goals + Status; a large one grows the rest as
 decisions get made. Keep headings in this order when present, since readers skim in this order.
+
+Frontmatter metadata:
+- `state`: design | revise | implement | done — current stage of this plan
+- `dependencies`: list of related plans (paths relative to .agents/plans/, e.g. features/ovl/ovl-track-pieces)
 -->
 
 ## Context
@@ -51,6 +63,14 @@ avoid foreclosing that future work (e.g. "the API shape leaves room for X"), not
 deferred. Also notes relevant work that is out-of-scope for this plan.
 
 ## Testing
+
+<!--
+Bot guidance for test naming:
+- Unit tests in OpenCobra/Tests/OVL/: Use plural noun + Tests.cs (e.g., SplinesTests.cs, TrackSectionsTests.cs). Follow existing patterns like SceneryItemsTests.cs, ManifoldMeshesTests.cs. Do NOT use "Decoder" suffix (e.g., not SplineDecoderTests.cs).
+- Integration tests in OpenCobra/Tests/Integration/: Add test methods to existing classes like ExtractResources, don't create new files for single-feature integration tests. See OVL README for the documented pattern.
+- Plugin tests: Create dedicated test file in the plugin directory (e.g., plugins/tks-viewer/index.test.ts).
+Audit all proposed test file names against actual project structure before finalizing the plan.
+-->
 
 What this plan will cover with unit/integration tests, called out per untested area it touches —
 not just the new code it adds. Existing untested code this plan modifies (especially in

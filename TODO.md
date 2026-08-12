@@ -59,17 +59,6 @@
 
 ### Rides & Track Splines
 
-- [ ] Derive `TrackChaining.ChainPiece`'s newly-chained piece world-space `Bank` from the previous piece's exit
-      bank instead of hardcoding `0f` (`OpenRCT3/Rides/TrackSpline/TrackChaining.cs:66`) — banked curves chained
-      in sequence currently lose world-space roll continuity; add a `TrackChainingTests` case covering it.
-      Cheap correctness fix; do before anything below builds on top of chained world transforms
-- [ ] Apply `TrackChaining`'s world-space `Position`/`Heading`/`Bank` transform to baked rail samples at
-      draw/query time — `BakedSample` positions stay in local/model space today; this is rendering pipeline
-      integration work, not part of the track spline data model itself. Completes the "render tracked rides"
-      milestone and unblocks visual validation of everything below
-- [ ] Build the ImGui editor window for track piece authoring + `ImDraw` rail/bake visualization
-      (`OpenRCT3/Rides/TrackSpline/`) — no editor exists yet; organic (hand-authored) pieces have no UI to set
-      control point/tangent overrides. Needed to author real content for the tolerance-tuning pass below
 - [ ] Tighten `BakingConfig` tolerance defaults (`ChordHeightToleranceFraction`, `ChordHeightToleranceAbsoluteMinimum`,
       `BankRateThreshold`) against real piece geometry once authoring content exists to validate against
       (depends on the editor above to author that content, and the render-pipeline item above to see it in-game)
