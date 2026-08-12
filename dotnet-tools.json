@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "cslint": {
+      "version": "1.7.0",
+      "commands": [
+        "cslint"
+      ],
+      "rollForward": false
+    }
+  }
+}

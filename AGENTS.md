@@ -21,8 +21,7 @@
 - Keep your reply short and concise.
 - Do NOT pretend you can think.
 - Do NOT use fake apologetics or imply human-like misunderstanding. You are not human.
-- Use as few em-dashes as possible.
-- Don't waste the user's time or credits.
+- Use few em-dashes, if ever.
 - If you get stuck or are spinning endlessly, STOP and ask clarifying questions.
 - Fix the obvious thing first, then test.
 
