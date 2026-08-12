@@ -77,6 +77,31 @@ public class TrackDataExtractorsTests {
       var nodeDistances = new List<float>();
       var cpMagnitudes = new List<float>();
 
+      // Validate Segment decoding
+      TestContext.WriteLine($"\n  Segment data validation:");
+      for (var segIdx = 0; segIdx < curved.Segments.Length; segIdx++) {
+        var segment = curved.Segments[segIdx];
+        var segmentLength = curved.SegmentLengths[segIdx];
+        var distances = segment.GetCumulativeDistances(segmentLength);
+
+        // Check decoded distances
+        Assert.That(distances.Length, Is.EqualTo(14), $"Segment {segIdx} should have 14 samples");
+
+        // Sample values should be monotonically increasing
+        for (var i = 1; i < distances.Length; i++) {
+          Assert.That(distances[i], Is.GreaterThanOrEqualTo(distances[i - 1]),
+            $"Segment {segIdx} sample {i} distance not monotonic: {distances[i]} < {distances[i-1]}");
+        }
+
+        // Decoded distances should be within segment bounds (with tolerance for rounding)
+        Assert.That(distances[0], Is.GreaterThanOrEqualTo(-0.1f),
+          $"Segment {segIdx} first sample {distances[0]} should be >= 0");
+        Assert.That(distances[13], Is.LessThanOrEqualTo(segmentLength + 0.1f),
+          $"Segment {segIdx} last sample {distances[13]} exceeds segment length {segmentLength}");
+
+        TestContext.WriteLine($"    Segment {segIdx}: len={segmentLength:F3}, samples=[{distances[0]:F3}..{distances[13]:F3}]");
+      }
+
       for (var i = 0; i < curved.Nodes.Length - 1; i++) {
         var p0 = curved.Nodes[i];
         var p1 = curved.Nodes[i + 1];
@@ -118,8 +143,8 @@ public class TrackDataExtractorsTests {
       Assert.That(hasNontrivialControlPoints, Is.True, "Curved splines should have non-trivial control points");
       Assert.That(deviations.Count > 0 && deviations.Any(d => d > 0.001f), Is.True, "Curved splines should deviate from straight lines");
 
-      Assert.That(curved.SegmentData.All(d => d.Length == 14), Is.True, "All segment data should be 14 bytes");
-      Assert.That(curved.SegmentData.Any(d => d.Any(b => b != 0)), Is.True, "Segment data should contain non-zero bytes");
+      Assert.That(curved.Segments.Length == curved.SegmentLengths.Length, Is.True, "Number of segments should match segment lengths");
+      Assert.That(curved.Segments.Any(seg => seg.Samples.Any(b => b != 0)), Is.True, "Segment data should contain non-zero bytes");
     }
   }
 }

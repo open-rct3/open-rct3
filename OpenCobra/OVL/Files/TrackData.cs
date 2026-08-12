@@ -24,6 +24,73 @@ internal struct SplineNodeBinary {
 }
 
 /// <summary>
+/// Decoded segment data: 14 normalized distance markers at 1/15th intervals along a cubic bezier curve.
+/// Each byte (0-255) represents cumulative distance along the segment.
+/// </summary>
+[StructLayout(LayoutKind.Sequential, Size = 14)]
+public readonly struct Segment {
+  /// <remarks>
+  /// Each byte represents a distance marker at 1/15th intervals along the segment's cubic bezier curve.
+  /// Encoding: 255 - floor((2*k + 16*k) - (255 * cumulative_distance[k] / segment_length))
+  /// Used for efficient curve traversal without re-computing bezier distances at runtime.
+  /// </remarks>
+  private readonly byte S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12, S13;
+
+  public static int Length => 14;
+
+  public readonly byte this[int index] => index switch {
+    0 => S0,
+    1 => S1,
+    2 => S2,
+    3 => S3,
+    4 => S4,
+    5 => S5,
+    6 => S6,
+    7 => S7,
+    8 => S8,
+    9 => S9,
+    10 => S10,
+    11 => S11,
+    12 => S12,
+    13 => S13,
+    _ => throw new IndexOutOfRangeException($"Sample index {index} out of range [0-13]")
+  };
+
+  public readonly IEnumerable<byte> Samples {
+    get {
+      yield return S0; yield return S1; yield return S2; yield return S3;
+      yield return S4; yield return S5; yield return S6; yield return S7;
+      yield return S8; yield return S9; yield return S10; yield return S11;
+      yield return S12; yield return S13;
+    }
+  }
+
+  /// <summary>
+  /// Decode sample to cumulative distance along segment.
+  /// Formula: cumDist[k] = segmentLength * (34*k - byte[k-1]) / 255
+  /// where k = sampleIndex + 1 (1-indexed in formula, 0-indexed for array access).
+  /// </summary>
+  public readonly float GetCumulativeDistance(int sampleIndex, float segmentLength) {
+    if (sampleIndex < 0 || sampleIndex >= 14)
+      throw new IndexOutOfRangeException($"Sample index {sampleIndex} out of range [0-13]");
+    var k = sampleIndex + 1;
+    var byte_value = this[sampleIndex];
+    return segmentLength * (34 * k - byte_value) / 255f;
+  }
+
+  /// <summary>
+  /// Decode all samples to cumulative distances along segment.
+  /// </summary>
+  public readonly float[] GetCumulativeDistances(float segmentLength) {
+    var distances = new float[14];
+    for (var i = 0; i < 14; i++) {
+      distances[i] = GetCumulativeDistance(i, segmentLength);
+    }
+    return distances;
+  }
+}
+
+/// <summary>
 /// Binary representation of Spline header.
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Size = 32)]
@@ -65,8 +132,8 @@ public readonly record struct OvlSpline(
   /// Length = NodeCount - 1 for open splines, NodeCount for cyclic.
   /// </summary>
   float[] SegmentLengths,
-  /// <summary>Travel behavior data: 14 bytes per segment encoding how objects traverse the spline.</summary>
-  byte[][] SegmentData,
+  /// <summary>Decoded segment data with 14 distance samples per segment.</summary>
+  Segment[] Segments,
   /// <summary>Maximum Y coordinate (height) in the spline.</summary>
   float MaxY
 );
@@ -218,7 +285,7 @@ public static class TrackData {
     ReadSplineNodes(ovl, splineData.NodesPtr, nodeCount, nodes, cp1, cp2);
 
     var segmentLengths = ReadFloatArray(ovl, splineData.LengthsPtr, cyclic ? nodeCount : nodeCount - 1);
-    var segmentData = ReadSegmentDataArray(ovl, splineData.DataPtr, cyclic ? nodeCount : nodeCount - 1);
+    var segments = ReadSegmentDataArray(ovl, splineData.DataPtr, cyclic ? nodeCount : nodeCount - 1);
 
     return new OvlSpline(
       file.Name,
@@ -230,7 +297,7 @@ public static class TrackData {
       splineData.TotalLength,
       splineData.InvTotalLength,
       segmentLengths,
-      segmentData,
+      segments,
       splineData.MaxY
     );
   }
@@ -311,16 +378,18 @@ public static class TrackData {
     return result;
   }
 
-  private static byte[][] ReadSegmentDataArray(Ovl ovl, uint ptr, uint count) {
+  private static Segment[] ReadSegmentDataArray(Ovl ovl, uint ptr, uint count) {
     if (ptr == 0)
       throw new InvalidDataException("Segment data pointer is null");
     if (!ovl.TryResolveRelocation(ptr, out var block, out var offset))
       throw new InvalidOperationException($"Failed to resolve segment data pointer 0x{ptr:X}");
 
     using var reader = new BinaryReader(new MemoryStream(block, (int)offset, block.Length - (int)offset));
-    var result = new byte[count][];
+    var result = new Segment[count];
     for (var i = 0; i < count; i++) {
-      result[i] = reader.ReadBytes(14);
+      if (reader.Read<Segment>(out var segment) == 0)
+        throw new InvalidDataException($"Failed to read segment {i}");
+      result[i] = segment;
     }
     return result;
   }
