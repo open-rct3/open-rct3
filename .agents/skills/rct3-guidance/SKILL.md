@@ -143,7 +143,54 @@ The `FileType` enumeration spans all loader tags defined by the `Manager` classe
 
 ---
 
-## 3. Renderer Control Flow
+## 3. OVL Resource Scanner Tool
+
+**Location**: `.agents/tools/OvlScanner/`
+
+A generic reusable console tool for discovering and enumerating **any** OVL resource type across OVL archives. Useful for production OVL discovery, fixture validation, pre-implementation analysis, and resource type surveys.
+
+### Usage
+
+From repo root, specify resource types via command-line arguments (file type tags):
+
+```bash
+# Scan for Spline and TrackSection
+dotnet run --project .agents/tools/OvlScanner/OvlScanner.csproj -- spl tks
+
+# Scan for Textures
+dotnet run --project .agents/tools/OvlScanner/OvlScanner.csproj -- tex
+
+# Scan multiple types
+dotnet run --project .agents/tools/OvlScanner/OvlScanner.csproj -- shs sid svd
+
+# Scan all texture-related types
+dotnet run --project .agents/tools/OvlScanner/OvlScanner.csproj -- tex flic ftx btbl
+```
+
+**Run without arguments** to see all 29 supported resource types.
+
+### Output
+
+Results are written to `.agents/summaries/ovl-{types}-scan.csv` with columns:
+- `file`: relative path to OVL archive
+- `type`: OVL file type tag (e.g., `spl`, `tks`, `tex`)
+- `count`: number of resources of this type in the file
+- `samples`: comma-separated resource names (first 3)
+
+Filename reflects the types scanned (e.g., `ovl-spl-tks-scan.csv` for Spline + TrackSection).
+
+### Scan Locations
+
+**Fixtures** (always scanned):
+- `OpenCobra/Tests/Fixtures/OVL/**/*.ovl`
+
+**Production OVLs** (scanned if `RCT3_PATH` environment variable is set):
+- `{RCT3_PATH}/Rides/**/*.ovl`
+- `{RCT3_PATH}/tracks/**/*.ovl`
+
+---
+
+## 4. Renderer Control Flow
 
 The `Renderer.Render` method handles rendering for the `Scene` bound to the global `Game.Instance`.
 
@@ -187,3 +234,4 @@ GameViewController
 *   [ReadArchive.cs](../../../OpenCobra/OVL%20Tests/ReadArchive.cs): OVL loader test suite.
 *   [GLSurface.cs](../../../OpenRCT3/Platforms/Windows/GLSurface.cs): Windows GLSurface paint/resize pipeline.
 *   [OpenGLLayer.cs](../../../OpenRCT3/Platforms/macOS/OpenGLLayer.cs): macOS OpenGLLayer implementation.
+*   [OvlScanner Tool](.agents/tools/OvlScanner/): Generic console tool for OVL resource discovery across fixtures and production archives.

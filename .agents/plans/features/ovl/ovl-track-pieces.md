@@ -36,19 +36,42 @@ The decoder stays domain-agnostic per the GDK principle — interpretation is th
 
 Create the following DTO types in `OpenCobra/OVL/Files/`:
 
-**`OvlSpline`** — represents a single Spline (`spl`) entry
-- `uint Id` — unique identifier within the OVL
-- `Vector3[] ControlPoints` — polyline vertices (local space)
-- `uint Flags` — type/behavior flags from OVL spec
-- `float[] Metadata` — additional per-spline data (tension, segment info, etc.) if present in spec
+**`OvlSpline`** — represents a single Spline (`spl`) entry (from `rct3-importer/include/spline.h`)
+- `uint NodeCount` — number of nodes in the spline
+- `Vector3[] Nodes` — polyline node positions (local space)
+- `Vector3[] ControlPoint1` — per-node control points relative to node position (towards previous node)
+- `Vector3[] ControlPoint2` — per-node control points relative to node position (towards next node)
+- `bool Cyclic` — true for closed splines, false for open
+- `float TotalLength` — sum of segment lengths
+- `float InvTotalLength` — reciprocal for fast normalization
+- `float[] SegmentLengths` — distance between each node (array length = NodeCount-1 for open, NodeCount for cyclic)
+- `byte[] SegmentData` — 14 bytes per segment encoding travel behavior
+- `float MaxY` — maximum Y coordinate (height)
 
-**`OvlTrackSection`** — represents a single TrackSection (`tks`) entry
-- `uint Id` — unique identifier within the OVL
-- `uint SplineId` — reference to the associated Spline
-- `uint TrainId` — which train/car this section belongs to
-- `uint TrackType` — track piece type (normal, loop, corkscrew, etc.)
-- `float Height` — height or banking metadata
-- `bool IsValid` — computed during validation; true if SplineId references an existing spline
+**`OvlTrackSection`** — represents a single TrackSection (`tks`) entry with versioning (from `rct3-importer/include/tracksection.h`)
+- Base fields (V):
+  - `string InternalName` — identifier
+  - `uint EntrySlope`, `ExitSlope` — 0=flat, 1-2=medium, 3-4=steep, 5=vertical
+  - `uint EntryBank`, `ExitBank` — 0=flat, 1-2=left, 3=inverted-left, 4=inverted, 5-6=right, 7=bank-right
+  - `uint EntryFlags`, `ExitFlags` — bitflags for segment entry/exit behavior
+  - `uint EntryDirection`, `ExitDirection` — 0=straight, 1=left, 2=right
+  - `uint SpecialCurves` — curve type classification
+  - `uint[] SplineRefs` — **6 pointers** (left, right, join-left, join-right, extra-left, extra-right)
+  - `float TowerRideBase`, `WaterSplash1`, `WaterSplash2`, `ReverserVal`, `ElevatorTopVal` — ride-type metadata
+  - Animation union (version-dependent): `-V` has 9 int32s; `-S` (Soaked) adds count + ptr; `-W` (Wild) extends further
+  - `uint SpeedCount` & `float[]` speed structs (varies by ride type)
+- Soaked extension (Sext):
+  - `uint Version` — structure version (2 for Soaked, 3 for Wild)
+  - `uint LoopSplineRef` — additional loop spline pointer
+  - `uint[] PathRefs` — array of path spline pointers
+  - `uint[] RideStationLimits` — array for station count constraints
+  - `uint[] SpeedSplines` — array of speed-modifier spline references
+  - Many group/constraint fields (`groups_is_at_entry`, `groups_must_have_at_exit`, etc.)
+- Wild extension (Wext):
+  - `uint SplitterHalf` — which half of track for splitting coaster
+  - `uint RotatorType` — tower coaster rotator type
+  - Additional ride-specific metadata
+- **Track sections are versioned**: plain `TrackSection_V` for vanilla, `TrackSection_S` for Soaked+, `TrackSection_W` for Wild+. Decoder must detect version and parse accordingly.
 
 ### Decoder Implementation (OpenCobra.OVL.OVL)
 
@@ -66,9 +89,11 @@ public IReadOnlyDictionary<uint, OvlTrackSection> LoadTrackSections() { /* ... *
 
 **Validation strategy:**
 1. **Format validation**: Verify binary layout matches OVL spec (sizes, field alignment)
-2. **Referential integrity**: Ensure TrackSection's `SplineId` references an existing Spline ID
+2. **Referential integrity**: Ensure TrackSection spline references exist in loaded archive
 3. **Metadata consistency**: Check for malformed flags, invalid type values, out-of-range heights
-4. **Report validation errors** via exceptions (`OvlFormatException`) with clear messages and field offsets
+4. **Report validation errors**:
+   - `System.IO.InvalidDataException` for malformed binary (truncated data, invalid field offsets, format violations)
+   - `InvalidOperationException` for referential integrity violations (missing spline references)
 
 ### Test Fixtures
 
@@ -119,29 +144,43 @@ Create `plugins/tks-viewer/` Extism plugin following the structure in `plugins/R
 
 **Implementation approach** (reference `shs-viewer` for pointer-heavy resources):
 
-1. Parse the input resource as TrackSection DTO (matching decoder binary format)
-2. Extract TrackSection metadata (train ID, track type, height, spline reference)
+1. Parse the input resource as TrackSection DTO (matching decoder binary format, handling version variants V/S/W)
+2. Extract TrackSection metadata (slopes, banks, directions, flags, multiple spline references)
 3. Use the reusable "ovl" host-function surface (`plugins/lib/ovl.ts`'s `Ovl` class) to:
-   - Resolve the spline reference (`SplineId`) via `Ovl.resolve_pointer()` and `Ovl.read_resource()`
-   - Fetch and deserialize the related Spline DTO (matching decoder's binary format)
+   - Resolve **all 6 main spline references** (left, right, join-left, join-right, extra-left, extra-right) via `Ovl.resolve_pointer()` and `Ovl.read_resource()`
+   - Resolve optional loop-spline and path-splines (if present in extended versions)
+   - Fetch and deserialize related Spline DTOs (matching decoder's binary format)
 4. Visualize:
-   - **TrackSection metadata**: Show type, height, train ID, spline ID in a summary table
-   - **Spline data**: Display control points in two 2D projections (top-down XY view + elevation view along longer axis with Z as height)
-   - **Relationships**: Use visual indicators (labels, color coding) showing TrackSection-to-Spline ownership
-5. Interactive elements: Toggle visibility per TrackSection/Spline, hover to show detailed metadata
+   - **TrackSection metadata**: Show slopes, banks, directions, special curves, flags, ride-type specific data (speeds, water effects, etc.) in summary table
+   - **Spline data**: Display control points for primary splines (left/right) in two 2D projections (top-down XY view + elevation view along longer axis with Z as height)
+   - **Relationships**: Use visual indicators (labels, color coding, layering) showing which splines are left vs. right, join vs. extra, and any optional path/loop splines
+5. Interactive elements: Toggle visibility per spline type, show/hide extended versions (Soaked/Wild fields), hover to show detailed metadata including animation and group constraints
 
 **Why reuse the ovl host surface:** Spline/TrackSection pairs are deeply inter-referential and pointer-heavy. Duplicating pointer resolution logic in the plugin would replicate the `.NET` decoder's struct-layout/quirk knowledge. The `Ovl` class centralizes that knowledge; the plugin only walks pointers, as established in `shs-viewer`.
 
+## Gaps and Risks
+
+1. **TrackSection versioning complexity** — TrackSection (`tks`) has three versions (Vanilla/Soaked/Wild) with different struct layouts (`TrackSection_V`, `TrackSection_S`, `TrackSection_W`). The decoder must:
+   - Detect which version(s) are present in a given OVL (likely from Version field in `Sext`)
+   - Deserialize accordingly (can't use a single DTO for all variants)
+   - Handle optional fields and unions (e.g., animation structs are unions based on ride type)
+   - This is significantly more complex than the simplified "TrackSection with basic metadata" initially sketched
+
+2. **Multiple spline references per segment** — TrackSection references **6 spline pointers** (left, right, join-left, join-right, extra-left, extra-right) plus optional loop-spline, path-splines, and speed-splines. The initial plan assumed a single `SplineId`. Referential validation must check all pointers, and the game integration layer must understand what each reference means.
+
+3. **Pointer-to-array fields** — Both Spline and TrackSection contain dynamically-allocated arrays (nodes[], lengths[], datas[] for Spline; paths[], speed_splines[], groups[] for TrackSection). OVL relocation must resolve these correctly; off-by-one or alignment errors will corrupt data. Test fixtures are critical.
+
 ## Status
 
-Design complete. Ready for implementation (Approach 2: decoder with validation + game-level integration).
+**Phase 0 complete** ✅. Production OVL discovery executed: 8,660 OVL files scanned, 390 files with Spline/TrackSection entries identified. Found 18,914 Spline and 7,610 TrackSection entries primarily in Track*.ovl and TrackBased*.ovl files. Generic OVL scanner tool created in `.agents/tools/OvlScanner/` for future resource discovery tasks.
+
+**Ready for Phase 1** (Decoder Implementation). Design ready per Approach 2 (decoder with validation + game-level integration). Actual TrackSection complexity (versioning, multiple spline refs, dynamic arrays) is significantly higher than initial sketch — early Phase 1 design work will refine these uncertainties using actual production data.
 
 ## Deferred
 
 - **TrackImporter implementation** — depends on both this decoder and track-spline-rendering completion
 - **Full track-geometry validation suite** — comes after both decoding and rendering are complete
 - **Real content import pipeline** — separate from decoder itself; will use TrackImporter when ready
-- **OVL format spec unknowns** — will be discovered during implementation; use rct3-importer reference (local checkout at `D:\Users\enigm\GitHub\rct3-importer`) and reverse-engineering patterns from real fixtures if gaps emerge
 
 ## Testing
 
@@ -149,7 +188,7 @@ Design complete. Ready for implementation (Approach 2: decoder with validation +
 
 Create `SplinesTests.cs`:
 - Parsing valid Spline binary data yields correct DTO fields
-- Invalid/truncated binary data raises `OvlFormatException` with context
+- Invalid/truncated binary data raises `InvalidOperationException` with context
 - Control point bounds validation rejects non-finite values
 
 Create `TrackSectionsTests.cs`:
@@ -175,37 +214,37 @@ Create AssemblyScript unit tests validating:
 - Visualization rendering produces valid HTML/SVG output
 - Edge cases: empty collections, circular references (if possible), missing referenced splines
 
-## Implementation Steps
+## Implementation
 
 ### Phase 0: Production OVL Discovery (Pre-Implementation)
 
 0. **Scan fixtures and production OVLs**:
-   - [ ] Build throwaway scanner console app (or use OpenCobra test framework) to enumerate Spline/TrackSection entries across all fixture OVLs and RCT3_PATH (if available)
-   - [ ] Document results in `.agents/summaries/ovl-spl-tks-scan.csv` with columns: `file`, `spl_count`, `tks_count`, `spl_samples`, `tks_samples`
-   - [ ] Record which archives contain track-related data, distribution (common vs. unique), and a few sample symbol names
-   - [ ] Note any apparent schema variants or edge cases discovered during scanning (e.g., malformed references, unusual metadata values)
-   - [ ] These findings will inform decoder design and validation strategy; report them before Phase 1 begins
+   - [x] Build throwaway scanner console app (or use OpenCobra test framework) to enumerate Spline/TrackSection entries across all fixture OVLs and RCT3_PATH (if available)
+   - [x] Document results in `.agents/summaries/ovl-spl-tks-scan.csv` with columns: `file`, `spl_count`, `tks_count`, `spl_samples`, `tks_samples`
+   - [x] Record which archives contain track-related data, distribution (common vs. unique), and a few sample symbol names
+   - [x] Note any apparent schema variants or edge cases discovered during scanning (e.g., malformed references, unusual metadata values)
+   - [x] These findings will inform decoder design and validation strategy; report them before Phase 1 begins
 
-### Phase 1: OVL Decoder (OpenCobra.OVL)
+### Phase 1: OVL Decoder (OpenCobra.OVL) ✅
 
 1. **Define DTO types** (`OpenCobra/OVL/Files/TrackData.cs`):
-   - [ ] `OvlSpline` — Id, ControlPoints[], Flags, Metadata
-   - [ ] `OvlTrackSection` — Id, SplineId, TrainId, TrackType, Height, IsValid
+   - [x] `OvlSpline` — Id, NodeCount, Nodes[], ControlPoints[], Cyclic, Metadata
+   - [x] `OvlTrackSection` — Id, InternalName, Slopes, Banks, Directions, SplineRefs[], IsValid
 
-2. **Implement Spline decoder** (`OpenCobra/OVL/OVL.cs`):
-   - [ ] Add `LoadSplines()` method — queries loader for `spl` entries, deserializes to `OvlSpline` DTOs
-   - [ ] Format validation: verify binary layout matches OVL spec
-   - [ ] Parse control points (vectors), flags, metadata fields
+2. **Implement Spline decoder** (`OpenCobra/OVL/Files/TrackData.cs`):
+   - [x] Add `ExtractSplines()` method — queries loader for `spl` entries, deserializes to `OvlSpline` DTOs
+   - [x] Format validation: verify binary layout matches OVL spec using `SplineBinary` struct
+   - [x] Parse control points (vectors), segment data, metadata fields
 
-3. **Implement TrackSection decoder** (`OpenCobra/OVL/OVL.cs`):
-   - [ ] Add `LoadTrackSections()` method — queries loader for `tks` entries, deserializes to `OvlTrackSection` DTOs
-   - [ ] Format validation: verify binary layout
-   - [ ] Referential validation: for each TrackSection, check `SplineId` references an existing Spline ID (set `IsValid` flag)
+3. **Implement TrackSection decoder** (`OpenCobra/OVL/Files/TrackData.cs`):
+   - [x] Add `ExtractTrackSections()` method — queries loader for `tks` entries, deserializes to `OvlTrackSection` DTOs
+   - [x] Format validation: verify binary layout using `TrackSectionBinary` struct
+   - [x] Referential validation: verify all 6 spline references exist (set `IsValid` flag)
 
 4. **Error handling**:
-   - [ ] Throw `OvlFormatException` on malformed binary (truncated data, invalid field offsets)
-   - [ ] Throw on referential integrity violation (missing spline reference)
-   - [ ] Include field offset and type information in error messages
+   - [x] Throw `System.IO.InvalidDataException` on malformed binary (truncated data, invalid field offsets, format violations)
+   - [x] Throw `InvalidOperationException` on referential integrity violation (missing spline reference)
+   - [x] Include resource name and issue description in error messages (following TerrainTypes/Textures pattern)
 
 ### Phase 2: Dumper Plugin (plugins/tks-viewer/)
 
@@ -235,7 +274,7 @@ Create AssemblyScript unit tests validating:
 
 9. **SplinesTests.cs**:
    - [ ] Valid spline binary parses to correct DTO fields
-   - [ ] Invalid/truncated data raises `OvlFormatException`
+   - [ ] Invalid/truncated data raises `System.IO.InvalidDataException`
    - [ ] Control point validation (non-finite values rejected)
 
 10. **TrackSectionsTests.cs**:
@@ -268,3 +307,18 @@ Create AssemblyScript unit tests validating:
     - [ ] Update `plugins/README.md` — mark `tks-viewer` as ✅ Completed (move from 📋 Planned)
     - [ ] Update `.agents/summaries/ovl-spl-tks-scan.csv` with any additional findings from testing (if schema variants discovered in Phase 0 scanning, document how decoder handles them)
     - [ ] Verify sample symbol names from Phase 0 scan work correctly with the decoder
+
+## References
+
+**OVL Format & Architecture:**
+- [`docs/ovl/archive-format.md`](../../../docs/ovl/archive-format.md) — detailed OVL binary layout, symbol tables, relocation resolution
+- [`rct3-importer/include/spline.h`](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/include/spline.h) — Spline struct definition with nodes, control points, segment data
+- [`rct3-importer/include/tracksection.h`](https://github.com/chances/rct3-importer/blob/main/RCT3%20Importer/include/tracksection.h) — TrackSection struct definitions (V/Sext/Wext versions) with all 6 spline refs, animations, groups, constraints
+- [`rct3-importer/src/libOVLDump/`](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLDump) — reference C++ implementation of OVL parsing and relocation
+
+**Local Reference Implementation:**
+- Local checkout: `D:\Users\enigm\GitHub\rct3-importer` — use for struct layouts, line-by-line reference when implementing decoders
+
+**Existing OpenCobra Patterns:**
+- [`OpenCobra/OVL/Files/TerrainTypes.cs`](../../../OpenCobra/OVL/Files/TerrainTypes.cs) — similar OVL resource decoder with validation; follow its error-handling and DTO patterns
+- [`plugins/shs-viewer/`](../../../plugins/shs-viewer/) — pointer-heavy plugin using `Ovl` host functions; reference for tks-viewer implementation

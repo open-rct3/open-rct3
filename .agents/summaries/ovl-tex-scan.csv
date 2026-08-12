@@ -1,0 +1,9 @@
+﻿file,type,count,samples
+OpenCobra\Tests\Fixtures\OVL\CFRs\SkyBeam\Style.common.ovl,tex,1,"Zodiicon"
+OpenCobra\Tests\Fixtures\OVL\CFRs\SkyBeam\Style.unique.ovl,tex,1,"Zodiicon"
+OpenCobra\Tests\Fixtures\OVL\CustomScenery\RadiatorSprings-TownHall\RS-TownHall\style.common.ovl,tex,1,"thumb"
+OpenCobra\Tests\Fixtures\OVL\CustomScenery\RadiatorSprings-TownHall\RS-TownHall\style.unique.ovl,tex,1,"thumb"
+OpenCobra\Tests\Fixtures\OVL\CustomScenery\Water World Set 1\style.common.ovl,tex,2,"Water World icons2; Water World icons"
+OpenCobra\Tests\Fixtures\OVL\CustomScenery\Water World Set 1\style.unique.ovl,tex,2,"Water World icons2; Water World icons"
+OpenCobra\Tests\Fixtures\OVL\CustomScenery\Yoshi's Adventure\CTR_YoshiAdventureTrack\CTR_YoshiAdventureTrack.common.ovl,tex,1,"StyleIconTexture"
+OpenCobra\Tests\Fixtures\OVL\CustomScenery\Yoshi's Adventure\CTR_YoshiAdventureTrack\CTR_YoshiAdventureTrack.unique.ovl,tex,1,"StyleIconTexture"
