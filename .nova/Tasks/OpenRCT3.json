@@ -1,17 +1,18 @@
 {
-  "actions": {
-    "build": {
-      "enabled": true,
-      "script": "#!\/bin\/sh\ndotnet build\n"
+  "actions" : {
+    "build" : {
+      "enabled" : true,
+      "script" : "#!\/bin\/sh\ndotnet build OpenRCT3.macos.slnf\n"
     },
-    "clean": {
-      "enabled": true,
-      "script": "#!\/bin\/sh\ndotnet clean\n"
+    "clean" : {
+      "enabled" : true,
+      "script" : "#!\/bin\/sh\ndotnet clean\n"
     },
-    "run": {
-      "enabled": true,
-      "script": "#!\/bin\/sh\ndotnet run --project OpenRCT3\/OpenRCT3.csproj\n"
+    "run" : {
+      "enabled" : true,
+      "script" : "#!\/bin\/sh\ndotnet run --project OpenRCT3\/OpenRCT3.csproj\n"
     }
   },
-  "openLogOnRun": "fail"
+  "openLogOnRun" : "fail",
+  "persistent" : true
 }

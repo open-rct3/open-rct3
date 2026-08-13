@@ -6,8 +6,9 @@
     },
     "run" : {
       "enabled" : true,
-      "script" : "#!\/bin\/sh\ndotnet test OpenRCT3.macos.slnf\n"
+      "script" : "#!\/bin\/sh\ndotnet test OpenRCT3.macos.slnf \\\n  \/p:Testing=true \/p:SolutionDir=\"`pwd`\"\n"
     }
   },
-  "openLogOnRun" : "fail"
+  "openLogOnRun" : "fail",
+  "persistent" : true
 }
