@@ -2,7 +2,7 @@
   "actions" : {
     "build" : {
       "enabled" : true,
-      "script" : "#!\/bin\/sh\ndotnet build OpenRCT3.macos.slnf\n"
+      "script" : "#!\/bin\/sh\ndotnet build OpenRCT3.macos.slnf -binaryLogger\n"
     },
     "clean" : {
       "enabled" : true,
@@ -10,7 +10,7 @@
     },
     "run" : {
       "enabled" : true,
-      "script" : "#!\/bin\/sh\ndotnet run --project OpenRCT3\/OpenRCT3.csproj\n"
+      "script" : "#!\/bin\/sh\ndotnet run -binaryLogger --project OpenRCT3\/OpenRCT3.csproj\n"
     }
   },
   "openLogOnRun" : "fail",
