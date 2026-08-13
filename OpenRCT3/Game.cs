@@ -5,6 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using System.Numerics;
 using DryIoc;
 using NLog;
 using OpenCobra.GDK;
@@ -15,12 +16,8 @@ using OpenRCT3.Input;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
 using Silk.NET.Input;
-using System.Numerics;
-using System.Threading;
 
-#if WINDOWS
-using System.Windows.Forms;
-#elif OSX
+#if OSX
 using AppKit;
 #endif
 
@@ -45,7 +42,7 @@ public class Game : IGame {
   private readonly Renderer renderer = IoC.Resolve<IRenderer>() as Renderer ??
     throw new InvalidOperationException();
 
-  public static Container IoC => IGame.IoC;
+  public static DryIoc.Container IoC => IGame.IoC;
   public static Game? Instance { get; private set; }
   public static bool IsRunning => Instance?.isRunning ?? false;
   /// <summary>

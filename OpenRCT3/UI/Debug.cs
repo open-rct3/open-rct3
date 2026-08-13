@@ -12,7 +12,6 @@ using OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Meshes;
 using OpenRCT3.Simulation;
 using Silk.NET.Input;
-using static OpenRCT3.UI.Gui;
 using PlatformWindow = OpenCobra.GDK.Platform.IWindow;
 
 namespace OpenRCT3.UI;
@@ -46,7 +45,10 @@ public class Debug(Game game, Mesh terrainMesh, PlatformWindow window, IInputCon
     // via the (1, 0) pivot - SetNextWindowPos's pos becomes that corner of the window, not its
     // top-left - so this stays pinned regardless of the window's auto-resized content each frame.
     var viewport = ImGui.GetMainViewport();
-    var windowPos = new Vector2(viewport.WorkPos.X + viewport.WorkSize.X - Padding, viewport.WorkPos.Y + Padding);
+    var windowPos = new Vector2(
+      viewport.WorkPos.X + viewport.WorkSize.X - Gui.Padding,
+      viewport.WorkPos.Y + Gui.Padding
+    );
     ImGui.SetNextWindowPos(windowPos, ImGuiCond.Always, new Vector2(1f, 0f));
     ImGui.Begin("Debug", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse);
 

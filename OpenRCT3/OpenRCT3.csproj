@@ -49,6 +49,9 @@
     <ProjectReference Include="../OpenCobra/Data/Data.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="OpenRCT3.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="HidSharp" Version="2.6.4" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
     <PackageReference Include="NLog" Version="5.3.4" />
@@ -65,10 +68,13 @@
   </ItemGroup>
   <ItemGroup>
     <Using Include="System" />
+    <Using Include="System.ComponentModel" />
     <Using Include="System.Diagnostics" />
     <Using Include="System.IO" />
     <Using Include="System.Linq" />
     <Using Include="System.Threading" />
+    <!-- Implicit Exclusions -->
+    <Using Remove="System.Drawing" />
   </ItemGroup>
   <Choose>
     <When Condition="$([MSBuild]::IsOSPlatform('macos')) And $(Testing) != 'true'">
@@ -118,9 +124,6 @@
         <OutputType>Library</OutputType>
         <TargetFramework>net9.0</TargetFramework>
       </PropertyGroup>
-      <ItemGroup>
-        <InternalsVisibleTo Include="OpenRCT3.Tests" />
-      </ItemGroup>
       <ItemGroup>
         <Compile Remove="OpenGL\GLContext.windows.cs" />
         <Compile Remove="Platforms\Windows\**\*.cs" />

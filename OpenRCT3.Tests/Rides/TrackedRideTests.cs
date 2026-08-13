@@ -45,15 +45,15 @@ public class TrackedRideTests {
 
     var straight1 = new TrackPiece { PieceType = TrackPieceType.Straight };
     ProceduralPieces.GenerateStraight(straight1.LeftRail, straight1.RightRail, length: 10f);
-    var node1 = TrackChaining.AddRootPiece(graph, straight1);
+    var nodeA = TrackChaining.AddRootPiece(graph, straight1);
 
     var straight2 = new TrackPiece { PieceType = TrackPieceType.Straight };
     ProceduralPieces.GenerateStraight(straight2.LeftRail, straight2.RightRail, length: 10f);
-    var node2 = TrackChaining.ChainPiece(graph, node1, straight2);
+    var nodeB = TrackChaining.ChainPiece(graph, nodeA, straight2)!;
 
     var straight3 = new TrackPiece { PieceType = TrackPieceType.Straight };
     ProceduralPieces.GenerateStraight(straight3.LeftRail, straight3.RightRail, length: 10f);
-    TrackChaining.ChainPiece(graph, node2, straight3);
+    TrackChaining.ChainPiece(graph, nodeB, straight3);
 
     TrackChaining.BakeGraph(graph, useTestTolerance: true);
 

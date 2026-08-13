@@ -8,7 +8,7 @@
 using System.Numerics;
 using Hexa.NET.ImGui;
 using OpenCobra.GDK.GUI;
-using static OpenRCT3.UI.Gui;
+using OpenRCT3.UI;
 
 namespace OpenRCT3.Scenario;
 
@@ -27,7 +27,7 @@ public class Editor : IWindow {
     var open = Open;
 
     var viewport = ImGui.GetMainViewport();
-    var windowPos = new Vector2(viewport.WorkPos.X + Padding, viewport.WorkPos.Y + Padding);
+    var windowPos = new Vector2(viewport.WorkPos.X + Gui.Padding, viewport.WorkPos.Y + Gui.Padding);
     ImGui.SetNextWindowPos(windowPos, ImGuiCond.Appearing, new Vector2(0f, 0f));
     ImGui.SetNextWindowSize(new Vector2(ButtonWidth + ImGui.GetStyle().WindowPadding.X * 2, 0), ImGuiCond.Once);
     ImGui.Begin("Scenario Editor", ref open, ImGuiWindowFlags.NoResize);

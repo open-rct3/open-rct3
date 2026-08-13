@@ -7,17 +7,15 @@
 
 using DryIoc;
 using NLog;
-using GUI = OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Numerics;
 using OpenCobra.GDK.Platform;
 using OpenRCT3.OpenGL;
 using Silk.NET.Core.Contexts;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
-using System.ComponentModel;
-using System.Windows.Forms;
 using static OpenRCT3.Platforms.Windows.Win32;
 using Drawing = System.Drawing;
+using GUI = OpenCobra.GDK.GUI;
 
 namespace OpenRCT3.Platforms.Windows;
 

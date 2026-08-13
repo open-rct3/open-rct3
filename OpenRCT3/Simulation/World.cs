@@ -262,8 +262,7 @@ internal class ParkLoadSystem : GDK.Game.System {
     base.Update(delta);
 
     var path = Interlocked.Exchange(ref pendingParkPath, "_NO_LOAD_");
-    if (path != "_NO_LOAD_" && world?.TryGetTarget(out var parkLoader) == true) {
-      parkLoader.Load(path);
-    }
+    if (path != "_NO_LOAD_" && world?.TryGetTarget(out var parkLoader) == true)
+      parkLoader?.Load(path);
   }
 }
