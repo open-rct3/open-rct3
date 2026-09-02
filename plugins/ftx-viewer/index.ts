@@ -1,8 +1,8 @@
 /// <reference no-default-lib="true" />
 import { Host } from "@extism/as-pdk";
-import "../types.ts";
-import { convertIndexedToRgba } from "../palette-converter.ts";
 import { renderHexView } from "../lib/hexViewer.ts";
+import { convertIndexedToRgba } from "../palette-converter.ts";
+import "../types.ts";
 
 export function name(): i32 {
   Host.outputString("Flexi-Texture Viewer");

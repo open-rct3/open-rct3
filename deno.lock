@@ -54,7 +54,7 @@
     "npm:@js-temporal/polyfill@0.4.4": "0.4.4",
     "npm:@percy/cli@*": "1.31.14",
     "npm:@types/estree@1.0.5": "1.0.5",
-    "npm:assemblyscript@*": "0.28.17",
+    "npm:assemblyscript@*": "0.28.20",
     "npm:autoprefixer@10.4.19": "10.4.19_postcss@8.4.39",
     "npm:estree-walker@3.0.3": "3.0.3",
     "npm:markdown-it-attrs@4.1.6": "4.1.6_markdown-it@14.1.0",
@@ -498,8 +498,8 @@
     "argparse@2.0.1": {
       "integrity": "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="
     },
-    "assemblyscript@0.28.17": {
-      "integrity": "sha512-+S0Y7pwLiJngik0bt63XAswcN3Mu0szjvl2aCRWJ9U+5214e93HIt1waTBGFq0yLa8LJBBziw95BaAs5FNfz5Q==",
+    "assemblyscript@0.28.20": {
+      "integrity": "sha512-5PM7GZpvcLypHcLmi30aP8mqm5HjU+LL3BdV1xDyA3USGtL2w+iMiUnhtH+vW8+2kOuHlAyPu7M+QgyEw5he1g==",
       "dependencies": [
         "binaryen",
         "long"
@@ -538,8 +538,8 @@
     "binary-extensions@2.3.0": {
       "integrity": "sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw=="
     },
-    "binaryen@129.0.0-nightly.20260428": {
-      "integrity": "sha512-RpjRVPZw8NOhkGzx3tTaKYdv4C+zO1VVI0VB9GSCNLM81flHOAZUwRJTLDM3Hqco3OmwB8hTLpkkpMSJjUfHXw==",
+    "binaryen@131.0.0-nightly.20260721": {
+      "integrity": "sha512-AAQIkhfbYXh4FBObwBrlO+5L+6Rp6OOMOjh6AdT0M+GLNLyrwKWgtW+EzmizNgx9CWDfTJPfDtKoZi62QESbtg==",
       "bin": true
     },
     "boxen@7.0.0": {

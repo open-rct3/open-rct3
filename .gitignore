@@ -87,3 +87,6 @@ bin/open-rct3-*
 
 # Code Coverage
 *.lst
+
+# Node
+node_modules/

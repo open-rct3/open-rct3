@@ -1,5 +1,7 @@
-// Little-endian primitive readers shared by viewer plugins that parse raw OVL resource bytes.
-// Previously duplicated verbatim across int-viewer, mam-viewer, snd-viewer, and spl-viewer.
+/**
+ * @module
+ * Little-endian primitive readers shared by viewer plugins that parse raw OVL resource bytes.
+ */
 
 export function readU16LE(data: Uint8Array, offset: i32): u16 {
   return u16(data[offset]) | (u16(data[offset + 1]) << 8);

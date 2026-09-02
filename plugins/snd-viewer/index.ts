@@ -1,4 +1,3 @@
-/// <reference no-default-lib="true" />
 import { Host } from "@extism/as-pdk";
 import { encodeBase64 } from "../lib/base64.ts";
 import { renderHexView } from "../lib/hexViewer.ts";

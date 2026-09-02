@@ -1,7 +1,6 @@
-/// <reference no-default-lib="true" />
-/// <reference types="assemblyscript/types" />
 import { Host } from "@extism/as-pdk";
 import { Ovl } from "../lib/ovl.ts";
+import "../types.ts";
 
 export function name(): i32 {
   Host.outputString("Spline Viewer");

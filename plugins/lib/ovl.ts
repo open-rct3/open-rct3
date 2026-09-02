@@ -1,4 +1,4 @@
-// @ts-nocheck Deno has poor support for AssemblyScript
+// @ts-nocheck Deno has poor support for AssemblyScript decorators.
 
 /**
  * @module

@@ -1,3 +1,8 @@
+/**
+ * @module
+ * HTML hex viewer renderer for OVL resource bytes.
+ */
+
 function toHex(value: u32, width: i32 = 8): string {
   let hex = value.toString(16).toUpperCase();
   while (hex.length < width) {

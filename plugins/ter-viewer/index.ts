@@ -1,9 +1,8 @@
-/// <reference no-default-lib="true" />
-/// <reference types="assemblyscript/types" />
 import { Host } from "@extism/as-pdk";
-import { renderHexView } from "../lib/hexViewer.ts";
 import { readF32LE, readU32LE } from "../lib/binaryReader.ts";
+import { renderHexView } from "../lib/hexViewer.ts";
 import { NOT_FOUND, Ovl } from "../lib/ovl.ts";
+import "../types.ts";
 
 export function name(): i32 {
   Host.outputString("Terrain Type Viewer");
