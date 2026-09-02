@@ -34,7 +34,7 @@ public class TexturesMeasurementTests {
     Assembly.GetExecutingAssembly().GetManifestResourceNames().Where(n => n.EndsWith(".common.ovl"));
 
   [Test]
-  [Explicit("Measurement test: locks in the current fixture-decode count, not part of the default test flow.")]
+  [Explicit("Measurement test to count current fixture-decode count; not part of the default test flow.")]
   public void Extract_FromAllFixtures_MatchesBaselineCount() {
     var assembly = Assembly.GetExecutingAssembly();
     var log = new StringBuilder();
