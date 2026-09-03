@@ -129,9 +129,9 @@ public class TerrainTests {
   }
 
   [Test]
-  public void CornerHeightToWorldZ_ScalesByHeightStep() {
-    Assert.That(Terrain.CornerHeightToWorldZ(100), Is.EqualTo(1.0f).Within(0.0001f));
-    Assert.That(Terrain.CornerHeightToWorldZ(0), Is.EqualTo(0.0f));
+  public void CornerHeightToWorldY_ScalesByHeightStep() {
+    Assert.That(Terrain.CornerHeightToWorldY(100), Is.EqualTo(1.0f).Within(0.0001f));
+    Assert.That(Terrain.CornerHeightToWorldY(0), Is.EqualTo(0.0f));
   }
 
   [Test]

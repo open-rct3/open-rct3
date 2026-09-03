@@ -118,9 +118,9 @@ public class World : GDK.Game.World, IParkLoader {
     var (boundsMin, boundsMax) = Park.BuildableBounds;
     var markerPosition = new Vector3(
       boundsMin.X + (boundsMax.X - boundsMin.X) * 0.75f,
-      boundsMin.Y + (boundsMax.Y - boundsMin.Y) * 0.75f,
-      1f);
-    MarkerCenter = markerPosition + new Vector3(0, 0, 0.5f);
+      1f,
+      boundsMin.Y + (boundsMax.Y - boundsMin.Y) * 0.75f);
+    MarkerCenter = markerPosition + new Vector3(0, 0.5f, 0);
     var marker = new Model(Primitives.Cube(name: "RotationMarker", color: Color.FromArgb(200, 30, 30).ToGl())) {
       Material = new Flat(),
       Transform = new Transform { Matrix = Matrix4x4.CreateTranslation(markerPosition) }

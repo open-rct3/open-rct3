@@ -19,11 +19,11 @@ namespace OpenRCT3.Simulation;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The coordinate system is Z-up:
+/// The coordinate system is Y-up:
 /// <list type="bullet">
 /// <item><description>X: West to East (East is +X)</description></item>
-/// <item><description>Y: South to North (North is +Y)</description></item>
-/// <item><description>Z: Down to Up (Up is +Z)</description></item>
+/// <item><description>Y: Down to Up (Up is +Y)</description></item>
+/// <item><description>Z: South to North (North is +Z)</description></item>
 /// </list>
 /// </para>
 /// <para>
@@ -344,8 +344,8 @@ public class Terrain {
     return (GetCorner(tileX, tileY, c1).Height, GetCorner(tileX, tileY, c2).Height);
   }
 
-  /// <summary>Converts a corner-height count to world-space Z, in meters.</summary>
-  public static float CornerHeightToWorldZ(ushort cornerHeight) => cornerHeight * HeightStep;
+  /// <summary>Converts a corner-height count to world-space Y, in meters.</summary>
+  public static float CornerHeightToWorldY(ushort cornerHeight) => cornerHeight * HeightStep;
 
   private static ushort ClampHeight(int value, int lower = ushort.MinValue, int upper = ushort.MaxValue)
     => (ushort)Math.Max(lower, Math.Min(upper, value));

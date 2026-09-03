@@ -51,7 +51,7 @@ public static class CameraExtensions {
     // Derived the same way Matrix4x4.CreateLookAt derives its axes, so this basis matches Update()'s
     // view matrix exactly: right = cross(forward, worldUp), up = cross(right, forward).
     var forward = Vector3.Normalize(camera.Target - camera.Eye);
-    var right = Vector3.Normalize(Vector3.Cross(forward, Vector3.UnitZ));
+    var right = Vector3.Normalize(Vector3.Cross(forward, Vector3.UnitY));
     var up = Vector3.Cross(right, forward);
 
     var tanHalfFov = MathF.Tan(Camera.FieldOfView * 0.5f);

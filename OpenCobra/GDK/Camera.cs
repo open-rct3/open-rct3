@@ -17,29 +17,29 @@ public class Camera : Uniform<Matrix4x4> {
   /// The world-space offset (South-East, elevated) the camera's default framing looks from.
   /// </summary>
   /// <remarks>
-  /// The Z component is deliberately large relative to the X/Y horizontal offset — roughly a 60°
+  /// The Y component is deliberately large relative to the X/Z horizontal offset — roughly a 60°
   /// elevation above the horizon, not a shallow grazing angle. A large, flat, unlit, single-color
-  /// terrain plane viewed edge-on from a shallow angle (the original (20, -20, 15) offset, ~28°
+  /// terrain plane viewed edge-on from a shallow angle (the original (20, 15, -20) offset, ~28°
   /// elevation) has no visual cue distinguishing "looking down at the ground from above" from "looking
   /// up at a ceiling from below" — there's no horizon, no shading gradient, nothing but a silhouette.
   /// A steep, mostly-downward angle removes that ambiguity.
   /// </remarks>
-  private static readonly Vector3 DefaultViewOffset = new(20, -20, 50);
+  private static readonly Vector3 DefaultViewOffset = new(20, 50, -20);
   private static readonly float DefaultDistance = DefaultViewOffset.Length();
   /// <summary>
-  /// The compass bearing (degrees, around Z) of <see cref="DefaultViewOffset"/>'s horizontal component -
+  /// The compass bearing (degrees, around Y) of <see cref="DefaultViewOffset"/>'s horizontal component -
   /// the azimuth-zero reference direction <see cref="UpdateEye"/> rotates by <see cref="Azimuth"/>.
   /// </summary>
   private static readonly float DefaultBearingDegrees =
-    MathF.Atan2(DefaultViewOffset.Y, DefaultViewOffset.X) * 180f / MathF.PI;
+    MathF.Atan2(DefaultViewOffset.Z, DefaultViewOffset.X) * 180f / MathF.PI;
   /// <summary>
   /// The angle (degrees, above the horizon) of <see cref="DefaultViewOffset"/> - the default value
   /// <see cref="Elevation"/> starts at, computed from <see cref="DefaultViewOffset"/> so the camera's
   /// initial direction matches it exactly (see the class remarks above for why that offset was chosen).
   /// </summary>
   private static readonly float DefaultElevationDegrees = MathF.Atan2(
-    DefaultViewOffset.Z,
-    new Vector2(DefaultViewOffset.X, DefaultViewOffset.Y).Length()
+    DefaultViewOffset.Y,
+    new Vector2(DefaultViewOffset.X, DefaultViewOffset.Z).Length()
   ) * 180f / MathF.PI;
 
   /// <summary>
@@ -70,7 +70,7 @@ public class Camera : Uniform<Matrix4x4> {
   private const float MinElevationDegrees = 15f;
   /// <summary>
   /// The steepest <see cref="Tilt"/> may bring <see cref="Elevation"/> toward straight down. Elevation 90°
-  /// (looking straight down the Z axis) makes <see cref="Azimuth"/> meaningless - every azimuth looks
+  /// (looking straight down the Y axis) makes <see cref="Azimuth"/> meaningless - every azimuth looks
   /// identical - so tilting stops short of it.
   /// </summary>
   private const float MaxElevationDegrees = 85f;
@@ -88,7 +88,7 @@ public class Camera : Uniform<Matrix4x4> {
   /// </summary>
   public float? MaxDistance { get; set; }
   /// <summary>
-  /// Rotation, in degrees, applied around <see cref="Target"/>'s Z axis on top of
+  /// Rotation, in degrees, applied around <see cref="Target"/>'s Y axis on top of
   /// <see cref="DefaultBearingDegrees"/>. See <see cref="RotateAzimuth"/>.
   /// </summary>
   public float Azimuth { get; private set; }
@@ -116,8 +116,8 @@ public class Camera : Uniform<Matrix4x4> {
   }
 
   /// <summary>
-  /// Rotates the camera around <see cref="Target"/>'s Z axis by <paramref name="degrees"/>, keeping the
-  /// same eye-to-target distance and elevation. Positive values rotate counter-clockwise looking down -Z.
+  /// Rotates the camera around <see cref="Target"/>'s Y axis by <paramref name="degrees"/>, keeping the
+  /// same eye-to-target distance and elevation. Positive values rotate counter-clockwise looking down -Y.
   /// </summary>
   public void RotateAzimuth(float degrees) {
     Azimuth = (Azimuth + degrees) % 360f;
@@ -147,25 +147,25 @@ public class Camera : Uniform<Matrix4x4> {
   }
 
   /// <summary>
-  /// The camera's ground-plane (Z=0) forward direction: the horizontal component of the eye-to-target
+  /// The camera's ground-plane (Y=0) forward direction: the horizontal component of the eye-to-target
   /// viewing direction, normalized. Rotates with <see cref="Azimuth"/>. See <see cref="Pan"/>.
   /// </summary>
   public Vector3 Forward {
     get {
       var back = Vector3.Normalize(Eye - Target);
-      return Vector3.Normalize(new Vector3(-back.X, -back.Y, 0));
+      return Vector3.Normalize(new Vector3(-back.X, 0, -back.Z));
     }
   }
 
   /// <summary>
-  /// The camera's ground-plane (Z=0) right direction, perpendicular to <see cref="Forward"/>. Derived the
+  /// The camera's ground-plane (Y=0) right direction, perpendicular to <see cref="Forward"/>. Derived the
   /// same way <see cref="Matrix4x4.CreateLookAt"/> derives its x-axis (<c>cross(up, eye-target)</c>), so it
   /// matches what "right" looks like on screen. See <see cref="Pan"/>.
   /// </summary>
   public Vector3 Right {
     get {
       var back = Vector3.Normalize(Eye - Target);
-      return Vector3.Normalize(new Vector3(-back.Y, back.X, 0));
+      return Vector3.Normalize(new Vector3(-back.Z, 0, back.X));
     }
   }
 
@@ -191,8 +191,8 @@ public class Camera : Uniform<Matrix4x4> {
     var horizontalMagnitude = MathF.Cos(elevationRad);
     var direction = new Vector3(
       MathF.Cos(bearingRad) * horizontalMagnitude,
-      MathF.Sin(bearingRad) * horizontalMagnitude,
-      MathF.Sin(elevationRad));
+      MathF.Sin(elevationRad),
+      MathF.Sin(bearingRad) * horizontalMagnitude);
     Eye = Target + (direction * distance);
   }
 
@@ -219,7 +219,7 @@ public class Camera : Uniform<Matrix4x4> {
   /// </summary>
   /// <param name="aspectRatio">The aspect ratio of the viewport.</param>
   public void Update(float aspectRatio) {
-    var view = Matrix4x4.CreateLookAt(Eye, Target, Vector3.UnitZ);
+    var view = Matrix4x4.CreateLookAt(Eye, Target, Vector3.UnitY);
     var farPlaneDistance = FarPlaneReferenceDistance * FarPlaneDistanceMargin;
     var projection = CreatePerspectiveFieldOfViewGL(FieldOfView, aspectRatio, NearPlaneDistance, farPlaneDistance);
 

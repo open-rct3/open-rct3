@@ -46,7 +46,7 @@ public class Park {
   /// The entrance is typically on the South edge of the buildable area.
   /// </remarks>
   // FIXME: This should be loaded from park data, not hard-coded.
-  public Vector3 EntrancePosition { get; set; } = new(0, OutOfBoundsBorder * TileSize, 0);
+  public Vector3 EntrancePosition { get; set; } = new(0, 0, OutOfBoundsBorder * TileSize);
 
   /// <summary>
   /// The rectangular boundary of the buildable area.

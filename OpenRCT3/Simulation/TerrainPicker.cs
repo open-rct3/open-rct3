@@ -36,11 +36,11 @@ public readonly record struct TilePickResult(
 public static class TerrainPicker {
   /// <summary>
   /// The fixed diagonal split <see cref="TerrainMeshBuilder.AddTopFace"/> emits per tile: two
-  /// triangles, (SW, SE, NE) then (SW, NE, NW).
+  /// triangles, (SW, NW, NE) then (SW, NE, SE).
   /// </summary>
   private static readonly (TerrainCornerSlot A, TerrainCornerSlot B, TerrainCornerSlot C)[] Triangles = [
-    (TerrainCornerSlot.SouthWest, TerrainCornerSlot.SouthEast, TerrainCornerSlot.NorthEast),
-    (TerrainCornerSlot.SouthWest, TerrainCornerSlot.NorthEast, TerrainCornerSlot.NorthWest),
+    (TerrainCornerSlot.SouthWest, TerrainCornerSlot.NorthWest, TerrainCornerSlot.NorthEast),
+    (TerrainCornerSlot.SouthWest, TerrainCornerSlot.NorthEast, TerrainCornerSlot.SouthEast),
   ];
 
   /// <summary>
@@ -60,7 +60,7 @@ public static class TerrainPicker {
     for (var step = 0; step <= maxSteps; step++) {
       var point = ray.Origin + (ray.Direction * (step * Park.TileSize));
       var tileX = (int)MathF.Floor((point.X / Park.TileSize) + (terrain.Width / 2f));
-      var tileY = (int)MathF.Floor(point.Y / Park.TileSize);
+      var tileY = (int)MathF.Floor(point.Z / Park.TileSize);
 
       if (!terrain.HasTile(tileX, tileY)) return null;
 

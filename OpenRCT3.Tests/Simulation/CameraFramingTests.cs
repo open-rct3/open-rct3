@@ -27,7 +27,7 @@ public class CameraFramingTests {
   private static Camera FrameOnPark(Park park) {
     var camera = new Camera();
     var bounds = park.BuildableBounds;
-    var center = new Vector3((bounds.Min.X + bounds.Max.X) / 2f, (bounds.Min.Y + bounds.Max.Y) / 2f, 0f);
+    var center = new Vector3((bounds.Min.X + bounds.Max.X) / 2f, 0f, (bounds.Min.Y + bounds.Max.Y) / 2f);
     var diagonal = Vector2.Distance(bounds.Min, bounds.Max);
     camera.Frame(center, diagonal * FramingDistanceMargin);
     camera.Update(aspectRatio: 16f / 9f);
@@ -55,8 +55,8 @@ public class CameraFramingTests {
     return [
       new Vector3(-halfWidth, 0, 0),
       new Vector3(halfWidth, 0, 0),
-      new Vector3(-halfWidth, height, 0),
-      new Vector3(halfWidth, height, 0),
+      new Vector3(-halfWidth, 0, height),
+      new Vector3(halfWidth, 0, height),
     ];
   }
 
@@ -71,10 +71,10 @@ public class CameraFramingTests {
 
     var (min, max) = park.BuildableBounds;
     var corners = new[] {
-      new Vector3(min.X, min.Y, 0),
-      new Vector3(max.X, min.Y, 0),
-      new Vector3(min.X, max.Y, 0),
-      new Vector3(max.X, max.Y, 0),
+      new Vector3(min.X, 0, min.Y),
+      new Vector3(max.X, 0, min.Y),
+      new Vector3(min.X, 0, max.Y),
+      new Vector3(max.X, 0, max.Y),
     };
 
     var allOnScreen = corners.All(c => {

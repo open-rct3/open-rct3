@@ -13,6 +13,13 @@ This skill provides comprehensive guidance on the OVL archive format, the C# por
 
 Detailed binary layout specifications is described in the [Archive Format](../../../docs/ovl/archive-format.md) documentation.
 
+### Coordinate System
+RollerCoaster Tycoon 3 and OpenRCT3 use a right-handed **Y-up** coordinate system:
+*   **+X**: East / Lateral Right
+*   **+Y**: Up / Elevation
+*   **+Z**: North / Longitudinal Forward
+*   **XZ Plane**: Horizontal ground plane
+
 ### Paired OVL Files
 OVL archives in RollerCoaster Tycoon 3 are split into paired files:
 *   **Common OVL (`.common.ovl`)**: Contains shared resources referenced by multiple archives (typically has string tables).

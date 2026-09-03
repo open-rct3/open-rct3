@@ -56,8 +56,8 @@ public static class TerrainMeshBuilder {
     };
 
     var worldX = (tileX + dx - (terrain.Width / 2f)) * Park.TileSize;
-    var worldY = (tileY + dy) * Park.TileSize;
-    var worldZ = Terrain.CornerHeightToWorldZ(terrain.GetCorner(tileX, tileY, slot).Height);
+    var worldY = Terrain.CornerHeightToWorldY(terrain.GetCorner(tileX, tileY, slot).Height);
+    var worldZ = (tileY + dy) * Park.TileSize;
     return new Vector3(worldX, worldY, worldZ);
   }
 
@@ -73,8 +73,8 @@ public static class TerrainMeshBuilder {
     var nw = CornerPosition(terrain, tileX, tileY, TerrainCornerSlot.NorthWest);
     var ne = CornerPosition(terrain, tileX, tileY, TerrainCornerSlot.NorthEast);
 
-    // Two triangles, CCW when viewed from +Z: (SW, SE, NE) and (SW, NE, NW).
-    var normal = Vector3.Normalize(Vector3.Cross(se - sw, ne - sw));
+    // Two triangles, CCW when viewed from +Y: (SW, NW, NE) and (SW, NE, SE).
+    var normal = Vector3.Normalize(Vector3.Cross(nw - sw, se - sw));
     var baseIndex = (uint)vertices.Count;
     // Each tile's texture maps 1:1 to the unit square, not world-space - simplest correct testing
     // mapping (no repeat/tiling math to get wrong). Revisit once continuous tiling is wanted.
@@ -82,7 +82,7 @@ public static class TerrainMeshBuilder {
     vertices.Add(new Vertex { Position = se, Normal = normal, Color = color, TexCoord = new Vector2(1, 0) });
     vertices.Add(new Vertex { Position = ne, Normal = normal, Color = color, TexCoord = new Vector2(1, 1) });
     vertices.Add(new Vertex { Position = nw, Normal = normal, Color = color, TexCoord = new Vector2(0, 1) });
-    indices.AddRange([baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3]);
+    indices.AddRange([baseIndex, baseIndex + 3, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 1]);
   }
 
   private static void AddCliffFace(
@@ -109,14 +109,24 @@ public static class TerrainMeshBuilder {
     var nearBottom = CornerPosition(terrain, neighborX, neighborY, nearNeighborSlot);
     var farBottom = CornerPosition(terrain, neighborX, neighborY, farNeighborSlot);
 
-    // Wind so the face's outward normal points away from this tile, into the neighbor.
-    var normal = Vector3.Normalize(Vector3.Cross(farTop - nearTop, nearBottom - nearTop));
+    // Wind so the face's outward normal points away from this tile, into the neighbor:
+    // South cliff faces -Z; West cliff faces -X.
+    var normal = edge == Edge.South
+      ? Vector3.Normalize(Vector3.Cross(farTop - nearTop, nearBottom - nearTop))
+      : Vector3.Normalize(Vector3.Cross(nearBottom - nearTop, farTop - nearTop));
     var baseIndex = (uint)vertices.Count;
     // Same unit-square-per-face mapping as AddTopFace - see comment there.
-    vertices.Add(new Vertex { Position = nearTop, Normal = normal, Color = color, TexCoord = new Vector2(0, 1) });
-    vertices.Add(new Vertex { Position = farTop, Normal = normal, Color = color, TexCoord = new Vector2(1, 1) });
-    vertices.Add(new Vertex { Position = farBottom, Normal = normal, Color = color, TexCoord = new Vector2(1, 0) });
-    vertices.Add(new Vertex { Position = nearBottom, Normal = normal, Color = color, TexCoord = new Vector2(0, 0) });
+    if (edge == Edge.South) {
+      vertices.Add(new Vertex { Position = nearTop, Normal = normal, Color = color, TexCoord = new Vector2(0, 1) });
+      vertices.Add(new Vertex { Position = farTop, Normal = normal, Color = color, TexCoord = new Vector2(1, 1) });
+      vertices.Add(new Vertex { Position = farBottom, Normal = normal, Color = color, TexCoord = new Vector2(1, 0) });
+      vertices.Add(new Vertex { Position = nearBottom, Normal = normal, Color = color, TexCoord = new Vector2(0, 0) });
+    } else {
+      vertices.Add(new Vertex { Position = nearTop, Normal = normal, Color = color, TexCoord = new Vector2(1, 1) });
+      vertices.Add(new Vertex { Position = nearBottom, Normal = normal, Color = color, TexCoord = new Vector2(1, 0) });
+      vertices.Add(new Vertex { Position = farBottom, Normal = normal, Color = color, TexCoord = new Vector2(0, 0) });
+      vertices.Add(new Vertex { Position = farTop, Normal = normal, Color = color, TexCoord = new Vector2(0, 1) });
+    }
     indices.AddRange([baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3]);
   }
 }

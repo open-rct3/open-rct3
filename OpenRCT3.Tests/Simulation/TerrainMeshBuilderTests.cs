@@ -62,8 +62,8 @@ public class TerrainMeshBuilderTests {
     var sw = TerrainMeshBuilder.CornerPosition(terrain, 6, 6, TerrainCornerSlot.SouthWest);
     var ne = TerrainMeshBuilder.CornerPosition(terrain, 6, 6, TerrainCornerSlot.NorthEast);
 
-    Assert.That(sw, Is.EqualTo(new Vector3(0, 24, 0)));
-    Assert.That(ne, Is.EqualTo(new Vector3(4, 28, 0)));
+    Assert.That(sw, Is.EqualTo(new Vector3(0, 0, 24)));
+    Assert.That(ne, Is.EqualTo(new Vector3(4, 0, 28)));
   }
 
   [Test]
