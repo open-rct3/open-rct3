@@ -1,8 +1,5 @@
 // TrackData
 //
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
-//
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 //
 // Decodes "spl" (Spline) and "tks" (TrackSection) entries per rct3-importer's
@@ -17,7 +14,7 @@ namespace OpenCobra.OVL.Files;
 /// Binary representation of a SplineNode (pos + 2 control points).
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Size = 36)]
-internal struct SplineNodeBinary {
+internal struct SplineNode {
   public Vector3 Pos;
   public Vector3 ControlPoint1;
   public Vector3 ControlPoint2;
@@ -94,7 +91,7 @@ public readonly struct Segment {
 /// Binary representation of Spline header.
 /// </summary>
 [StructLayout(LayoutKind.Sequential, Size = 32)]
-internal struct SplineBinary {
+internal struct Spline {
   public uint NodeCount;
   public uint NodesPtr;
   public uint Cyclic;
@@ -144,7 +141,7 @@ public readonly record struct OvlSpline(
 /// Does not include Soaked/Wild extensions.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-internal struct TrackSectionBinary {
+internal struct TrackSection {
   public uint InternalNamePtr;
   public uint SceneryItemRef;
   public uint EntryCurve;
@@ -273,7 +270,7 @@ public static class TrackData {
       throw new InvalidOperationException($"Failed to resolve Spline block for {file.Name}");
 
     using var reader = new BinaryReader(new MemoryStream(block, (int)offset, block.Length - (int)offset));
-    if (reader.Read<SplineBinary>(out var splineData) == 0)
+    if (reader.Read<Spline>(out var splineData) == 0)
       throw new InvalidDataException($"Failed to read Spline header for {file.Name}");
 
     var nodeCount = splineData.NodeCount;
@@ -309,7 +306,7 @@ public static class TrackData {
       throw new InvalidOperationException($"Failed to resolve TrackSection block for {file.Name}");
 
     using var reader = new BinaryReader(new MemoryStream(block, (int)offset, block.Length - (int)offset));
-    if (reader.Read<TrackSectionBinary>(out var tksData) == 0)
+    if (reader.Read<TrackSection>(out var tksData) == 0)
       throw new InvalidDataException($"Failed to read TrackSection header for {file.Name}");
 
     var internalName = ovl.TryResolveString(tksData.InternalNamePtr, out var name) ? name : $"<unresolved:{tksData.InternalNamePtr:X}>";
@@ -356,7 +353,7 @@ public static class TrackData {
 
     using var reader = new BinaryReader(new MemoryStream(block, (int)offset, block.Length - (int)offset));
     for (var i = 0; i < count; i++) {
-      if (reader.Read<SplineNodeBinary>(out var nodeData) == 0)
+      if (reader.Read<SplineNode>(out var nodeData) == 0)
         throw new InvalidDataException($"Failed to read spline node {i}");
       nodes[i] = nodeData.Pos;
       cp1[i] = nodeData.ControlPoint1;

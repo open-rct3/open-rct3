@@ -95,15 +95,17 @@
     <None Remove="Dumper.Tests\**" />
   </ItemGroup>
   <!-- Bundle built-in plugins -->
-  <Target Name="BuildPlugins" BeforeTargets="BeforeBuild">
-    <!-- FIXME: Why can't we use $(SolutionDir) here? -->
-    <Exec Command="make plugins" WorkingDirectory="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))" />
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildProjectDirectory)\..\</SolutionDir>
+  </PropertyGroup>
+  <Target Name="BuildPlugins" BeforeTargets="BeforeBuild;AssignTargetPaths;GetCopyToOutputDirectoryItems">
+    <Exec Command="make plugins" WorkingDirectory="$(SolutionDir)" />
   </Target>
   <ItemGroup>
     <Folder Include="Plugins\Artifacts\" />
   </ItemGroup>
   <ItemGroup>
-    <!-- FIXME: Plugins are not _always_ copied to output directory -->
+    <Content Remove="$(SolutionDir)bin\plugins\*.wasm" />
     <Content Include="$(SolutionDir)bin\plugins\*.wasm">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Link>Plugins\Artifacts\%(Filename).wasm</Link>

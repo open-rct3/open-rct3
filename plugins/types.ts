@@ -12,13 +12,3 @@
 
 /// <reference no-default-lib="true" />
 /// <reference types="assemblyscript/types" />
-
-declare global {
-  interface StringConstructor {
-    readonly UTF16: {
-      decode(buf: ArrayBuffer): string;
-      encode(str: string): ArrayBuffer;
-      byteLength(str: string): i32;
-    };
-  }
-}

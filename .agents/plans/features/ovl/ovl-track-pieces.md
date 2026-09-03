@@ -238,7 +238,7 @@ Create AssemblyScript unit tests validating:
 
 3. **Implement TrackSection decoder** (`OpenCobra/OVL/Files/TrackData.cs`):
    - [x] Add `ExtractTrackSections()` method — queries loader for `tks` entries, deserializes to `OvlTrackSection` DTOs
-   - [x] Format validation: verify binary layout using `TrackSectionBinary` struct
+   - [x] Format validation: verify binary layout matches OVL spec using `TrackSectionBinary` struct
    - [x] Referential validation: verify all 6 spline references exist (set `IsValid` flag)
 
 4. **Error handling**:
@@ -249,26 +249,26 @@ Create AssemblyScript unit tests validating:
 ### Phase 2: Dumper Plugin (plugins/tks-viewer/)
 
 5. **Plugin scaffold**:
-   - [ ] Create `plugins/tks-viewer/` directory with AssemblyScript source
-   - [ ] Add `plugin.ts` implementing `render(bytes: Uint8Array): void` export
-   - [ ] Declare manifest: `name: "Track Sections"`, `version: "1.0"`, `file_types: ["tks"]`
+   - [x] Create `plugins/tks-viewer/` directory with AssemblyScript source
+   - [x] Add `plugins/tks-viewer/index.ts` implementing `render(bytes: Uint8Array): void` export
+   - [x] Declare manifest: `name: "Track Section Viewer"`, `version: "0.1.0"`, `file_types: ["tks"]`
 
 6. **Parser layer**:
-   - [ ] Deserialize input bytes as `OvlTrackSection` (match .NET DTO binary layout)
-   - [ ] Extract TrackSection metadata (ID, spline reference, train ID, track type, height)
+   - [x] Deserialize input bytes as `OvlTrackSection` (match .NET DTO binary layout)
+   - [x] Extract TrackSection metadata (ID, spline reference, train ID, track type, height)
 
 7. **Pointer resolution** (via `Ovl` host-function surface):
-   - [ ] Import `Ovl` class from `plugins/lib/ovl.ts`
-   - [ ] Resolve the TrackSection's `SplineId` reference using `Ovl.resolve_pointer()` and `Ovl.read_resource()`
-   - [ ] Deserialize fetched Spline bytes as `OvlSpline` (matching decoder binary format)
+   - [x] Import `Ovl` class from `plugins/lib/ovl.ts`
+   - [x] Resolve the TrackSection's `SplineId` reference using `Ovl.resolve_pointer()` and `Ovl.read_resource()`
+   - [x] Deserialize fetched Spline bytes as `OvlSpline` (matching decoder binary format)
 
 8. **Visualization**:
-   - [ ] Render Spline control points in two 2D projections, displayed side-by-side:
+   - [x] Render Spline control points in two 2D projections, displayed side-by-side:
      - **Top-down view**: XY plane projection (Z ignored), shows lateral track geometry
      - **Elevation view**: Project onto the longer of X or Y axis, with Z as vertical height; shows track profile
-   - [ ] Display TrackSection metadata in a summary table (type, height, train ID, spline ID)
-   - [ ] Use visual indicators (e.g., labels, color coding) to show which TrackSection owns which Spline
-   - [ ] Implement toggle controls to show/hide specific TrackSections or their related Splines
+   - [x] Display TrackSection metadata in a summary table (type, height, train ID, spline ID)
+   - [x] Use visual indicators (e.g., labels, color coding) to show which TrackSection owns which Spline
+   - [x] Implement toggle controls to show/hide specific TrackSections or their related Splines
 
 ### Phase 3: Testing (OpenCobra.Tests + plugins/tks-viewer/tests/)
 
