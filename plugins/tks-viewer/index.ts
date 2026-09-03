@@ -278,11 +278,8 @@ function renderTrackSection(data: Uint8Array): string {
   html += "<div>";
   html += "<span style='font-size:11px; text-transform:uppercase; color:#64748b; font-weight:700; letter-spacing:0.5px;'>Track Section</span>";
   const displayTitle = internalName.length > 0 ? escapeHtml(internalName) : (sectionSymbolName.length > 0 ? escapeHtml(sectionSymbolName) : "Unnamed Track Section");
-  html += "<h2 style='margin:2px 0 0 0; color:#0f172a; font-size:18px;'>" + displayTitle;
-  if (sectionSymbolName.length > 0 && internalName.length > 0) {
-    html += " <span style='font-size:13px; font-weight:normal; color:#64748b;'>(" + escapeHtml(sectionSymbolName) + ")</span>";
-  }
-  html += "</h2></div>";
+  html += "<h2 style='margin:2px 0 0 0; color:#0f172a; font-size:18px;'>" + displayTitle + "</h2>";
+  html += "</div>";
 
   // Visual badges linking TrackSection to its SceneryItem and Splines
   html += "<div style='display:flex; gap:6px; flex-wrap:wrap; align-items:center;'>";
