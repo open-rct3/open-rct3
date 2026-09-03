@@ -101,19 +101,19 @@ Deno.test("tks-viewer: render() resolves splines, renders side-by-side SVG proje
 
   // Build nodes data: 2 nodes * 36 bytes = 72 bytes
   // Node 0: Pos(0, 0, 0), CP1(0, 0, 0), CP2(2, 0, 0)
-  // Node 1: Pos(10, 0, 2), CP1(-2, 0, 0), CP2(0, 0, 0)
+  // Node 1: Pos(10, 2, 0), CP1(-2, 0, 0), CP2(0, 0, 0)
   function makeNodesData(xOffset: number): Uint8Array {
     const bytes = new Uint8Array(72);
     const view = new DataView(bytes.buffer);
     // Node 0:
     view.setFloat32(0, xOffset, true); // Pos.X
-    view.setFloat32(4, 0, true); // Pos.Y
+    view.setFloat32(4, 0, true); // Pos.Y (Elevation)
     view.setFloat32(8, 0, true); // Pos.Z
     view.setFloat32(24, 2, true); // CP2.X
     // Node 1:
     view.setFloat32(36, xOffset + 10, true); // Pos.X
-    view.setFloat32(40, 0, true); // Pos.Y
-    view.setFloat32(44, 2, true); // Pos.Z
+    view.setFloat32(40, 2, true); // Pos.Y (Elevation)
+    view.setFloat32(44, 0, true); // Pos.Z
     view.setFloat32(48, -2, true); // CP1.X
     return bytes;
   }
@@ -191,8 +191,10 @@ Deno.test("tks-viewer: render() resolves splines, renders side-by-side SVG proje
   assert(html.includes("chk-handles"), "Expected Bezier Handles checkbox");
 
   // 5. Verify Side-by-side 2D Projections (Top-down and Elevation)
-  assert(html.includes("Top-Down View (XY Plane"), "Expected Top-down view header");
+  assert(html.includes("Top-Down View (XZ Plane"), "Expected Top-down view header");
   assert(html.includes("Elevation View ("), "Expected Elevation view header");
+  assert(html.includes("Height (Y Axis)"), "Expected Height Y Axis");
+  assert(html.includes("Length (Z Axis)"), "Expected Length Z Axis");
   assert(html.includes("projection-svg"), "Expected SVG projections rendered");
   assert(html.includes("spl-left"), "Expected left spline svg group");
   assert(html.includes("spl-right"), "Expected right spline svg group");
