@@ -166,6 +166,19 @@ public class TrackGraphEdge {
 /// <summary>
 /// A complete track graph: the DAG of track pieces chained together.
 /// </summary>
+/// <remarks>
+/// <para>
+/// A <see cref="TrackGraph"/> is one <em>constructed</em> ride: pieces laid in-game, or built from
+/// an RCT3 <c>.trk</c>, RCT1 <c>.TD4</c>, or RCT2 <c>.TD6</c> design.
+/// </para>
+/// <para>
+/// It is not what decoding a <c>Track*.ovl</c> yields. An OVL holds a ride type's unordered
+/// <em>palette</em> of segment shapes (<c>TrackLibrary</c> and <c>TrackSegments</c> in
+/// <c>OpenRCT3.Rides</c>), with no ordering, connectivity, or world placement. A design importer
+/// builds a graph by naming segments from a loaded <c>TrackLibrary</c>. Importing the OVL alone
+/// never produces one.
+/// </para>
+/// </remarks>
 public class TrackGraph {
   /// <summary>Root node (first piece in the sequence).</summary>
   public TrackGraphNode? RootNode { get; set; }

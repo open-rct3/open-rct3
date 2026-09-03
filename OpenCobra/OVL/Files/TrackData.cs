@@ -101,7 +101,10 @@ public readonly record struct Spline(
 /// Does not include Soaked/Wild extensions.
 /// </summary>
 /// <remarks>
-/// Mirrors rct3-importer's <c>TrackSection_V</c> structure.
+/// Mirrors rct3-importer's <c>TrackSection_V</c> structure. The six spline-ref fields are read at
+/// these fixed <c>_V</c> offsets; Soaked/Wild-era coaster archives use a larger <c>TrackSection_S</c>
+/// / <c>_W</c> layout where those offsets instead hold zero, so their sections decode with empty
+/// <see cref="TrackSection.SplineRefs"/> and <see cref="TrackSection.IsValid"/> <c>false</c>.
 /// </remarks>
 [StructLayout(LayoutKind.Sequential, Size = 140)]
 internal struct TrackSectionVanilla {

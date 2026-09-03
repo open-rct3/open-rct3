@@ -200,9 +200,92 @@ Filename reflects the types scanned (e.g., `ovl-spl-tks-scan.csv` for Spline + T
 - `{RCT3_PATH}/Rides/**/*.ovl`
 - `{RCT3_PATH}/tracks/**/*.ovl`
 
+Generated CSVs write archive paths with the literal token `${RCT3_PATH}` for anything under the
+RCT3 install (repo-relative otherwise), so they stay portable across machines.
+
+### Extra dump modes
+
+- `-- --strings` → `.agents/summaries/ovl-dump-strings.csv`: every symbol name plus every decoded
+  `txt` value, one row per symbol.
+- `-- --refs` → `.agents/summaries/ovl-dump-refs.csv`: every `Name:Tag` target in each archive's
+  SymbolRefStruct table, **including cross-archive references** (e.g. the `tks`/`sid`/`spl` segment
+  symbols a coaster's `trr` names, which live in a different `Track*.ovl`). Backed by
+  `Ovl.SymbolReferences`.
+
+### Sibling tools
+
+- **`.agents/tools/TrackDataVerifier/`** reads an `spl`/`tks` scan CSV and checks the decoder can
+  extract usable rail geometry *through* each named `tks`. For each section it resolves the
+  `SplineRefs`, requires left and right rails, and sanity-checks every rail spline. It fails loudly
+  where symbol-name checks alone would pass.
+- **`.agents/tools/TrackedRideCorrelator/`** decodes every `tracks/` OVL in parallel (PLINQ) and
+  matches each `trr`'s referenced `tks` symbols against the archive that *defines* them. It writes
+  `ovl-trr-scan.csv` (ride to primary segment archive) and `track-rides.csv` (segment archive to
+  rides, with an inferred `addon` column of Vanilla, Soaked, Wild, or blank when no `trr` references
+  it).
+
 ---
 
-## 4. Renderer Control Flow
+## 4. Track Data: Segment Libraries vs. Constructed Rides
+
+RCT3 track data has two distinct layers. Conflating them produces a disconnected graph of lone
+nodes, which is wrong.
+
+### `Track*.ovl` & `TrackBased*.ovl` are segment *palettes*, not rides
+
+Each of these (~79 archives) is the fixed set of reusable track-segment shapes (`Straight`,
+`Medcurve`, `Halfloop`, `Stationmiddle`, and so on) that one or more tracked-ride *types* can be
+built from. Per segment it holds:
+
+- a `tks` (`TrackSection`) with slope, bank, direction, flags, and **six** `SplineRefs`
+  (left, right, join-left, join-right, extra-left, extra-right), all in local segment space with
+  no ordering, connectivity, or world placement;
+- the `spl` (`Spline`) rails those refs point at;
+- a `sid` (`SceneryItem`) plus its `shs` (`StaticShape`) LODs for the visible rendered mesh.
+
+There is no chaining, no start or end, no transform. `Track*.ovl` numbering is internal and
+undocumented (no wiki maps `Track11.ovl` to a coaster type).
+
+### `trr` (`TrackedRide`) is the ride-type definition
+
+A ride's own OVL (`tracks/coasters/Corkscrew/`, `tracks/TrackedRides/LogFlume/`, and so on)
+contains a single `trr` plus preview and car splines. The link from a `trr` to its segment archive
+is **not a string in the ride OVL**. It is a cross-archive SymbolRefStruct table naming the exact
+segment `tks`/`sid`/`spl` symbols, which resolve into some numbered `Track*.ovl`. Use
+`Ovl.SymbolReferences` (or `TrackedRideCorrelator`) to walk it. `symbolReferenceTargets` alone
+drops these, because it only binds same-archive names.
+
+### Constructed rides
+
+Players build actual rides by chaining segments: laying track in-game, loading an RCT3 `.trk`
+design, or importing an RCT1 `.TD4` / RCT2 `.TD6` design (dropped into `Documents/RCT3/Coasters/`,
+surfaced by the "Import Track Designs From Previous RollerCoaster Tycoon Games" button). Only these
+produce a chained, placed graph.
+
+### Where each lives in code
+
+| Concept | OpenCobra.OVL (decode) | OpenRCT3 (model) |
+| :-- | :-- | :-- |
+| One segment's geometry & metadata | `TrackData.ExtractSplines` / `ExtractTrackSections` yield `Spline` / `TrackSection` DTOs | `TrackSegment` (`OpenRCT3/Rides/TrackLibrary.cs`) |
+| A ride type's whole segment palette | (none) | `TrackSegments` (name-keyed, immutable) |
+| Every ride type's palettes | (none) | `TrackLibrary : IReadOnlyDictionary<TrackedRide, TrackSegments>` |
+| Read one `Track*.ovl` into a palette | (none) | `TrackLibrary.Read(TrackedRide, Ovl)`, which **never returns a `TrackGraph`** |
+| A *constructed* ride's chained pieces | (none) | `TrackGraph` / `TrackGraphNode` / `TrackPiece` (`OpenRCT3/Rides/TrackSpline/`) |
+| `.trk` / `.TD4` / `.TD6` design import | not started | not started (will build a `TrackGraph` by naming segments from a loaded `TrackLibrary`) |
+
+`OpenRCT3/Simulation/` has no ride representation yet, so this distinction lives in
+`OpenRCT3/Rides/`. When rides enter the ECS world it must be preserved there too.
+
+### Known decoder gap
+
+`TrackData` only handles the 140-byte vanilla `TrackSection_V`. On Soaked/Wild-era coaster archives
+(`Track1`, `Track10`, `Track11`, and so on) the six `SplineRefs` read as zero at the `_V` offsets,
+so most of their sections come back `IsValid == false`. Decoding `TrackSection_S` / `_W` is
+deferred (see `TODO.md`).
+
+---
+
+## 5. Renderer Control Flow
 
 The `Renderer.Render` method handles rendering for the `Scene` bound to the global `Game.Instance`.
 
@@ -246,4 +329,8 @@ GameViewController
 *   [ReadArchive.cs](../../../OpenCobra/OVL%20Tests/ReadArchive.cs): OVL loader test suite.
 *   [GLSurface.cs](../../../OpenRCT3/Platforms/Windows/GLSurface.cs): Windows GLSurface paint/resize pipeline.
 *   [OpenGLLayer.cs](../../../OpenRCT3/Platforms/macOS/OpenGLLayer.cs): macOS OpenGLLayer implementation.
-*   [OvlScanner Tool](.agents/tools/OvlScanner/): Generic console tool for OVL resource discovery across fixtures and production archives.
+*   [OvlScanner Tool](.agents/tools/OvlScanner/): Generic console tool for OVL resource discovery across fixtures and production archives, with `--strings` & `--refs` dump modes.
+*   [TrackData.cs](../../../OpenCobra/OVL/Files/TrackData.cs): `spl` & `tks` decoder (`ExtractSplines`, `ExtractTrackSections`), vanilla `TrackSection_V` only.
+*   [TrackLibrary.cs](../../../OpenRCT3/Rides/TrackLibrary.cs): `TrackLibrary` / `TrackSegments` / `TrackSegment`, a ride type's segment palette (not a `TrackGraph`).
+*   [SplineTypes.cs](../../../OpenRCT3/Rides/TrackSpline/SplineTypes.cs): `TrackGraph` / `TrackPiece`, a *constructed* ride's chained pieces.
+*   [TrackedRideCorrelator](.agents/tools/TrackedRideCorrelator/) & [TrackDataVerifier](.agents/tools/TrackDataVerifier/): `trr`-to-segment-archive correlation, and decoder rail-geometry verification.
