@@ -107,6 +107,11 @@ namespace OpenRCT3 {
 
 Auto-generated `.designer.cs` files are exempt. They are owned by their generator (WinForms/Xamarin), and editing them by hand just creates merge conflicts the next time the designer runs.
 
+## Types & Constructors
+
+- Prefer primary constructors on class, struct, and record declarations.
+- Prefer `record`, `record struct`, or `readonly struct` over mutable classes when data does not require mutable reference-identity semantics or internal mutable collections.
+
 ## XML Doc Comments
 
 Use `/// <summary>` on every public type and member.

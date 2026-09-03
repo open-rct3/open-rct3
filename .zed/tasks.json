@@ -9,7 +9,9 @@
     "label": "Build Website",
     "command": "make",
     "args": ["website"],
-    "cwd": "$ZED_WORKTREE_ROOT"
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "show_summary": false,
+    "hide": "on_success"
   },
   {
     "label": "Test",
@@ -20,37 +22,43 @@
       // We want this task to run without scanning actual installs, to keep it fast
       "RCT3_PATH": "",
     },
-    "show_summary": true
+    "show_summary": false,
+    "hide": "on_success"
   },
   {
     "label": "Test Integrations",
     "command": "make",
     "args": ["integration"],
     "cwd": "$ZED_WORKTREE_ROOT",
-    "show_summary": true
+    "show_summary": false,
+    "hide": "on_success"
   },
   {
     "label": "Run OpenRCT3",
     "command": "dotnet",
     "args": ["run", "--project", "$ZED_WORKTREE_ROOT/OpenRCT3/OpenRCT3.csproj"],
-    "cwd": "$ZED_WORKTREE_ROOT"
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "hide": "on_success"
   },
   {
     "label": "Run Dumper",
     "command": "dotnet",
     "args": ["run", "--project", "$ZED_WORKTREE_ROOT/Dumper/Dumper.csproj"],
-    "cwd": "$ZED_WORKTREE_ROOT"
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "hide": "on_success"
   },
   {
     "label": "Run OVL Test Bench",
     "command": "dotnet",
     "args": ["run", "--project", "$ZED_WORKTREE_ROOT/OpenCobra/Tests/TestRunner/OvlTestBench.csproj"],
-    "cwd": "$ZED_WORKTREE_ROOT"
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "hide": "on_success"
   },
   {
     "label": "Serve Website",
     "command": "deno",
     "args": ["run", "-A", "npm:serve", "--", "./_site"],
-    "cwd": "$ZED_WORKTREE_ROOT/clients/website"
+    "cwd": "$ZED_WORKTREE_ROOT/clients/website",
+    "hide": "always"
   }
 ]

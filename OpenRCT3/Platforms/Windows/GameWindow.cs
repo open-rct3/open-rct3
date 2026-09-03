@@ -219,7 +219,7 @@ internal partial class GameWindow : Form, IWindow {
   // FIXME: This method ought be extracted into a platform-independent base-class.
   public void Start() {
     stopwatch.Start();
-    Debug.Assert(renderer != null, "Renderer should be created before starting the game.");
+    Diagnostics.Assert(renderer != null, "Renderer should be created before starting the game.");
     if (Game.Instance == null) {
       logger.Trace("Starting game...");
       var game = new Game();

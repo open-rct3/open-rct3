@@ -60,7 +60,7 @@ public class Renderer : ThreadAffine, IRenderer {
   public void Render(Scene scene) => Invoke(() => {
     if (!Game.IsRunning) return;
     context.MakeCurrent();
-    Debug.Assert(context.IsCurrent);
+    Diagnostics.Assert(context.IsCurrent);
 
     // Cannot render scene without a camera
     var viewProj = scene.Camera.Value;
@@ -158,7 +158,7 @@ public class Renderer : ThreadAffine, IRenderer {
       if ((model.Material?.State ?? State.Uninitialized) != State.Ready) continue;
 
       var material = model.Material;
-      Debug.Assert(material != null);
+      Diagnostics.Assert(material != null);
 
       yield return new DrawNode(
         Name: mesh.Name ?? "Mesh",
@@ -174,7 +174,7 @@ public class Renderer : ThreadAffine, IRenderer {
 
   private void UploadChanges(Camera camera, IEnumerable<Model> models) {
     foreach (var model in models) {
-      Debug.Assert(model.Material != null);
+      Diagnostics.Assert(model.Material != null);
       // TODO: Use KhrParallelShaderCompile
       UploadMaterial(model.Material);
 
@@ -183,7 +183,7 @@ public class Renderer : ThreadAffine, IRenderer {
       shaderProgram.Uniforms.Add(model.Transform);
       shaderProgram.Uniforms.Add(camera);
       // Upload mesh data
-      Debug.Assert(model.Mesh.State == State.Uninitialized);
+      Diagnostics.Assert(model.Mesh.State == State.Uninitialized);
       model.Mesh.Upload(shaderProgram.Shader);
     }
   }

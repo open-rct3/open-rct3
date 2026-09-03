@@ -45,7 +45,7 @@ internal static class Program {
   private static void HandleException(Exception? e) {
     if (e == null) return;
     logger.Fatal(e, "An unhandled exception occurred.");
-    Debug.Assert(false);
+    Diagnostics.Assert(false);
 
     // TODO: Refactor to custom modal with "Restart" label in place of "Retry".
     var result = MessageBox.Show(

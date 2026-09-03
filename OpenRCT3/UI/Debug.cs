@@ -1,4 +1,4 @@
-// Debug Window
+// Debugging Telemetry Window
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
@@ -7,6 +7,7 @@ using Hexa.NET.ImGui;
 using OpenCobra.GDK;
 using OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Meshes;
+using OpenRCT3.Debug;
 using OpenRCT3.Simulation;
 using Silk.NET.Input;
 using PlatformWindow = OpenCobra.GDK.Platform.IWindow;
@@ -24,6 +25,12 @@ namespace OpenRCT3.UI;
 /// never has to reach back into the container itself at render time.
 /// </remarks>
 public class Debug(Game game, PlatformWindow window, IInputContext inputContext) : IWindow {
+  private static readonly uint PlotColor = Color.FromRgb(0x4CAF50).ToUint();
+  private static readonly uint PlotBgColor = Color.FromRgba(76, 175, 80, Convert.ToByte(255 * 0.35f)).ToUint();
+
+  private readonly FrameRateAccumulator frameRate = new();
+  private readonly RingBuffer<float> frameHistory = new(120);
+
   private Mesh? TerrainMesh => game.World.Terrain?.GroundModel.Mesh;
 
   public Debug(Game game, Mesh terrainMesh, PlatformWindow window, IInputContext inputContext)
@@ -54,9 +61,13 @@ public class Debug(Game game, PlatformWindow window, IInputContext inputContext)
     ImGui.SetNextWindowPos(windowPos, ImGuiCond.Always, new Vector2(1f, 0f));
     ImGui.Begin("Debug", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse);
 
-    var frameSeconds = game.FrameTime.TotalSeconds;
-    var fps = frameSeconds > 0 ? 1.0 / frameSeconds : 0;
-    ImGui.Text($"Frame: {fps:0} fps ({game.FrameTime.TotalMilliseconds:0.00}ms)");
+    var delta = game.FrameTime;
+    frameRate.RecordFrame(delta);
+    frameHistory.Push((float)delta.TotalMilliseconds);
+
+    ImGui.Text($"Frame: {frameRate.CurrentFps:0} fps ({frameRate.CurrentFrameTimeMs:0.00}ms)");
+    RenderFrameTimePlot();
+
     var mesh = TerrainMesh;
     var faces = mesh != null ? mesh.Indices.Count / 3 : 0;
     var vertices = mesh != null ? mesh.Vertices.Count : 0;
@@ -64,9 +75,54 @@ public class Debug(Game game, PlatformWindow window, IInputContext inputContext)
 
     RenderCursorPosition();
 
-    // TODO: Render a graph of frame times
-
     ImGui.End();
+  }
+
+  /// <summary>
+  /// Renders a rolling plot of measured frame time as a solid 2px line with translucent fill below.
+  /// </summary>
+  private void RenderFrameTimePlot() {
+    const float PlotHeight = 40f;
+    const float TargetFrameMs = 33.33f;
+    var width = Math.Max(ImGui.GetContentRegionAvail().X, 150f);
+    var cursorScreenPos = ImGui.GetCursorScreenPos();
+    var plotSize = new Vector2(width, PlotHeight);
+
+    ImGui.Dummy(plotSize);
+
+    if (frameHistory.Count < 2) return;
+
+    var drawList = ImGui.GetWindowDrawList();
+    var count = frameHistory.Count;
+    var maxMs = TargetFrameMs;
+    for (var i = 0; i < count; i++) {
+      if (frameHistory[i] > maxMs) maxMs = frameHistory[i];
+    }
+
+    Span<Vector2> points = stackalloc Vector2[count];
+    for (var i = 0; i < count; i++) {
+      var x = cursorScreenPos.X + (i / (float)(frameHistory.Capacity - 1)) * width;
+      var normalized = Math.Clamp(frameHistory[i] / maxMs, 0f, 1f);
+      var y = cursorScreenPos.Y + PlotHeight - (normalized * PlotHeight);
+      points[i] = new Vector2(x, y);
+    }
+
+    // Filled polygon: bottom-left, points in chronological order, bottom-right
+    Span<Vector2> fillPoints = stackalloc Vector2[count + 2];
+    fillPoints[0] = new Vector2(points[0].X, cursorScreenPos.Y + PlotHeight);
+    for (var i = 0; i < count; i++) {
+      fillPoints[i + 1] = points[i];
+    }
+    fillPoints[count + 1] = new Vector2(points[count - 1].X, cursorScreenPos.Y + PlotHeight);
+
+    unsafe {
+      fixed (Vector2* pFill = fillPoints) {
+        drawList.AddConvexPolyFilled(pFill, fillPoints.Length, PlotFillColor);
+      }
+      fixed (Vector2* pLine = points) {
+        drawList.AddPolyline(pLine, count, PlotLineColor, ImDrawFlags.None, thickness: 2f);
+      }
+    }
   }
 
   /// <summary>

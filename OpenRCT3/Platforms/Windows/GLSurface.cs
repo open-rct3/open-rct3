@@ -86,7 +86,7 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
 
     // Load Silk.NET OpenGL with the current context
     gl = GL.GetApi(Context.GetProcAddress);
-    Debug.Assert(gl is not null);
+    Diagnostics.Assert(gl is not null);
     logger.Info("Created OpenGL context: {ctxSettings}", settings);
     Context.MakeCurrent();
 

@@ -68,6 +68,12 @@ public static class Color {
   public static uint ToRgbaUint(this Drawing.Color color) =>
     (uint)((color.R << 24) | (color.G << 16) | (color.B << 8) | color.A);
 
+  /// <summary>
+  /// Converts a <see cref="Drawing.Color"/> into an unsigned 32-bit integer packed RGBA value (e.g. for ImGui).
+  /// </summary>
+  public static uint ToUint(this Drawing.Color color) =>
+    (uint)((color.R) | (color.G << 8) | (color.B << 16) | (color.A << 24));
+
   public static Drawing.Color ToColor(this Vector4 vec) =>
     Drawing.Color.FromArgb(
       Convert.ToByte(Math.Clamp(vec.W * 255f, 0f, 255f)),

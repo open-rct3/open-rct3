@@ -73,6 +73,7 @@
     <Using Include="System.IO" />
     <Using Include="System.Linq" />
     <Using Include="System.Threading" />
+    <Using Include="System.Diagnostics.Debug" Alias="Diagnostics" />
     <!-- Implicit Exclusions -->
     <Using Remove="System.Drawing" />
   </ItemGroup>
