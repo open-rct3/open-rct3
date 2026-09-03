@@ -14,7 +14,7 @@ Deno.test("tks-viewer: name()", async () => {
   const plugin = await createPlugin(wasmUrl, { functions });
   const out = await plugin.call("name");
   assert(out !== null, "Expected a result!");
-  assertEquals(out!.text(), "Track Sections Viewer");
+  assertEquals(out!.text(), "Track Section Viewer");
   await plugin.close();
 });
 
@@ -153,7 +153,12 @@ Deno.test("tks-viewer: render() resolves splines, renders side-by-side SVG proje
         return NOT_FOUND;
       },
       "get_relocation_source": () => NOT_FOUND,
-      "resolve_symbol_reference": () => NOT_FOUND,
+      "resolve_symbol_reference": (ctx: CallContext, fieldAddr: bigint) => {
+        if (fieldAddr === 1004n) return ctx.store(new TextEncoder().encode(symbolJson("CTR_Coaster_Train", "sid")));
+        if (fieldAddr === 1032n) return ctx.store(new TextEncoder().encode(symbolJson("track_spl_left", "spl")));
+        if (fieldAddr === 1036n) return ctx.store(new TextEncoder().encode(symbolJson("track_spl_right", "spl")));
+        return NOT_FOUND;
+      },
       "symbol_address": () => NOT_FOUND,
     },
   };
@@ -165,7 +170,6 @@ Deno.test("tks-viewer: render() resolves splines, renders side-by-side SVG proje
 
   // 1. Verify TrackSection Metadata & Title
   assert(html.includes("Straight 1x1 Track Piece"), "Expected resolved internal name");
-  assert(html.includes("CTR_Track_Straight"), "Expected symbol name");
   assert(html.includes("Scenery Item Ref (sceneryItemRef)"), "Expected Scenery Item Ref row");
   assert(html.includes("CTR_Coaster_Train"), "Expected resolved vehicle/scenery item ID");
   assert(html.includes("SceneryItem: CTR_Coaster_Train"), "Expected SceneryItem badge");

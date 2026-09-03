@@ -1,8 +1,5 @@
 // ExtractResources
 //
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
-//
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Collections.Generic;
 using DotNetEnv;
@@ -237,6 +234,61 @@ public class ExtractResources {
           $"{entry.Name} in {Path.GetFileName(ovlPath)}: decoded width does not match header");
         Assert.That(Convert.ToInt32(frame.Height), Is.EqualTo(Convert.ToInt32(height)),
           $"{entry.Name} in {Path.GetFileName(ovlPath)}: decoded height does not match header");
+      }
+    }
+  }
+
+  [Test]
+  public void YoshiAdventureTrack_LoadsSplinesAndTrackSectionsWithReferentialIntegrity() {
+    var fixturePath = Path.Combine(
+      TestContext.CurrentContext.TestDirectory,
+      "Fixtures", "OVL", "CustomScenery", "Yoshi's Adventure", "CTR_YoshiAdventureTrack", "CTR_YoshiAdventureTrack.common.ovl"
+    );
+    if (!File.Exists(fixturePath)) {
+      var dir = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+      while (dir != null) {
+        var candidate = Path.Combine(dir.FullName, "OpenCobra", "Tests", "Fixtures", "OVL", "CustomScenery", "Yoshi's Adventure", "CTR_YoshiAdventureTrack", "CTR_YoshiAdventureTrack.common.ovl");
+        if (File.Exists(candidate)) {
+          fixturePath = candidate;
+          break;
+        }
+        dir = dir.Parent;
+      }
+    }
+    Assert.That(File.Exists(fixturePath), Is.True, $"CTR_YoshiAdventureTrack.common.ovl not found at {fixturePath}");
+
+    using var ovl = Ovl.Load(fixturePath);
+
+    var splines = TrackData.ExtractSplines(ovl);
+    Assert.That(splines, Is.Not.Empty, "Expected TrackData.ExtractSplines(ovl) to return non-empty collection from Yoshi track fixture");
+
+    var sections = TrackData.ExtractTrackSections(ovl);
+    Assert.That(sections, Is.Not.Empty, "Expected TrackData.ExtractTrackSections(ovl) to return non-empty collection from Yoshi track fixture");
+
+    using (Assert.EnterMultipleScope()) {
+      foreach (var section in sections) {
+        Assert.That(section.IsValid, Is.True, $"TrackSection {section.Id} failed referential validation");
+      }
+
+      foreach (var spline in splines) {
+        Assert.That(spline.NodeCount, Is.GreaterThan(0u), $"Spline {spline.Id} has 0 nodes");
+        foreach (var node in spline.Nodes) {
+          Assert.That(float.IsFinite(node.X) && float.IsFinite(node.Y) && float.IsFinite(node.Z), Is.True,
+            $"Spline {spline.Id} contains non-finite node coordinates: ({node.X}, {node.Y}, {node.Z})");
+          Assert.That(Math.Abs(node.X), Is.LessThan(100000f), $"Spline {spline.Id} node X is unreasonably large: {node.X}");
+          Assert.That(Math.Abs(node.Y), Is.LessThan(100000f), $"Spline {spline.Id} node Y is unreasonably large: {node.Y}");
+          Assert.That(Math.Abs(node.Z), Is.LessThan(100000f), $"Spline {spline.Id} node Z is unreasonably large: {node.Z}");
+        }
+
+        foreach (var cp in spline.ControlPoint1) {
+          Assert.That(float.IsFinite(cp.X) && float.IsFinite(cp.Y) && float.IsFinite(cp.Z), Is.True,
+            $"Spline {spline.Id} contains non-finite control point 1: ({cp.X}, {cp.Y}, {cp.Z})");
+        }
+
+        foreach (var cp in spline.ControlPoint2) {
+          Assert.That(float.IsFinite(cp.X) && float.IsFinite(cp.Y) && float.IsFinite(cp.Z), Is.True,
+            $"Spline {spline.Id} contains non-finite control point 2: ({cp.X}, {cp.Y}, {cp.Z})");
+        }
       }
     }
   }

@@ -78,24 +78,34 @@ function directionName(dir: u32): string {
   return "Direction " + dir.toString();
 }
 
-function resolveSplineResource(role: string, ptr: u32, color: string, cssClass: string): TrackSplineInfo {
-  if (ptr == 0) {
+function resolveSplineResource(role: string, ptr: u32, color: string, cssClass: string, fieldAddr: u32 = 0): TrackSplineInfo {
+  if (ptr == 0 && fieldAddr == 0) {
     return new TrackSplineInfo(role, 0, "", color, cssClass, false, 0, false, 0.0, 0.0, 0.0, new Array<SplineNode>());
   }
 
   let symbolName = "";
   let splineBytes: Uint8Array | null = null;
 
-  // 1. Try finding symbol by pointer
-  const sym = Ovl.findSymbol(i64(ptr));
-  if (sym != null) {
-    symbolName = sym.name;
-    // 2. Try reading resource by name & tag
-    splineBytes = Ovl.readResource(sym.name, sym.tag.length > 0 ? sym.tag : "spl");
+  // 1. Cross-resource symbol reference via symbol-reference table (standard RCT3 assignSymbolReference pattern)
+  if (fieldAddr != 0) {
+    const symRef = Ovl.resolveSymbolReference(fieldAddr);
+    if (symRef != null) {
+      symbolName = symRef.name;
+      splineBytes = Ovl.readResource(symRef.name, symRef.tag.length > 0 ? symRef.tag : "spl");
+    }
+  }
+
+  // 2. Fallback: try finding symbol by pointer if not found via symbol reference
+  if (splineBytes == null && ptr != 0) {
+    const sym = Ovl.findSymbol(i64(ptr));
+    if (sym != null) {
+      symbolName = sym.name;
+      splineBytes = Ovl.readResource(sym.name, sym.tag.length > 0 ? sym.tag : "spl");
+    }
   }
 
   // 3. Fallback: resolve relocated pointer directly
-  if (splineBytes == null) {
+  if (splineBytes == null && ptr != 0) {
     splineBytes = Ovl.resolvePointer(i64(ptr));
   }
 
@@ -220,28 +230,33 @@ function renderTrackSection(data: Uint8Array): string {
 
   // Resolve scenery item reference
   let sceneryItemName: string = "";
-  if (sceneryItemRef != 0) {
+  if (currentAddr != NOT_FOUND) {
+    const sidSym = Ovl.resolveSymbolReference(u32(currentAddr) + 4);
+    if (sidSym != null) {
+      sceneryItemName = sidSym.name;
+    }
+  }
+  if (sceneryItemName.length == 0 && sceneryItemRef != 0) {
     const scenerySym = Ovl.findSymbol(i64(sceneryItemRef));
     if (scenerySym != null) {
       sceneryItemName = scenerySym.name;
     }
   }
 
-  // Resolve all 6 spline references
+  // Resolve all 6 spline references (offsets 32, 36, 40, 44, 48, 52)
   const splines = new Array<TrackSplineInfo>();
-  splines.push(resolveSplineResource("Left Spline", splineLeftRef, "#2563eb", "spl-left"));
-  splines.push(resolveSplineResource("Right Spline", splineRightRef, "#dc2626", "spl-right"));
-  splines.push(resolveSplineResource("Join Left", joinSplineLeftRef, "#0891b2", "spl-join-left"));
-  splines.push(resolveSplineResource("Join Right", joinSplineRightRef, "#d97706", "spl-join-right"));
-  splines.push(resolveSplineResource("Extra Left", extraSplineLeftRef, "#7c3aed", "spl-extra-left"));
-  splines.push(resolveSplineResource("Extra Right", extraSplineRightRef, "#059669", "spl-extra-right"));
+  const baseAddr = currentAddr != NOT_FOUND ? u32(currentAddr) : 0;
+  splines.push(resolveSplineResource("Left Spline", splineLeftRef, "#2563eb", "spl-left", baseAddr != 0 ? baseAddr + 32 : 0));
+  splines.push(resolveSplineResource("Right Spline", splineRightRef, "#dc2626", "spl-right", baseAddr != 0 ? baseAddr + 36 : 0));
+  splines.push(resolveSplineResource("Join Left", joinSplineLeftRef, "#0891b2", "spl-join-left", baseAddr != 0 ? baseAddr + 40 : 0));
+  splines.push(resolveSplineResource("Join Right", joinSplineRightRef, "#d97706", "spl-join-right", baseAddr != 0 ? baseAddr + 44 : 0));
+  splines.push(resolveSplineResource("Extra Left", extraSplineLeftRef, "#7c3aed", "spl-extra-left", baseAddr != 0 ? baseAddr + 48 : 0));
+  splines.push(resolveSplineResource("Extra Right", extraSplineRightRef, "#059669", "spl-extra-right", baseAddr != 0 ? baseAddr + 52 : 0));
 
   // Optional Soaked loop spline
   if (data.length >= 144) {
     const loopSplineRef = readU32LE(data, 140);
-    if (loopSplineRef != 0) {
-      splines.push(resolveSplineResource("Loop Spline", loopSplineRef, "#db2777", "spl-loop"));
-    }
+    splines.push(resolveSplineResource("Loop Spline", loopSplineRef, "#db2777", "spl-loop", baseAddr != 0 ? baseAddr + 140 : 0));
   }
 
   // Count resolved splines and determine 3D bounding box

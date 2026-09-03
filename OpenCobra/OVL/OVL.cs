@@ -253,9 +253,8 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// <summary>
   /// Resolves a cross-resource symbol-reference field (e.g. <c>StaticShapeMesh.FtxRef</c>'s own
   /// address, or one element of <c>SceneryItem.SvdRefs</c>) to the <see cref="OvlFile"/> its
-  /// SymbolRefStruct entry names, via the archive's symbol-reference table - NOT the base
-  /// relocation-fixup table <see cref="TryGetRelocationSource"/> reads, which only resolves pointers
-  /// to other data within the archive's own blocks. See <see cref="symbolReferenceTargets"/> for why
+  /// SymbolRefStruct entry names as the target. Distinct from <see cref="relocations"/>, which only
+  /// resolves pointers within the archive's own block data - see <see cref="symbolReferenceTargets"/> for why
   /// these are genuinely different tables.
   /// </summary>
   /// <param name="fieldAddress">Relative offset address of the field being referenced (the field's

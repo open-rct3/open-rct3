@@ -233,7 +233,7 @@ Create AssemblyScript unit tests validating:
 
 2. **Implement Spline decoder** (`OpenCobra/OVL/Files/TrackData.cs`):
    - [x] Add `ExtractSplines()` method — queries loader for `spl` entries, deserializes to `OvlSpline` DTOs
-   - [x] Format validation: verify binary layout matches OVL spec using `SplineBinary` struct
+   - [x] Format validation: verify binary layout matches OVL spec using `SplineData` struct
    - [x] Parse control points (vectors), segment data, metadata fields
 
 3. **Implement TrackSection decoder** (`OpenCobra/OVL/Files/TrackData.cs`):
@@ -290,9 +290,8 @@ Create AssemblyScript unit tests validating:
     - [ ] Test: Sample control points from fixture are finite and in reasonable bounds
 
 12. **Plugin tests** (`plugins/tks-viewer/tests/`):
-    - [ ] Unit tests for binary parsing (synthetic data)
+    - [x] Unit tests for binary parsing (synthetic data)
     - [ ] Integration tests for pointer resolution (using fixture OVLs)
-    - [ ] Snapshot tests for rendered output HTML/SVG
 
 ### Phase 4: Game Integration (OpenRCT3)
 
