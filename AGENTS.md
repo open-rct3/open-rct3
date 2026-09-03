@@ -18,6 +18,7 @@
 - **Obey Explicit Tool Directives Immediately:** When the user explicitly instructs you to use a specific tool or resource (e.g., "use the internet", "use bash", "use file writing tools"), obey immediately on your next tool invocation. Do NOT substitute alternative tools, do NOT retreat into local guesswork, and do NOT repeat failing patterns.
 - **Always Cite Evidence:** ALWAYS back up ANY technical claim, explanation, or justification with concrete evidence (e.g., official documentation links, source code permalinks, or direct quotes). Never make unverified assertions.
 - **Fix the obvious thing first, then test:** Don't investigate when the root cause is clear from the code and error message.
+- **New tools ALWAYS live in [`.agents/tools/`](.agents/tools/).** Any throwaway or reusable console app, scanner, or script goes in its own subdirectory there (e.g. `.agents/tools/MyScanner/`), never at the repo root, in a temp directory, or beside source. Scaffold it with the file-writing tools (a `.csproj` referencing `OpenCobra/OVL/OVL.csproj` as needed), not shell heredocs. Before adding one, check whether an existing tool in that directory can be extended instead.
 - Links in any markdown file MUST work both locally and on GitHub. Use relative paths for links.
 - All references (file paths, documentation, online resources) MUST be hyperlinked when relevant to the context.
 

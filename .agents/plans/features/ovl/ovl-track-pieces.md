@@ -176,6 +176,14 @@ Create `plugins/tks-viewer/` Extism plugin following the structure in `plugins/R
 
 **Ready for Phase 1** (Decoder Implementation). Design ready per Approach 2 (decoder with validation + game-level integration). Actual TrackSection complexity (versioning, multiple spline refs, dynamic arrays) is significantly higher than initial sketch — early Phase 1 design work will refine these uncertainties using actual production data.
 
+**Phases 1–5 complete** ✅. Decoder, `tks-viewer` plugin, tests, and the
+`OpenRCT3/Rides/TrackLibrary.cs` scaffold (`TrackLibrary` / `TrackSegments` /
+`TrackSegment`) are in place. `TrackData` decodes all 390 track archives (fixtures + production)
+with `spl`/`tks` counts matching the Phase 0 scan and every sample symbol name resolving,
+verified by `.agents/tools/TrackDataVerifier/`. Only vanilla `TrackSection_V` layout was observed
+in practice. Importing one OVL yields a per-ride-type segment library, not a `TrackGraph`;
+`TrackConnector` geometry derivation and the `.trk`/`.TD6` design importers remain deferred.
+
 ## Deferred
 
 - **TrackImporter implementation** — depends on both this decoder and track-spline-rendering completion
@@ -293,20 +301,43 @@ Create AssemblyScript unit tests validating:
     - [x] Unit tests for binary parsing (synthetic data)
     - [x] Integration tests for pointer resolution (using fixture OVLs)
 
-### Phase 4: Game Integration (OpenRCT3)
+### Phase 4: Game Integration (OpenRCT3) ✅
 
-13. **TrackImporter scaffold** (`OpenRCT3/Rides/OVL/TrackImporter.cs`):
-    - [ ] Stub implementation (parse OVL, validate, defer model construction)
-    - [ ] Add XML doc comments describing responsibilities
+13. **Track segment library** (`OpenRCT3/Rides/TrackLibrary.cs`):
+    - [x] `TrackLibrary.Read(TrackedRide, Ovl)` decodes an OVL into that ride type's segment set
+    - [x] Collection types follow the framework collection guidelines
+    - [x] XML doc comments describing responsibilities
 
-    Full implementation deferred; depends on both this plan and track-spline rendering completion.
+    A tracked-ride OVL is the *segment palette* for one ride type, not a ride, so importing one
+    does **not** produce a `TrackGraph` (that would be a fully disconnected graph of lone nodes).
+    Instead:
+    - `TrackLibrary : IReadOnlyDictionary<TrackedRide, TrackSegments>` — the per-ride-type catalog,
+      composed over an inner `Dictionary` (not derived from it).
+    - `TrackSegments : IReadOnlyList<TrackSegment> + IReadOnlyDictionary<string, TrackSegment>` —
+      one ride type's fixed segment set, indexable by position and by OVL `tks` symbol name (the
+      key `.trk`/`.TD6` designs reference).
+    - `TrackSegment` — `TrackSection` metadata + resolved rail `Spline`s in local space, with a
+      lazily-derived `Connectors` (entry/exit socket: position, tangent, bank, gauge).
 
-### Phase 5: Documentation & Verification
+    Constructed rides come from separate importers not covered here: RCT3 `.trk` designs and
+    imported RCT1/RCT2 `.TD4`/`.TD6` designs (dropped into `Documents/RCT3/Coasters/`, surfaced by
+    "Import Track Designs From Previous RollerCoaster Tycoon Games"), which build a `TrackGraph` by
+    naming segments from the loaded `TrackLibrary`. `TrackConnector` geometry derivation is
+    provisional pending track-spline chaining work.
+
+### Phase 5: Documentation & Verification ✅
 
 14. **Post-Implementation**:
-    - [ ] Update `plugins/README.md` — mark `tks-viewer` as ✅ Completed (move from 📋 Planned)
-    - [ ] Update `.agents/summaries/ovl-spl-tks-scan.csv` with any additional findings from testing (if schema variants discovered in Phase 0 scanning, document how decoder handles them)
-    - [ ] Verify sample symbol names from Phase 0 scan work correctly with the decoder
+    - [x] Update `plugins/README.md` — `tks-viewer` listed under ✅ Completed
+    - [x] Update `.agents/summaries/` with findings from testing — `TrackDataVerifier` writes a
+      per-archive report to `.agents/summaries/ovl-spl-tks-verify.csv`. No schema variants beyond
+      vanilla (`TrackSection_V`) surfaced; all 390 archives decode with matching `spl`/`tks`
+      counts and no geometry issues. 98 archives contain track sections with `IsValid == false`
+      (sections whose join/extra/water spline references are absent, or non-track path splines) —
+      expected, flagged by the decoder's referential check, not a decode failure.
+    - [x] Verify sample symbol names from Phase 0 scan work correctly with the decoder —
+      `.agents/tools/TrackDataVerifier/` confirms every `spl_samples` / `tks_samples` name in the
+      scan CSV resolves to a decoded `Spline` / `TrackSection` across all 390 archives
 
 ## References
 

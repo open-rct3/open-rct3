@@ -55,6 +55,7 @@ obj/
 **/bin/Release/**/*.deps.json
 **/bin/Release/**/.msCoverageSourceRootsMapping_Tests
 **/bin/Release/**/CoverletSourceRootsMapping_Tests
+.agents/tools/**/*.runtimeconfig.json
 
 bin/OpenRCT3*
 OpenRCT3/bin/

@@ -145,4 +145,43 @@ public class TrackDataExtractorsTests {
       }
     }
   }
+
+  [Test]
+  public void SymbolReferenceNames_FromYoshiTrackFixture_ExposesEveryNamedRefIncludingUnresolvedTargets() {
+    using var ovl = Ovl.Load(YoshiTrackFixturePath());
+
+    var refs = ovl.SymbolReferences;
+
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(refs, Is.Not.Empty, "Yoshi track fixture should name symbol-reference targets");
+      Assert.That(refs.All(r => r.Type != FileType.Unknown), "Every reference carries a known file type");
+
+      // A track archive's sections reference their rail splines by symbol; those names must surface.
+      var splineRefNames = refs.Where(r => r.Type == FileType.Spline).Select(r => r.Name).ToHashSet();
+      Assert.That(splineRefNames, Is.Not.Empty, "Track sections reference spline symbols");
+
+      // Every reference the same-archive resolver can bind must also be listed here (superset).
+      var sections = TrackData.ExtractTrackSections(ovl);
+      var boundSplineRefs = sections
+        .SelectMany(s => s.SplineRefs)
+        .Where(name => !string.IsNullOrEmpty(name) && !name.StartsWith("<unresolved", StringComparison.Ordinal))
+        .ToHashSet();
+      Assert.That(boundSplineRefs, Is.SubsetOf(splineRefNames),
+        "SymbolReferenceNames omits a spline reference that TrackData resolved");
+    }
+  }
+
+  private static string YoshiTrackFixturePath() {
+    var name = Path.Combine(
+      "Fixtures", "OVL", "CustomScenery", "Yoshi's Adventure", "CTR_YoshiAdventureTrack", "CTR_YoshiAdventureTrack.common.ovl");
+    var direct = Path.Combine(TestContext.CurrentContext.TestDirectory, name);
+    if (File.Exists(direct)) return direct;
+
+    for (var dir = new DirectoryInfo(TestContext.CurrentContext.TestDirectory); dir != null; dir = dir.Parent) {
+      var candidate = Path.Combine(dir.FullName, "OpenCobra", "Tests", name);
+      if (File.Exists(candidate)) return candidate;
+    }
+    Assert.Fail($"{name} not found from {TestContext.CurrentContext.TestDirectory}");
+    return string.Empty;
+  }
 }

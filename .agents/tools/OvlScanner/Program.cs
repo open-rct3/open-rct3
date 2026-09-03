@@ -6,17 +6,24 @@ using System.Text;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
 
-// Parse command-line arguments for file types to scan
-var requestedTypes = args.Length > 0
-  ? args.Select(arg => arg.ToFileType()).Where(t => t != FileType.Unknown).ToList()
+// Parse command-line arguments for file types to scan.
+// `--strings` dumps decoded `txt` values and every symbol name per OVL.
+// `--refs`    dumps every `Name:Tag` named in each OVL's SymbolRefStruct table, including
+//             cross-archive references (e.g. which segment symbols a coaster's `trr` points at).
+var dumpStrings = args.Any(a => a is "--strings" or "--dump-strings");
+var dumpRefs = args.Any(a => a is "--refs" or "--dump-refs");
+var requestedTypes = args.Where(a => !a.StartsWith("--")).Any()
+  ? args.Where(a => !a.StartsWith("--")).Select(arg => arg.ToFileType()).Where(t => t != FileType.Unknown).ToList()
   : [];
 
-if (requestedTypes.Count == 0) {
+if (requestedTypes.Count == 0 && !dumpStrings && !dumpRefs) {
   Console.WriteLine("Usage: dotnet run --project .agents/tools/OvlScanner/OvlScanner.csproj -- <tag1> [tag2] [tag3] ...");
   Console.WriteLine("\nExamples:");
   Console.WriteLine("  dotnet run --project ... -- spl tks       # Scan for Spline and TrackSection");
   Console.WriteLine("  dotnet run --project ... -- tex           # Scan for Textures");
   Console.WriteLine("  dotnet run --project ... -- shs sid       # Scan for Static Shapes and Scenery Items");
+  Console.WriteLine("  dotnet run --project ... -- --strings     # Dump txt values + symbol names per OVL");
+  Console.WriteLine("  dotnet run --project ... -- --refs        # Dump SymbolRefStruct targets per OVL");
   Console.WriteLine("\nSupported tags (29 types):");
   Console.WriteLine("  txt, int, tex, flic, ftx, gsi, sid, btbl, anr, ban, bsh, ced, chg, cid,");
   Console.WriteLine("  mam, ptd, qtd, ric, rit, sat, shs, snd, spl, sta, svd, ter, tks, trr, wai, mms, prt, psi, fct");
@@ -28,6 +35,18 @@ while (!Directory.Exists(Path.Combine(repoRoot, "OpenCobra")) && repoRoot.Length
   repoRoot = Path.GetDirectoryName(repoRoot)!;
 }
 var fixtureDir = Path.Combine(repoRoot, "OpenCobra", "Tests", "Fixtures", "OVL");
+
+// Portable path for a CSV: ${RCT3_PATH}/... under the RCT3 install, else repo-relative.
+var rct3InstallForRel = Environment.GetEnvironmentVariable("RCT3_PATH");
+string Rel(string fullPath) {
+  var full = Path.GetFullPath(fullPath);
+  if (!string.IsNullOrEmpty(rct3InstallForRel)) {
+    var root = Path.GetFullPath(rct3InstallForRel);
+    if (full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+      return "${RCT3_PATH}/" + full[root.Length..].TrimStart('/', '\\').Replace('\\', '/');
+  }
+  return Path.GetRelativePath(repoRoot, full).Replace('\\', '/');
+}
 
 // Generate output filename based on requested types
 var typeNames = string.Join("-", requestedTypes.Select(t => t.ToTagString()).OrderBy(t => t));
@@ -88,6 +107,71 @@ if (!string.IsNullOrEmpty(rct3Path) && Directory.Exists(rct3Path)) {
   Console.WriteLine("RCT3_PATH environment variable not set - skipping production OVL scan\n");
 }
 
+if (dumpStrings) {
+  var dumpFile = Path.Combine(repoRoot, ".agents", "summaries", "ovl-dump-strings.csv");
+  var typeFilter = requestedTypes.Count > 0 ? requestedTypes.ToHashSet() : null;
+  using var writer = new StreamWriter(dumpFile, false, new UTF8Encoding(false));
+  writer.WriteLine("file,kind,symbol,value");
+  var dumped = 0;
+  foreach (var ovlFile in allOvlFiles.OrderBy(f => f)) {
+    try {
+      using var ovl = Ovl.Load(ovlFile);
+      var rel = Rel(ovlFile);
+      foreach (var kvp in ovl.OrderBy(k => k.Key.Name)) {
+        var file = kvp.Key;
+        if (typeFilter != null && !typeFilter.Contains(file.Type)) continue;
+        WriteRow(writer, rel, "symbol", file.Name, file.Type.ToTagString());
+        if (file.Type == FileType.Text) {
+          var text = Text.TryExtractOne(ovl, file);
+          if (!string.IsNullOrEmpty(text)) WriteRow(writer, rel, "txt", file.Name, text);
+        }
+        dumped++;
+      }
+    } catch {
+      // Silently skip files that can't be parsed
+    }
+  }
+  Console.WriteLine($"Dumped {dumped} symbols from {allOvlFiles.Count} OVLs -> {Path.GetRelativePath(repoRoot, dumpFile)}");
+  return;
+
+  static void WriteRow(StreamWriter w, string file, string kind, string symbol, string value) {
+    string Esc(string s) => s.Contains(',') || s.Contains('"') || s.Contains('\n') || s.Contains('\r')
+      ? $"\"{s.Replace("\"", "\"\"").Replace("\r", " ").Replace("\n", " ")}\""
+      : s;
+    w.WriteLine($"{Esc(file)},{kind},{Esc(symbol)},{Esc(value)}");
+  }
+}
+
+if (dumpRefs) {
+  var dumpFile = Path.Combine(repoRoot, ".agents", "summaries", "ovl-dump-refs.csv");
+  var typeFilter = requestedTypes.Count > 0 ? requestedTypes.ToHashSet() : null;
+  using var writer = new StreamWriter(dumpFile, false, new UTF8Encoding(false));
+  writer.WriteLine("file,ref_name,ref_tag");
+  var rows = 0;
+  var withRefs = 0;
+  foreach (var ovlFile in allOvlFiles.OrderBy(f => f)) {
+    try {
+      using var ovl = Ovl.Load(ovlFile);
+      var rel = Rel(ovlFile);
+      var any = false;
+      foreach (var (name, type) in ovl.SymbolReferences.OrderBy(r => r.Type).ThenBy(r => r.Name)) {
+        if (typeFilter != null && !typeFilter.Contains(type)) continue;
+        var esc = name.Contains(',') || name.Contains('"')
+          ? $"\"{name.Replace("\"", "\"\"")}\""
+          : name;
+        writer.WriteLine($"{rel},{esc},{type.ToTagString()}");
+        rows++;
+        any = true;
+      }
+      if (any) withRefs++;
+    } catch {
+      // Silently skip files that can't be parsed
+    }
+  }
+  Console.WriteLine($"Dumped {rows} refs from {withRefs}/{allOvlFiles.Count} OVLs -> {Path.GetRelativePath(repoRoot, dumpFile)}");
+  return;
+}
+
 Console.WriteLine($"=== SCANNING ===\n");
 
 int fileCount = 0;
@@ -116,7 +200,7 @@ foreach (var ovlFile in allOvlFiles.OrderBy(f => f)) {
     foreach (var (type, matches) in matchesByType) {
       var samples = string.Join("; ", matches.Take(3));
       results.Add((
-        Path.GetRelativePath(repoRoot, ovlFile),
+        Rel(ovlFile),
         type.ToTagString(),
         matches.Count,
         samples

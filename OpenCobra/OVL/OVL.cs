@@ -88,8 +88,16 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// resolves pointers within the archive's own block data - see <see cref="TryResolveSymbolReference"/>.
   /// </summary>
   private readonly Dictionary<uint, OvlFile> symbolReferenceTargets = [];
-  /// <summary>Backing field for <see cref="LoaderEntriesInOrder"/>.</summary>
-  private readonly List<(string Tag, uint DataAddress)> loaderEntriesInOrder = [];
+  /// <summary>
+  /// Every <c>Name:Tag</c> target named in the archive's SymbolRefStruct table, in table order,
+  /// deduplicated. Unlike <see cref="symbolReferenceTargets"/>, this keeps references whose target
+  /// symbol is defined in a <em>different</em> archive (e.g. a <c>trr</c> in one archive naming
+  /// track-segment <c>tks</c>/<c>sid</c>/<c>spl</c> symbols that live in a numbered <c>TrackN</c>
+  /// archive), which same-archive name resolution necessarily drops.
+  /// </summary>
+  public IReadOnlyCollection<(string Name, FileType Type)> SymbolReferences => symbolReferences;
+  private readonly HashSet<(string Name, FileType Type)> symbolReferences = [];
+  private readonly List<(string Tag, uint DataAddress)> loaderEntriesOrdered = [];
   private uint relocationOffset;
   private bool disposed = false;
 
@@ -99,7 +107,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// <see cref="Keys"/>, this includes loader categories (like "btbl"/"flic") that are never
   /// classified as their own symbol - see Part 6 Finding 4 of the texture-decoding bug doc.
   /// </summary>
-  internal IReadOnlyList<(string Tag, uint DataAddress)> LoaderEntriesInOrder => loaderEntriesInOrder;
+  internal IReadOnlyList<(string Tag, uint DataAddress)> LoaderEntriesOrdered => loaderEntriesOrdered;
 
   /// <summary>Reads <paramref name="length"/> raw bytes at a relocation-resolved data address.</summary>
   public bool TryReadBytes(uint address, int length, [MaybeNullWhen(false)] out byte[] data) {
@@ -396,7 +404,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
       // LoaderType is a direct, on-disk-position index into loaderHeaders (Part 6 Finding 1).
       if (loaderType < loaderHeaders.Count)
-        loaderEntriesInOrder.Add((loaderHeaders[Convert.ToInt32(loaderType)].Tag, dataPtr));
+        loaderEntriesOrdered.Add((loaderHeaders[Convert.ToInt32(loaderType)].Tag, dataPtr));
 
       for (var c = 0; c < hasExtraData; c++) {
         if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) break;
@@ -682,6 +690,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
         var (name, fileType) = SplitSymbolNameTag(rawName);
         if (fileType == FileType.Unknown) continue;
+        symbolReferences.Add((name, fileType));
         if (!byNameAndType.TryGetValue((name, fileType), out var targetFile)) continue;
 
         symbolReferenceTargets[referenceFieldAddress] = targetFile;
@@ -733,6 +742,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
       entryDataPtrs.Clear();
       symbolsByDataPointer.Clear();
       symbolReferenceTargets.Clear();
+      symbolReferences.Clear();
       allFileTypeBlocks.Clear();
       allLoaderHeaders.Clear();
       allExtraData.Clear();

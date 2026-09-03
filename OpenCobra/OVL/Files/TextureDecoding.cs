@@ -418,7 +418,7 @@ internal static class TextureDecoding {
     var logger = NLog.LogManager.GetCurrentClassLogger();
     Texture[]? currentTable = null;
     var bitmapTablesByFlicAddress = new Dictionary<uint, Texture[]>();
-    foreach (var (tag, dataAddress) in ovl.LoaderEntriesInOrder) {
+    foreach (var (tag, dataAddress) in ovl.LoaderEntriesOrdered) {
       switch (tag) {
         case "btbl":
           try {
