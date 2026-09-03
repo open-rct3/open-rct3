@@ -7,6 +7,11 @@ description: Guidance on RCT3 OVL structure, libOVL porting details, texture/bit
 
 This skill provides comprehensive guidance on the OVL archive format, the C# port of the `libOVL` parser, and the application's renderer control flow within the OpenRCT3 codebase.
 
+## Reference Implementations & Working Examples
+
+- **Adapt working examples end-to-end**, rather than inferring or deriving file formats from scratch. Reference implementations (e.g. `rct3-importer`'s `libOVLng`, `rct3tex.cpp`) already solve these formats correctly - port their logic directly instead of reverse-engineering it from raw byte dumps.
+- **Read reference implementations FIRST.** Do NOT guess at clumsy changes or trial-and-error before understanding a problem. If a reference implementation exists for the code you're touching, read the relevant source before writing a single line - not after a guess fails.
+
 ---
 
 ## 1. OVL Archive & Resource Architecture
