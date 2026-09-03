@@ -49,6 +49,13 @@ public static class PluginTests {
         (plugin, inputs, outputs) => outputs[0].v.i64 = NotFound
       ).WithNamespace("ovl"),
       new HostFunction(
+        "resolve_symbol_reference",
+        [ExtismValType.I64],
+        [ExtismValType.I64],
+        null,
+        (plugin, inputs, outputs) => outputs[0].v.i64 = NotFound
+      ).WithNamespace("ovl"),
+      new HostFunction(
         "find_symbol",
         [ExtismValType.I64],
         [ExtismValType.I64],
@@ -57,6 +64,13 @@ public static class PluginTests {
       ).WithNamespace("ovl"),
       new HostFunction(
         "read_resource",
+        [ExtismValType.I64, ExtismValType.I64, ExtismValType.I64, ExtismValType.I64],
+        [ExtismValType.I64],
+        null,
+        (plugin, inputs, outputs) => outputs[0].v.i64 = NotFound
+      ).WithNamespace("ovl"),
+      new HostFunction(
+        "symbol_address",
         [ExtismValType.I64, ExtismValType.I64, ExtismValType.I64, ExtismValType.I64],
         [ExtismValType.I64],
         null,

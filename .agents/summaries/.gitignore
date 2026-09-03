@@ -1,3 +1,4 @@
 # Production OVL Dumps
+ovl-dump-*.csv
 ovl-*-scan.csv
 ovl-*-verify.csv

@@ -1,4 +1,4 @@
-// ReentrancyAnalyzer
+// Reentrancy Analyzer
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
@@ -20,8 +20,7 @@ namespace OpenCobra.Analyzers;
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class ReentrancyAnalyzer : DiagnosticAnalyzer {
-  public static readonly string ReentrancyWarningId = "GDK004";
-
+  public const string ReentrancyWarningId = "GDK004";
   private const string Category = "Performance";
 
   private static readonly DiagnosticDescriptor BlockingOperationInRenderPhaseRule =
@@ -32,8 +31,7 @@ public class ReentrancyAnalyzer : DiagnosticAnalyzer {
                         "as this blocks the UI thread and prevents responsive event handling. " +
                         "Move blocking operations to PipelinePhase.Early or PipelinePhase.Update instead.");
 
-  public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-      ImmutableArray.Create(BlockingOperationInRenderPhaseRule);
+  public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [BlockingOperationInRenderPhaseRule];
 
   public override void Initialize(AnalysisContext context) {
     context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);

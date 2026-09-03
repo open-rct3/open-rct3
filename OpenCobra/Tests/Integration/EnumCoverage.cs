@@ -65,6 +65,7 @@ public class EnumCoverage {
   }
 
   [TestCaseSource(nameof(GetSvdFixtures))]
+  [Parallelizable(ParallelScope.Self)]
   public void SvdResources_AreReadable(string ovlPath) {
     Assert.That(ovlPath, Does.Exist, $"OVL not found: {ovlPath}");
 
