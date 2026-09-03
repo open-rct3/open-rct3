@@ -11,8 +11,8 @@ using OpenCobra.GDK.Streaming;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Scenario;
 using Silk.NET.Input;
-using System.Drawing;
 using System.Numerics;
+using Drawing = System.Drawing;
 using GDK = OpenCobra.GDK;
 
 #if WINDOWS
@@ -32,9 +32,7 @@ public class World : GDK.Game.World, IParkLoader {
   /// rather than by bare <see cref="Mesh"/> type so a later feature registering some other
   /// <see cref="Mesh"/> instance can't collide with (or be shadowed by) this one.
   /// </summary>
-  private const string TerrainMeshServiceKey = "Terrain";
-  private readonly static Vector4 GrassColor = Color.FromArgb(79, 129, 14).ToGl();
-  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
+  private const string ServiceKey = "Terrain";
 
   public Terrain? Terrain { get; private set; }
   public Park? Park { get; private set; }
@@ -82,7 +80,7 @@ public class World : GDK.Game.World, IParkLoader {
     System.Diagnostics.Debug.Assert(Terrain != null);
     System.Diagnostics.Debug.Assert(Park != null);
 
-    Game.IoC.RegisterInstance(Terrain.GroundModel.Mesh, serviceKey: TerrainMeshServiceKey, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+    Game.IoC.RegisterInstance(Terrain.GroundModel.Mesh, serviceKey: ServiceKey, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
     if (currentGroundModel != null)
       scene.Models.Remove(currentGroundModel);
@@ -97,7 +95,7 @@ public class World : GDK.Game.World, IParkLoader {
     MarkerCenter = markerPosition + new Vector3(0, 0.5f, 0);
 
     if (rotationMarker == null) {
-      rotationMarker = new Model(Primitives.Cube(name: "RotationMarker", color: Color.FromArgb(200, 30, 30).ToGl())) {
+      rotationMarker = new Model(Primitives.Cube(name: "RotationMarker", color: Drawing.Color.FromArgb(200, 30, 30).ToGl())) {
         Material = new Flat(),
         Transform = new Transform { Matrix = Matrix4x4.CreateTranslation(markerPosition) }
       };
@@ -107,8 +105,8 @@ public class World : GDK.Game.World, IParkLoader {
     }
 
     const float FramingDistanceMargin = 1.25f;
-    var bounds = Park.BuildableBounds;
-    var parkDiagonal = Vector2.Distance(bounds.Min, bounds.Max);
+    var (Min, Max) = Park.BuildableBounds;
+    var parkDiagonal = Vector2.Distance(Min, Max);
     var maxFramingDistance = parkDiagonal * FramingDistanceMargin;
     scene.Camera.MaxDistance = maxFramingDistance;
 
@@ -158,4 +156,3 @@ public class World : GDK.Game.World, IParkLoader {
     base.Dispose(disposing);
   }
 }
-

@@ -5,9 +5,9 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Numerics;
+using Drawing = System.Drawing;
 using OpenCobra.Data;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Materials;
@@ -60,7 +60,7 @@ public class Terrain {
   /// <summary>The height of the terrain grid in tiles, including the OOB border.</summary>
   public int Height { get; }
 
-  public readonly static Vector4 GrassColor = Color.FromArgb(79, 129, 14).ToGl();
+  public readonly static Vector4 GrassColor = Drawing.Color.FromArgb(79, 129, 14).ToGl();
 
   public OpenCobra.GDK.Materials.Texture? GrassTexture { get; private set; }
   public Model GroundModel { get; private set; } = null!;
@@ -90,7 +90,7 @@ public class Terrain {
   /// </summary>
   public void BuildModel() {
     var hasGrassTexture = GrassTexture != null;
-    var terrainMesh = TerrainMeshBuilder.Build(this, hasGrassTexture ? Color.White.ToGl() : GrassColor);
+    var terrainMesh = TerrainMeshBuilder.Build(this, hasGrassTexture ? Drawing.Color.White.ToGl() : GrassColor);
     if (GroundModel == null) {
       GroundModel = new Model(terrainMesh) {
         Material = hasGrassTexture ? new Textured { AlbedoTexture = GrassTexture } : new Flat()

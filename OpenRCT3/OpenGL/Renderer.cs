@@ -18,9 +18,9 @@ using Silk.NET.Core.Contexts;
 using Silk.NET.OpenGL;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Numerics;
+using Drawing = System.Drawing;
 using GUI = OpenCobra.GDK.GUI;
 using Materials = OpenCobra.GDK.Materials;
 
@@ -35,7 +35,7 @@ public class Renderer : ThreadAffine, IRenderer {
   private bool? appliedVSync;
 
   public State State { get; private set; } = State.Uninitialized;
-  public Color ClearColor { get; set; } = Color.FromArgb(45, 45, 48);
+  public Drawing.Color ClearColor { get; set; } = Drawing.Color.FromArgb(45, 45, 48);
   public OpenCobra.GDK.Numerics.Size FramebufferSize { get; set; }
   public int MsaaSamples { get; } = 0;
 

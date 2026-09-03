@@ -1,8 +1,5 @@
 // Debug Window
 //
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
-//
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System.Numerics;

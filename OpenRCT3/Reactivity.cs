@@ -1,3 +1,6 @@
+// Reactivity Data Structures
+//
+// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System;
 using System.Collections.Generic;
 
