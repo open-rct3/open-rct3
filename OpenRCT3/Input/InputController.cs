@@ -146,12 +146,7 @@ public sealed class InputController {
       camera.RotateAzimuth(delta.X * RotateSensitivityDegrees);
       camera.Tilt(-delta.Y * TiltSensitivityDegrees);
     } else if (Actions.IsActive(DefaultBindings.StrafeCameraNormal)) {
-      // Drag-to-pan: the camera moves opposite the drag direction, so the point under the cursor
-      // (approximately) follows the mouse, matching how map-drag panning feels in other tools. The Y
-      // (forward/backward) term is +delta.Y, not -delta.Y: mouse Y grows downward on screen, and dragging
-      // down needs to move the camera toward Forward (revealing what's "further away") for content to
-      // track the cursor - the X (left/right) term already had the correct sign.
-      var strafe = (-camera.Right * delta.X) + (camera.Forward * delta.Y);
+      var strafe = (camera.Right * delta.X) + (camera.Forward * delta.Y);
       camera.Pan(strafe * StrafeSensitivity);
     }
   }

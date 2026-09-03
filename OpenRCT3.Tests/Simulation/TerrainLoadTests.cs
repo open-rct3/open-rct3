@@ -80,4 +80,15 @@ public class TerrainLoadTests {
       Assert.That(terrain.Height, Is.EqualTo(122 + Park.OutOfBoundsBorder * 2));
     }
   }
+
+  [Test]
+  public void Load_WithParkPath_LoadsGeometryAndGroundModel() {
+    var fixturePath = ReverseEngineeringFixture("01-one-corner-up.dat");
+    var terrain = Terrain.Load(fixturePath);
+    Assert.That(terrain.Width, Is.GreaterThan(0));
+    Assert.That(terrain.GetCorner(TileCol, TileRow, TerrainCornerSlot.SouthEast).Height, Is.EqualTo(100));
+    Assert.That(terrain.GroundModel, Is.Not.Null);
+    Assert.That(terrain.GroundModel.Mesh, Is.Not.Null);
+  }
 }
+

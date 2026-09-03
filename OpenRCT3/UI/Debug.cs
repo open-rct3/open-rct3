@@ -26,7 +26,12 @@ namespace OpenRCT3.UI;
 /// container's existing registrations (see <c>GameWindow.cs</c>/<c>GLSurface.cs</c>), so this window
 /// never has to reach back into the container itself at render time.
 /// </remarks>
-public class Debug(Game game, Mesh terrainMesh, PlatformWindow window, IInputContext inputContext) : IWindow {
+public class Debug(Game game, PlatformWindow window, IInputContext inputContext) : IWindow {
+  private Mesh? TerrainMesh => game.World.Terrain?.GroundModel.Mesh;
+
+  public Debug(Game game, Mesh terrainMesh, PlatformWindow window, IInputContext inputContext)
+    : this(game, window, inputContext) {
+  }
   /// <summary>
   /// The step budget for the cursor-position ray march - derived per-frame from <see cref="Camera.MaxDistance"/>,
   /// falling back to the live eye-to-target distance (mirroring the fallback <see cref="Camera"/> itself
@@ -55,7 +60,10 @@ public class Debug(Game game, Mesh terrainMesh, PlatformWindow window, IInputCon
     var frameSeconds = game.FrameTime.TotalSeconds;
     var fps = frameSeconds > 0 ? 1.0 / frameSeconds : 0;
     ImGui.Text($"Frame: {fps:0} fps ({game.FrameTime.TotalMilliseconds:0.00}ms)");
-    ImGui.Text($"Terrain: {terrainMesh.Indices.Count / 3} faces, {terrainMesh.Vertices.Count} vertices");
+    var mesh = TerrainMesh;
+    var faces = mesh != null ? mesh.Indices.Count / 3 : 0;
+    var vertices = mesh != null ? mesh.Vertices.Count : 0;
+    ImGui.Text($"Terrain: {faces} faces, {vertices} vertices");
 
     RenderCursorPosition();
 

@@ -16,6 +16,7 @@ namespace OpenRCT3.Platforms;
 
 public record AppConfig {
   private static AppConfig? instance = null;
+  public static bool IsInitialized => instance != null;
   public static AppConfig Instance => instance
     ?? throw new InvalidOperationException("App configuration is not initialized!");
 

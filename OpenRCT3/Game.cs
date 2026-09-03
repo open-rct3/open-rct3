@@ -241,9 +241,7 @@ public class Game : IGame {
   /// <remarks>
   /// Called at a fixed timestep (potentially multiple times per frame if lagging, clamped by
   /// <see cref="MaxSimulationTicks"/>). Invokes <see cref="Simulation.World.Update"/> to execute all
-  /// registered systems in phase order (Early → Update → Render → Late). Park load requests from
-  /// <see cref="ParkChooser"/> are dequeued and executed in Early phase, deferred from the render loop
-  /// to avoid UI-thread reentrancy.
+  /// registered systems in phase order (Early → Update → Render → Late).
   /// </remarks>
   /// <param name="delta">The time between ticks.</param>
   /// <param name="interpolation">The interpolation fraction.</param>

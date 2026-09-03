@@ -5,10 +5,15 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Numerics;
 using OpenCobra.Data;
+using OpenCobra.GDK;
+using OpenCobra.GDK.Materials;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
+using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
 using DatParks = OpenCobra.Data.Parks;
 
@@ -55,7 +60,10 @@ public class Terrain {
   /// <summary>The height of the terrain grid in tiles, including the OOB border.</summary>
   public int Height { get; }
 
+  public readonly static Vector4 GrassColor = Color.FromArgb(79, 129, 14).ToGl();
+
   public OpenCobra.GDK.Materials.Texture? GrassTexture { get; private set; }
+  public Model GroundModel { get; private set; } = null!;
 
   private readonly TerrainCorner[] _corners;
 
@@ -74,45 +82,57 @@ public class Terrain {
     _corners = new TerrainCorner[Width * Height * CornersPerTile];
     for (var i = 0; i < _corners.Length; i++)
       _corners[i] = new TerrainCorner { Height = initialHeight };
+    BuildModel();
   }
 
-  /// <summary>Loads the default flat terrain grid and textures.</summary>
-  /// <returns>A loaded <see cref="Terrain"/> instance.</returns>
-  public static Terrain Load() {
-    var config = AppConfig.Instance;
-    Debug.Assert(config.InstallPath != null);
+  /// <summary>
+  /// Constructs or updates <see cref="GroundModel"/> from the current terrain grid corners and textures.
+  /// </summary>
+  public void BuildModel() {
+    var hasGrassTexture = GrassTexture != null;
+    var terrainMesh = TerrainMeshBuilder.Build(this, hasGrassTexture ? Color.White.ToGl() : GrassColor);
+    if (GroundModel == null) {
+      GroundModel = new Model(terrainMesh) {
+        Material = hasGrassTexture ? new Textured { AlbedoTexture = GrassTexture } : new Flat()
+      };
+    } else {
+      GroundModel.Mesh.Replace(terrainMesh.Vertices, terrainMesh.Indices);
+      if (hasGrassTexture && GroundModel.Material is not Textured)
+        GroundModel.Material = new Textured { AlbedoTexture = GrassTexture };
+      else if (!hasGrassTexture && GroundModel.Material is not Flat)
+        GroundModel.Material = new Flat();
+    }
+  }
 
-    var terrain = new Terrain();
-    var terrainOvl = Path.Combine(config.InstallPath, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
-    using (var ovl = Ovl.Load(terrainOvl)) {
-      var terrainTypes = TerrainTypes.Extract(ovl);
-      var textures = Textures.Extract(ovl);
+  /// <summary>Loads terrain from the given park save path (or default flat terrain if null) and loads textures.</summary>
+  /// <param name="parkPath">Path to the park save file, or null to load default flat terrain.</param>
+  /// <returns>A loaded <see cref="Terrain"/> instance with <see cref="GroundModel"/> populated.</returns>
+  public static Terrain Load(string? parkPath = null) {
+    var terrain = parkPath != null ? LoadFromSave(parkPath) : new Terrain();
 
-      // Identify grass via decoded metadata: Type==GroundBlended + nearest-color to Terrain_06's
-      // own decoded ColourSimple, verified against a real Terrain_RCT3.common.ovl (see
-      // TerrainTypesTests.GrassIdentification_FindsTerrain06 for the exact value/verification).
-      //
-      // ter.texture_ref (the pointer the struct layout implies should link directly to the tex
-      // entry) is zero/unpopulated in every shipped archive sampled, so it cannot be used here.
-      // Instead, the texture lookup uses the decoded entry's own symbol Name: Ground ter/tex pairs
-      // share a symbol name on disk (e.g. ter "Terrain_06" names the tex "Terrain_06"), so no
-      // separate pointer chain is needed once the correct entry is identified by color.
-      var grassColor = 0xFF487D10u;
-      var groundBlended = terrainTypes.Where(t => t.Type == TerrainType.GroundBlended).ToList();
-      if (groundBlended.Count > 0) {
-        var grassEntry = groundBlended.OrderBy(t => ColorDistance(t.Parameters.ColorSimple, grassColor)).First();
-        if (textures.Names.Contains(grassEntry.Name)) {
-          var tex = textures[grassEntry.Name];
-          // TakeMip transfers ownership of mip 0 to GrassTexture and nulls the source slot, so
-          // disposing `tex` below (with every other extracted texture) can't double-dispose it.
-          var mip0 = tex.TakeMip(0);
-          terrain.GrassTexture = new OpenCobra.GDK.Materials.Texture(tex.Name, (int)tex.Width, (int)tex.Height, mip0, tex.Recolorable);
+    if (AppConfig.IsInitialized && AppConfig.Instance.InstallPath != null) {
+      var terrainOvl = Path.Combine(AppConfig.Instance.InstallPath, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
+      if (File.Exists(terrainOvl)) {
+        using var ovl = Ovl.Load(terrainOvl);
+        var terrainTypes = TerrainTypes.Extract(ovl);
+        var textures = Textures.Extract(ovl);
+
+        var grassColor = 0xFF487D10u;
+        var groundBlended = terrainTypes.Where(t => t.Type == TerrainType.GroundBlended).ToList();
+        if (groundBlended.Count > 0) {
+          var grassEntry = groundBlended.OrderBy(t => ColorDistance(t.Parameters.ColorSimple, grassColor)).First();
+          if (textures.Names.Contains(grassEntry.Name)) {
+            var tex = textures[grassEntry.Name];
+            var mip0 = tex.TakeMip(0);
+            terrain.GrassTexture = new OpenCobra.GDK.Materials.Texture(tex.Name, (int)tex.Width, (int)tex.Height, mip0, tex.Recolorable);
+          }
         }
-      }
 
-      foreach (var texture in textures) texture.Dispose();
+        foreach (var texture in textures) texture.Dispose();
+      }
     }
 
+    terrain.BuildModel();
     return terrain;
   }
 
