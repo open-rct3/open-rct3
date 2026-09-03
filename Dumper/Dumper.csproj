@@ -94,9 +94,6 @@
     <None Remove="Dumper.Tests\**" />
   </ItemGroup>
   <!-- Bundle built-in plugins -->
-  <PropertyGroup>
-    <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildProjectDirectory)\..\</SolutionDir>
-  </PropertyGroup>
   <Target Name="BuildPlugins" BeforeTargets="BeforeBuild;AssignTargetPaths;GetCopyToOutputDirectoryItems">
     <Exec Command="make plugins" WorkingDirectory="$(SolutionDir)" />
   </Target>

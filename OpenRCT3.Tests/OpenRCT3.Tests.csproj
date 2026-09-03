@@ -53,8 +53,4 @@
   <ItemGroup>
     <ProjectReference Include="../OpenRCT3/OpenRCT3.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Constant Include="SolutionDir" Value="$(SolutionDir)" />
-  </ItemGroup>
 </Project>

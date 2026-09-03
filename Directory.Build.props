@@ -1,0 +1,29 @@
+<!-- Repo root, available to every project in the solution. -->
+<Project>
+  <!--
+    Defaults to this file's directory so builds invoked directly on a .csproj
+    (e.g. `dotnet build`, `dotnet test`) resolve it the same as a full solution
+    build, instead of leaving it empty.
+
+    ## See Also
+
+      Customizing builds by folder
+        https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory
+
+      Reserved and well-known properties
+        https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-reserved-and-well-known-properties
+
+      Property functions
+        https://learn.microsoft.com/en-us/visualstudio/msbuild/property-functions
+  -->
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
+  </PropertyGroup>
+  <!--
+    Generates C# constants from MSBuild items, e.g. `ThisAssembly.Constants.SolutionDir`).
+    See https://github.com/devlooped/ThisAssembly#constants
+  -->
+  <ItemGroup>
+    <Constant Include="SolutionDir" Value="$(SolutionDir)" />
+  </ItemGroup>
+</Project>

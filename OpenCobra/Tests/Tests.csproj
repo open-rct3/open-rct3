@@ -66,10 +66,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Constant Include="SolutionDir" Value="$(SolutionDir)" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Remove="Fixtures\OVL\**\*.ovl" />
     <EmbeddedResource Include="Fixtures\OVL\**\*.ovl" />
     <None Remove="Fixtures\Parks\**\*.dat" />
