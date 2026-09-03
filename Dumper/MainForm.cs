@@ -117,114 +117,7 @@ public partial class MainForm : Form {
 
         if (!entriesByFile.TryGetValue(fileName, out var entries)) continue;
 
-        // Resolve display names and types for all entries
-        var resolved = entries.Select(entry => {
-          string displayName;
-          FileType symbolFileType;
-          var colonIdx = entry.Name.LastIndexOf(':');
-          if (colonIdx >= 0) {
-            displayName = entry.Name[..colonIdx];
-            symbolFileType = entry.Name[(colonIdx + 1)..].ToFileType();
-          } else {
-            displayName = entry.Name;
-            symbolFileType = entry.Type;
-          }
-          return (entry, displayName, symbolFileType);
-        }).ToList();
-
-        // Group numbered animation frames by their base name (strip trailing digits).
-        // Groups with multiple entries are animated textures: parent = base name, children = suffixes.
-        // Only apply this nesting for textures.
-        var frameGroups = resolved
-          .Where(r => (r.symbolFileType == FileType.Texture || r.symbolFileType == FileType.Flic) && EndsWithDigit(r.displayName))
-          .GroupBy(r => StripTrailingDigits(r.displayName))
-          .Where(g => g.Count() > 1)
-          .ToDictionary(g => g.Key, g => g.OrderBy(r => r.displayName).ToList());
-        var groupedNames = new HashSet<string>(
-          frameGroups.Values.SelectMany(g => g).Select(r => r.displayName));
-
-        // Collect non-animated-texture entries
-        var remainingEntries = resolved
-          .Where(r => !groupedNames.Contains(r.displayName))
-          .ToList();
-
-        // Group remaining entries by display name to find duplicates
-        var duplicateGroups = remainingEntries
-          .GroupBy(r => r.displayName)
-          .Where(g => g.Count() > 1)
-          .ToDictionary(g => g.Key, g => g.ToList());
-        var duplicateNames = new HashSet<string>(duplicateGroups.Keys);
-
-        // Add animated texture groups
-        foreach (var (entry, displayName, symbolFileType) in resolved) {
-          if (groupedNames.Contains(displayName)) {
-            var baseName = StripTrailingDigits(displayName);
-            if (!frameGroups.TryGetValue(baseName, out var group)) continue;
-
-            var parentNode = fileNode.Nodes.Add(baseName);
-            parentNode.ImageKey = FileType.Flic.ToIconName();
-            parentNode.SelectedImageKey = FileType.Flic.ToIconName();
-            parentNode.Tag = FileType.Flic;
-            parentNode.ToolTipText = $"Animated texture ({group.Count} frames) \u00b7 Loader: {symbolFileType.ToDisplayName()}";
-
-            foreach (var frame in group) {
-              var suffix = frame.displayName[baseName.Length..];
-              var childNode = parentNode.Nodes.Add(suffix);
-              childNode.ImageKey = FileType.Texture.ToIconName();
-              childNode.SelectedImageKey = FileType.Texture.ToIconName();
-              childNode.ToolTipText = frame.symbolFileType.ToDisplayName();
-              _nodeEntries[childNode] = frame.entry;
-            }
-
-            frameGroups.Remove(baseName);
-            continue;
-          }
-        }
-
-        // Add duplicate name groups
-        foreach (var (name, group) in duplicateGroups) {
-          var commonType = group.Select(r => r.symbolFileType).Distinct().Count() == 1
-            ? group.First().symbolFileType
-            : FileType.Unknown;
-          var iconKey = commonType == FileType.Unknown
-            ? "FileMultipleOutline"
-            : commonType.ToGroupIconName();
-          var pluralName = Pluralize(commonType.ToDisplayName());
-          var parentNode = fileNode.Nodes.Add($"{group.Count} {pluralName}");
-          parentNode.ImageKey = iconKey;
-          parentNode.SelectedImageKey = iconKey;
-          parentNode.Tag = commonType;
-          parentNode.ToolTipText = $"{group.Count} entries named \"{name}\"";
-
-          foreach (var (entry, _, symbolFileType) in group) {
-            var childIconKey = symbolFileType == FileType.Flic
-              ? FileType.Texture.ToIconName()
-              : symbolFileType.ToIconName();
-            var childNode = parentNode.Nodes.Add(name);
-            childNode.ImageKey = childIconKey;
-            childNode.SelectedImageKey = childIconKey;
-            childNode.Tag = symbolFileType;
-            childNode.ToolTipText = symbolFileType.ToDisplayName();
-            _nodeEntries[childNode] = entry;
-          }
-        }
-
-        // Add non-duplicate, non-animated entries
-        foreach (var (entry, displayName, symbolFileType) in remainingEntries) {
-          if (duplicateNames.Contains(displayName)) continue;
-
-          var iconKey = symbolFileType == FileType.Flic
-            ? FileType.Texture.ToIconName()
-            : symbolFileType.ToIconName();
-          var tooltip = symbolFileType.ToDisplayName();
-
-          var node = fileNode.Nodes.Add(displayName);
-          node.ImageKey = iconKey;
-          node.SelectedImageKey = iconKey;
-          node.Tag = symbolFileType;
-          node.ToolTipText = tooltip;
-          _nodeEntries[node] = entry;
-        }
+        PopulateFileNodes(fileNode, entries, _nodeEntries);
       }
     } else {
       // Fallback: single root node with loader type descriptors
@@ -247,7 +140,7 @@ public partial class MainForm : Form {
     foreach (TreeNode fileNode in treeView.Nodes) {
       fileNode.Expand();
       foreach (TreeNode child in fileNode.Nodes) {
-        if (child.Tag is FileType ft && ft != FileType.Flic && !IsDuplicateGroup(child.Text)) {
+        if (child.Tag is FileType ft && ft != FileType.Flic) {
           child.Expand();
         }
       }
@@ -257,6 +150,123 @@ public partial class MainForm : Form {
     UpdateStatusBar();
 
     FitSidebarToContent(ClientSize.Width / 2);
+  }
+
+  /// <summary>Populates a file node in the tree with its resource child nodes and grouping rules.</summary>
+  /// <param name="fileNode">Parent tree node for the file archive.</param>
+  /// <param name="entries">Entries belonging to this file.</param>
+  /// <param name="nodeEntries">Optional dictionary mapping leaf tree nodes to OVL file entries.</param>
+  public static void PopulateFileNodes(TreeNode fileNode, IEnumerable<OvlFile> entries, IDictionary<TreeNode, OvlFile>? nodeEntries = null) {
+    // Resolve display names and types for all entries
+    var resolved = entries.Select(entry => {
+      string displayName;
+      FileType symbolFileType;
+      var colonIdx = entry.Name.LastIndexOf(':');
+      if (colonIdx >= 0) {
+        displayName = entry.Name[..colonIdx];
+        symbolFileType = entry.Name[(colonIdx + 1)..].ToFileType();
+      } else {
+        displayName = entry.Name;
+        symbolFileType = entry.Type;
+      }
+      return (entry, displayName, symbolFileType);
+    }).ToList();
+
+    // Group numbered animation frames by their base name (strip trailing digits).
+    // Groups with multiple entries are animated textures: parent = base name, children = suffixes.
+    // Only apply this nesting for textures.
+    var frameGroups = resolved
+      .Where(r => (r.symbolFileType == FileType.Texture || r.symbolFileType == FileType.Flic) && EndsWithDigit(r.displayName))
+      .GroupBy(r => StripTrailingDigits(r.displayName))
+      .Where(g => g.Count() > 1)
+      .ToDictionary(g => g.Key, g => g.OrderBy(r => r.displayName).ToList());
+    var groupedNames = new HashSet<string>(
+      frameGroups.Values.SelectMany(g => g).Select(r => r.displayName));
+
+    // Collect non-animated-texture entries
+    var remainingEntries = resolved
+      .Where(r => !groupedNames.Contains(r.displayName))
+      .ToList();
+
+    // Group remaining entries by display name to find duplicates
+    var duplicateGroups = remainingEntries
+      .GroupBy(r => r.displayName)
+      .Where(g => g.Count() > 1)
+      .ToDictionary(g => g.Key, g => g.ToList());
+    var duplicateNames = new HashSet<string>(duplicateGroups.Keys);
+
+    // Add animated texture groups
+    foreach (var (entry, displayName, symbolFileType) in resolved) {
+      if (groupedNames.Contains(displayName)) {
+        var baseName = StripTrailingDigits(displayName);
+        if (!frameGroups.TryGetValue(baseName, out var group)) continue;
+
+        var parentNode = fileNode.Nodes.Add(baseName);
+        parentNode.ImageKey = FileType.Flic.ToIconName();
+        parentNode.SelectedImageKey = FileType.Flic.ToIconName();
+        parentNode.Tag = FileType.Flic;
+        parentNode.ToolTipText = $"Animated texture ({group.Count} frames) · Loader: {symbolFileType.ToDisplayName()}";
+
+        foreach (var frame in group) {
+          var suffix = frame.displayName[baseName.Length..];
+          var childNode = parentNode.Nodes.Add(suffix);
+          childNode.ImageKey = FileType.Texture.ToIconName();
+          childNode.SelectedImageKey = FileType.Texture.ToIconName();
+          childNode.Tag = frame.symbolFileType;
+          childNode.ToolTipText = frame.symbolFileType.ToDisplayName();
+          if (nodeEntries != null) nodeEntries[childNode] = frame.entry;
+        }
+
+        frameGroups.Remove(baseName);
+        continue;
+      }
+    }
+
+    // Add duplicate name groups
+    foreach (var (name, group) in duplicateGroups) {
+      var commonType = group.Select(r => r.symbolFileType).Distinct().Count() == 1
+        ? group.First().symbolFileType
+        : FileType.Unknown;
+      var iconKey = commonType == FileType.Unknown
+        ? "FileMultipleOutline"
+        : commonType.ToGroupIconName();
+      var parentNode = fileNode.Nodes.Add(name);
+      parentNode.ImageKey = iconKey;
+      parentNode.SelectedImageKey = iconKey;
+      parentNode.Tag = commonType;
+      parentNode.ToolTipText = $"{group.Count} entries named \"{name}\"";
+
+      foreach (var (entry, _, symbolFileType) in group) {
+        var childIconKey = symbolFileType == FileType.Flic
+          ? FileType.Texture.ToIconName()
+          : symbolFileType.ToIconName();
+        var tag = symbolFileType.ToTagString();
+        var childName = !string.IsNullOrEmpty(tag) ? $"{name}.{tag}" : name;
+        var childNode = parentNode.Nodes.Add(childName);
+        childNode.ImageKey = childIconKey;
+        childNode.SelectedImageKey = childIconKey;
+        childNode.Tag = symbolFileType;
+        childNode.ToolTipText = symbolFileType.ToDisplayName();
+        if (nodeEntries != null) nodeEntries[childNode] = entry;
+      }
+    }
+
+    // Add non-duplicate, non-animated entries
+    foreach (var (entry, displayName, symbolFileType) in remainingEntries) {
+      if (duplicateNames.Contains(displayName)) continue;
+
+      var iconKey = symbolFileType == FileType.Flic
+        ? FileType.Texture.ToIconName()
+        : symbolFileType.ToIconName();
+      var tooltip = symbolFileType.ToDisplayName();
+
+      var node = fileNode.Nodes.Add(displayName);
+      node.ImageKey = iconKey;
+      node.SelectedImageKey = iconKey;
+      node.Tag = symbolFileType;
+      node.ToolTipText = tooltip;
+      if (nodeEntries != null) nodeEntries[node] = entry;
+    }
   }
 
   private void UpdateStatusBar() {
@@ -312,6 +322,11 @@ public partial class MainForm : Form {
     // Add folder icon for file group nodes
     imageList.Images.Add("FolderOpen", Icons.Render(icons, "FolderOpen", Icons.Folder)!);
 
+    // Add multiple file icon for duplicate groups
+    var multiIcon = Icons.Render(icons, "FileMultipleOutline");
+    if (multiIcon != null)
+      imageList.Images.Add("FileMultipleOutline", multiIcon);
+
     // Add icons for each file type, skipping unknown icon names
     foreach (var fileType in Enum.GetValues<FileType>()) {
       var iconName = fileType.ToIconName();
@@ -319,6 +334,12 @@ public partial class MainForm : Form {
         var bmp = Icons.Render(icons, iconName);
         if (bmp != null)
           imageList.Images.Add(iconName, bmp);
+      }
+      var groupIconName = fileType.ToGroupIconName();
+      if (!imageList.Images.ContainsKey(groupIconName)) {
+        var bmp = Icons.Render(icons, groupIconName);
+        if (bmp != null)
+          imageList.Images.Add(groupIconName, bmp);
       }
     }
 
@@ -413,7 +434,10 @@ Try again or continue anyway?",
     // If this node has a loader entry, show it via the plugin viewer
     if (_nodeEntries.TryGetValue(e.Node, out var entry) && fileType.HasValue && fileType != FileType.Unknown) {
       Debug.Assert(fileType.HasValue);
-      var fileName = $"{e.Node.Text}{fileType.Value.ToTagString(asExtension: true)}";
+      var ext = fileType.Value.ToTagString(asExtension: true);
+      var fileName = e.Node.Text.EndsWith(ext, StringComparison.OrdinalIgnoreCase)
+        ? e.Node.Text
+        : $"{e.Node.Text}{ext}";
       var tag = fileType.Value.ToTagString();
 
       var viewers = pluginManager.GetViewers(tag);
@@ -452,7 +476,10 @@ Try again or continue anyway?",
     if (fileType == null || fileType == FileType.Unknown || !_nodeEntries.ContainsKey(e.Node)) return;
     Debug.Assert(fileType.HasValue);
 
-    var fileName = $"{e.Node.Text}{fileType.Value.ToTagString(asExtension: true)}";
+    var ext = fileType.Value.ToTagString(asExtension: true);
+    var fileName = e.Node.Text.EndsWith(ext, StringComparison.OrdinalIgnoreCase)
+      ? e.Node.Text
+      : $"{e.Node.Text}{ext}";
     var tag = fileType.Value.ToTagString();
     var viewers = pluginManager.GetViewers(tag);
 
@@ -480,7 +507,7 @@ Try again or continue anyway?",
       }
       openWith.DropDownItems.Add(new ToolStripSeparator());
     }
-    var chooseDefault = new ToolStripMenuItem("Choose a default viewer\u2026");
+    var chooseDefault = new ToolStripMenuItem("Choose a default viewer…");
     chooseDefault.Click += (_, _) => {
       using var chooser = new DefaultViewerChooser(pluginManager.GetRegistrySnapshot());
       if (chooser.ShowDialog(this) == DialogResult.OK && !string.IsNullOrEmpty(chooser.SelectedFileTypeTag)) {
@@ -526,9 +553,12 @@ Try again or continue anyway?",
 
     var fileTypeName = fileType.ToDisplayName();
     var ext = fileType.ToTagString();
+    var extWithDot = fileType.ToTagString(asExtension: true);
     using var saveDialog = new SaveFileDialog();
     saveDialog.Title = $@"Export {fileTypeName}";
-    saveDialog.FileName = $"{node.Text}.{ext}";
+    saveDialog.FileName = node.Text.EndsWith(extWithDot, StringComparison.OrdinalIgnoreCase)
+      ? node.Text
+      : $"{node.Text}.{ext}";
     saveDialog.Filter = $@"RCT3 {fileTypeName} (*.{ext})|*.{ext}|All Files (*.*)|*.*";
     saveDialog.DefaultExt = ext;
     saveDialog.InitialDirectory = settings.LastDocumentExported != null
