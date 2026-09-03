@@ -14,6 +14,7 @@
 
 ## Rules
 
+- **NEVER scan or search the user's filesystem at large.** Do not run `find /`, `ls /`, recursive directory walks at filesystem roots, or any command that fans out across the whole disk to locate files. Discover files only via project-relative globbing (`find_path`/`grep`/`list_directory`) scoped under the repo roots. If a file outside the repo is truly required, ask the user for its exact path instead of fishing for it.
 - **ALWAYS use relative paths from repo root.** Never use absolute paths (e.g., `D:\Users\...`, `C:\Users\...`). You do not have unbridled access to the user's entire computer. All tool invocations, file operations, and commands must use relative paths only.
 - **ALWAYS re-read sources before modifying files.** Never overwrite user changes or introduce regressions. Always re-read target files immediately before modifying them to stay synchronized with external and user changes.
 - NEVER run any `git` command (including read-only or seemingly-harmless ones like `git stash`, `git stash pop`, `git add`, `git status`, `git diff`) without first stopping and asking the user for explicit permission for that specific command. This applies even mid-task, even to verify something, even if it seems reversible. Ask first, every time, no exceptions.
@@ -53,6 +54,9 @@ For any task requiring multiple steps:
 
 ### C#
 
+- Prefer primary constructors on class, struct, and record declarations
+- Prefer `record`, `record struct`, or `readonly struct` over mutable classes when data does not require mutable reference-identity semantics or internal mutable collections
+- Prefer fluent APIs and self-describing invocation syntax over verbose parameter-heavy method calls
 - Prefer `var` declarations over those with explicit types
 - Use `Convert.*` instead of raw number casts
 - Prefer single-line clauses with `foreach` and `if` statements, e.g.

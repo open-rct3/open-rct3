@@ -1,8 +1,6 @@
 // Unit tests for Accumulator, MovingAverage, and FrameRateAccumulator telemetry.
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-
-using NUnit.Framework;
 using OpenRCT3.Debug;
 
 namespace OpenRCT3.Tests.Debug;
@@ -18,8 +16,10 @@ public class TelemetryMathTests {
     avg.Update(20.0);
     avg.Update(30.0);
 
-    Assert.That(avg.Value, Is.EqualTo(20.0).Within(1e-5));
-    Assert.That(avg.Samples.Count, Is.EqualTo(3));
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(avg.Value, Is.EqualTo(20.0).Within(1e-5));
+      Assert.That(avg.Samples, Has.Count.EqualTo(3));
+    }
   }
 
   [Test]
@@ -39,8 +39,10 @@ public class TelemetryMathTests {
     avg.Update(100.0);
     avg.Reset();
 
-    Assert.That(avg.Value, Is.EqualTo(0.0));
-    Assert.That(avg.Samples.Count, Is.EqualTo(0));
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(avg.Value, Is.Zero);
+      Assert.That(avg.Samples, Is.Empty);
+    }
   }
 
   [Test]
@@ -64,8 +66,10 @@ public class TelemetryMathTests {
       lastUpdated = acc.RecordFrame(delta16ms);
     }
 
-    Assert.That(lastUpdated, Is.True);
-    Assert.That(acc.CurrentFps, Is.EqualTo(62.5).Within(0.1));
-    Assert.That(acc.CurrentFrameTimeMs, Is.EqualTo(16.0).Within(0.01));
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(lastUpdated, Is.True);
+      Assert.That(acc.CurrentFps, Is.EqualTo(62.5).Within(0.1));
+      Assert.That(acc.CurrentFrameTimeMs, Is.EqualTo(16.0).Within(0.01));
+    }
   }
 }

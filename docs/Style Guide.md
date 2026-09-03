@@ -111,6 +111,7 @@ Auto-generated `.designer.cs` files are exempt. They are owned by their generato
 
 - Prefer primary constructors on class, struct, and record declarations.
 - Prefer `record`, `record struct`, or `readonly struct` over mutable classes when data does not require mutable reference-identity semantics or internal mutable collections.
+- Prefer fluent APIs and self-describing invocation syntax (e.g. `Graph.Polyline(plot)`) over verbose parameter-heavy method calls.
 
 ## XML Doc Comments
 
