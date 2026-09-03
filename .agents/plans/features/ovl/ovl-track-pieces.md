@@ -270,35 +270,36 @@ Create AssemblyScript unit tests validating:
    - [x] Use visual indicators (e.g., labels, color coding) to show which TrackSection owns which Spline
    - [x] Implement toggle controls to show/hide specific TrackSections or their related Splines
 
-### Phase 3: Testing (OpenCobra.Tests + plugins/tks-viewer/tests/)
+### Phase 3: Testing (OpenCobra.Tests + plugins/tks-viewer/tests/) ✅
 
 9. **SplinesTests.cs**:
-   - [ ] Valid spline binary parses to correct DTO fields
-   - [ ] Invalid/truncated data raises `System.IO.InvalidDataException`
-   - [ ] Control point validation (non-finite values rejected)
+   - [x] Valid spline binary parses to correct DTO fields
+   - [x] Invalid/truncated data raises `System.IO.InvalidDataException`
+   - [x] Control point validation (non-finite values rejected)
 
 10. **TrackSectionsTests.cs**:
-    - [ ] Valid track section binary parses correctly
-    - [ ] Missing spline reference detected; `IsValid` flag set appropriately
-    - [ ] Train ID and track type parsed correctly
+    - [x] Valid track section binary parses correctly
+    - [x] Missing spline reference detected; `IsValid` flag set appropriately
+    - [x] Train ID and track type parsed correctly
 
 11. **ExtractResources.cs** (integration):
-    - [ ] Add test cases to existing `ExtractResources` class in `OpenCobra/Tests/Integration/`
-    - [ ] Test: Load Yoshi's Adventure Track OVL fixture → `LoadSplines()` returns non-empty collection
-    - [ ] Test: Load Yoshi's Adventure Track OVL fixture → `LoadTrackSections()` returns non-empty collection
-    - [ ] Test: All TrackSections have valid `IsValid` flags (referential integrity)
-    - [ ] Test: Sample control points from fixture are finite and in reasonable bounds
+    - [x] Add test cases to existing `ExtractResources` class in `OpenCobra/Tests/Integration/`
+    - [x] Test: Load Yoshi's Adventure Track OVL fixture → `LoadSplines()` returns non-empty collection
+    - [x] Test: Load Yoshi's Adventure Track OVL fixture → `LoadTrackSections()` returns non-empty collection
+    - [x] Test: All TrackSections have valid `IsValid` flags (referential integrity)
+    - [x] Test: Sample control points from fixture are finite and in reasonable bounds
 
 12. **Plugin tests** (`plugins/tks-viewer/tests/`):
     - [x] Unit tests for binary parsing (synthetic data)
-    - [ ] Integration tests for pointer resolution (using fixture OVLs)
+    - [x] Integration tests for pointer resolution (using fixture OVLs)
 
 ### Phase 4: Game Integration (OpenRCT3)
 
 13. **TrackImporter scaffold** (`OpenRCT3/Rides/OVL/TrackImporter.cs`):
     - [ ] Stub implementation (parse OVL, validate, defer model construction)
     - [ ] Add XML doc comments describing responsibilities
-    - [ ] (Full implementation deferred; depends on both this plan and track-spline-rendering completion)
+
+    Full implementation deferred; depends on both this plan and track-spline rendering completion.
 
 ### Phase 5: Documentation & Verification
 

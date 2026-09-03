@@ -16,7 +16,7 @@ each file type is the default viewer.
 
 ## Plugin Status
 
-### ✅ Completed (7/11)
+### ✅ Completed (8/11)
 
 | Plugin     | Tag     | Type          | Source                                     |
 | ---------- | ------- | ------------- | ------------------------------------------ |
@@ -27,6 +27,7 @@ each file type is the default viewer.
 | mam-viewer | `"mam"` | Manifold Mesh | Vertex/face counts and bounding box        |
 | shs-viewer | `"shs"` | Static Shape  | Bounding box/counts header plus a live per-mesh table (vertex/index counts, support type, sides, resolved `FtxRef`/`TxsRef`) |
 | ter-viewer | `"ter"` | Terrain Type  | Metadata table (Version, Addon, Number, Type as enum name, colour swatches) with resolved `TextureRef`/`DescriptionName`/`IconName` symbol names |
+| tks-viewer | `"tks"` | Track Section | Metadata summary table (slopes, banks, directions, flags) with live side-by-side SVG projections of resolved splines |
 
 **`shs-viewer` scope note**: `StaticShape`'s mesh/effect data and `FtxRef`/`TxsRef` all live
 behind relocated pointers into *other* archive blocks - a plugin operating only on its own

@@ -135,10 +135,15 @@ internal struct TrackSectionVanilla {
   public uint ExitTrackGroupPtr;
   public uint SpeedCount;
   public uint SpeedsPtr;
+  [SeenInGame(Values = [0])]
   public uint TowerRideBaseFlag;
+  [SeenInGame(Values = [0])]
   public float TowerUnkf01;
+  [SeenInGame(Values = [0])]
   public float WaterSplash01;
+  [SeenInGame(Values = [0])]
   public float WaterSplash02;
+  [SeenInGame(Values = [0])]
   public float ReverserVal;
 }
 
@@ -162,17 +167,17 @@ public readonly record struct TrackSection(
   /// <summary>Exit curve type: purpose unclear from RCT3 source.</summary>
   uint ExitCurve,
   /// <summary>Entry slope: 0=flat, 1-2=medium, 3-4=steep, 5=vertical.</summary>
-  uint EntrySlope,
+  TrackSlope EntrySlope,
   /// <summary>Exit slope: 0=flat, 1-2=medium, 3-4=steep, 5=vertical.</summary>
-  uint ExitSlope,
+  TrackSlope ExitSlope,
   /// <summary>Entry banking: 0=flat, 1-2=left, 3=inverted-left, 4=inverted, 5-6=right, 7=bank-right.</summary>
-  uint EntryBank,
+  TrackBank EntryBank,
   /// <summary>Exit banking: 0=flat, 1-2=left, 3=inverted-left, 4=inverted, 5-6=right, 7=bank-right.</summary>
-  uint ExitBank,
+  TrackBank ExitBank,
   /// <summary>Entry direction: 0=straight, 1=left, 2=right.</summary>
-  uint EntryDirection,
+  TrackDirection EntryDirection,
   /// <summary>Exit direction: 0=straight, 1=left, 2=right.</summary>
-  uint ExitDirection,
+  TrackDirection ExitDirection,
   /// <summary>Special curve type classification bitflags.</summary>
   uint SpecialCurves,
   /// <summary>Entry behavior bitflags.</summary>
@@ -180,19 +185,26 @@ public readonly record struct TrackSection(
   /// <summary>Exit behavior bitflags.</summary>
   uint ExitFlags,
   /// <summary>
-  /// Six spline references (all required for track geometry).
-  /// Order: [left, right, join-left, join-right, extra-left, extra-right].
+  /// Six spline references, required for track geometry.
   /// </summary>
+  /// <remarks>
+  /// Order: [left, right, join-left, join-right, extra-left, extra-right].
+  /// </remarks>
   string[] SplineRefs,
-  /// <summary>Tower ride base height value, usually 0.</summary>
+  /// <summary>Tower ride base height value.</summary>
+  [SeenInGame(Values = [0])]
   float TowerRideBase,
-  /// <summary>Water splash effect value 1, usually 0.</summary>
+  /// <summary>Water splash effect value 1.</summary>
+  [SeenInGame(Values = [0])]
   float WaterSplash1,
-  /// <summary>Water splash effect value 2, usually 0.</summary>
+  /// <summary>Water splash effect value 2.</summary>
+  [SeenInGame(Values = [0])]
   float WaterSplash2,
-  /// <summary>Reverser track value, usually 0.</summary>
+  /// <summary>Reverser track value.</summary>
+  [SeenInGame(Values = [0])]
   float ReverserVal,
-  /// <summary>Elevator top value, usually 0.</summary>
+  /// <summary>Elevator top value.</summary>
+  [SeenInGame(Values = [0])]
   float ElevatorTopVal,
   /// <summary>Number of speed modifier entries.</summary>
   uint SpeedCount,
@@ -375,12 +387,12 @@ public static class TrackData {
       sceneryItemRef,
       entryCurve,
       exitCurve,
-      entrySlope,
-      exitSlope,
-      entryBank,
-      exitBank,
-      direction & 0x3,
-      (direction >> 2) & 0x3,
+      (TrackSlope)entrySlope,
+      (TrackSlope)exitSlope,
+      (TrackBank)entryBank,
+      (TrackBank)exitBank,
+      (TrackDirection)(direction & 0x3),
+      (TrackDirection)((direction >> 2) & 0x3),
       specialCurves,
       entryFlags,
       exitFlags,
@@ -464,12 +476,12 @@ public static class TrackData {
       tksData.SceneryItemRef,
       tksData.EntryCurve,
       tksData.ExitCurve,
-      tksData.EntrySlope,
-      tksData.ExitSlope,
-      tksData.EntryBank,
-      tksData.ExitBank,
-      tksData.Direction & 0x3,
-      (tksData.Direction >> 2) & 0x3,
+      (TrackSlope)tksData.EntrySlope,
+      (TrackSlope)tksData.ExitSlope,
+      (TrackBank)tksData.EntryBank,
+      (TrackBank)tksData.ExitBank,
+      (TrackDirection)(tksData.Direction & 0x3),
+      (TrackDirection)((tksData.Direction >> 2) & 0x3),
       tksData.SpecialCurves,
       tksData.EntryFlags,
       tksData.ExitFlags,
