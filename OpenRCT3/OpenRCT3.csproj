@@ -2,6 +2,12 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('windows'))">
+      net8.0-windows10.0.17763.0
+    </TargetFramework>
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('macos'))">
+      net9.0-macos
+    </TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>true</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -83,7 +89,6 @@
         <ProfileName>macOS</ProfileName>
         <DefineConstants>$(DefineConstants);MACOS;OSX</DefineConstants>
         <!-- See https://github.com/xamarin/xamarin-macios -->
-        <TargetFramework>net9.0-macos</TargetFramework>
         <TargetPlatformVersion>15.0</TargetPlatformVersion>
         <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
         <LinkerBehavior>LinkFrameworkSDKsOnly</LinkerBehavior>
