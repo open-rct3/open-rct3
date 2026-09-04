@@ -69,7 +69,7 @@ public partial class GameViewController(NativeHandle handle) : NSViewController(
 
   public void WillClose(NSObject _sender, EventArgs _e) {
     var game = OpenRCT3.Game.Instance;
-    Diagnostics.Assert(!OpenRCT3.Game.IsRunning, "Game should be stopped before closing!");
+    Debug.Assert(!OpenRCT3.Game.IsRunning, "Game should be stopped before closing!");
     game?.Dispose();
   }
 }

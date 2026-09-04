@@ -1,7 +1,7 @@
 // Unit tests for Accumulator, MovingAverage, and FrameRateAccumulator telemetry.
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using OpenRCT3.Debug;
+using OpenRCT3.Telemetry;
 using OpenCobra.GDK.Numerics;
 
 namespace OpenRCT3.Tests.Debug;

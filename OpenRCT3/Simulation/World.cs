@@ -47,7 +47,7 @@ public class World : GDK.Game.World, IParkLoader {
   /// once, from <see cref="Load"/>) and wired to <see cref="ReplaceTerrain"/> for opening a different
   /// park later.
   /// </summary>
-  public UI.Debug? Debug { get; private set; }
+  public UI.Debug? DebugWindow { get; private set; }
   public ParkChooser? ParkChooser => parkChooser;
 
   private Editor? editor;
@@ -76,8 +76,8 @@ public class World : GDK.Game.World, IParkLoader {
     if (game == null) return;
     var scene = game.Scene;
 
-    System.Diagnostics.Debug.Assert(Terrain != null);
-    System.Diagnostics.Debug.Assert(Park != null);
+    Debug.Assert(Terrain != null);
+    Debug.Assert(Park != null);
 
     Game.IoC.RegisterInstance(Terrain.GroundModel.Mesh, serviceKey: ServiceKey, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
 
@@ -134,10 +134,10 @@ public class World : GDK.Game.World, IParkLoader {
       scene.Windows.Add(parkChooser);
     }
 
-    if (Debug != null) return;
-    Debug = new UI.Debug(game);
-    Game.IoC.RegisterInstance(Debug, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-    scene.Windows.Add(Debug);
+    if (DebugWindow != null) return;
+    DebugWindow = new UI.Debug(game);
+    Game.IoC.RegisterInstance(DebugWindow, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+    scene.Windows.Add(DebugWindow);
   }
 
   protected virtual void Dispose(bool disposing) {

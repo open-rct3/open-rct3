@@ -4,7 +4,7 @@
 
 using OpenCobra.GDK.Numerics;
 
-namespace OpenRCT3.Debug;
+namespace OpenRCT3.Telemetry;
 
 /// <summary>
 /// A moving average over frame time durations, tracking FPS metrics without high-frequency jitter.

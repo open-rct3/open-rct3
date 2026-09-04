@@ -49,7 +49,7 @@ public partial class GLContext : IGLContext, INativeContext, IDisposable {
       // Recreate the context when the HDC changes
       var didRecreate = false;
       if (context != nint.Zero) {
-        Diagnostics.Assert(wgl.DeleteContext(context));
+        Debug.Assert(wgl.DeleteContext(context));
         context = nint.Zero;
         didRecreate = true;
       }
@@ -94,14 +94,14 @@ public partial class GLContext : IGLContext, INativeContext, IDisposable {
         0 // NULL terminator
       ]);
       // Cleanup temporary context
-      Diagnostics.Assert(wgl.MakeCurrent(hdc, 0));
-      Diagnostics.Assert(wgl.DeleteContext(tempContext));
+      Debug.Assert(wgl.MakeCurrent(hdc, 0));
+      Debug.Assert(wgl.DeleteContext(tempContext));
 
       if (context == nint.Zero) context = wgl.CreateContext(hdc);
       if (context == nint.Zero) throw new Exception(CreateContextError);
 
       // Make the new context current
-      Diagnostics.Assert(wgl.MakeCurrent(hdc, context));
+      Debug.Assert(wgl.MakeCurrent(hdc, context));
 
       if (didRecreate) Recreated?.Invoke(this, EventArgs.Empty);
     }

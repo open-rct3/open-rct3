@@ -17,6 +17,7 @@ Overview of OpenRCT3's core runtime engine architecture, covering frame timing a
 - [GUI Layout Architecture](#gui-layout-architecture)
   - [Flutter-Inspired Constraints-Down Sizing](#flutter-inspired-constraints-down-sizing)
   - [Stateful vs Stateless Widget Boundaries](#stateful-vs-stateless-widget-boundaries)
+- [Diagnostics & Telemetry Conventions](#diagnostics--telemetry-conventions)
 
 ---
 
@@ -144,3 +145,12 @@ Layout sizing operates in whole integer pixels (`Size<int>` and `BoxConstraints`
   Pure rendering functions that draw immediate primitives given an explicit parameter payload (`Graph.Plot`). They maintain no state across frames.
 - **Stateful Widgets (`RollingPlot`)**:
   Widgets that maintain frame-to-frame continuity. For example, `RollingPlot` manages its own fixed-capacity sample buffer, tracks visible peak ranges, and computes exponential decay smoothing (`currentScale += (targetMax - currentScale) * 0.1f`) so visual transitions remain stable without cluttering parent window code.
+
+---
+
+## Diagnostics & Telemetry Conventions
+
+To preserve clear boundaries and prevent identifier collisions:
+
+- **Framework Diagnostics**: Base Class Library assertion and diagnostic utilities from `System.Diagnostics.Debug` are directly imported via project global usings. Call sites use `Debug.Assert(...)` or `Debug.WriteLine(...)` without prefixing or custom aliases.
+- **Game-level Telemetry**: Custom engine metrics, profiling accumulators, and diagnostics facilities residing in `OpenRCT3.Debug` are imported using the alias `Telemetry` (e.g. `using Telemetry = OpenRCT3.Debug;`). This guarantees that framework assertions remain cleanly accessible as `Debug.*` everywhere while clearly identifying runtime telemetry.

@@ -68,7 +68,7 @@ public partial class MainWindow : NSWindow, IWindow {
 
   public void Start() {
     stopwatch.Start();
-    Diagnostics.Assert(Layer?.IsValid == true, "Renderer should be created before starting the game.");
+    Debug.Assert(Layer?.IsValid == true, "Renderer should be created before starting the game.");
     if (Game.Instance == null) {
       logger.Trace("Starting game...");
       var game = new Game();

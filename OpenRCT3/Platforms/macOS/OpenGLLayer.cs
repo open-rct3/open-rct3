@@ -135,7 +135,7 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
 
     // Determine the current OpenGL version
     CGLContext.CurrentContext = context;
-    Diagnostics.Assert(Version.TryParse(gl.GetStringS(StringName.Version).Split(' ')[0], out var version));
+    Debug.Assert(Version.TryParse(gl.GetStringS(StringName.Version).Split(' ')[0], out var version));
     settings = new SurfaceSettings {
       Profile = ContextProfileMask.CoreProfileBit,
       Version = version

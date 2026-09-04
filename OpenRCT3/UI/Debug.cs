@@ -8,8 +8,8 @@ using Hexa.NET.ImGui;
 using OpenCobra.GDK;
 using OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Meshes;
-using OpenRCT3.Debug;
 using OpenRCT3.Simulation;
+using OpenRCT3.Telemetry;
 using Silk.NET.Input;
 using PlatformWindow = OpenCobra.GDK.Platform.IWindow;
 
