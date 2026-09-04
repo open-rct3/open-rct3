@@ -1,8 +1,7 @@
 // Unit tests for WCAG color utilities.
 //
-// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+// Copyright Â© 2026 OpenRCT3 Contributors. All rights reserved.
 
-using NUnit.Framework;
 using OpenCobra.GDK.Numerics;
 using Drawing = System.Drawing;
 
@@ -47,10 +46,10 @@ public class ColorTests {
   [Test]
   [Description("Blends a semi-transparent foreground over a background color.")]
   public void BlendOverAlphaComposite() {
-    var foreground = 0x80FF0000u; // 50% red
-    var background = 0xFF0000FFu; // opaque blue
+    var foreground = 0x800000FFu; // 50% red (ABGR)
+    var background = 0xFFFF0000u; // opaque blue (ABGR)
     var blended = Color.BlendOver(foreground, background);
-    
+
     var a = (blended >> 24) & 0xFFu;
     Assert.That(a, Is.EqualTo(0xFF), "Blended result must be fully opaque.");
   }
@@ -70,7 +69,7 @@ public class ColorTests {
     var lineColor = 0xFF808080u; // Mid-gray; should fail to contrast
     var windowBg = 0xFF1E1E1Eu;
     var resolved = Color.ResolveLabelColor(lineColor, windowBg, null);
-    
+
     var isWhiteOrBlack = resolved == 0xFFFFFFFFu || resolved == 0xFF000000u;
     Assert.That(isWhiteOrBlack, Is.True, "Resolved color must be white or black.");
   }
@@ -78,10 +77,10 @@ public class ColorTests {
   [Test]
   [Description("Handles zero alpha blending edge case (fully transparent foreground).")]
   public void BlendOverZeroAlpha() {
-    var transparent = 0x00FF0000u; // 0% alpha red
-    var background = 0xFF0000FFu; // opaque blue
+    var transparent = 0x000000FFu; // 0% alpha red (ABGR)
+    var background = 0xFFFF0000u; // opaque blue (ABGR)
     var blended = Color.BlendOver(transparent, background);
-    
+
     var r = (blended) & 0xFFu;
     var g = (blended >> 8) & 0xFFu;
     var b = (blended >> 16) & 0xFFu;
@@ -97,7 +96,7 @@ public class ColorTests {
   public void LuminanceEdgeCases() {
     var blackLuminance = Color.CalculateLuminance(0xFF000000u);
     var whiteLuminance = Color.CalculateLuminance(0xFFFFFFFFu);
-    
+
     using (Assert.EnterMultipleScope()) {
       Assert.That(blackLuminance, Is.LessThan(0.01), "Black luminance should be ~0.");
       Assert.That(whiteLuminance, Is.GreaterThan(0.99), "White luminance should be ~1.");
@@ -107,14 +106,14 @@ public class ColorTests {
   [Test]
   [Description("Verifies RGB channel values after blending 50% red over blue.")]
   public void BlendOverRgbChannels() {
-    var foreground = 0x80FF0000u; // 50% red (R=255, G=0, B=0, A=128)
-    var background = 0xFF0000FFu; // opaque blue (R=0, G=0, B=255, A=255)
+    var foreground = 0x800000FFu; // 50% red (R=255, G=0, B=0, A=128 in ABGR)
+    var background = 0xFFFF0000u; // opaque blue (R=0, G=0, B=255, A=255 in ABGR)
     var blended = Color.BlendOver(foreground, background);
-    
+
     var r = blended & 0xFFu;
     var g = (blended >> 8) & 0xFFu;
     var b = (blended >> 16) & 0xFFu;
-    
+
     using (Assert.EnterMultipleScope()) {
       Assert.That(r, Is.InRange(127, 129), "R channel should be ~128 after 50% red blend.");
       Assert.That(g, Is.EqualTo(0), "G channel should remain 0.");
