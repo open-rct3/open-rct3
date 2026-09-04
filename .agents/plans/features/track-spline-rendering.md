@@ -1,18 +1,16 @@
 ---
 state: design
-dependencies:
-  - features/ovl/ovl-track-pieces
 ---
 
 # Track Spline Rendering Foundation
 
 ## Context
 
-The track-spline data model (complete in the archived ride-track-spline plan) defines rail geometry, baking, and query APIs in local/model space. This plan unblocks visual validation by integrating world-space rendering and fixing a correctness bug in chained track transforms.
+The track-spline data model (rail geometry, baking, and query APIs in local/model space) is complete in the codebase under `OpenRCT3/Rides/TrackSpline/`. This plan unblocks visual validation by integrating world-space rendering and fixing a correctness bug in chained track transforms.
 
 **GDK foundation:** This work builds on `OpenCobra.GDK.ImDraw` for visualization (line primitives expanded to screen-space-constant-width quads) and `OpenCobra.GDK.Transform` for world-space coordinate systems. Rendering of track geometry uses `ImDraw` as a debug/validation aid first, then transitions to full mesh geometry if performance testing justifies it (deferred).
 
-Parallel work on [OVL track-piece decoding](./ovl/ovl-track-pieces.md) will import real RCT3 content; rendering integration works independently with procedural test pieces first, then supports imported content once decoding is ready.
+OVL track-piece decoding (its plan is archived; see `OpenCobra/OVL/Files/TrackData.cs` and `TODO.md`) will import real RCT3 content. Rendering integration works independently with procedural test pieces first, then supports imported content once decoding is ready.
 
 Two integration gaps block visual validation:
 
@@ -27,11 +25,19 @@ Two integration gaps block visual validation:
 
 1. **GDK Transform class uses degrees instead of radians** — `OpenCobra.GDK.Transform` accepts degrees in
    `Rotate()`, `RotateX()`, etc., converting to radians internally. Track splines use radians natively
-   (see `SplineTypes.Bank` and `TrackChaining.Heading`). This creates a unit-mismatch risk when applying
-   track transforms. **Fix:** Amend `Transform` to use radians directly; convert the degree-based API to
-   accept radians and document this as a breaking change. This is not a blocker for this plan (rendering
-   code can convert radians to degrees when calling Transform methods), but it should be corrected to
-   prevent future confusion.
+   (see `SplineTypes.Bank` and `TrackChaining.Heading`). **Out of scope for this plan (YAGNI).** Goal 2
+   composes the world transform manually and feeds `ImDraw.Line()` world-space points, so `Transform` is
+   not on the rendering path here. The rendering layer converts radians to degrees at the call site when
+   it does touch `Transform`. A breaking radians migration of `Transform`, if wanted, is a standalone
+   framework change with its own call-site audit.
+
+2. **World-transform seam is undefined (open question)** — applying a piece's world Position/Heading/Bank
+   to its local `BakedSample` data has no single home today. `TrackedRide.Center` walks the graph but does
+   not apply the transform, though `SplineTypes` (`TrackPiece` remarks) states that applying it is the
+   render pipeline's job. Options: (a) a shared helper on the track-spline layer (e.g.
+   `TrackPiece.WorldSamples()` or an extension in `Rides/TrackSpline/`) consumed by both
+   `TrackSplineVisualizer` and `TrackedRide.Center`; (b) inline in `TrackSplineVisualizer`. Resolve before
+   implementing Goal 2.
 
 ## Goals
 
@@ -48,53 +54,30 @@ Two integration gaps block visual validation:
 
 ## Implementation
 
-0. **Game type hierarchy foundation** (prerequisite for Step 3 integration)
-   - [ ] Amend `OpenRCT3/Rides/TrackSpline/SplineTypes.cs` — add to `TrackPiece`:
-     ```csharp
-     /// <summary>
-     /// Baked samples along the heartline of this piece, lazy-computed on first access. 
-     /// </summary>
-     /// <remarks>
-     /// The heartline is the centerline of both rails, inset upward to align with the average rider's heart (middle-torso level), accounting for varied seating positions (sitting, standing, lying down).
-     /// </remarks>
-     Lazy<BakedSample[]> Heartline { get; }
-     ```
-   - [ ] Create `OpenRCT3/Rides/Ride.cs` — abstract base class with:
-     ```csharp
-     /// <summary>Player-facing name of this ride.</summary>
-     string Name { get; set; }
-     /// <summary>Amount guests pay before entering this ride's queue.</summary>
-     decimal Price { get; set; }
-     ```
-   - [ ] Create `OpenRCT3/Rides/TrackedRide.cs` — abstract subclass of `Ride` with:
-     ```csharp
-     /// <summary>Track, traversible by this ride's trains.</summary>
-     readonly TrackGraph Track;
-     /// <summary>Total length of this ride, in meters.</summary>
-     float Length => /* Derive length from distance along the whole track's heartline, in meters. */;
-     /// <summary>Maximum height of this ride, in meters.</summary>
-     float MaxHeight => /* Derive from maximum height of the whole track's heartline, in meters. */;
-     ```
-   - [ ] Create `OpenRCT3/Rides/Coaster.cs` — concrete subclass of `TrackedRide` with:
-     ```csharp
-     /// <summary>Total number of inversions of this ride's track.</summary>
-     ushort Inversions => /* Derive from the rail splines and 3D trigonometry along the whole track's kength. */;
-     ```
-   - **Rationale:** TrackSplineVisualizer will render track splines for `TrackedRide` instances. Derived properties consume track-spline query APIs to compute ride statistics from geometry.
+0. **Game type hierarchy foundation** — **COMPLETE.** `OpenRCT3/Rides/Ride.cs`,
+   `TrackedRide.cs` (with `Length`, `MaxHeight`, `Center`), `Coaster.cs` (with `Inversions` stub), and
+   `TrackPiece.Heartline` (stub) already exist in the tree. Goal 2 renders `LeftRail`/`RightRail.BakedSamples`
+   directly, so the `Heartline` and `Inversions` stubs are not on this plan's critical path. Any stats display
+   reads `TrackedRide.Length` / `.MaxHeight`; it does not recompute them.
 
-1. **GDK improvement (prerequisite, noted in Gaps & Risks)**
-   - [ ] Amend `OpenCobra/GDK/Transform.cs` to use radians instead of degrees (breaking change; update all call sites)
-   - [ ] Verify Transform methods (`Rotate()`, `RotateX()`, `RotateY()`, `RotateZ()`) accept radians and document the change
+1. **Bank propagation fix (Goal 1, prerequisite)**
+   - [ ] Fix `TrackChaining.ChainPiece()` in `OpenRCT3/Rides/TrackSpline/TrackChaining.cs` — the
+     `newPiece.Bank = 0f; // TODO: derive from piece geometry` line. Derive `newPiece.Bank` from the previous
+     piece's exit bank.
+   - [ ] Add a `GetPieceExitBank(TrackPiece)` private accessor beside the existing `GetPieceExitPosition` /
+     `GetPieceExitTangent` helpers, reading the last `BakedSample.Bank` of a rail.
+   - [ ] Add test case `TrackChainingTests.DerivedBankPropagatesInChainedSequence` covering a banked curve
+     chained after a straight piece (extend `OpenRCT3.Tests/Rides/TrackSpline/TrackChainingTests.cs`).
 
-2. **Bank propagation fix (Goal 1, prerequisite)**
-   - [ ] Fix `TrackChaining.ChainPiece()` (line 66 in `OpenRCT3/Rides/TrackSpline/TrackChaining.cs`) — derive `newPiece.Bank` from `prevExitBank` instead of hardcoding `0f`
-   - [ ] Add test case `TrackChainingTests.DerivedBankPropagatesInChainedSequence` covering banked curve chained after straight piece
-
-3. **World-space rendering (Goal 2)** — Implement as dockable IWindow panel (debug/editor-only visualization)
-   - [ ] Create `OpenRCT3/UI/TrackSplineVisualizer.cs` — IWindow panel that queries track graph pieces and renders left/right rails using `ImDraw.Line()` with per-piece Position/Heading/Bank transform composition
+2. **World-space rendering (Goal 2)** — Implement as dockable IWindow panel (debug/editor-only visualization)
+   - [ ] Resolve the world-transform seam (Gaps & Risks 2) before writing the visualizer.
+   - [ ] Create `OpenRCT3/UI/TrackSplineVisualizer.cs` — IWindow panel that queries track graph pieces and
+     renders left/right rails using `ImDraw.Line()`. It calls the shared world-transform helper (or the graph
+     walk on `TrackedRide`), not a private re-implementation of graph traversal.
    - [ ] Register window with the UI controller so it appears in the Windows menu (dockable, toggleable)
    - [ ] Add GDK-level ImDraw test cases (`OpenCobra/Tests/GDK/ImDrawTests.cs` extension) for transform composition
-   - [ ] Add game-level integration test (`OpenRCT3/Tests/Rides/TrackSpline/IntegrationTests.cs::RenderingTransformAppliedCorrectlyToBakedSamples`)
+   - [ ] Extend `OpenRCT3.Tests/Rides/TrackSpline/IntegrationTests.cs` with
+     `RenderingTransformAppliedCorrectlyToBakedSamples`
 
 ## Deferred
 
@@ -115,7 +98,9 @@ Two integration gaps block visual validation:
 
 - **ImDraw track spline visualization** (`OpenCobra/Tests/GDK/ImDrawTests.cs` extension or new test): Add
   tests verifying that `ImDraw.Line()` primitives correctly render left/right rail `BakedSample` positions
-  after per-piece world-space transform application (Position → Heading → Bank order). Test cases:
+  after per-piece world-space transform application (Position → Heading → Bank order). These assert against
+  the shared world-transform helper chosen for Gaps & Risks 2, not against `TrackSplineVisualizer`
+  internals; the visualizer stays a thin `ImDraw.Line()` caller. Test cases:
   - Single rail segment at origin with identity transform yields expected line vertices
   - Rail segment at non-origin `Position` is translated correctly
   - Rail segment with `Heading` rotation applies yaw correctly (angle between line direction and expected heading)
@@ -124,21 +109,24 @@ Two integration gaps block visual validation:
 
 ### Game-level tests (OpenRCT3.Tests)
 
-- **World-space transform integration** (`OpenRCT3/Tests/Rides/TrackSpline/IntegrationTests.cs`): Add test case
+- **World-space transform integration** (`OpenRCT3.Tests/Rides/TrackSpline/IntegrationTests.cs`): Add test case
   `RenderingTransformAppliedCorrectlyToBakedSamples` verifying that a piece with known position/heading/bank
   yields expected world-space baked sample positions when rendered. Transform composition order is
   Position → Heading → Bank (translate, then yaw, then roll). Test:
   - Create a simple procedural piece (straight or curve)
   - Apply known world-space Position/Heading/Bank via `TrackChaining`
-  - Query baked samples and manually apply the per-piece transform in the correct order
+  - Query baked samples and apply the per-piece transform via the shared world-transform helper (Gaps & Risks 2)
   - Verify results match expected world coordinates
-  - No new algorithmic tests needed; the math is in existing `TrackChaining` logic
+  - No new algorithmic tests needed; the math is in existing `TrackChaining` logic. If the helper is added,
+    its unit coverage lives with it, and this test exercises the piece-to-world path end to end.
 
-- **Bank propagation fix** (`OpenRCT3/Tests/Rides/TrackSpline/TrackChainingTests.cs`): Add
+- **Bank propagation fix** (`OpenRCT3.Tests/Rides/TrackSpline/TrackChainingTests.cs`): Add
   `DerivedBankPropagatesInChainedSequence` covering a banked curve chained after a straight piece, validating
   that the chained curve's world-space `Bank` matches the straight's exit bank.
 
 ## Status
 
-Scope refined. Plan ready for implementation. Parallel work: [OVL track-piece decoding](./ovl/ovl-track-pieces.md)
-will import real content; rendering integration works independently with procedural pieces first.
+Review applied. Step 0 complete. Transform radians migration dropped as YAGNI. World-transform seam is an
+open question (Gaps & Risks 2) to resolve before Goal 2. Remaining work: Goal 1 bank fix, then Goal 2
+rendering. Parallel work: OVL track-piece decoding will import real content; rendering integration works
+independently with procedural pieces first.
