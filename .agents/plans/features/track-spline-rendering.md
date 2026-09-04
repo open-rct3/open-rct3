@@ -1,132 +1,90 @@
 ---
-state: design
+state: ready
 ---
 
 # Track Spline Rendering Foundation
 
 ## Context
 
-The track-spline data model (rail geometry, baking, and query APIs in local/model space) is complete in the codebase under `OpenRCT3/Rides/TrackSpline/`. This plan unblocks visual validation by integrating world-space rendering and fixing a correctness bug in chained track transforms.
+The track-spline data model (rail geometry, baking, and query APIs in local/model space) is complete in the codebase under `OpenRCT3/Rides/TrackSpline/`. This plan unblocks visual validation by integrating rendering and fixing roll continuity in chained track transforms.
 
-**GDK foundation:** This work builds on `OpenCobra.GDK.ImDraw` for visualization (line primitives expanded to screen-space-constant-width quads) and `OpenCobra.GDK.Transform` for world-space coordinate systems. Rendering of track geometry uses `ImDraw` as a debug/validation aid first, then transitions to full mesh geometry if performance testing justifies it (deferred).
+**Model-Space Invariant:** Track pieces (and any other game model) only concern themselves with their own model space. Track piece geometry, control points, and baked samples remain in model space. World-space transformation is strictly a rendering layer concern.
 
-OVL track-piece decoding (its plan is archived; see `OpenCobra/OVL/Files/TrackData.cs` and `TODO.md`) will import real RCT3 content. Rendering integration works independently with procedural test pieces first, then supports imported content once decoding is ready.
+**GDK foundation:** This work builds on `OpenCobra.GDK.ImDraw` for visualization (line primitives expanded to screen-space-constant-width quads) and `OpenCobra.GDK.Transform` / `System.Numerics.Matrix4x4` for model transforms. To keep game models isolated in their model space, `ImDraw` is extended with a model transform stack (`PushTransform` / `PopTransform`). Rendering of track geometry uses `ImDraw` as an immediate visual validation aid; full mesh geometry is future work.
 
 Two integration gaps block visual validation:
 
-1. **World-space rendering integration**: `BakedSample` positions stay in local space; applying
-   `TrackChaining`'s world `Position`/`Heading`/`Bank` transform is the rendering pipeline's responsibility.
-   This completes the "render tracked rides" milestone and unblocks visual validation with existing procedural pieces.
-   Render using `ImDraw.Line()` to visualize left/right rails as immediate-mode line primitives.
-2. **Bank propagation bug**: `TrackChaining.ChainPiece` hardcodes newly-chained piece world-space `Bank` to
-   `0f`, breaking roll continuity in banked sequences (loops, corkscrews). Correctness fix after rendering works.
+1. **Rendering layer model transform & visualizer**: `ImDraw` operates on world-space points directly and lacks model matrix support. Introducing `PushTransform` and `PopTransform` in `ImDraw` allows consumers (such as `TrackSplineVisualizer`) to submit samples in native piece model space while applying `TrackChaining`'s `Position`/`Heading`/`Bank` affine transform via matrix composition.
+2. **Bank propagation bug**: `TrackChaining.ChainPiece` hardcodes newly-chained piece world-space `Bank` to `0f`, breaking roll continuity in banked sequences (loops, corkscrews). Correctness fix ensures chained pieces have proper orientation.
 
-## Gaps and Risks
+## Architecture & Seams
 
-1. **GDK Transform class uses degrees instead of radians** — `OpenCobra.GDK.Transform` accepts degrees in
-   `Rotate()`, `RotateX()`, etc., converting to radians internally. Track splines use radians natively
-   (see `SplineTypes.Bank` and `TrackChaining.Heading`). **Out of scope for this plan (YAGNI).** Goal 2
-   composes the world transform manually and feeds `ImDraw.Line()` world-space points, so `Transform` is
-   not on the rendering path here. The rendering layer converts radians to degrees at the call site when
-   it does touch `Transform`. A breaking radians migration of `Transform`, if wanted, is a standalone
-   framework change with its own call-site audit.
+1. **ImDraw Model Transform Stack (`OpenCobra.GDK.ImDraw`)**:
+   - Maintains a `Stack<Matrix4x4>` of active transforms.
+   - `PushTransform(Matrix4x4 transform)` multiplies against the current top matrix (or identity if empty) and pushes the composite matrix.
+   - `PopTransform()` pops the top matrix.
+   - `Line(Vector3 a, Vector3 b, ...)` transforms endpoints `a` and `b` by the current transform matrix at submission time before constructing vertex quads. Higher-level primitives (`Axis`, `Circle`, `Arrow`) automatically inherit this behavior.
+   - `Clear()` resets the transform stack to prevent cross-frame leaks.
 
-2. **World-transform seam is undefined (open question)** — applying a piece's world Position/Heading/Bank
-   to its local `BakedSample` data has no single home today. `TrackedRide.Center` walks the graph but does
-   not apply the transform, though `SplineTypes` (`TrackPiece` remarks) states that applying it is the
-   render pipeline's job. Options: (a) a shared helper on the track-spline layer (e.g.
-   `TrackPiece.WorldSamples()` or an extension in `Rides/TrackSpline/`) consumed by both
-   `TrackSplineVisualizer` and `TrackedRide.Center`; (b) inline in `TrackSplineVisualizer`. Resolve before
-   implementing Goal 2.
+2. **Track Piece Model Matrix Composition**:
+   - When placing a piece, the model-to-world transform is composed as:
+     `M = CreateFromAxisAngle(Vector3.UnitX, piece.Bank) * CreateRotationY(piece.Heading) * CreateTranslation(piece.Position)`
+   - The visualizer submits this matrix to `imDraw.PushTransform(M)` and then draws rail samples directly in model space.
+
+3. **TrackSplineVisualizer Panel (`OpenRCT3/UI/TrackSplineVisualizer.cs`)**:
+   - Implements `OpenCobra.GDK.GUI.IWindow`.
+   - Queries `TrackGraph` from the active ride or scenario editor.
+   - Renders left and right rails using `ImDraw.Line()` within a `PushTransform` / `PopTransform` scope for each piece.
+   - Registered in `scene.Windows` and toggleable in the editor UI.
 
 ## Goals
 
-1. **Fix `TrackChaining.ChainPiece` world-space `Bank` computation**: Derive the
-   newly-chained piece's world `Bank` from the previous piece's exit bank rather than hardcoding `0f`. Add a
-   `TrackChainingTests` case covering banked curve sequences to prevent regression. (Prerequisite: correct
-   geometry before rendering it.)
-2. **Integrate world-space transform into the rendering pipeline**: Apply `TrackChaining`'s
-   `Position`/`Heading`/`Bank` to `BakedSample` data **per piece** (not per-sample), composed in order:
-   translate by `Position`, rotate by `Heading` (yaw about world-up axis), then rotate by `Bank` (roll about
-   the piece's forward tangent axis). This is glue code connecting the track-spline data model to actual frame
-   output — scope is "make rendered tracks match their authored position/heading/bank," not full-scene rendering.
-   Render using `ImDraw.Line()` to visualize left/right rails as immediate-mode line primitives.
+1. **Fix `TrackChaining.ChainPiece` world-space `Bank` computation**: Derive the newly-chained piece's world `Bank` from the previous piece's exit bank rather than hardcoding `0f`. Add a `TrackChainingTests` case covering banked curve sequences to prevent regression.
+2. **Add Model Transform Stack to `OpenCobra.GDK.ImDraw`**: Implement `PushTransform(Matrix4x4)` and `PopTransform()`, transforming vertex positions at submission time in `Line()`. Add unit tests in `OpenCobra.Tests/GDK/ImDrawTests.cs`.
+3. **Integrate Track Spline Visualizer (`OpenRCT3/UI/TrackSplineVisualizer.cs`)**: Create a dockable `IWindow` panel that iterates track graph pieces and renders rail spline samples in model space using `ImDraw`. Register with scene windows. Add integration tests verifying transform composition.
 
 ## Implementation
 
 0. **Game type hierarchy foundation** — **COMPLETE.** `OpenRCT3/Rides/Ride.cs`,
-   `TrackedRide.cs` (with `Length`, `MaxHeight`, `Center`), `Coaster.cs` (with `Inversions` stub), and
-   `TrackPiece.Heartline` (stub) already exist in the tree. Goal 2 renders `LeftRail`/`RightRail.BakedSamples`
-   directly, so the `Heartline` and `Inversions` stubs are not on this plan's critical path. Any stats display
-   reads `TrackedRide.Length` / `.MaxHeight`; it does not recompute them.
+   `TrackedRide.cs`, `Coaster.cs`, and `TrackPiece.Heartline` already exist in the tree.
 
-1. **Bank propagation fix (Goal 1, prerequisite)**
-   - [ ] Fix `TrackChaining.ChainPiece()` in `OpenRCT3/Rides/TrackSpline/TrackChaining.cs` — the
-     `newPiece.Bank = 0f; // TODO: derive from piece geometry` line. Derive `newPiece.Bank` from the previous
-     piece's exit bank.
-   - [ ] Add a `GetPieceExitBank(TrackPiece)` private accessor beside the existing `GetPieceExitPosition` /
-     `GetPieceExitTangent` helpers, reading the last `BakedSample.Bank` of a rail.
-   - [ ] Add test case `TrackChainingTests.DerivedBankPropagatesInChainedSequence` covering a banked curve
-     chained after a straight piece (extend `OpenRCT3.Tests/Rides/TrackSpline/TrackChainingTests.cs`).
+1. **Bank propagation fix (Goal 1)**
+   - [ ] Add a `GetPieceExitBank(TrackPiece)` helper in `OpenRCT3/Rides/TrackSpline/TrackChaining.cs` reading the last control point or baked sample bank.
+   - [ ] Update `TrackChaining.ChainPiece()` to assign `newPiece.Bank = GetPieceExitBank(prevPiece);`.
+   - [ ] Add test case `TrackChainingTests.DerivedBankPropagatesInChainedSequence` in `OpenRCT3.Tests/Rides/TrackSpline/TrackChainingTests.cs`.
 
-2. **World-space rendering (Goal 2)** — Implement as dockable IWindow panel (debug/editor-only visualization)
-   - [ ] Resolve the world-transform seam (Gaps & Risks 2) before writing the visualizer.
-   - [ ] Create `OpenRCT3/UI/TrackSplineVisualizer.cs` — IWindow panel that queries track graph pieces and
-     renders left/right rails using `ImDraw.Line()`. It calls the shared world-transform helper (or the graph
-     walk on `TrackedRide`), not a private re-implementation of graph traversal.
-   - [ ] Register window with the UI controller so it appears in the Windows menu (dockable, toggleable)
-   - [ ] Add GDK-level ImDraw test cases (`OpenCobra/Tests/GDK/ImDrawTests.cs` extension) for transform composition
-   - [ ] Extend `OpenRCT3.Tests/Rides/TrackSpline/IntegrationTests.cs` with
-     `RenderingTransformAppliedCorrectlyToBakedSamples`
+2. **ImDraw Model Transform Stack (Goal 2)**
+   - [ ] Add `Stack<Matrix4x4> transformStack` and `Matrix4x4 currentTransform` to `OpenCobra.GDK.ImDraw`.
+   - [ ] Implement `PushTransform(Matrix4x4 transform)` and `PopTransform()`.
+   - [ ] Apply `currentTransform` to `a` and `b` in `ImDraw.Line()`.
+   - [ ] Clear `transformStack` in `ImDraw.Clear()`.
+   - [ ] Add unit tests in `OpenCobra/Tests/GDK/ImDrawTests.cs` verifying single transform, nested transforms, and reset on Clear.
+
+3. **Track Spline Visualizer (Goal 3)**
+   - [ ] Create `OpenRCT3/UI/TrackSplineVisualizer.cs` implementing `IWindow`.
+   - [ ] Implement piece graph iteration and rail sample rendering within `imDraw.PushTransform(pieceTransform)` scopes.
+   - [ ] Wire `TrackSplineVisualizer` into `World.cs` / scene window list and add an editor toggle.
+   - [ ] Add integration test in `OpenRCT3.Tests/Rides/TrackSpline/IntegrationTests.cs` verifying that rendering a piece under transform produces expected world-space vertices in `ImDraw`.
 
 ## Deferred
 
-- **Track authoring UI**: Editor for hand-authoring organic pieces is valuable but deferred. Procedural pieces
-  + world-space rendering provide sufficient validation surface for this foundation phase. Editor can follow
-  once real OVL content is imported and geometry needs tuning/validation.
-- **Tolerance tuning against real content**: the baking config defaults are provisional. A data-driven tuning
-  pass will follow once OVL content is imported and geometry can be benchmarked.
-- **Procedural piece geometry refinement**: currently 4 Catmull-Rom segments per curve/corkscrew. Can be
-  densified once baking is fast enough; deferred until visual validation confirms the current geometry is
-  correct.
-- **ImGui inspector for train/bogie placement**: placing cars on the track and viewing their IK queries is
-  valuable but separate; it's a consumer of the track model, not part of this foundation.
+- **Track authoring UI**: Editor for hand-authoring organic pieces is valuable but deferred. Procedural pieces + rendering provide sufficient validation surface.
+- **Tolerance tuning against real content**: Baking config defaults are provisional until OVL content is imported.
+- **Procedural piece geometry refinement**: Catmull-Rom segment count can be tuned once visual validation confirms geometry.
+- **Full 3D Mesh Rail Generation**: Transitioning from `ImDraw` lines to extruded mesh tubes/ties is deferred to a subsequent milestone.
 
 ## Testing
 
 ### GDK-level tests (OpenCobra.Tests)
-
-- **ImDraw track spline visualization** (`OpenCobra/Tests/GDK/ImDrawTests.cs` extension or new test): Add
-  tests verifying that `ImDraw.Line()` primitives correctly render left/right rail `BakedSample` positions
-  after per-piece world-space transform application (Position → Heading → Bank order). These assert against
-  the shared world-transform helper chosen for Gaps & Risks 2, not against `TrackSplineVisualizer`
-  internals; the visualizer stays a thin `ImDraw.Line()` caller. Test cases:
-  - Single rail segment at origin with identity transform yields expected line vertices
-  - Rail segment at non-origin `Position` is translated correctly
-  - Rail segment with `Heading` rotation applies yaw correctly (angle between line direction and expected heading)
-  - Rail segment with `Bank` rotation tilts roll around the forward axis correctly
-  - Combined Position + Heading + Bank transform applies all three in correct composition order
+- `ImDrawTests.PushTransform_TransformsLineEndpoints`: Verifies endpoints `a` and `b` are multiplied by the pushed matrix.
+- `ImDrawTests.PushTransform_NestedTransforms_ComposesCorrectly`: Verifies nested push operations concatenate transforms in order.
+- `ImDrawTests.PopTransform_RestoresPreviousTransform`: Verifies pop restores parent matrix.
+- `ImDrawTests.Clear_ResetsTransformStack`: Verifies transform stack is cleared between frames.
 
 ### Game-level tests (OpenRCT3.Tests)
-
-- **World-space transform integration** (`OpenRCT3.Tests/Rides/TrackSpline/IntegrationTests.cs`): Add test case
-  `RenderingTransformAppliedCorrectlyToBakedSamples` verifying that a piece with known position/heading/bank
-  yields expected world-space baked sample positions when rendered. Transform composition order is
-  Position → Heading → Bank (translate, then yaw, then roll). Test:
-  - Create a simple procedural piece (straight or curve)
-  - Apply known world-space Position/Heading/Bank via `TrackChaining`
-  - Query baked samples and apply the per-piece transform via the shared world-transform helper (Gaps & Risks 2)
-  - Verify results match expected world coordinates
-  - No new algorithmic tests needed; the math is in existing `TrackChaining` logic. If the helper is added,
-    its unit coverage lives with it, and this test exercises the piece-to-world path end to end.
-
-- **Bank propagation fix** (`OpenRCT3.Tests/Rides/TrackSpline/TrackChainingTests.cs`): Add
-  `DerivedBankPropagatesInChainedSequence` covering a banked curve chained after a straight piece, validating
-  that the chained curve's world-space `Bank` matches the straight's exit bank.
+- `TrackChainingTests.DerivedBankPropagatesInChainedSequence`: Verifies that chaining a banked curve or twist onto an existing piece propagates the exit bank.
+- `IntegrationTests.RenderingTransformAppliedCorrectlyToBakedSamples`: Verifies track spline visualizer submits rail points through `ImDraw` with correct translation, yaw heading, and roll bank.
 
 ## Status
 
-Review applied. Step 0 complete. Transform radians migration dropped as YAGNI. World-transform seam is an
-open question (Gaps & Risks 2) to resolve before Goal 2. Remaining work: Goal 1 bank fix, then Goal 2
-rendering. Parallel work: OVL track-piece decoding will import real content; rendering integration works
-independently with procedural pieces first.
+Design updated to preserve model-space isolation for track pieces and game models. Ready for implementation.

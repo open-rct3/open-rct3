@@ -11,6 +11,20 @@
           {
             "type": "command",
             "command": "./.claude/hooks/deno-fmt-check-if-dts.sh"
+          },
+          {
+            "type": "command",
+            "command": "./.claude/hooks/question-violation.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/question-violation.sh"
           }
         ]
       }

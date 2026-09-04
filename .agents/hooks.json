@@ -1,0 +1,10 @@
+{
+  "question-tool-gate": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node ./.claude/hooks/question-violation.js"
+      }
+    ]
+  }
+}

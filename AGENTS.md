@@ -8,6 +8,7 @@
 
 ## Prose Style
 
+- Use plain, direct phrasing everywhere (replies, commit messages, Markdown docs, code comments, and XML doc comments). State facts simply rather than using flowery language or inventing speculative justifications.
 - Never use em-dashes. Use parentheticals or regular commas instead. When prose gets complicated enough to want multiple asides or digressions, split it into new sentences and paragraphs. This applies **everywhere**: replies, commit messages, Markdown docs, code comments, and C# XML doc comments.
 - C# XML doc comments support rich formatting (`<para>`, `<list>`, `<c>`, `<see>`, `<em>`). Use it to structure multi-part explanations rather than cramming everything into run-on sentences.
 - Prefer ampersands (`&`) over plus signs (`+`) when joining words in prose and headings.
@@ -44,7 +45,8 @@ These cover how to act on the codebase. They are not as severe as the Hard Rules
 
 - **Obey Explicit Tool Directives Immediately.** When the user tells you to use a specific tool (e.g., "use the internet", "use bash", "use the file-writing tools"), obey on the next tool invocation. Do NOT substitute, retreat to local guesswork, or repeat failing patterns.
 - **Always Prefer Built-in File Tools.** Always use built-in file read & write tools (`view_file`, `replace_file_content`) rather than shell commands (e.g., `Set-Content`, `Get-Content`, `cat`, `echo`, heredocs, or PowerShell scripts) to read, create, or modify files.
-- **No Complicated Tool Calls.** Keep tool operations simple and direct. Do not run multi-step pipeline shell commands, complex PowerShell invocations, or commands that trigger incessant user prompts when simple standard tools suffice (`make test`, standard file tools).
+- **Always Use `ask_question` for Decisions & Choices.** ALWAYS use the `ask_question` tool whenever asking the user ANY question, presenting architectural choices, clarifying requirements, soliciting design preferences, or asking the user to pick from a list of options. NEVER write open questions or multiple-choice questions as plain text in your response; ALWAYS invoke the `ask_question` tool.
+- **Simple Commands Only & Prefer Default Tools.** Stop prompting the user for permission on complicated, multi-line, or convoluted shell commands. Do NOT execute inline multi-line scripts (such as `node -e "..."`, PowerShell multi-line invocations, or pipeline gymnastics). Keep tool operations simple, single-purpose, and direct. Use the default built-in file and search tools whenever possible.
 - **New tools ALWAYS live in [`.agents/tools/`](.agents/tools/).** Any throwaway or reusable console app, scanner, or script goes in its own subdirectory there (e.g. `.agents/tools/MyScanner/`), never at the repo root, in a temp directory, or beside source. Scaffold it with the file-writing tools (a `.csproj` referencing `OpenCobra/OVL/OVL.csproj` as needed), not shell heredocs. Before adding one, check whether an existing tool in that directory can be extended instead.
 
 #### Reasoning (or lack thereof)

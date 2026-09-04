@@ -12,6 +12,7 @@ Overview of OpenRCT3's core runtime engine architecture, covering frame timing a
 - [GPU & Rendering Architecture](#gpu--rendering-architecture)
   - [Multi-Platform OpenGL via Silk.NET](#multi-platform-opengl-via-silknet)
   - [3D Coordinate System](#3d-coordinate-system)
+  - [Model Space Invariant & Rendering Layer Boundaries](#model-space-invariant--rendering-layer-boundaries)
   - [Immediate Mode GUI via Hexa.NET.ImGui](#immediate-mode-gui-via-hexanetimgui)
 - [GUI Layout Architecture](#gui-layout-architecture)
   - [Flutter-Inspired Constraints-Down Sizing](#flutter-inspired-constraints-down-sizing)
@@ -103,6 +104,13 @@ OpenRCT3 uses a standard **right-handed 3D coordinate system with Y-up orientati
 - $+Z$: Forward / South (towards the camera in default view)
 
 All world geometry, tile elevation, and camera projection calculations adhere to this orientation.
+
+### Model Space Invariant & Rendering Layer Boundaries
+
+Track pieces and all game models only concern themselves with their own model space. Control points, spline samples, and piece geometry are authored, queried, and stored in model coordinates.
+
+World-space transformation is strictly a rendering layer concern. Game entities and pieces do not transform their geometry to world space or store world coordinates. Instead, the rendering pipeline (such as `OpenCobra.GDK.ImDraw` with its transform stack) applies piece model matrices (`Bank`, `Heading`, and `Position`) at draw time.
+
 
 ### Immediate Mode GUI via Hexa.NET.ImGui
 

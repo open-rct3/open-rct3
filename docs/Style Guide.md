@@ -149,6 +149,14 @@ Use `<remarks>` to document the *why* including, but not limited to, implementat
 public static Ray ToRay(this Camera camera, Vector2 screenPos, Vector2D<int> framebufferSize);
 ```
 
+When describing *anything* (code behavior, edge cases, invariants, or deferred scope), use plain, direct phrasing. State facts simply rather than using flowery language or inventing speculative justifications:
+
+- **Prefer:** "full mesh geometry is future work" or "deferred to track geometry tuning phase"
+- **Avoid:** "generation is planned for a subsequent milestone" or "transitions to full mesh geometry if performance testing justifies it"
+
+
+
+
 ### See Also Links
 
 For cross-project references (e.g. references to source files
