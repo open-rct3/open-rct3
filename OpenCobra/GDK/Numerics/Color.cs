@@ -1,6 +1,6 @@
 // Domain-agnostic color utilities for WCAG 2.1 operations and color-space conversion.
 //
-// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+// Copyright Â© 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System.Globalization;
 using System.Numerics;

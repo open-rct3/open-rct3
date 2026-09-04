@@ -1,0 +1,31 @@
+# Set default behavior to automatically normalize line endings and text files
+* text=auto eol=lf working-tree-encoding=UTF-8
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.bmp binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.otf binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.dll binary
+*.exe binary
+*.so binary
+*.dylib binary
+*.pdb binary
+*.ovl binary
+*.dat binary
+*.td4 binary
+*.td6 binary
+*.trk binary
+*.wasm binary
+*.zip binary
+*.tar binary
+*.gz binary
