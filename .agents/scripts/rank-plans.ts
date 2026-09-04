@@ -131,12 +131,34 @@ function extractStatusText(content: string): string {
   return "";
 }
 
+function extractFrontmatterState(content: string): string {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!match) return "";
+  const stateMatch = match[1].match(/^state:\s*(.+)$/m);
+  return stateMatch ? stateMatch[1].trim().toLowerCase() : "";
+}
+
 function classifyStatus(statusText: string, fullContent: string): { closed: boolean; reason?: string; inProgress: boolean } {
-  const haystack = statusText.toLowerCase() || fullContent.slice(0, 1200).toLowerCase();
-  for (const kw of CLOSED_KEYWORDS) {
-    if (haystack.includes(kw)) return { closed: true, reason: kw, inProgress: false };
+  const frontmatterState = extractFrontmatterState(fullContent);
+  if (frontmatterState) {
+    if (["done", "complete", "completed", "implemented", "superseded", "closed", "archived"].includes(frontmatterState)) {
+      return { closed: true, reason: frontmatterState, inProgress: false };
+    }
+    if (["design", "in-progress", "in progress", "active", "draft", "open"].includes(frontmatterState)) {
+      const inProgress = frontmatterState !== "design" && frontmatterState !== "draft";
+      return { closed: false, inProgress };
+    }
   }
-  const inProgress = IN_PROGRESS_KEYWORDS.some((kw) => haystack.includes(kw));
+
+  const haystack = statusText.toLowerCase() || fullContent.slice(0, 1200).toLowerCase();
+
+  // If status explicitly notes remaining work or unstarted goals, it is not closed.
+  const hasRemainingWork = /remaining work|remaining:|not started|not yet done/i.test(statusText);
+
+  for (const kw of CLOSED_KEYWORDS) {
+    if (haystack.includes(kw) && !hasRemainingWork) return { closed: true, reason: kw, inProgress: false };
+  }
+  const inProgress = IN_PROGRESS_KEYWORDS.some((kw) => haystack.includes(kw)) || hasRemainingWork;
   return { closed: false, inProgress };
 }
 
