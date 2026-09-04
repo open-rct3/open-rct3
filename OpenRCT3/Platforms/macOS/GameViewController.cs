@@ -1,8 +1,5 @@
 // GameViewController
 //
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
-//
 // Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.
 
 using OpenCobra.GDK.Platform;
@@ -30,26 +27,49 @@ public partial class GameViewController(NativeHandle handle) : NSViewController(
 
     game.WantsLayer = true;
     game.Layer = new OpenGLLayer();
+    CATransaction.Begin();
+    CATransaction.DisableActions = true;
+    game.Layer.Frame = game.Frame;
+    CATransaction.Commit();
     game.PostsFrameChangedNotifications = true;
     Surface.SurfaceCreated += SurfaceCreated;
 
     // The game pane is the right side of the split view; its own frame (not the window's) is
     // what determines the OpenGL layer's framebuffer size, so resize notifications are scoped to it.
-    NSNotificationCenter.DefaultCenter.AddObserver(NSView.FrameChangedNotification, _ =>
-      (View.Window as MainWindow)?.NotifyFramebufferResize(Surface.FrameBufferSize), game);
+    NSNotificationCenter.DefaultCenter.AddObserver(NSView.FrameChangedNotification, _ => {
+      CATransaction.Begin();
+      CATransaction.DisableActions = true;
+      game.Layer.Frame = game.Frame;
+      CATransaction.Commit();
+      (View.Window as MainWindow)?.NotifyFramebufferResize(Surface.FrameBufferSize);
+    }, game);
 
     // TODO: Update framebuffer on WillResize/DidResize, DidChangeScreen, and DidChangeScreenProfile
     // See also DidEndLiveResize
   }
 
+  public override void ViewDidLayout() {
+    base.ViewDidLayout();
+    if (game.Layer == null) return;
+    CATransaction.Begin();
+    CATransaction.DisableActions = true;
+    game.Layer.Frame = game.Frame;
+    CATransaction.Commit();
+  }
+
+  public override void ViewWillAppear() {
+    base.ViewWillAppear();
+    (View.Window as MainWindow ?? NSApplication.SharedApplication.MainWindow as MainWindow)?.Initialize();
+  }
+
   private void SurfaceCreated(IGraphicsSurface surface, IRenderer renderer) =>
-    (View.Window as MainWindow)?.Start();
+    (View.Window as MainWindow ?? NSApplication.SharedApplication.MainWindow as MainWindow)?.Start();
 
   public static bool ShouldClose(NSObject _) => OpenRCT3.Game.Instance?.Quit() ?? false;
 
   public void WillClose(NSObject _sender, EventArgs _e) {
     var game = OpenRCT3.Game.Instance;
-    Debug.Assert(!OpenRCT3.Game.IsRunning, "Game should be stopped before closing!");
+    Diagnostics.Assert(!OpenRCT3.Game.IsRunning, "Game should be stopped before closing!");
     game?.Dispose();
   }
 }

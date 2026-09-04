@@ -1,11 +1,7 @@
 // OpenGLLayer
 //
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
-//
 // Copyright © 2025-2026 OpenRCT3 Contributors. All rights reserved.
 
-using System.ComponentModel;
 using OpenCobra.GDK.Numerics;
 using System.Runtime.InteropServices;
 using Silk.NET.OpenGL;
@@ -16,7 +12,6 @@ using OpenCobra.GDK.GUI;
 using Silk.NET.Core.Contexts;
 using Silk.NET.Input;
 using DryIoc;
-using DryIoc.ImTools;
 using OpenGL;
 using OpenRCT3.OpenGL;
 // ReSharper disable InconsistentNaming
@@ -24,8 +19,23 @@ using OpenRCT3.OpenGL;
 namespace OpenRCT3.Platforms.macOS;
 
 public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
-  private const CGLPixelFormatAttribute CglPfaVersion_4_1 = (CGLPixelFormatAttribute) 0x4100;
-  private const CGLPixelFormatAttribute CglPfaOpenGLProfile = (CGLPixelFormatAttribute) 0x63;
+  private const CGLPixelFormatAttribute CglPfaVersion_4_1 = (CGLPixelFormatAttribute)0x4100;
+  private const CGLPixelFormatAttribute CglPfaOpenGLProfile = (CGLPixelFormatAttribute)0x63;
+
+  public OpenGLLayer() {
+    Surface = new Handle<IntPtr>(IntPtr.Zero, false);
+    NeedsDisplayOnBoundsChange = true;
+  }
+
+  /// <summary>
+  /// Prevent Core Animation from animating geometry changes for this layer.
+  /// </summary>
+  /// <remarks>
+  /// Returning NSNull.Null explicitly halts Core Animation's action search chain,
+  /// whereas returning null would fall back to defaultActionForKey (creating a default CABasicAnimation).
+  /// </remarks>
+  public override NSObject? ActionForKey(string eventKey) =>
+    eventKey is "position" or "bounds" or "frame" ? NSNull.Null : base.ActionForKey(eventKey);
 
   private bool initialized;
   private bool faulted;
@@ -95,11 +105,20 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
   public override void DrawInCGLContext(CGLContext context, CGLPixelFormat pixelFormat, double timeInterval, ref CVTimeStamp timeStamp) {
     if (!faulted) {
       try {
+        // CoreAnimation can schedule draw callbacks before AppKit finishes attaching the view
+        // to the window hierarchy during scene startup. Defer renderer creation until the host
+        // window has been registered so downstream subsystems can resolve IWindow.
+        if (!Game.IoC.IsRegistered<OpenCobra.GDK.Platform.IWindow>()) {
+          SetNeedsDisplay();
+          return;
+        }
+
         glContext.SetCurrentContext(context.Handle.Handle);
 
         if (!initialized) InitializeRenderer(context);
         if (renderer != null) RenderScene();
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         // Latch so a failure during init/render doesn't re-throw (and re-alert) on every
         // subsequent frame while the CVDisplayLink keeps calling us at up to 60fps.
         faulted = true;
@@ -116,7 +135,7 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
 
     // Determine the current OpenGL version
     CGLContext.CurrentContext = context;
-    Debug.Assert(Version.TryParse(gl.GetStringS(StringName.Version).Split(' ')[0], out var version));
+    Diagnostics.Assert(Version.TryParse(gl.GetStringS(StringName.Version).Split(' ')[0], out var version));
     settings = new SurfaceSettings {
       Profile = ContextProfileMask.CoreProfileBit,
       Version = version
@@ -138,12 +157,11 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
     Game.IoC.RegisterInstance<IRenderer>(renderer);
 
     // Create a platform surface handle (opaque) for consumers
-    Surface = new Handle<IntPtr>((nint)context.Handle.Handle, false);
-
-    SurfaceCreated?.Invoke(this, renderer);
-    SetNeedsDisplay();
+    Surface = new Handle<IntPtr>(context.Handle.Handle, false);
 
     initialized = true;
+    SurfaceCreated?.Invoke(this, renderer);
+    SetNeedsDisplay();
   }
 
   private void RenderScene() {

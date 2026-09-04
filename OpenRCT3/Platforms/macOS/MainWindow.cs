@@ -36,31 +36,23 @@ public partial class MainWindow : NSWindow, IWindow {
   private Action? loadHandlers;
   private Action<double>? updateHandlers;
   private bool isClosing;
+  private bool initialized;
 
   public event Action<Vector2D<int>>? FramebufferResize;
   public event Action<bool>? FocusChanged;
   public event Action<double>? Render;
 
-  public MainWindow(NativeHandle handle) : base(handle) {
-    NSApplication.SharedApplication.ActivateIgnoringOtherApps(true);
-    MakeKeyAndOrderFront(this);
+  [Export("initWithCoder:")]
+  public MainWindow(NSCoder coder) : base(coder) => Initialize();
 
-    // This Program manages the game window's lifetime, same as GameWindow does on Windows.
-    Game.IoC.RegisterInstance<IWindow>(this, IfAlreadyRegistered.Replace, Setup.With(preventDisposal: true));
+  public MainWindow(NativeHandle handle) : base(handle) => Initialize();
 
-    NSNotificationCenter.DefaultCenter.AddObserver(NSWindow.WillCloseNotification, _ => isClosing = true, this);
-    NSNotificationCenter.DefaultCenter.AddObserver(NSWindow.DidBecomeKeyNotification, _ => FocusChanged?.Invoke(true), this);
-    NSNotificationCenter.DefaultCenter.AddObserver(NSWindow.DidResignKeyNotification, _ => FocusChanged?.Invoke(false), this);
-
-    loadHandlers?.Invoke();
-  }
-
-  public uint FrameBufferWidth => (uint) Math.Round(
+  public uint FrameBufferWidth => Convert.ToUInt32(Math.Round(
     Controller?.Game.Bounds.Width.Value * BackingScaleFactor.Value ?? 640
-  );
-  public uint FrameBufferHeight => (uint) Math.Round(
+  ));
+  public uint FrameBufferHeight => Convert.ToUInt32(Math.Round(
     Controller?.Game.Bounds.Height.Value * BackingScaleFactor.Value ?? 420
-  );
+  ));
 
   public Size FrameBufferSize => new((int)FrameBufferWidth, (int)FrameBufferHeight);
 
@@ -76,12 +68,13 @@ public partial class MainWindow : NSWindow, IWindow {
 
   public void Start() {
     stopwatch.Start();
-    Debug.Assert(Layer?.IsValid == true, "Renderer should be created before starting the game.");
+    Diagnostics.Assert(Layer?.IsValid == true, "Renderer should be created before starting the game.");
     if (Game.Instance == null) {
       logger.Trace("Starting game...");
       var game = new Game();
       Task.Run(game.Run);
-    } else {
+    }
+    else {
       logger.Trace("Resuming game...");
       Game.Instance.Resume();
     }
@@ -108,19 +101,19 @@ public partial class MainWindow : NSWindow, IWindow {
   [Browsable(false)]
   public bool ShouldSwapAutomatically {
     get => false;
-    set {}
+    set { }
   }
 
   [Browsable(false)]
   public bool IsEventDriven {
     get => true;
-    set {}
+    set { }
   }
 
   [Browsable(false)]
   public bool IsContextControlDisabled {
     get => false;
-    set {}
+    set { }
   }
 
   [Browsable(false)]
@@ -242,9 +235,20 @@ public partial class MainWindow : NSWindow, IWindow {
 
   #region IView Methods
   public void Initialize() {
-    // No-op: macOS's Cocoa/AppKit lifecycle (AwakeFromNib + the first CAOpenGLLayer draw
-    // callback) already sequences renderer creation correctly, unlike Windows where this method
-    // blocks the caller until the designer-created GL surface finishes initializing.
+    if (initialized) return;
+    initialized = true;
+
+    NSApplication.SharedApplication.ActivateIgnoringOtherApps(true);
+    MakeKeyAndOrderFront(this);
+
+    // This Program manages the game window's lifetime, same as GameWindow does on Windows.
+    Game.IoC.RegisterInstance<IWindow>(this, IfAlreadyRegistered.Replace, Setup.With(preventDisposal: true));
+
+    NSNotificationCenter.DefaultCenter.AddObserver(WillCloseNotification, _ => isClosing = true, this);
+    NSNotificationCenter.DefaultCenter.AddObserver(DidBecomeKeyNotification, _ => FocusChanged?.Invoke(true), this);
+    NSNotificationCenter.DefaultCenter.AddObserver(DidResignKeyNotification, _ => FocusChanged?.Invoke(false), this);
+
+    loadHandlers?.Invoke();
   }
 
   public void Reset() {

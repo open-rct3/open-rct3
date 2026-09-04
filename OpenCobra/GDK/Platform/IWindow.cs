@@ -21,6 +21,10 @@ public record struct Dpi(float X, float Y);
 /// - Expose window/view state via <see cref="IView"/> members,
 /// - Expose input devices/events via <see cref="IInputPlatform"/> members, and
 /// - Create and manage the application's <c>Game</c> instance when <see cref="Start"/> is called.
+/// <para>
+/// Implementations must register themselves into <see cref="OpenCobra.GDK.Game.IGame.IoC"/> as <see cref="IWindow"/>
+/// upon initialization so dependent platform services &amp; GUI controllers can resolve the host window.
+/// </para>
 /// </remarks>
 public interface IWindow : IView, IInputPlatform {
   [Category("Behavior")]
