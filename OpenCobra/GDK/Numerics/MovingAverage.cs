@@ -4,7 +4,7 @@
 
 using System.Numerics;
 
-namespace OpenRCT3.Debug;
+namespace OpenCobra.GDK.Numerics;
 
 /// <summary>Calculates a moving average over a sliding duration window.</summary>
 public class MovingAverage<T> : Accumulator<T> where T : IFloatingPoint<T> {

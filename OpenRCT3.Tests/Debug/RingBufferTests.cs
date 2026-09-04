@@ -3,7 +3,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using NUnit.Framework;
-using OpenRCT3.Debug;
+using OpenCobra.GDK.Numerics;
 
 namespace OpenRCT3.Tests.Debug;
 

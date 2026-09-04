@@ -4,24 +4,26 @@
 
 using System.Collections;
 
-namespace OpenRCT3.Debug;
+namespace OpenCobra.GDK.Numerics;
 
 /// <summary>
 /// A fixed-capacity circular buffer storing the most recent <typeparamref name="T"/> samples.
 /// Index 0 always refers to the oldest recorded sample, and <c>Count - 1</c> refers to the newest.
 /// </summary>
-public class RingBuffer<T> : IReadOnlyList<T> {
-  private readonly T[] buffer;
+public class RingBuffer<T>(int capacity) : IReadOnlyList<T> {
+  private readonly T[] buffer = capacity > 0
+    ? new T[capacity]
+    : throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity must be greater than zero.");
   private int head;
   private int tail;
 
-  public RingBuffer(int capacity) {
-    if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity must be greater than zero.");
-    buffer = new T[capacity];
-  }
-
+  /// <summary>Gets the maximum number of items the buffer can hold.</summary>
   public int Capacity => buffer.Length;
+
+  /// <summary>Gets the current number of items stored in the buffer.</summary>
   public int Count { get; private set; }
+
+  /// <summary>Gets whether the buffer has reached maximum capacity.</summary>
   public bool IsFull => Count == Capacity;
 
   public void Push(T item) {

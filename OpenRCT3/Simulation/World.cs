@@ -10,7 +10,6 @@ using OpenCobra.GDK.Meshes;
 using OpenCobra.GDK.Streaming;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Scenario;
-using Silk.NET.Input;
 using System.Numerics;
 using Drawing = System.Drawing;
 using GDK = OpenCobra.GDK;
@@ -135,15 +134,10 @@ public class World : GDK.Game.World, IParkLoader {
       scene.Windows.Add(parkChooser);
     }
 
-    if (Debug == null) {
-      Debug = new UI.Debug(
-        game,
-        Terrain.GroundModel.Mesh,
-        Game.IoC.Resolve<GDK.Platform.IWindow>(),
-        Game.IoC.Resolve<IInputContext>());
-      Game.IoC.RegisterInstance(Debug, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
-      scene.Windows.Add(Debug);
-    }
+    if (Debug != null) return;
+    Debug = new UI.Debug(game);
+    Game.IoC.RegisterInstance(Debug, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+    scene.Windows.Add(Debug);
   }
 
   protected virtual void Dispose(bool disposing) {

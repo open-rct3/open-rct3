@@ -11,6 +11,7 @@ using NLog;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Input;
+using OpenCobra.GDK.Numerics;
 using OpenCobra.GDK.Platform;
 using OpenRCT3.Input;
 using OpenRCT3.OpenGL;
@@ -137,8 +138,7 @@ public class Game : IGame {
     Started?.Invoke();
     stopwatch.Start();
     var previousTime = stopwatch.Elapsed;
-    // Measures wall time that has elapsed since the last frame
-    var lag = TimeSpan.Zero;
+    var accumulator = new FixedTimestepAccumulator(TargetUpdateRate, MaxSimulationTicks);
 
     // Implements the fixed-update-time-step, variable-rendering pattern to decouple
     // simulation stability (fixed step for physics/AI determinism) from visual
@@ -149,14 +149,17 @@ public class Game : IGame {
       // Wait for the resume signal if the game is paused
       if (isPaused) {
         resumeSignal.WaitOne();
+        previousTime = stopwatch.Elapsed;
+        accumulator.Reset();
         logger.Trace("Game resumed");
       }
 
       var currentTime = stopwatch.Elapsed;
       var elapsed = FrameTime = currentTime - previousTime;
       previousTime = currentTime;
-      // FIXME: Ought the game NOT accumulate lag if the game was paused?
-      lag += elapsed;
+
+      accumulator.StepRate = TargetUpdateRate;
+      accumulator.Accumulate(elapsed);
 
       // Process any pending window events, e.g. input events
 #if WINDOWS
@@ -168,15 +171,11 @@ public class Game : IGame {
 #endif
 
       // Simulation ticks are fixed steps to aid physics/AI determinism
-      // For example, a 60Hz target frame-rate would process one tick 60 times per second
-      LogLagWarning(lag);
-      for (var tickCount = 0; tickCount < MaxSimulationTicks && lag >= TargetFrameTime; tickCount++) {
-        Tick(
-          delta: TargetFrameTime,
-          // Normalize the lag to a percentage representing how far into the
-          // simulation step we are (0.0 = just started, 1.0 = just finished)
-          interpolation: lag.TotalMilliseconds / TargetFrameTime.TotalMilliseconds);
-        lag -= TargetFrameTime;
+      LogLagWarning(accumulator.Lag);
+      var tickCount = 0;
+      while (accumulator.TryConsumeTick() && tickCount < MaxSimulationTicks) {
+        Tick(accumulator.StepRate);
+        tickCount++;
       }
 
       // Poll held-key camera movement (WASD/arrows) once per rendered frame - unlike the
@@ -195,11 +194,11 @@ public class Game : IGame {
 
       renderer.Render(Scene);
 
-      // Reduce CPU usage by sleeping when ahead of schedule
-      var remaining = TargetFrameTime - lag;
-      if (remaining > TimeSpan.Zero) {
-        var sleepMs = remaining.TotalMilliseconds / 2.0;
-        if (sleepMs > 2) Thread.Sleep((int)sleepMs / 2);
+      // Reduce CPU usage by sleeping when ahead of schedule without fractional quantization
+      var frameElapsed = stopwatch.Elapsed - currentTime;
+      var remaining = TargetFrameTime - frameElapsed;
+      if (remaining > TimeSpan.FromMilliseconds(2)) {
+        Thread.Sleep(Convert.ToInt32(remaining.TotalMilliseconds - 1));
       }
     }
 
@@ -244,8 +243,7 @@ public class Game : IGame {
   /// registered systems in phase order (Early → Update → Render → Late).
   /// </remarks>
   /// <param name="delta">The time between ticks.</param>
-  /// <param name="interpolation">The interpolation fraction.</param>
-  private void Tick(TimeSpan delta, double interpolation) {
+  private void Tick(TimeSpan delta) {
     World.Update(delta);
   }
 

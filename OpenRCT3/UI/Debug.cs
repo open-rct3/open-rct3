@@ -3,6 +3,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System.Numerics;
+using DryIoc;
 using Hexa.NET.ImGui;
 using OpenCobra.GDK;
 using OpenCobra.GDK.GUI;
@@ -19,14 +20,21 @@ namespace OpenRCT3.UI;
 /// setting is responsible for a given visual bug.
 /// </summary>
 /// <remarks>
-/// Constructed via <see cref="Game.IoC"/> (see <c>Game.cs</c>'s <c>Made.Of</c> registration) rather than
-/// <c>new</c> - <paramref name="window"/> and <paramref name="inputContext"/> are resolved from the
-/// container's existing registrations (see <c>GameWindow.cs</c>/<c>GLSurface.cs</c>), so this window
-/// never has to reach back into the container itself at render time.
+/// <paramref name="window"/> and <paramref name="inputContext"/> default to resolving from
+/// <see cref="Game.IoC"/>'s existing registrations (see <c>GameWindow.cs</c> and <c>GLSurface.cs</c>),
+/// so this window never has to reach back into the container itself at render time.
 /// </remarks>
 public class Debug(Game game, PlatformWindow window, IInputContext inputContext) : IWindow {
+  public Debug(Game game) : this(
+    game,
+    Game.IoC.Resolve<PlatformWindow>(),
+    Game.IoC.Resolve<IInputContext>()
+  ) {}
+
   private static readonly uint PlotColor = Color.FromRgb(0x4CAF50).ToUint();
   private static readonly uint PlotBgColor = Color.FromRgba(76, 175, 80, Convert.ToByte(255 * 0.35f)).ToUint();
+
+  public bool Open { get; private set; } = true;
 
   private readonly FrameRateAccumulator frameRate = new();
   private readonly RollingPlot framePlot = new(
@@ -36,12 +44,31 @@ public class Debug(Game game, PlatformWindow window, IInputContext inputContext)
     targetScale: 33.33f,
     thickness: 1.5f
   );
-
   private Mesh? TerrainMesh => game.World.Terrain?.GroundModel.Mesh;
 
-  public Debug(Game game, Mesh terrainMesh, PlatformWindow window, IInputContext inputContext)
-    : this(game, window, inputContext) {
+  /// <summary>Gets the cursor terrain position or UI state description.</summary>
+  private string CursorPosition {
+    get {
+      // Skip picking while the mouse is over an ImGui window (including this one) - IMouse.Position still
+      // reports a screen coordinate in that case, and TryPickTile would happily report a bogus pick for
+      // whatever's behind the panel.
+      if (ImGui.GetIO().WantCaptureMouse) return "(UI)";
+
+      var mouse = inputContext.Mice[0];
+      var camera = game.Scene.Camera;
+      var terrain = game.World.Terrain;
+
+      if (terrain == null) return "none";
+
+      var ray = camera.ToRay(mouse.Position, window.FramebufferSize);
+      var pick = TerrainPicker.TryPickTile(ray, terrain, StepBudget(camera));
+
+      return pick is { } hit
+        ? $"Terrain at ({hit.Point.X:0.00}, {hit.Point.Y:0.00}, {hit.Point.Z:0.00})"
+        : "none";
+    }
   }
+
   /// <summary>
   /// The step budget for the cursor-position ray march - derived per-frame from <see cref="Camera.MaxDistance"/>,
   /// falling back to the live eye-to-target distance (mirroring the fallback <see cref="Camera"/> itself
@@ -50,7 +77,6 @@ public class Debug(Game game, PlatformWindow window, IInputContext inputContext)
   private static int StepBudget(Camera camera)
     => (int)MathF.Ceiling((camera.MaxDistance ?? Vector3.Distance(camera.Eye, camera.Target)) / Park.TileSize);
 
-  public bool Open { get; private set; } = true;
 
   public void Render() {
     if (!Open) return;
@@ -71,51 +97,20 @@ public class Debug(Game game, PlatformWindow window, IInputContext inputContext)
     frameRate.RecordFrame(delta);
     framePlot.Push((float)delta.TotalMilliseconds);
 
+    // Frame timing statistics
     ImGui.Text($"Frame: {frameRate.CurrentFps:0} fps ({frameRate.CurrentFrameTimeMs:0.00}ms)");
-
     var availWidth = Math.Max(Convert.ToInt32(ImGui.GetContentRegionAvail().X), 150);
     framePlot.Render(BoxConstraints.TightFor(availWidth));
+    if (framePlot.Summary is { } stats)
+      ImGui.TextDisabled($"{stats.Min:0.0}/{stats.Max:0.0}ms  avg: {stats.Average:0.0}ms  dev: {stats.StandardDeviation:0.0}ms");
 
+    // Terrain statistics
     var mesh = TerrainMesh;
     var faces = mesh != null ? mesh.Indices.Count / 3 : 0;
     var vertices = mesh != null ? mesh.Vertices.Count : 0;
     ImGui.Text($"Terrain: {faces} faces, {vertices} vertices");
-
-    RenderCursorPosition();
+    ImGui.Text($"Cursor: {CursorPosition}");
 
     ImGui.End();
-  }
-
-  /// <summary>
-  /// Renders a live "Cursor: {kind} at (x, y, z)" line, re-running <see cref="Camera.Unproject"/> and
-  /// <see cref="TerrainPicker.TryPickTile"/> once per frame against the current mouse position - purely
-  /// for display. This is a separate, independent pick from whatever tool input wiring later dispatches
-  /// clicks (see the "raise-lower-smoothing-tools.md" plan); a debug overlay shouldn't add a hidden
-  /// dependency between the two.
-  /// </summary>
-  private void RenderCursorPosition() {
-    // Skip picking while the mouse is over an ImGui window (including this one) - IMouse.Position still
-    // reports a screen coordinate in that case, and TryPickTile would happily report a bogus pick for
-    // whatever's behind the panel.
-    if (ImGui.GetIO().WantCaptureMouse) {
-      ImGui.Text("Cursor: (UI)");
-      return;
-    }
-
-    var mouse = inputContext.Mice[0];
-    var camera = game.Scene.Camera;
-    var terrain = game.World.Terrain;
-
-    if (terrain == null) {
-      ImGui.Text("Cursor: none");
-      return;
-    }
-
-    var ray = camera.ToRay(mouse.Position, window.FramebufferSize);
-    var pick = TerrainPicker.TryPickTile(ray, terrain, StepBudget(camera));
-
-    ImGui.Text(pick is { } hit
-      ? $"Cursor: Terrain at ({hit.Point.X:0.00}, {hit.Point.Y:0.00}, {hit.Point.Z:0.00})"
-      : "Cursor: none");
   }
 }

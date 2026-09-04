@@ -2,11 +2,12 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using OpenRCT3.Debug;
+using OpenCobra.GDK.Numerics;
 
 namespace OpenRCT3.Tests.Debug;
 
 [TestFixture]
-public class TelemetryMathTests {
+public class TelemetryTests {
   [Test]
   public void MovingAverage_DefaultConstructor_UsesDefaultWindowAndLinearAverage() {
     var avg = new MovingAverage<double>();

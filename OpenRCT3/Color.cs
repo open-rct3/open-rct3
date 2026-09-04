@@ -87,4 +87,77 @@ public static class Color {
       Convert.ToByte(Math.Clamp(vec.X * 255f, 0f, 255f)),
       Convert.ToByte(Math.Clamp(vec.Y * 255f, 0f, 255f)),
       Convert.ToByte(Math.Clamp(vec.Z * 255f, 0f, 255f)));
+
+  /// <summary>Calculates the WCAG 2.1 relative luminance of an ImGui packed ABGR color.</summary>
+  public static double CalculateLuminance(uint color) {
+    static double ChannelLuminance(byte c) {
+      var s = c / 255.0;
+      return s <= 0.04045 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
+    }
+    var r = ChannelLuminance(Convert.ToByte(color & 0xFF));
+    var g = ChannelLuminance(Convert.ToByte((color >> 8) & 0xFF));
+    var b = ChannelLuminance(Convert.ToByte((color >> 16) & 0xFF));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  /// <summary>Calculates the WCAG 2.1 relative luminance of a <see cref="Drawing.Color"/>.</summary>
+  public static double CalculateLuminance(Drawing.Color color) => CalculateLuminance(color.ToUint());
+
+  /// <summary>Calculates the WCAG 2.1 contrast ratio between two ImGui packed ABGR colors.</summary>
+  public static double CalculateContrastRatio(uint color1, uint color2) {
+    var l1 = CalculateLuminance(color1);
+    var l2 = CalculateLuminance(color2);
+    var lighter = Math.Max(l1, l2);
+    var darker = Math.Min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  /// <summary>Calculates the WCAG 2.1 contrast ratio between two <see cref="Drawing.Color"/> instances.</summary>
+  public static double CalculateContrastRatio(Drawing.Color color1, Drawing.Color color2) =>
+    CalculateContrastRatio(color1.ToUint(), color2.ToUint());
+
+  /// <summary>Composites a foreground color over a background color taking alpha transparency into account.</summary>
+  public static uint BlendOver(uint foreground, uint background) {
+    var a = Convert.ToByte((foreground >> 24) & 0xFF) / 255f;
+    var invA = 1f - a;
+    var r = Convert.ToByte(Math.Clamp((foreground & 0xFF) * a + (background & 0xFF) * invA, 0f, 255f));
+    var g = Convert.ToByte(Math.Clamp(((foreground >> 8) & 0xFF) * a + (((background >> 8) & 0xFF) * invA), 0f, 255f));
+    var b = Convert.ToByte(Math.Clamp(((foreground >> 16) & 0xFF) * a + (((background >> 16) & 0xFF) * invA), 0f, 255f));
+    return (uint)(r | (g << 8) | (b << 16) | (0xFF << 24));
+  }
+
+  /// <summary>Composites a foreground <see cref="Drawing.Color"/> over a background <see cref="Drawing.Color"/>.</summary>
+  public static Drawing.Color BlendOver(Drawing.Color foreground, Drawing.Color background) {
+    var blended = BlendOver(foreground.ToUint(), background.ToUint());
+    return FromRgba(unchecked((int)blended));
+  }
+
+  /// <summary>
+  /// Resolves an accessible label color satisfying the WCAG 2.1 Level AA minimum contrast ratio (4.5:1).
+  /// </summary>
+  public static uint ResolveLabelColor(uint lineColor, uint backgroundColor = 0xFF1E1E1E, uint? fillColor = null) {
+    var opaqueColor = (lineColor & 0x00FFFFFF) | 0xFF000000;
+    var bgContrast = CalculateContrastRatio(opaqueColor, backgroundColor);
+    var fillContrast = fillColor.HasValue && fillColor.Value != 0
+      ? CalculateContrastRatio(opaqueColor, BlendOver(fillColor.Value, backgroundColor))
+      : 21.0;
+
+    if (bgContrast >= 4.5 && fillContrast >= 4.5)
+      return opaqueColor;
+
+    var whiteContrast = Math.Min(
+      CalculateContrastRatio(0xFFFFFFFF, backgroundColor),
+      fillColor.HasValue && fillColor.Value != 0
+        ? CalculateContrastRatio(0xFFFFFFFF, BlendOver(fillColor.Value, backgroundColor))
+        : 21.0
+    );
+    var blackContrast = Math.Min(
+      CalculateContrastRatio(0xFF000000, backgroundColor),
+      fillColor.HasValue && fillColor.Value != 0
+        ? CalculateContrastRatio(0xFF000000, BlendOver(fillColor.Value, backgroundColor))
+        : 21.0
+    );
+
+    return whiteContrast >= blackContrast ? 0xFFFFFFFF : 0xFF000000;
+  }
 }

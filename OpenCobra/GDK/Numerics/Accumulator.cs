@@ -4,9 +4,9 @@
 
 using System.Numerics;
 
-namespace OpenRCT3.Debug;
+namespace OpenCobra.GDK.Numerics;
 
-/// <summary>Accumulates streaming numeric telemetry samples into an aggregated value.</summary>
+/// <summary>Accumulates streaming numeric samples into an aggregated value.</summary>
 public abstract class Accumulator<T> where T : INumber<T> {
   /// <summary>Gets the current accumulated value.</summary>
   public T Value { get; protected set; } = T.Zero;

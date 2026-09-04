@@ -2,6 +2,8 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using OpenCobra.GDK.Numerics;
+
 namespace OpenRCT3.Debug;
 
 /// <summary>

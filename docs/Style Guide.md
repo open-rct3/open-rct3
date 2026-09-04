@@ -8,7 +8,9 @@ The guide is intentionally short. The goal is to provide consistency, not exhaus
 
 - [File Headers](#file-headers)
 - [Namespaces](#namespaces)
+- [Types & Constructors](#types--constructors)
 - [XML Doc Comments](#xml-doc-comments)
+- [Unit Tests](#unit-tests)
 - [Commit Messages](#commit-messages)
 
 ## File Headers
@@ -166,6 +168,40 @@ as a sibling of and after `<summary>` and `<remarks>`.
 Use `href` (not `cref`) for external URLs, `cref` references code and doesn't create clickable links.
 
 See the [Microsoft XML docs guidance](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/recommended-tags#seealso).
+
+## Unit Tests
+
+Structure NUnit tests with descriptive metadata attributes and concise, verb-led method names:
+
+- Annotate test methods with `[Test]` and `[Description("...")]`. Keep the method name concise and verb-led (e.g. `ConstrainToBounds`, `EvictOldestSampleAtCapacity`), detailing the scenario in the `[Description]` attribute.
+- Group multiple assertions with `using (Assert.EnterMultipleScope()) { ... }` so test reports surface all failing assertions at once.
+- For exception testing, use `Assert.Throws<T>(new Action(() => ...))` instead of the obsolete `TestDelegate`.
+
+```cs
+[TestFixture]
+public class RollingPlotTests {
+  [Test]
+  [Description("Clamps arbitrary dimensions to box constraints bounds.")]
+  public void ConstrainToBounds() {
+    var constraints = new BoxConstraints(MinWidth: 10, MaxWidth: 100, MinHeight: 20, MaxHeight: 50);
+    var small = constraints.Constrain(new Size<int>(5, 10));
+
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(small.Width, Is.EqualTo(10));
+      Assert.That(small.Height, Is.EqualTo(20));
+    }
+  }
+
+  [Test]
+  [Description("Throws ArgumentOutOfRangeException when plot capacity is less than or equal to one.")]
+  public void ValidateMinimumCapacity() {
+    var invalidPlot = new Graph.Plot(samples, capacity: 1, size: new Size<int>(100, 50), lineColor: 0xFFFFFFFF);
+    Assert.Throws<ArgumentOutOfRangeException>(new Action(() => Graph.Polyline(invalidPlot)));
+  }
+}
+```
+
+See [`OpenCobra/Tests/GUI/RollingPlotTests.cs`](../OpenCobra/Tests/GUI/RollingPlotTests.cs) as the reference gold standard implementation.
 
 ## Commit Messages
 

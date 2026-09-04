@@ -43,6 +43,7 @@
 - [ ] `ImDraw` (`OpenCobra/GDK/ImDraw.cs`) has no real consumers yet — default line width, circle segment
       count, degenerate-line-direction collapse threshold, and `DynamicDraw` vs `StreamDraw` buffer usage
       are all unturned, deferred until a real caller (brush cursor, route/waypoint visualization) exists
+- [ ] Enhance `OpenRCT3.Debug` with fine-grained frame profiling (simulation tick, scene update, terrain/mesh draw calls, ImGui rendering, and GPU `SwapBuffers`/VSync wait time) to pinpoint why simple scenes run at ~38 fps instead of 60+ fps
 
 ### Camera & Input
 
@@ -124,8 +125,7 @@ See the [Roadmap](https://github.com/open-rct3/open-rct3/wiki/Roadmap#phase-2-ga
 ## 📋 Documentation & Tooling
 
 - [x] Bundle the app for all OSes (`Makefile:6`)
-- [ ] Connect to globally installed roslyn-language-server (`_zed/settings.json:24`)
-
+- [ ] Connect to globally installed roslyn-language-server (`_zed/settings.json:24`)\n
 ## Website & Frontend
 
 - [ ] Use Lume SASS plugin (pending v2.2.4) (`clients/website/config.ts:11`)
@@ -158,3 +158,4 @@ OpenCobra engine, and stream the game world's scene to the web client.
 - [ ] Handle auth tokens from requested protocol (`src/server/routes.d:94`)
 - [ ] Verify bearer auth token (`src/server/routes.d:68`)
 - [ ] Implement content type negotiation for HTML responses (`src/server/package.d:30`)
+- [ ] Automate player testing with Gherkin feature files and automated testing, i.e. use NUnit/Gherkin to drive a live instance of the game

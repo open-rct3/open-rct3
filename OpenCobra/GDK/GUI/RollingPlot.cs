@@ -50,13 +50,37 @@ public class RollingPlot(
     currentScale = TargetScale > 0f ? TargetScale : 1f;
   }
 
+  /// <summary>Summary statistics computed from recorded samples.</summary>
+  public readonly record struct Statistics(float Min, float Max, double Average, double StandardDeviation);
+
+  /// <summary>Compute summary statistics from the current samples, or null if empty.</summary>
+  public Statistics? Summary {
+    get {
+      if (samples.Count == 0) return null;
+
+      var min = float.MaxValue;
+      var max = float.MinValue;
+      var sum = 0.0;
+      foreach (var s in samples) {
+        if (s < min) min = s;
+        if (s > max) max = s;
+        sum += s;
+      }
+      var avg = sum / samples.Count;
+      var varianceSum = 0.0;
+      foreach (var s in samples) {
+        var diff = s - avg;
+        varianceSum += diff * diff;
+      }
+      var stddev = Math.Sqrt(varianceSum / samples.Count);
+      return new Statistics(min, max, avg, stddev);
+    }
+  }
+
   /// <summary>Updates the smoothed vertical scale target based on currently retained samples.</summary>
   /// <returns>The updated smoothed scale value.</returns>
   public float UpdateScale() {
-    var targetMax = TargetScale;
-    foreach (var sample in samples) {
-      if (sample > targetMax) targetMax = sample;
-    }
+    var targetMax = Summary is { } stats ? MathF.Ceiling(stats.Max) : TargetScale;
     if (targetMax <= 0f) targetMax = 1f;
 
     // Smooth vertical scale transition with exponential decay for visual stability
