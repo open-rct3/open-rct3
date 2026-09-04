@@ -13,66 +13,6 @@ public static class Graph {
   /// <summary>Formats an axis limit label rounded to the nearest whole integer.</summary>
   public static string FormatAxisLabel(float value) => $"{Convert.ToInt32(MathF.Round(value))}";
 
-  /// <summary>Calculates the WCAG 2.1 relative luminance of an ImGui packed ABGR color.</summary>
-  public static double CalculateLuminance(uint color) {
-    static double ChannelLuminance(byte c) {
-      var s = c / 255.0;
-      return s <= 0.04045 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
-    }
-    var r = ChannelLuminance(Convert.ToByte(color & 0xFF));
-    var g = ChannelLuminance(Convert.ToByte((color >> 8) & 0xFF));
-    var b = ChannelLuminance(Convert.ToByte((color >> 16) & 0xFF));
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  }
-
-  /// <summary>Calculates the WCAG 2.1 contrast ratio between two colors.</summary>
-  public static double CalculateContrastRatio(uint color1, uint color2) {
-    var l1 = CalculateLuminance(color1);
-    var l2 = CalculateLuminance(color2);
-    var lighter = Math.Max(l1, l2);
-    var darker = Math.Min(l1, l2);
-    return (lighter + 0.05) / (darker + 0.05);
-  }
-
-  /// <summary>Composites a foreground color over a background color taking alpha into account.</summary>
-  public static uint BlendOver(uint foreground, uint background) {
-    var a = Convert.ToByte((foreground >> 24) & 0xFF) / 255f;
-    var invA = 1f - a;
-    var r = Convert.ToByte(Math.Clamp((foreground & 0xFF) * a + (background & 0xFF) * invA, 0f, 255f));
-    var g = Convert.ToByte(Math.Clamp(((foreground >> 8) & 0xFF) * a + (((background >> 8) & 0xFF) * invA), 0f, 255f));
-    var b = Convert.ToByte(Math.Clamp(((foreground >> 16) & 0xFF) * a + (((background >> 16) & 0xFF) * invA), 0f, 255f));
-    return (uint)(r | (g << 8) | (b << 16) | (0xFF << 24));
-  }
-
-  /// <summary>
-  /// Resolves an accessible label color satisfying the WCAG 2.1 Level AA minimum contrast ratio (4.5:1).
-  /// </summary>
-  public static uint ResolveLabelColor(uint lineColor, uint backgroundColor = 0xFF1E1E1E, uint? fillColor = null) {
-    var opaqueColor = (lineColor & 0x00FFFFFF) | 0xFF000000;
-    var bgContrast = CalculateContrastRatio(opaqueColor, backgroundColor);
-    var fillContrast = fillColor.HasValue && fillColor.Value != 0
-      ? CalculateContrastRatio(opaqueColor, BlendOver(fillColor.Value, backgroundColor))
-      : 21.0;
-
-    if (bgContrast >= 4.5 && fillContrast >= 4.5)
-      return opaqueColor;
-
-    var whiteContrast = Math.Min(
-      CalculateContrastRatio(0xFFFFFFFF, backgroundColor),
-      fillColor.HasValue && fillColor.Value != 0
-        ? CalculateContrastRatio(0xFFFFFFFF, BlendOver(fillColor.Value, backgroundColor))
-        : 21.0
-    );
-    var blackContrast = Math.Min(
-      CalculateContrastRatio(0xFF000000, backgroundColor),
-      fillColor.HasValue && fillColor.Value != 0
-        ? CalculateContrastRatio(0xFF000000, BlendOver(fillColor.Value, backgroundColor))
-        : 21.0
-    );
-
-    return whiteContrast >= blackContrast ? 0xFFFFFFFF : 0xFF000000;
-  }
-
   /// <summary>Parameters configuring the display and layout of a <see cref="Graph.Polyline"/> render.</summary>
   public readonly record struct Plot(
     IReadOnlyList<float> Values,
@@ -150,7 +90,7 @@ public static class Graph {
 
     var drawList = ImGui.GetWindowDrawList();
     var axisColor = (plot.LineColor & 0x00FFFFFF) | 0x44000000;
-    var labelColor = ResolveLabelColor(plot.LineColor, 0xFF1E1E1E, plot.FillColor != 0 ? plot.FillColor : null);
+    var labelColor = Color.ResolveLabelColor(plot.LineColor, 0xFF1E1E1E, plot.FillColor != 0 ? plot.FillColor : null);
 
     // Y-axis line and min/max labels
     if (plot.ShowYAxis) {

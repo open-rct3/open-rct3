@@ -43,6 +43,7 @@ These cover how to act on the codebase. They are not as severe as the Hard Rules
 #### Using Tools
 
 - **Obey Explicit Tool Directives Immediately.** When the user tells you to use a specific tool (e.g., "use the internet", "use bash", "use the file-writing tools"), obey on the next tool invocation. Do NOT substitute, retreat to local guesswork, or repeat failing patterns.
+- **Always Prefer Built-in File Tools.** Always use built-in file read & write tools (`view_file`, `replace_file_content`) rather than shell commands (e.g., `Set-Content`, `Get-Content`, `cat`, `echo`, heredocs, or PowerShell scripts) to read, create, or modify files.
 - **No Complicated Tool Calls.** Keep tool operations simple and direct. Do not run multi-step pipeline shell commands, complex PowerShell invocations, or commands that trigger incessant user prompts when simple standard tools suffice (`make test`, standard file tools).
 - **New tools ALWAYS live in [`.agents/tools/`](.agents/tools/).** Any throwaway or reusable console app, scanner, or script goes in its own subdirectory there (e.g. `.agents/tools/MyScanner/`), never at the repo root, in a temp directory, or beside source. Scaffold it with the file-writing tools (a `.csproj` referencing `OpenCobra/OVL/OVL.csproj` as needed), not shell heredocs. Before adding one, check whether an existing tool in that directory can be extended instead.
 

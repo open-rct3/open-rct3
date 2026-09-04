@@ -233,7 +233,7 @@ public class RollingPlotTests {
   [Test]
   [Description("Calculates the standard maximum 21:1 contrast ratio between black and white.")]
   public void ContrastRatioBlackAndWhite() {
-    var ratio = Graph.CalculateContrastRatio(0xFFFFFFFFu, 0xFF000000u);
+    var ratio = Color.CalculateContrastRatio(0xFFFFFFFFu, 0xFF000000u);
     Assert.That(ratio, Is.EqualTo(21.0).Within(0.01));
   }
 
@@ -244,11 +244,11 @@ public class RollingPlotTests {
     var fillColor = 0x5950AF4Cu; // 35% alpha #4CAF50 fill
     var windowBg = 0xFF1E1E1Eu;  // Standard dark ImGui window background
 
-    var resolvedColor = Graph.ResolveLabelColor(lineColor, windowBg, fillColor);
-    var effectiveFillBg = Graph.BlendOver(fillColor, windowBg);
+    var resolvedColor = Color.ResolveLabelColor(lineColor, windowBg, fillColor);
+    var effectiveFillBg = Color.BlendOver(fillColor, windowBg);
 
-    var windowContrast = Graph.CalculateContrastRatio(resolvedColor, windowBg);
-    var fillContrast = Graph.CalculateContrastRatio(resolvedColor, effectiveFillBg);
+    var windowContrast = Color.CalculateContrastRatio(resolvedColor, windowBg);
+    var fillContrast = Color.CalculateContrastRatio(resolvedColor, effectiveFillBg);
 
     using (Assert.EnterMultipleScope()) {
       Assert.That(windowContrast, Is.GreaterThanOrEqualTo(4.5), "Label contrast against window background must satisfy WCAG AA.");
