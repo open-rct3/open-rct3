@@ -4,15 +4,18 @@
 
 using System.Globalization;
 using System.Numerics;
-using OpenCobra.GDK.Numerics;
 using Drawing = System.Drawing;
 
 namespace OpenRCT3;
 
 /// <summary>
-/// Color conversion methods and extensions between <see cref="Drawing.Color"/>, normalized vectors,
-/// CSS hex integer codes, and RGBA components.
+/// Color conversion extensions between <see cref="Drawing.Color"/>, normalized
+/// vectors, CSS hex integer codes, and RGBA components.
 /// </summary>
+/// <remarks>
+/// Domain-agnostic color operations live in
+/// <see cref="OpenCobra.GDK.Numerics.Color"/>.
+/// </remarks>
 public static class Color {
   public static Drawing.Color FromRgb(int rgb) =>
     Drawing.Color.FromArgb(255, (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
@@ -69,14 +72,19 @@ public static class Color {
   public static int ToRgba(this Drawing.Color color) =>
     (color.R << 24) | (color.G << 16) | (color.B << 8) | color.A;
 
+  /// <summary>
+  /// Converts a <see cref="Drawing.Color"/> to a packed RGBA unsigned 32-bit
+  /// integer value.
+  /// </summary>
   public static uint ToRgbaUint(this Drawing.Color color) =>
-    (uint)((color.R << 24) | (color.G << 16) | (color.B << 8) | color.A);
+    ((uint)color.R << 24) | ((uint)color.G << 16) | ((uint)color.B << 8) | color.A;
 
   /// <summary>
-  /// Converts a <see cref="Drawing.Color"/> into an unsigned 32-bit integer packed RGBA value (e.g. for ImGui).
+  /// Converts a <see cref="Drawing.Color"/> to a packed ABGR unsigned 32-bit
+  /// integer value.
   /// </summary>
-  public static uint ToUint(this Drawing.Color color) =>
-    (uint)((color.R) | (color.G << 8) | (color.B << 16) | (color.A << 24));
+  public static uint ToAbgrUint(this Drawing.Color color) =>
+    (uint)color.R | ((uint)color.G << 8) | ((uint)color.B << 16) | ((uint)color.A << 24);
 
   public static Drawing.Color ToColor(this Vector4 vec) =>
     Drawing.Color.FromArgb(

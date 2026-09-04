@@ -31,8 +31,8 @@ public class Debug(Game game, PlatformWindow window, IInputContext inputContext)
     Game.IoC.Resolve<IInputContext>()
   ) {}
 
-  private static readonly uint PlotColor = Color.FromRgb(0x4CAF50).ToUint();
-  private static readonly uint PlotBgColor = Color.FromRgba(76, 175, 80, Convert.ToByte(255 * 0.35f)).ToUint();
+  private static readonly uint PlotColor = Color.FromRgb(0x4CAF50).ToAbgrUint();
+  private static readonly uint PlotBgColor = Color.FromRgba(76, 175, 80, Convert.ToByte(255 * 0.35f)).ToAbgrUint();
 
   public bool Open { get; private set; } = true;
 

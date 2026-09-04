@@ -2,16 +2,18 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using System.Globalization;
-using System.Numerics;
 using Drawing = System.Drawing;
 
 namespace OpenCobra.GDK.Numerics;
 
 /// <summary>
 /// Provides WCAG 2.1 luminance, contrast ratio, alpha-blending, accessible label-color resolution,
-/// and Drawing.Color <-> ImGui ABGR uint conversion helpers. All methods are static and domain-agnostic.
+/// and Drawing.Color ⇆ ImGui ABGR uint conversion helpers. All methods are static and domain-agnostic.
 /// </summary>
+/// <remarks>
+/// Color integer representations use ImGui ABGR 32-bit packed ordering:
+/// red in bits 0..7, green in bits 8..15, blue in bits 16..23, and alpha in bits 24..31.
+/// </remarks>
 public static class Color {
   public static Drawing.Color FromRgb(int rgb) =>
     Drawing.Color.FromArgb(255, (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
@@ -39,7 +41,7 @@ public static class Color {
   }
 
   /// <summary>Calculates the WCAG 2.1 relative luminance of a Drawing.Color.</summary>
-  public static double CalculateLuminance(Drawing.Color color) => CalculateLuminance(ToUint(color));
+  public static double CalculateLuminance(Drawing.Color color) => CalculateLuminance(ToAbgrUint(color));
 
   /// <summary>Calculates the WCAG 2.1 contrast ratio between two ImGui packed ABGR colors.</summary>
   public static double CalculateContrastRatio(uint color1, uint color2) {
@@ -52,9 +54,10 @@ public static class Color {
 
   /// <summary>Calculates the WCAG 2.1 contrast ratio between two Drawing.Color instances.</summary>
   public static double CalculateContrastRatio(Drawing.Color color1, Drawing.Color color2) =>
-    CalculateContrastRatio(ToUint(color1), ToUint(color2));
+    CalculateContrastRatio(ToAbgrUint(color1), ToAbgrUint(color2));
 
   /// <summary>Composites a foreground color over a background color using alpha-blending.</summary>
+  /// <remarks>The composited output color is always fully opaque (alpha channel set to 255).</remarks>
   public static uint BlendOver(uint foreground, uint background) {
     var a = Convert.ToByte((foreground >> 24) & 0xFF) / 255f;
     var invA = 1f - a;
@@ -66,7 +69,7 @@ public static class Color {
 
   /// <summary>Composites a foreground Drawing.Color over a background Drawing.Color.</summary>
   public static Drawing.Color BlendOver(Drawing.Color foreground, Drawing.Color background) {
-    var blended = BlendOver(ToUint(foreground), ToUint(background));
+    var blended = BlendOver(ToAbgrUint(foreground), ToAbgrUint(background));
     return Drawing.Color.FromArgb(
       Convert.ToByte((blended >> 24) & 0xFF),
       Convert.ToByte(blended & 0xFF),
@@ -105,6 +108,6 @@ public static class Color {
   }
 
   /// <summary>Packs a Drawing.Color into an ImGui ABGR uint (R|G<<8|B<<16|A<<24).</summary>
-  public static uint ToUint(Drawing.Color color) =>
+  public static uint ToAbgrUint(Drawing.Color color) =>
     (uint)(color.R | (color.G << 8) | (color.B << 16) | (color.A << 24));
 }

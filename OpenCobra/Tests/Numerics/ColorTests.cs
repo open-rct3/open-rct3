@@ -18,10 +18,10 @@ public class ColorTests {
 
   [Test]
   [Description("Converts Drawing.Color to ImGui ABGR uint format.")]
-  public void DrawingColorToUint() {
+  public void DrawingColorToAbgrUint() {
     var color = Drawing.Color.FromArgb(255, 76, 175, 80); // #4CAF50 with full opacity
-    var uint_color = Color.CalculateLuminance(color);
-    Assert.That(uint_color, Is.GreaterThanOrEqualTo(0.0));
+    var packed = Color.ToAbgrUint(color);
+    Assert.That(packed, Is.EqualTo(76u | (175u << 8) | (80u << 16) | (255u << 24)));
   }
 
   [Test]

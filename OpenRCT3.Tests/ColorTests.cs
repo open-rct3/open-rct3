@@ -113,6 +113,6 @@ public class ColorTests {
     Assert.That(color.ToRgb(), Is.EqualTo(0x4CAF50));
     Assert.That(color.ToRgba(), Is.EqualTo(unchecked((int)0x4CAF5080)));
     Assert.That(color.ToRgbaUint(), Is.EqualTo(0x4CAF5080u));
-    Assert.That(color.ToUint(), Is.EqualTo(76u | (175u << 8) | (80u << 16) | (128u << 24)));
+    Assert.That(color.ToAbgrUint(), Is.EqualTo(76u | (175u << 8) | (80u << 16) | (128u << 24)));
   }
 }
