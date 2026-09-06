@@ -121,23 +121,23 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   }
 
   private Version IngestArchive(string ovlPath) {
-    Version archiveVersion = Version.Unknown;
+    var version = Version.Unknown;
     var basePath = Path.GetDirectoryName(ovlPath) ?? "";
     var fileName = Path.GetFileNameWithoutExtension(ovlPath).Split('.')[0];
 
     var commonPath = Path.Combine(basePath, $"{fileName}.common.ovl");
     if (File.Exists(commonPath))
-      archiveVersion = ProcessFile(commonPath);
+      version = ProcessFile(commonPath);
 
     var uniquePath = Path.Combine(basePath, $"{fileName}.unique.ovl");
     if (File.Exists(uniquePath)) {
-      var uniqueVersion = ProcessFile(uniquePath);
-      archiveVersion = archiveVersion == Version.Unknown ? uniqueVersion : archiveVersion;
+      var v = ProcessFile(uniquePath);
+      version = version == Version.Unknown ? v : version;
     }
 
     ExtractResources();
 
-    return archiveVersion;
+    return version;
   }
 
   private Version ProcessFile(string filePath) {
@@ -147,13 +147,13 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     var magic = reader.ReadUInt32();
     Debug.Assert(magic == 0x4b524746, "Invalid OVL magic");
     var reserved = reader.ReadUInt32();
-    var fileVersion = (Version) reader.ReadUInt32();
+    var version = (Version) reader.ReadUInt32();
     var headerRefs = reader.ReadUInt32();
 
-    Debug.WriteLine($"[OVL] Loading {Path.GetFileName(filePath)} (v{fileVersion})");
+    Debug.WriteLine($"[OVL] Loading {Path.GetFileName(filePath)} (v{version})");
 
     var subVersionFlag = 0u;
-    var referenceCount = fileVersion switch {
+    var referenceCount = version switch {
       Version.Five => ReadV5References(reader, out subVersionFlag),
       Version.Four => reader.ReadUInt32(),
       _ => headerRefs
@@ -173,23 +173,23 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
       var fileTypeCount = reader.ReadUInt32();
       if (fileTypeCount > 0 && fileTypeCount < 1024) {
         loaderHeaders = ReadLoaderHeaders(reader, (int)fileTypeCount);
-        if (fileVersion == Version.Five) ReadV5SymbolCounts(reader, loaderHeaders);
+        if (version == Version.Five) ReadV5SymbolCounts(reader, loaderHeaders);
       }
     }
     allLoaderHeaders.Add([.. loaderHeaders]);
-    allVersions.Add((uint)fileVersion);
+    allVersions.Add(version);
 
-    var blocks = ReadFileTypeBlocks(filePath, reader, fileVersion, subVersionFlag);
+    var blocks = ReadFileTypeBlocks(filePath, reader, version, subVersionFlag);
     allFileTypeBlocks.Add(blocks);
 
-    ReadPostBlockUnknowns(reader, fileVersion);
-    ReadBlockData(reader, blocks, fileVersion);
+    ReadPostBlockUnknowns(reader, version);
+    ReadBlockData(reader, blocks, version);
     SkipRelocations(reader);
 
-    if (fileVersion < Version.Four || reader.BaseStream.Position + 4 > reader.BaseStream.Length) return fileVersion;
-    if (fileVersion == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
+    if (version < Version.Four || reader.BaseStream.Position + 4 > reader.BaseStream.Length) return version;
+    if (version == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
 
-    return fileVersion;
+    return version;
   }
 
   private static uint ReadV5References(BinaryReader reader, out uint subVersionFlag) {

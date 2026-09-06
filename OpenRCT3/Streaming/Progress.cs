@@ -23,15 +23,14 @@ public record struct Measurement(Progress Progress, Tasks.Task Task);
 /// Represents the progress of a long-running task.
 /// </summary>
 public record struct Progress(string Task, float Loaded = 0.0f) {
-  private const float ProgressEpsilon = 0.0001f;
   public static readonly Progress COMPLETE = new(string.Empty, 1.0f);
   public static readonly string ELLIPSIS = "\u2026";
   private static readonly string DEFAULT_LOADING_TASK = $"Loading{ELLIPSIS}";
 
   public readonly float LoadedPercent => Loaded * 100.0f;
   public readonly float LoadedPercentRounded => Convert.ToSingle(Math.Round(LoadedPercent, 2));
-  public readonly bool IsLoading => Loaded < 1.0f - ProgressEpsilon;
-  public readonly bool IsLoaded => Loaded >= 1.0f - ProgressEpsilon;
+  public readonly bool IsLoading => Loaded < 1;
+  public readonly bool IsLoaded => Loaded >= 1.0f;
 
   public static Progress operator +(Progress a, Progress b) => new(a.Task, a.Loaded + b.Loaded);
 
