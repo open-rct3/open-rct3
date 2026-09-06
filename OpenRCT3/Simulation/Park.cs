@@ -87,6 +87,16 @@ public class Park {
   /// </summary>
   public List<SceneryPlacement> SceneryPlacements { get; } = [];
 
+  /// <summary>
+  /// Every ride in the park.
+  /// </summary>
+  public List<Rides.Ride> Rides { get; } = [];
+
+  /// <summary>
+  /// Track graphs in the park, either standalone or associated with rides.
+  /// </summary>
+  public List<Rides.TrackSpline.TrackGraph> TrackGraphs { get; } = [];
+
   public Park(int buildableWidth = DefaultMapSize, int buildableHeight = DefaultMapSize) {
     float halfWidth = (buildableWidth * TileSize) / 2.0f;
     float borderOffset = OutOfBoundsBorder * TileSize;

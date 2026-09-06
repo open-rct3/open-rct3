@@ -167,4 +167,40 @@ public class IntegrationTests {
       Assert.That(banks[i], Is.GreaterThanOrEqualTo(banks[i - 1] - 0.01f), "Bank should increase monotonically");
     }
   }
+
+  [Test]
+  [Description("Verify that track spline visualizer submits rail points through ImDraw with correct translation, yaw heading, and roll bank.")]
+  public void RenderingTransformAppliedCorrectlyToBakedSamples() {
+    var piece = new TrackPiece {
+      Position = new Vector3(10f, 20f, 30f),
+      Heading = (float)Math.PI * 0.5f, // 90 deg yaw
+      Bank = 0f,
+    };
+    ProceduralPieces.GenerateStraight(piece.LeftRail, piece.RightRail, length: 10f);
+
+    var imDraw = new OpenCobra.GDK.ImDraw();
+    var transform = OpenRCT3.UI.TrackSplineVisualizer.ComputePieceTransform(piece);
+    imDraw.PushTransform(transform);
+
+    try {
+      var p0 = piece.LeftRail.ControlPoints[0].Position;
+      var p1 = piece.LeftRail.ControlPoints[1].Position;
+      imDraw.Line(p0, p1, Vector4.One);
+    } finally {
+      imDraw.PopTransform();
+    }
+
+    Assert.That(imDraw.vertices, Has.Count.GreaterThan(0));
+
+    var expectedP0 = Vector3.Transform(piece.LeftRail.ControlPoints[0].Position, transform);
+    var expectedP1 = Vector3.Transform(piece.LeftRail.ControlPoints[1].Position, transform);
+
+    var actualNear = imDraw.vertices[0].Position;
+    var actualFar = imDraw.vertices[1].Position;
+
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(Vector3.Distance(actualNear, expectedP0), Is.LessThan(1e-4f));
+      Assert.That(Vector3.Distance(actualFar, expectedP1), Is.LessThan(1e-4f));
+    }
+  }
 }

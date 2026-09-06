@@ -95,4 +95,21 @@ public class TrackChainingTests {
     Assert.That(n1.OutgoingEdges.Count, Is.EqualTo(1));
     Assert.That(n2.OutgoingEdges.Count, Is.EqualTo(1));
   }
+
+  [Test]
+  [Description("Verify that chaining onto a piece with non-zero exit bank propagates that bank angle to the new piece.")]
+  public void DerivedBankPropagatesInChainedSequence() {
+    var graph = TrackChaining.CreateGraph();
+
+    var bankedCurve = new TrackPiece { PieceType = TrackPieceType.BankedCurve };
+    ProceduralPieces.GenerateBankedCurve(bankedCurve.LeftRail, bankedCurve.RightRail, radius: 10f, arcAngle: 1.57f, bank: 0.785f);
+    var n1 = TrackChaining.AddRootPiece(graph, bankedCurve);
+
+    var straight = new TrackPiece { PieceType = TrackPieceType.Straight };
+    ProceduralPieces.GenerateStraight(straight.LeftRail, straight.RightRail, length: 10f);
+    var n2 = TrackChaining.ChainPiece(graph, n1, straight, validateContinuity: false);
+
+    Assert.That(n2, Is.Not.Null);
+    Assert.That(n2!.Piece.Bank, Is.EqualTo(0.785f).Within(1e-4f));
+  }
 }

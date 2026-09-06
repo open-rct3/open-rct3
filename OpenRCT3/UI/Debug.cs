@@ -114,3 +114,122 @@ public class Debug(Game game, PlatformWindow window, IInputContext inputContext)
     ImGui.End();
   }
 }
+
+/// <summary>
+/// Developer window to inspect and render track spline graphs in real time.
+/// Renders left and right rails in native model space within an <see cref="ImDraw.PushTransform(Matrix4x4)"/> scope.
+/// </summary>
+public class TrackSplineVisualizer(Game game) : IWindow {
+  private static readonly Vector4 LeftRailColor = new(0.9f, 0.2f, 0.2f, 1f);
+  private static readonly Vector4 RightRailColor = new(0.2f, 0.8f, 0.2f, 1f);
+  private static readonly Vector4 ControlPointColor = new(1f, 0.9f, 0.2f, 1f);
+
+  public bool Open { get; set; } = true;
+  public bool RenderRails { get; set; } = true;
+  public bool RenderControlPoints { get; set; } = false;
+  public float LineWidth { get; set; } = 2.5f;
+
+  public void Render() {
+    if (!Open) return;
+
+    var open = Open;
+    ImGui.Begin("Track Spline Visualizer", ref open, ImGuiWindowFlags.AlwaysAutoResize);
+    var renderRails = RenderRails;
+    if (ImGui.Checkbox("Render Rails", ref renderRails)) RenderRails = renderRails;
+
+    var renderCp = RenderControlPoints;
+    if (ImGui.Checkbox("Render Control Points", ref renderCp)) RenderControlPoints = renderCp;
+
+    var lineWidth = LineWidth;
+    if (ImGui.SliderFloat("Line Width", ref lineWidth, 1f, 10f)) LineWidth = lineWidth;
+
+    var imDraw = game.Scene.ImDraw;
+    var graphs = GetActiveTrackGraphs();
+    var totalPieces = 0;
+
+    foreach (var graph in graphs) {
+      totalPieces += graph.NodesById.Count;
+      if (RenderRails || RenderControlPoints)
+        RenderTrackGraph(imDraw, graph);
+    }
+
+    ImGui.Text($"Active Graphs: {graphs.Count}");
+    ImGui.Text($"Total Track Pieces: {totalPieces}");
+
+    ImGui.End();
+    if (open != Open) Open = open;
+  }
+
+  /// <summary>
+  /// Render all pieces in a track graph using ImDraw.
+  /// </summary>
+  public void RenderTrackGraph(ImDraw imDraw, Rides.TrackSpline.TrackGraph graph) {
+    foreach (var node in graph.NodesById.Values)
+      RenderPiece(imDraw, node.Piece);
+  }
+
+  /// <summary>
+  /// Renders a single track piece's rails and control points in model space within a pushed transform.
+  /// </summary>
+  public void RenderPiece(ImDraw imDraw, Rides.TrackSpline.TrackPiece piece) {
+    var transform = ComputePieceTransform(piece);
+    imDraw.PushTransform(transform);
+
+    try {
+      if (RenderRails) {
+        DrawRail(imDraw, piece.LeftRail, LeftRailColor);
+        DrawRail(imDraw, piece.RightRail, RightRailColor);
+      }
+
+      if (RenderControlPoints) {
+        DrawControlPoints(imDraw, piece.LeftRail);
+        DrawControlPoints(imDraw, piece.RightRail);
+      }
+    } finally {
+      imDraw.PopTransform();
+    }
+  }
+
+  /// <summary>
+  /// Composes the model-to-world transform matrix for a track piece:
+  /// M = CreateFromAxisAngle(UnitX, Bank) * CreateRotationY(Heading) * CreateTranslation(Position).
+  /// </summary>
+  public static Matrix4x4 ComputePieceTransform(Rides.TrackSpline.TrackPiece piece) =>
+    Matrix4x4.CreateFromAxisAngle(Vector3.UnitX, piece.Bank) *
+    Matrix4x4.CreateRotationY(piece.Heading) *
+    Matrix4x4.CreateTranslation(piece.Position);
+
+  private void DrawRail(ImDraw imDraw, Rides.TrackSpline.RailSpline rail, Vector4 color) {
+    var samples = rail.BakedSamples;
+    if (samples.Count < 2) {
+      var cps = rail.ControlPoints;
+      for (var i = 0; i < cps.Count - 1; i++)
+        imDraw.Line(cps[i].Position, cps[i + 1].Position, color, LineWidth);
+      return;
+    }
+
+    for (var i = 0; i < samples.Count - 1; i++)
+      imDraw.Line(samples[i].Position, samples[i + 1].Position, color, LineWidth);
+  }
+
+  private void DrawControlPoints(ImDraw imDraw, Rides.TrackSpline.RailSpline rail) {
+    foreach (var cp in rail.ControlPoints) {
+      imDraw.Line(cp.Position, cp.Position + (cp.Tangent * 0.5f), ControlPointColor, LineWidth);
+    }
+  }
+
+  private List<Rides.TrackSpline.TrackGraph> GetActiveTrackGraphs() {
+    var list = new List<Rides.TrackSpline.TrackGraph>();
+    var park = game.World.Park;
+    if (park == null) return list;
+
+    list.AddRange(park.TrackGraphs);
+
+    foreach (var ride in park.Rides) {
+      if (ride is Rides.TrackedRide trackedRide)
+        list.Add(trackedRide.Track);
+    }
+
+    return list;
+  }
+}

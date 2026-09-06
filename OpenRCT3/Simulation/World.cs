@@ -48,6 +48,7 @@ public class World : GDK.Game.World, IParkLoader {
   /// park later.
   /// </summary>
   public UI.Debug? DebugWindow { get; private set; }
+  public UI.TrackSplineVisualizer? TrackSplineVisualizer { get; private set; }
   public ParkChooser? ParkChooser => parkChooser;
 
   private Editor? editor;
@@ -138,6 +139,10 @@ public class World : GDK.Game.World, IParkLoader {
     DebugWindow = new UI.Debug(game);
     Game.IoC.RegisterInstance(DebugWindow, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
     scene.Windows.Add(DebugWindow);
+
+    TrackSplineVisualizer = new UI.TrackSplineVisualizer(game);
+    Game.IoC.RegisterInstance(TrackSplineVisualizer, ifAlreadyRegistered: IfAlreadyRegistered.Replace);
+    scene.Windows.Add(TrackSplineVisualizer);
   }
 
   protected virtual void Dispose(bool disposing) {

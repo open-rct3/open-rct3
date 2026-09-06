@@ -63,7 +63,7 @@ public static class TrackChaining {
     // Place new piece at previous piece's exit
     newPiece.Position = prevExitPos;
     newPiece.Heading = (float)Math.Atan2(prevExitTangent.Z, prevExitTangent.X);
-    newPiece.Bank = 0f; // TODO: derive from piece geometry
+    newPiece.Bank = GetPieceExitBank(prevPiece);
 
     // Validate C1 continuity: tangents should match direction
     if (validateContinuity) {
@@ -137,5 +137,25 @@ public static class TrackChaining {
     var leftTangent = piece.LeftRail.ControlPoints[0].Tangent;
     var rightTangent = piece.RightRail.ControlPoints[0].Tangent;
     return Vector3.Normalize((leftTangent + rightTangent) * 0.5f);
+  }
+
+  /// <summary>
+  /// Get the exit bank angle of a piece in local space (end of piece).
+  /// Reads from the last baked sample if available, or averages the bank of the last control points.
+  /// </summary>
+  private static float GetPieceExitBank(TrackPiece piece) {
+    if (piece.LeftRail.BakedSamples.Count > 0 && piece.RightRail.BakedSamples.Count > 0) {
+      var leftBank = piece.LeftRail.BakedSamples[^1].Bank;
+      var rightBank = piece.RightRail.BakedSamples[^1].Bank;
+      return (leftBank + rightBank) * 0.5f;
+    }
+
+    if (piece.LeftRail.ControlPoints.Count == 0 || piece.RightRail.ControlPoints.Count == 0) {
+      return piece.Bank;
+    }
+
+    var leftCpBank = piece.LeftRail.ControlPoints[^1].Bank;
+    var rightCpBank = piece.RightRail.ControlPoints[^1].Bank;
+    return (leftCpBank + rightCpBank) * 0.5f;
   }
 }

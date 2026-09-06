@@ -279,4 +279,92 @@ public class ImDrawTests {
 
     Assert.That(farResult, Is.EqualTo(nearResult * 2f).Within(Epsilon));
   }
+
+  [Test]
+  [Description("PushTransform transforms line endpoints by the pushed matrix.")]
+  public void PushTransform_TransformsLineEndpoints() {
+    var imDraw = new ImDraw();
+    var translation = Matrix4x4.CreateTranslation(10, 20, 30);
+    imDraw.PushTransform(translation);
+
+    imDraw.Line(new Vector3(1, 2, 3), new Vector3(4, 5, 6), Vector4.One);
+
+    var expectedA = new Vector3(11, 22, 33);
+    var expectedB = new Vector3(14, 25, 36);
+
+    var nearVertex = imDraw.vertices[0].Position;
+    var farVertex = imDraw.vertices[1].Position;
+
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(Vector3.Distance(nearVertex, expectedA), Is.LessThan(Epsilon));
+      Assert.That(Vector3.Distance(farVertex, expectedB), Is.LessThan(Epsilon));
+    }
+  }
+
+  [Test]
+  [Description("Nested PushTransform concatenates transforms in order.")]
+  public void PushTransform_NestedTransforms_ComposesCorrectly() {
+    var imDraw = new ImDraw();
+    var t1 = Matrix4x4.CreateTranslation(10, 0, 0);
+    var t2 = Matrix4x4.CreateTranslation(0, 5, 0);
+
+    imDraw.PushTransform(t1);
+    imDraw.PushTransform(t2);
+
+    imDraw.Line(Vector3.Zero, Vector3.UnitX, Vector4.One);
+
+    var expectedA = new Vector3(10, 5, 0);
+    var expectedB = new Vector3(11, 5, 0);
+
+    var nearVertex = imDraw.vertices[0].Position;
+    var farVertex = imDraw.vertices[1].Position;
+
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(Vector3.Distance(nearVertex, expectedA), Is.LessThan(Epsilon));
+      Assert.That(Vector3.Distance(farVertex, expectedB), Is.LessThan(Epsilon));
+    }
+  }
+
+  [Test]
+  [Description("PopTransform restores previous parent transform.")]
+  public void PopTransform_RestoresPreviousTransform() {
+    var imDraw = new ImDraw();
+    var t1 = Matrix4x4.CreateTranslation(10, 0, 0);
+    var t2 = Matrix4x4.CreateTranslation(0, 5, 0);
+
+    imDraw.PushTransform(t1);
+    imDraw.PushTransform(t2);
+    imDraw.PopTransform();
+
+    imDraw.Line(Vector3.Zero, Vector3.UnitX, Vector4.One);
+
+    var expectedA = new Vector3(10, 0, 0);
+    var expectedB = new Vector3(11, 0, 0);
+
+    var nearVertex = imDraw.vertices[0].Position;
+    var farVertex = imDraw.vertices[1].Position;
+
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(Vector3.Distance(nearVertex, expectedA), Is.LessThan(Epsilon));
+      Assert.That(Vector3.Distance(farVertex, expectedB), Is.LessThan(Epsilon));
+    }
+  }
+
+  [Test]
+  [Description("Clear resets transform stack so subsequent calls use identity transform.")]
+  public void Clear_ResetsTransformStack() {
+    var imDraw = new ImDraw();
+    imDraw.PushTransform(Matrix4x4.CreateTranslation(10, 20, 30));
+    imDraw.Clear();
+
+    imDraw.Line(Vector3.Zero, Vector3.UnitX, Vector4.One);
+
+    var nearVertex = imDraw.vertices[0].Position;
+    var farVertex = imDraw.vertices[1].Position;
+
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(Vector3.Distance(nearVertex, Vector3.Zero), Is.LessThan(Epsilon));
+      Assert.That(Vector3.Distance(farVertex, Vector3.UnitX), Is.LessThan(Epsilon));
+    }
+  }
 }

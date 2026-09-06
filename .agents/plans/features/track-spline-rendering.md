@@ -49,22 +49,22 @@ Two integration gaps block visual validation:
    `TrackedRide.cs`, `Coaster.cs`, and `TrackPiece.Heartline` already exist in the tree.
 
 1. **Bank propagation fix (Goal 1)**
-   - [ ] Add a `GetPieceExitBank(TrackPiece)` helper in `OpenRCT3/Rides/TrackSpline/TrackChaining.cs` reading the last control point or baked sample bank.
-   - [ ] Update `TrackChaining.ChainPiece()` to assign `newPiece.Bank = GetPieceExitBank(prevPiece);`.
-   - [ ] Add test case `TrackChainingTests.DerivedBankPropagatesInChainedSequence` in `OpenRCT3.Tests/Rides/TrackSpline/TrackChainingTests.cs`.
+   - [x] Add a `GetPieceExitBank(TrackPiece)` helper in `OpenRCT3/Rides/TrackSpline/TrackChaining.cs` reading the last control point or baked sample bank.
+   - [x] Update `TrackChaining.ChainPiece()` to assign `newPiece.Bank = GetPieceExitBank(prevPiece);`.
+   - [x] Add test case `TrackChainingTests.DerivedBankPropagatesInChainedSequence` in `OpenRCT3.Tests/Rides/TrackSpline/TrackChainingTests.cs`.
 
 2. **ImDraw Model Transform Stack (Goal 2)**
-   - [ ] Add `Stack<Matrix4x4> transformStack` and `Matrix4x4 currentTransform` to `OpenCobra.GDK.ImDraw`.
-   - [ ] Implement `PushTransform(Matrix4x4 transform)` and `PopTransform()`.
-   - [ ] Apply `currentTransform` to `a` and `b` in `ImDraw.Line()`.
-   - [ ] Clear `transformStack` in `ImDraw.Clear()`.
-   - [ ] Add unit tests in `OpenCobra/Tests/GDK/ImDrawTests.cs` verifying single transform, nested transforms, and reset on Clear.
+   - [x] Add `Stack<Matrix4x4> transformStack` and `Matrix4x4 currentTransform` to `OpenCobra.GDK.ImDraw`.
+   - [x] Implement `PushTransform(Matrix4x4 transform)` and `PopTransform()`.
+   - [x] Apply `currentTransform` to `a` and `b` in `ImDraw.Line()`.
+   - [x] Clear `transformStack` in `ImDraw.Clear()`.
+   - [x] Add unit tests in `OpenCobra/Tests/GDK/ImDrawTests.cs` verifying single transform, nested transforms, and reset on Clear.
 
 3. **Track Spline Visualizer (Goal 3)**
-   - [ ] Create `OpenRCT3/UI/TrackSplineVisualizer.cs` implementing `IWindow`.
-   - [ ] Implement piece graph iteration and rail sample rendering within `imDraw.PushTransform(pieceTransform)` scopes.
-   - [ ] Wire `TrackSplineVisualizer` into `World.cs` / scene window list and add an editor toggle.
-   - [ ] Add integration test in `OpenRCT3.Tests/Rides/TrackSpline/IntegrationTests.cs` verifying that rendering a piece under transform produces expected world-space vertices in `ImDraw`.
+   - [x] Create `OpenRCT3/UI/TrackSplineVisualizer.cs` implementing `IWindow`.
+   - [x] Implement piece graph iteration and rail sample rendering within `imDraw.PushTransform(pieceTransform)` scopes.
+   - [x] Wire `TrackSplineVisualizer` into `World.cs` / scene window list and add an editor toggle.
+   - [x] Add integration test in `OpenRCT3.Tests/Rides/TrackSpline/IntegrationTests.cs` verifying that rendering a piece under transform produces expected world-space vertices in `ImDraw`.
 
 ## Deferred
 

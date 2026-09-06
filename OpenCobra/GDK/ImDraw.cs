@@ -74,6 +74,9 @@ public class ImDraw : IDisposable {
   /// </summary>
   internal readonly List<ImDrawVertex> alwaysOnTopVertices = [];
 
+  private readonly Stack<Matrix4x4> transformStack = [];
+  private Matrix4x4 currentTransform = Matrix4x4.Identity;
+
   private Vector3 cameraEye;
   private float fieldOfViewYRadians;
   private float viewportHeightPixels;
@@ -83,6 +86,26 @@ public class ImDraw : IDisposable {
   private uint vbo;
   private uint vboCapacity;
   private bool gpuResourcesReady;
+
+  /// <summary>
+  /// Pushes a model-to-world transform onto the stack. Subsequent primitives are transformed
+  /// by the composite matrix (accumulated via multiplication against the current transform).
+  /// </summary>
+  public void PushTransform(Matrix4x4 transform) {
+    var composite = transformStack.Count == 0 ? transform : transform * currentTransform;
+    transformStack.Push(composite);
+    currentTransform = composite;
+  }
+
+  /// <summary>
+  /// Pops the topmost transform from the stack, restoring the previous composite transform.
+  /// </summary>
+  public void PopTransform() {
+    if (transformStack.Count > 0) {
+      transformStack.Pop();
+      currentTransform = transformStack.Count > 0 ? transformStack.Peek() : Matrix4x4.Identity;
+    }
+  }
 
   /// <summary>
   /// Sets the per-frame camera info <see cref="Axis"/>/<see cref="Circle"/>/<see cref="Arrow"/>'s
@@ -106,6 +129,11 @@ public class ImDraw : IDisposable {
   /// false so a brush outline drawn on sloped/occluded terrain still occludes correctly.
   /// </param>
   public void Line(Vector3 a, Vector3 b, Vector4 color, float width = DefaultWidth, bool alwaysOnTop = false) {
+    if (transformStack.Count > 0) {
+      a = Vector3.Transform(a, currentTransform);
+      b = Vector3.Transform(b, currentTransform);
+    }
+
     var target = alwaysOnTop ? alwaysOnTopVertices : vertices;
 
     // Two triangles forming a quad, expanded perpendicular to the line by the vertex shader. Emitted as
@@ -254,6 +282,8 @@ public class ImDraw : IDisposable {
   public void Clear() {
     vertices.Clear();
     alwaysOnTopVertices.Clear();
+    transformStack.Clear();
+    currentTransform = Matrix4x4.Identity;
   }
 
   #region GPU resources

@@ -58,6 +58,10 @@ public class Editor : IWindow {
     if (ImGui.Button("Choose Objectives & Challenges", new Vector2(ButtonWidth, 0))) {
       // TODO: Open objectives dialog
     }
+    if (ImGui.Button("Track Splines", new Vector2(ButtonWidth, 0))) {
+      if (Game.Instance?.World is Simulation.World world && world.TrackSplineVisualizer != null)
+        world.TrackSplineVisualizer.Open = !world.TrackSplineVisualizer.Open;
+    }
 
     ImGui.End();
     if (open != Open) Open = open;
