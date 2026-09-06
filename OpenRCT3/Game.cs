@@ -62,7 +62,7 @@ public class Game : IDisposable {
     // TODO: Show a progress bar while loading
     World.Load();
     if (!string.IsNullOrEmpty(Config.InstallPath)) {
-      var nullbmpPath = Path.Combine(Config.InstallPath, "nullbmp.common.ovl");
+      var nullbmpPath = Path.Join(Config.InstallPath, "nullbmp.common.ovl");
       Scene.LoadTexture(nullbmpPath, "nullbmp");
     }
   }

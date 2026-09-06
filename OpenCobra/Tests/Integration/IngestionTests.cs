@@ -20,7 +20,7 @@ public class IngestionTests {
   public void LoadTerrainTexture_Succeeds() {
     using var _ = Assert.EnterMultipleScope();
     var rct3Path = Environment.GetEnvironmentVariable("RCT3_PATH")!;
-    var terrainOvl = Path.Combine(rct3Path, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
+    var terrainOvl = Path.Join(rct3Path, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
 
     if (!File.Exists(terrainOvl))
       Assert.Fail("Terrain OVL not found at: " + terrainOvl);
