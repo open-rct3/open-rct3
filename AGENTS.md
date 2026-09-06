@@ -39,3 +39,10 @@
 This solution has unit tests and integration tests; ALWAYS run the **Unit Tests** when sources are changed.
 
 Run **Unit Tests** via `make test`. Do NOT try to run other tests, UNLESS explicitly requested.
+
+## Session and GitHub UI
+
+- Clearly distinguish the local worktree, committed branch state, and GitHub PR state. Uncommitted local changes are not visible on GitHub.
+- Never claim that a session is visibly linked, navigated, or otherwise changed in the desktop app unless the tool result explicitly confirms that visible UI change.
+- Backend session metadata or a filesystem path is not proof that the user can see a worktree or session link in the desktop app.
+- If the requested desktop UI relationship cannot be changed with an available tool, say so plainly instead of implying that it was changed.
