@@ -16,9 +16,6 @@
     <ProjectReference Include="..\..\OVL\OVL.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="..\EnumCoverage.cs" Link="EnumCoverage.cs" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DotNetEnv" Version="3.2.0" />

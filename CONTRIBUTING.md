@@ -13,7 +13,7 @@ fix, and resolve your issue.
 
 ## Contributing Code
 
-See the [Debugging](./docs/Debugging.md) guide.
+Before you start, read the [Style Guide](./docs/Style%20Guide.md). For runtime issues, see the [Debugging](./docs/Debugging.md) guide.
 
 ### 🛠️ Fixing a bug?
 

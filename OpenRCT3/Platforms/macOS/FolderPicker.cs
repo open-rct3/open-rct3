@@ -11,21 +11,26 @@ using Foundation;
 namespace OpenRCT3.Platforms.macOS;
 
 public class FolderPicker : IFolderPicker {
-    public string? PickFolder(string title, string? initialPath = null) {
-        var panel = new NSOpenPanel {
-            Title = title,
-            CanChooseDirectories = true,
-            CanChooseFiles = false,
-            AllowsMultipleSelection = false
-        };
+  private NSOpenPanel? panel = null;
 
-        if (!string.IsNullOrEmpty(initialPath)) {
-            panel.DirectoryUrl = NSUrl.FromFilename(initialPath);
-        }
+  public string? PickFolder(string title, string? initialPath = null) {
+    panel = new NSOpenPanel {
+      Title = title,
+      CanChooseDirectories = true,
+      CanChooseFiles = false,
+      AllowsMultipleSelection = false
+    };
 
-        if (panel.RunModal() == (long)NSModalResponse.OK) {
-            return panel.Url?.Path;
-        }
-        return null;
-    }
+    if (!string.IsNullOrEmpty(initialPath))
+      panel.DirectoryUrl = NSUrl.FromFilename(initialPath);
+
+    if (panel.RunModal() == (long)NSModalResponse.OK)
+      return panel.Url?.Path;
+    return null;
+  }
+
+  public void Dispose() {
+    GC.SuppressFinalize(this);
+    panel?.Dispose();
+  }
 }

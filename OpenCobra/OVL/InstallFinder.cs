@@ -17,7 +17,7 @@ public static class InstallFinder {
   }
 
   public static bool Validate(string path) =>
-    Directory.Exists(path) && File.Exists(Path.Combine(path, "terrain", "RCT3", "Terrain_RCT3.common.ovl"));
+    Directory.Exists(path) && File.Exists(Path.Join(path, "terrain", "RCT3", "Terrain_RCT3.common.ovl"));
 
   public static string Find(string[]? extraPaths = null) {
     var potentialPaths = new List<string>();

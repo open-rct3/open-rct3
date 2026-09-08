@@ -10,17 +10,20 @@ using System.Windows.Forms;
 namespace OpenRCT3.Platforms.Windows;
 
 public class FolderPicker : IFolderPicker {
-    public string? PickFolder(string title, string? initialPath = null) {
-        using var dialog = new FolderBrowserDialog {
-            Description = title,
-            UseDescriptionForTitle = true,
-            SelectedPath = initialPath ?? string.Empty,
-            ShowNewFolderButton = false
-        };
+  public string? PickFolder(string title, string? initialPath = null) {
+    using var dialog = new FolderBrowserDialog {
+      Description = title,
+      UseDescriptionForTitle = true,
+      SelectedPath = initialPath ?? string.Empty,
+      ShowNewFolderButton = false
+    };
 
-        if (dialog.ShowDialog() == DialogResult.OK) {
-            return dialog.SelectedPath;
-        }
-        return null;
-    }
+    if (dialog.ShowDialog() == DialogResult.OK)
+      return dialog.SelectedPath;
+    return null;
+  }
+
+  public void Dispose() {
+    GC.SuppressFinalize(this);
+  }
 }

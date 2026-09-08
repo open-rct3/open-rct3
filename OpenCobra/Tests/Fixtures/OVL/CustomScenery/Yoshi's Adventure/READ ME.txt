@@ -1,0 +1,15 @@
+Thank you for Installing My Yoshi's Adventure CTR!
+
+BEFORE INSTALLING:
+This Ctr Requires both "Flat Stations" & "Revolutionary Rides Invisible Track"
+These can be found on the ParkCrafters Website
+( THIS CTR WILL NOT WORK IF THESE AREN'T INSTALLED )
+
+Installation:
+Place the folder CTR_Yoshi'sAdventure Into:
+RollerCoaster Tycoon 3\Cars\TrackedRideCars
+
+Place the folder CTR_YoshiAdventureTrack
+RollerCoaster Tycoon 3\tracks\TrackedRides
+
+I Hope You Enjoy!

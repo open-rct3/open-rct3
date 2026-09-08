@@ -7,10 +7,6 @@ endif
 
 all: release
 
-.PHONY: website
-website: ovl
-	deno task build:website
-
 # ===========
 # Publishing
 # ===========
@@ -34,7 +30,7 @@ endif
 .PHONY: release
 release: gui
 	dotnet build OpenRCT3/OpenRCT3.csproj -c Release
-  
+
 
 # ==========
 # Debugging
@@ -66,13 +62,17 @@ ovl:
 dumper:
 	dotnet run --project Dumper/Dumper.csproj
 
+.PHONY: debug
+debug: plugins
+	dotnet run --project OpenRCT3/OpenRCT3.csproj
+
 # Website
 
 WEBSITE_DIR := clients/website
 WEBSITE_SRC := $(wildcard clients/website/*.ts) $(wildcard clients/website/src/*.*) $(wildcard clients/website/src/css/*.scss) $(wildcard clients/website/src/templates/*.vto) $(wildcard clients/website/src/templates/partials/*.vto)
 
 .PHONY: website
-website: $(WEBSITE_DIR)/_site
+website: ovl $(WEBSITE_DIR)/_site
 
 $(WEBSITE_DIR)/_site: $(WEBSITE_SRC)
 	deno task build:website
