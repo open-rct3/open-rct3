@@ -42,7 +42,7 @@ jobs:
       - name: Restore Dependencies
         run: dotnet restore
       - name: Test
-        run: dotnet test --no-restore --verbosity normal --collect:"XPlat Code Coverage"
+        run: dotnet test OpenRCT3.tests.slnf --no-restore --verbosity normal --collect:"XPlat Code Coverage"
       - name: Merge Coverage Reports
         if: success()
         run: |

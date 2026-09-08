@@ -17,7 +17,17 @@ namespace OpenCobra.Tests.Integration;
 
 [TestFixture]
 public class TextureDecodeVerification {
-  private static string? Rct3Path() => Environment.GetEnvironmentVariable("RCT3_PATH");
+  private static string? Rct3Path() {
+    var rct3Path = Environment.GetEnvironmentVariable("RCT3_PATH");
+    if (string.IsNullOrEmpty(rct3Path)) {
+      try {
+        rct3Path = InstallFinder.Find();
+      } catch (InstallNotFoundException) {
+        rct3Path = null;
+      }
+    }
+    return rct3Path;
+  }
 
   [SetUp]
   public void Setup() {
@@ -26,10 +36,13 @@ public class TextureDecodeVerification {
   }
 
   [Test]
-  [SkipIfEnvironmentMissing("RCT3_PATH", "Cannot find RCT3. Skipping integration test.")]
   public void MainCommonOvl_TexEntries_DecodeAfterRelocationFix() {
-    var rct3 = Rct3Path()!;
-    var mainPath = Path.Combine(rct3, "Main.common.ovl");
+    var rct3 = Rct3Path();
+    if (string.IsNullOrEmpty(rct3)) {
+      // TODO: Extract this logic to the `SkipIfEnvironmentMissing` attribute implementation
+      Assert.Ignore("Cannot find RCT3. Skipping integration test.");
+    }
+    var mainPath = Path.Combine(rct3!, "Main.common.ovl");
     Assert.That(File.Exists(mainPath), Is.True, $"Main.common.ovl not found at: {mainPath}");
 
     using var ovl = Ovl.Load(mainPath);
@@ -44,10 +57,13 @@ public class TextureDecodeVerification {
   }
 
   [Test]
-  [SkipIfEnvironmentMissing("RCT3_PATH", "Cannot find RCT3. Skipping integration test.")]
   public void Af01BodyMain_GenuineTexEntry_DecodesAfterRelocationFix() {
-    var rct3 = Rct3Path()!;
-    var path = Path.Combine(rct3, "Characters", "AF", "AF01_Body_Main.common.ovl");
+    var rct3 = Rct3Path();
+    if (string.IsNullOrEmpty(rct3)) {
+      // TODO: Extract this logic to the `SkipIfEnvironmentMissing` attribute implementation
+      Assert.Ignore("Cannot find RCT3. Skipping integration test.");
+    }
+    var path = Path.Combine(rct3!, "Characters", "AF", "AF01_Body_Main.common.ovl");
     Assert.That(File.Exists(path), Is.True, $"AF01_Body_Main.common.ovl not found at: {path}");
 
     using var ovl = Ovl.Load(path);
