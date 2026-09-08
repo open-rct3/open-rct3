@@ -4,6 +4,7 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+using System.Collections.Generic;
 using DotNetEnv;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
@@ -46,20 +47,36 @@ public class EnumCoverage {
     LoadEnv();
     var rct3Path = Rct3Path();
     if (string.IsNullOrEmpty(rct3Path)) {
+      try {
+        rct3Path = InstallFinder.Find();
+      } catch (InstallNotFoundException) {
+        rct3Path = null;
+      }
+    }
+    if (string.IsNullOrEmpty(rct3Path)) {
+      // TODO: Extract this logic to the `SkipIfEnvironmentMissing` attribute implementation
       yield return new TestCaseData(string.Empty)
         .Explicit(cannotFindRct3)
         .Ignore(cannotFindRct3);
       yield break;
     }
 
-    var files = Directory.GetFiles(rct3Path, "*.ovl", SearchOption.AllDirectories);
+    var files = Directory.GetFiles(rct3Path, "*.common.ovl", SearchOption.AllDirectories);
     if (files.Length == 0) {
       yield return new TestCaseData(string.Empty).Ignore("No OVL fixtures found.");
       yield break;
     }
 
-    foreach (var file in files)
-      yield return new TestCaseData(file);
+    var yielded = 0;
+    foreach (var file in files) {
+      using var ovl = Ovl.Load(file);
+      if (ovl.Keys.Any(k => k.Type == FileType.SceneryItemVisual)) {
+        yielded++;
+        yield return new TestCaseData(file);
+      }
+    }
+    if (yielded == 0)
+      yield return new TestCaseData(string.Empty).Ignore("No SceneryItemVisual (svd) resources found in OVL fixtures.");
   }
 
   [TestCaseSource(nameof(GetSvdFixtures))]

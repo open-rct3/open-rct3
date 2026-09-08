@@ -63,7 +63,7 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
-  private readonly List<uint> allVersions = [];
+  private readonly List<Version> allVersions = [];
   private uint relocationOffset;
   private bool disposed = false;
 
@@ -290,10 +290,10 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     }
   }
 
-  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, Version version) {
+  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, Version archiveVersion) {
     for (var i = 0; i < blocks.Length; i++) {
       foreach (var block in blocks[i].Blocks) {
-        if (version == Version.One && block.Size == 0) {
+        if (archiveVersion == Version.One && block.Size == 0) {
           if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
           block.Size = reader.ReadUInt32();
         }
@@ -337,8 +337,8 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
       // layout has a header before the symbol table. Guessing the stride from the block size (e.g.
       // any size that is a multiple of 48 divides evenly by both 12 and 16) silently misaligns every
       // name/data pointer read for the rest of the file once it picks wrong.
-      var version = fileIndex < allVersions.Count ? allVersions[fileIndex] : 0u;
-      var symbolSize = version == 1 ? 12 : 16;
+      var fileVersion = fileIndex < allVersions.Count ? allVersions[fileIndex] : Version.One;
+      var symbolSize = fileVersion == Version.One ? 12 : 16;
       if (symbolBlock.Size % symbolSize != 0) continue;
 
       var loaderHeaders = fileIndex < allLoaderHeaders.Count ? allLoaderHeaders[fileIndex] : [];

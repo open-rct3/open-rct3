@@ -24,7 +24,13 @@ public class ListResources {
   private static IEnumerable<TestCaseData> GetOvlFixtures() {
     var rct3Path = Rct3Path();
     if (string.IsNullOrEmpty(rct3Path)) {
-      // TODO: Try to discover the path from the install finder
+      try {
+        rct3Path = InstallFinder.Find();
+      } catch (InstallNotFoundException) {
+        rct3Path = null;
+      }
+    }
+    if (string.IsNullOrEmpty(rct3Path)) {
       // TODO: Extract this logic to the `SkipIfEnvironmentMissing` attribute implementation
       yield return new TestCaseData(string.Empty)
         .Explicit(cannotFindRct3)

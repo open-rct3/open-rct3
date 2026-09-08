@@ -35,9 +35,9 @@ public static class PluginTests {
     new("Compile and Instantiate", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
       Assert.That(compiled != null, "Plugin loaded and instantiated successfully");
-      var instance = compiled?.Instantiate();
+      using var instance = compiled?.Instantiate();
       if (instance == null) {
         Assert.AddError("Plugin must be instantiable");
         return;
@@ -46,52 +46,42 @@ public static class PluginTests {
       Assert.That(instance.FunctionExists("version"), "Plugin must export version() function");
       Assert.That(instance.FunctionExists("file_types"), "Plugin must export file_types() function");
       Assert.That(instance.FunctionExists("render"), "Plugin must export render() function");
-      instance.Dispose();
-      compiled.Dispose();
     }),
     new("Has Name", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
-      var instance = compiled.Instantiate();
+      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var instance = compiled.Instantiate();
       var nameBytes = instance.Call("name", []);
       var name = Encoding.UTF8.GetString(nameBytes);
-      instance.Dispose();
-      compiled.Dispose();
       Assert.That(name.Length > 0, "name() returned empty string");
     }),
     new("Has Version", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
-      var instance = compiled.Instantiate();
+      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var instance = compiled.Instantiate();
       var versionBytes = instance.Call("version", []);
       var version = Encoding.UTF8.GetString(versionBytes);
       Assert.That(version.Length > 0, "version() returned empty string");
-      instance.Dispose();
-      compiled.Dispose();
     }),
     new("Has File Types", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
-      var instance = compiled.Instantiate();
+      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var instance = compiled.Instantiate();
       var jsonBytes = instance.Call("file_types", []);
       var json = Encoding.UTF8.GetString(jsonBytes);
       Assert.That(json.Length > 0, "file_types() returned empty string");
-      instance.Dispose();
-      compiled.Dispose();
     }),
     new("Renders a View", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
-      var instance = compiled.Instantiate();
+      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var instance = compiled.Instantiate();
       var htmlBytes = instance.Call("render", []);
       var html = Encoding.UTF8.GetString(htmlBytes);
       Assert.That(html.Length > 0, "render() returned empty string");
-      instance.Dispose();
-      compiled.Dispose();
     }),
   ];
 }
