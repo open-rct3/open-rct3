@@ -9,35 +9,34 @@ namespace OvlTestBench.Tests;
 public record PluginTest(string Name, Action<string> Test);
 
 public static class PluginTests {
-  static HostFunction[] CreateAbortFunctions() {
+  static HostFunction CreateAbortFunction() {
     var inputTypes = new[] { ExtismValType.I32, ExtismValType.I32, ExtismValType.I32, ExtismValType.I32 };
-    return new[] {
-      new HostFunction(
-        "abort",
-        inputTypes,
-        [],
-        null,
-        (plugin, inputs, outputs) => {
-          var msgPtr = inputs[0].v.i32;
-          var msgLen = inputs[1].v.i32;
-          var line = inputs[2].v.i32;
-          var col = inputs[3].v.i32;
-          var message = msgLen > 0
-            ? Encoding.UTF8.GetString(plugin.ReadBytes(msgPtr)[..msgLen])
-            : "Abort called by plugin";
-          throw new PluginException($"Plugin abort at line {line}, col {col}: {message}");
-        }
-      ).WithNamespace("env")
-    };
+    return new HostFunction(
+      "abort",
+      inputTypes,
+      [],
+      null,
+      (plugin, inputs, outputs) => {
+        var msgPtr = inputs[0].v.i32;
+        var msgLen = inputs[1].v.i32;
+        var line = inputs[2].v.i32;
+        var col = inputs[3].v.i32;
+        var message = msgLen > 0
+          ? Encoding.UTF8.GetString(plugin.ReadBytes(msgPtr)[..msgLen])
+          : "Abort called by plugin";
+        throw new PluginException($"Plugin abort at line {line}, col {col}: {message}");
+      }
+    ).WithNamespace("env");
   }
 
   public static readonly PluginTest[] All = [
     new("Compile and Instantiate", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var abort = CreateAbortFunction();
+      using var compiled = new CompiledPlugin(manifest, [abort], options);
       Assert.That(compiled != null, "Plugin loaded and instantiated successfully");
-      using var instance = compiled?.Instantiate();
+      using var instance = compiled.Instantiate();
       if (instance == null) {
         Assert.AddError("Plugin must be instantiable");
         return;
@@ -50,7 +49,8 @@ public static class PluginTests {
     new("Has Name", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var abort = CreateAbortFunction();
+      using var compiled = new CompiledPlugin(manifest, [abort], options);
       using var instance = compiled.Instantiate();
       var nameBytes = instance.Call("name", []);
       var name = Encoding.UTF8.GetString(nameBytes);
@@ -59,7 +59,8 @@ public static class PluginTests {
     new("Has Version", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var abort = CreateAbortFunction();
+      using var compiled = new CompiledPlugin(manifest, [abort], options);
       using var instance = compiled.Instantiate();
       var versionBytes = instance.Call("version", []);
       var version = Encoding.UTF8.GetString(versionBytes);
@@ -68,7 +69,8 @@ public static class PluginTests {
     new("Has File Types", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var abort = CreateAbortFunction();
+      using var compiled = new CompiledPlugin(manifest, [abort], options);
       using var instance = compiled.Instantiate();
       var jsonBytes = instance.Call("file_types", []);
       var json = Encoding.UTF8.GetString(jsonBytes);
@@ -77,7 +79,8 @@ public static class PluginTests {
     new("Renders a View", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      using var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      using var abort = CreateAbortFunction();
+      using var compiled = new CompiledPlugin(manifest, [abort], options);
       using var instance = compiled.Instantiate();
       var htmlBytes = instance.Call("render", []);
       var html = Encoding.UTF8.GetString(htmlBytes);
