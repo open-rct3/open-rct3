@@ -52,4 +52,4 @@ For any task requiring multiple steps:
 
 This solution has unit tests and integration tests; ALWAYS run the **Unit Tests** when sources are changed.
 
-Run **Unit Tests** via `make test`. Do NOT try to run other tests, UNLESS explicitly requested.
+Run **Unit Tests** via `make test`. Do NOT try to run other tests, UNLESS explicitly requested. Test commands will always rebuild dependencies themselves; never run separate build commands before testing.
