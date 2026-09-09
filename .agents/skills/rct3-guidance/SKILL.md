@@ -319,6 +319,17 @@ GameViewController
 
 ---
 
+## 6. Integration Testing Guidelines
+
+- **Separate Unit & Integration Tests**: High-volume integration tests that inspect production game archives (such as full OVL resource scans or `SvdResources_AreReadable`) belong strictly in `OpenCobra/Tests/Integration/IntegrationTests.csproj`, **never** in the unit test project (`Tests.csproj`).
+- **Do Not Skip Integration Tests When Install is Available**: Integration tests scanning production assets must properly discover the game installation path:
+  1. Load `.env` from `Constants.EnvFilePath`.
+  2. Read `RCT3_PATH` environment variable.
+  3. Fall back to `InstallFinder.Find()` across all supported Steam/GOG/system drives (`C:\`, `D:\`, etc.).
+  4. Yield valid test cases across common OVL fixtures (`*.common.ovl`) containing the targeted resource types instead of skipping or silently ignoring them.
+
+---
+
 ## References
 
 *   [archive-format.md](../../../docs/ovl/archive-format.md): Full binary layout details.

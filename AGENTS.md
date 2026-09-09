@@ -38,7 +38,8 @@ These cover how to act on the codebase. They are not as severe as the Hard Rules
 
 #### Git
 
-- **NEVER run any `git` command without first stopping and asking the user for explicit permission.** This applies even to read-only commands (`git stash`, `git stash pop`, `git add`, `git status`, `git diff`) and even mid-task to verify something. Ask first, every time, no exceptions.
+- **NEVER run any mutating `git` command without first stopping and asking the user for explicit permission.** In the main agent, ask first before running git commands.
+- **Always Allow Read-Only Operations in Subagents:** Subagents are always permitted to run read-only git operations (`git show`, `git diff`, `git log`, `git status`, `git rev-parse`) and read-only inspect commands without stopping to prompt the user.
 - **Commits are the user's job.** Do NOT ask "ready to commit?" or offer to commit changes. When you finish staged work, stop. The user will commit.
 
 #### Using Tools
@@ -72,6 +73,7 @@ These cover how to act on the codebase. They are not as severe as the Hard Rules
 
 - **Test What The User Is Running:** A passing CLI test (e.g. `deno check`) is completely meaningless if the user is reporting an IDE error (e.g. `deno-ts`). Always align your mental model and verification with the actual environment exhibiting the bug.
 - **Always Use `gh api` for GitHub:** NEVER trust web search summaries for GitHub issue numbers. ALWAYS use `gh api` whenever interacting with GitHub to fetch or verify issue titles, statuses, or source code. NEVER use `curl` or other tools that trigger incessant permission prompts.
+- **Always Allow Read-Only `gh pr` Commands:** Read-only `gh pr` commands (`gh pr view`, `gh pr list`, `gh pr diff`, `gh pr checks`, `gh pr status`) are allowed without stopping for prior permission.
 - **Always Use Permalinks:** Any source code link placed in documentation or code must use a commit hash, never `main` or `master`.
 
 ### Planning Workflow
