@@ -24,6 +24,7 @@
   <ItemGroup>
     <Compile Remove="TestRunner\**" />
     <Compile Remove="Integration\**" />
+    <Compile Remove="EnumCoverage.cs" />
     <EmbeddedResource Remove="TestRunner\**" />
     <EmbeddedResource Remove="Integration\**" />
     <None Remove="TestRunner\**" />

@@ -275,13 +275,13 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     var magic = reader.ReadUInt32();
     Debug.Assert(magic == 0x4b524746, "Invalid OVL magic");
     var reserved = reader.ReadUInt32();
-    var version = (Version) reader.ReadUInt32();
+    var fileVersion = (Version) reader.ReadUInt32();
     var headerRefs = reader.ReadUInt32();
 
-    Debug.WriteLine($"[OVL] Loading {Path.GetFileName(filePath)} (v{version})");
+    Debug.WriteLine($"[OVL] Loading {Path.GetFileName(filePath)} (v{fileVersion})");
 
     var subVersionFlag = 0u;
-    var referenceCount = version switch {
+    var referenceCount = fileVersion switch {
       Version.Five => ReadV5References(reader, out subVersionFlag),
       Version.Four => reader.ReadUInt32(),
       _ => headerRefs
@@ -301,26 +301,26 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
       var fileTypeCount = reader.ReadUInt32();
       if (fileTypeCount > 0 && fileTypeCount < 1024) {
         loaderHeaders = ReadLoaderHeaders(reader, (int)fileTypeCount);
-        if (version == Version.Five) ReadV5SymbolCounts(reader, loaderHeaders);
+        if (fileVersion == Version.Five) ReadV5SymbolCounts(reader, loaderHeaders);
       }
     }
     allLoaderHeaders.Add([.. loaderHeaders]);
-    allVersions.Add(version);
+    allVersions.Add(fileVersion);
 
-    var blocks = ReadFileTypeBlocks(filePath, reader, version, subVersionFlag);
+    var blocks = ReadFileTypeBlocks(filePath, reader, fileVersion, subVersionFlag);
     allFileTypeBlocks.Add(blocks);
 
-    ReadPostBlockUnknowns(reader, version);
-    ReadBlockData(reader, blocks, version);
+    ReadPostBlockUnknowns(reader, fileVersion);
+    ReadBlockData(reader, blocks, fileVersion);
     ReadRelocations(reader);
 
-    if (version >= Version.Four && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
-      if (version == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
+    if (fileVersion >= Version.Four && reader.BaseStream.Position + 4 <= reader.BaseStream.Length) {
+      if (fileVersion == Version.Four || (subVersionFlag & 1) != 0) reader.ReadBytes(4);
     }
 
-    allExtraData.Add(ReadLoaderExtraData(reader, blocks, version, loaderHeaders));
+    allExtraData.Add(ReadLoaderExtraData(reader, blocks, fileVersion, loaderHeaders));
 
-    return version;
+    return fileVersion;
   }
 
   /// <summary>
@@ -475,10 +475,10 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     }
   }
 
-  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, Version version) {
+  private void ReadBlockData(BinaryReader reader, FileTypeBlock[] blocks, Version archiveVersion) {
     for (var i = 0; i < blocks.Length; i++) {
       foreach (var block in blocks[i].Blocks) {
-        if (version == Version.One && block.Size == 0) {
+        if (archiveVersion == Version.One && block.Size == 0) {
           if (reader.BaseStream.Position + 4 > reader.BaseStream.Length) return;
           block.Size = reader.ReadUInt32();
         }

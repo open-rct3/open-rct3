@@ -17,9 +17,11 @@
 - Use as few em-dashes as possible.
 - Don't waste the user's time or credits.
 - If you get stuck or are spinning endlessly, STOP and ask clarifying questions.
+- Do NOT ask follow-up questions offering to perform the next action
+  (e.g. staging, committing, running tests). Just do the work or stop.
 - Fix the obvious thing first, then test.
 
-  Don't investigate when the root cause is clear from the code and error message.
+  Do NOT investigate when the root cause is clear from the code and error message.
 
 ### Planning Workflow
 
@@ -50,4 +52,4 @@ For any task requiring multiple steps:
 
 This solution has unit tests and integration tests; ALWAYS run the **Unit Tests** when sources are changed.
 
-Run **Unit Tests** via `make test`. Do NOT try to run other tests, UNLESS explicitly requested.
+Run **Unit Tests** via `make test`. Do NOT try to run other tests, UNLESS explicitly requested. Test commands will always rebuild dependencies themselves; never run separate build commands before testing.

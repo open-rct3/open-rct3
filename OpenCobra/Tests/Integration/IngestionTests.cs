@@ -15,11 +15,23 @@ namespace OpenCobra.Tests.Integration;
 
 [TestFixture]
 public class IngestionTests {
+  [OneTimeSetUp]
+  public void Setup() {
+    if (File.Exists(Constants.EnvFilePath))
+      DotNetEnv.Env.NoClobber().Load(Constants.EnvFilePath);
+  }
+
   [Test]
-  [SkipIfEnvironmentMissing("RCT3_PATH")]
   public void LoadTerrainTexture_Succeeds() {
-    using var _ = Assert.EnterMultipleScope();
-    var rct3Path = Environment.GetEnvironmentVariable("RCT3_PATH")!;
+    var rct3Path = Environment.GetEnvironmentVariable("RCT3_PATH");
+    if (string.IsNullOrEmpty(rct3Path)) {
+      try {
+        rct3Path = InstallFinder.Find();
+      } catch (InstallNotFoundException) {
+        Assert.Ignore("Cannot find RCT3. Skipping integration test.");
+        return;
+      }
+    }
     var terrainOvl = Path.Combine(rct3Path, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
 
     if (!File.Exists(terrainOvl))

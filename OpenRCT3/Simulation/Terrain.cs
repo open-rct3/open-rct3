@@ -85,7 +85,7 @@ public class Terrain {
     var terrain = new Terrain();
     // Load textures from terrain/RCT3/Terrain_RCT3.common.ovl
     var terrainOvl = Path.Combine(config.InstallPath, "terrain", "RCT3", "Terrain_RCT3.common.ovl");
-    var ovl = Ovl.Load(terrainOvl);
+    using var ovl = Ovl.Load(terrainOvl);
 
     return terrain;
   }
