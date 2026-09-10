@@ -11,7 +11,7 @@ public record PluginTest(string Name, Action<string> Test);
 public static class PluginTests {
   static HostFunction CreateAbortFunction() {
     var inputTypes = new[] { ExtismValType.I32, ExtismValType.I32, ExtismValType.I32, ExtismValType.I32 };
-    return new HostFunction(
+    var abort = new HostFunction(
       "abort",
       inputTypes,
       [],
@@ -26,7 +26,10 @@ public static class PluginTests {
           : "Abort called by plugin";
         throw new PluginException($"Plugin abort at line {line}, col {col}: {message}");
       }
-    ).WithNamespace("env");
+    );
+    // `WithNamespace` mutates and returns the same instance; callers own disposal via `using var`.
+    abort.SetNamespace("env");
+    return abort;
   }
 
   public static readonly PluginTest[] All = [

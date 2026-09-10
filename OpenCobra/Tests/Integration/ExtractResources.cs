@@ -41,7 +41,7 @@ public class ExtractResources {
       Assert.Ignore("Cannot find RCT3. Skipping integration test.");
     }
 
-    var commonPath = Path.Combine(rct3!, "nullbmp.common.ovl");
+    var commonPath = Path.Join(rct3!, "nullbmp.common.ovl");
     Assert.That(File.Exists(commonPath), Is.True, $"nullbmp.common.ovl not found at: {commonPath}");
 
     var resources = Ovl.Load(commonPath);

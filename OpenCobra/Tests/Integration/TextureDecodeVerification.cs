@@ -42,7 +42,7 @@ public class TextureDecodeVerification {
       // TODO: Extract this logic to the `SkipIfEnvironmentMissing` attribute implementation
       Assert.Ignore("Cannot find RCT3. Skipping integration test.");
     }
-    var mainPath = Path.Combine(rct3!, "Main.common.ovl");
+    var mainPath = Path.Join(rct3!, "Main.common.ovl");
     Assert.That(File.Exists(mainPath), Is.True, $"Main.common.ovl not found at: {mainPath}");
 
     using var ovl = Ovl.Load(mainPath);
@@ -63,7 +63,7 @@ public class TextureDecodeVerification {
       // TODO: Extract this logic to the `SkipIfEnvironmentMissing` attribute implementation
       Assert.Ignore("Cannot find RCT3. Skipping integration test.");
     }
-    var path = Path.Combine(rct3!, "Characters", "AF", "AF01_Body_Main.common.ovl");
+    var path = Path.Join(rct3!, "Characters", "AF", "AF01_Body_Main.common.ovl");
     Assert.That(File.Exists(path), Is.True, $"AF01_Body_Main.common.ovl not found at: {path}");
 
     using var ovl = Ovl.Load(path);
