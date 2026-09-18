@@ -199,15 +199,16 @@ namespace Dumper
       // pluginsToolStripMenuItem
       // 
       pluginsToolStripMenuItem.Name = "pluginsToolStripMenuItem";
-      pluginsToolStripMenuItem.Size = new Size(125, 22);
+      pluginsToolStripMenuItem.Size = new Size(180, 22);
       pluginsToolStripMenuItem.Text = "&Plugins…";
       pluginsToolStripMenuItem.Click += PluginsMenuItem_Click;
       // 
       // optionsToolStripMenuItem
       // 
       optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
-      optionsToolStripMenuItem.Size = new Size(125, 22);
-      optionsToolStripMenuItem.Text = "&Options…";
+      optionsToolStripMenuItem.Size = new Size(180, 22);
+      optionsToolStripMenuItem.Text = "Settings…";
+      optionsToolStripMenuItem.Click += SettingsToolStripMenuItem_Click;
       // 
       // helpToolStripMenuItem
       // 

@@ -1,0 +1,14 @@
+﻿{
+  "solution": {
+    "path": "OpenRCT3.sln",
+    "projects": [
+      "OpenCobra\\Analyzers\\Analyzers.csproj",
+      "OpenCobra\\GDK\\GDK.csproj",
+      "OpenCobra\\OVL\\OVL.csproj",
+      "OpenCobra\\Tests\\Integration\\IntegrationTests.csproj",
+      "OpenCobra\\Tests\\TestRunner\\OvlTestBench.csproj",
+      "OpenCobra\\Tests\\Tests.csproj",
+      "OpenRCT3\\OpenRCT3.csproj"
+    ]
+  }
+}

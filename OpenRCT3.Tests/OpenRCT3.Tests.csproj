@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>OpenRCT3.Tests</RootNamespace>
+    <AssemblyName>OpenRCT3.Tests</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+
+  <!-- Match OpenRCT3.csproj's per-OS TargetFramework, since this project references it. -->
+  <Choose>
+    <When Condition="$([MSBuild]::IsOSPlatform('macos'))">
+      <PropertyGroup>
+        <TargetFramework>net9.0-macos</TargetFramework>
+        <TargetPlatformVersion>15.0</TargetPlatformVersion>
+        <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+      </PropertyGroup>
+    </When>
+    <When Condition="$([MSBuild]::IsOSPlatform('windows'))">
+      <PropertyGroup>
+        <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+        <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="4.6.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.13.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="NUnit3TestAdapter" Version="6.2.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+    <Using Include="System" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenRCT3\OpenRCT3.csproj" />
+  </ItemGroup>
+</Project>

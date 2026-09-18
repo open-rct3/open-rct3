@@ -1,10 +1,11 @@
-﻿// Program
+// Program
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024 OpenRCT3 Contributors. All rights reserved.
 
+using OpenCobra.OVL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.macOS;
 using NLog;
@@ -14,34 +15,33 @@ using System;
 namespace OpenRCT3;
 
 internal static class Program {
-  private readonly static Logger Logger = LogManager.GetCurrentClassLogger();
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
-  private static void HandleException(Exception? e) {
+  internal static void HandleException(Exception? e) {
     if (e == null) return;
-    Logger.Fatal(e, "An unhandled exception occurred.");
-    // See https://www.jetbrains.com/help/rider/UsingStatementResourceInitialization.html
-    using var alert = new NSAlert();
-    alert.MessageText = "OpenRCT3 Error";
-    alert.InformativeText = $"An unhandled exception occurred: {e.Message}";
-    alert.AlertStyle = NSAlertStyle.Critical;
-    alert.RunModal();
+    logger.Fatal(e, "An unhandled exception occurred.");
+
+    // Must be deferred (not InvokeOnMainThread's synchronous waitUntilDone:YES): this can be
+    // reached from inside a CATransaction commit (e.g. a CAOpenGLLayer draw callback), and
+    // NSAlert.RunModal cannot run a nested run loop while a transaction is mid-commit.
+    NSApplication.SharedApplication.BeginInvokeOnMainThread(() => {
+      using var alert = new CrashAlert(e);
+      alert.RunAndHandle();
+    });
   }
 
   private static AppConfig LoadConfigAndFindInstall() {
     var config = AppConfig.Load();
-    if (!string.IsNullOrEmpty(config.InstallPath) && InstallFinder.Validate(config.InstallPath)) {
+    if (!string.IsNullOrEmpty(config.InstallPath) && InstallFinder.Validate(config.InstallPath))
       return config;
-    }
 
     try {
-      var installPath = InstallFinder.Find(config.ExtraPaths);
-      // ReSharper disable once WithExpressionModifiesAllMembers
-      config = config with { InstallPath = installPath };
+      config.InstallPath = InstallFinder.Find(config.ExtraPaths);
       config.Save();
       return config;
-    }
-    catch (InstallNotFoundException) {
-      var picker = new FolderPicker();
+    } catch (InstallNotFoundException) {
+      logger.Trace("Install not found! Attempting to show folder chooser...");
+      using var picker = new FolderPicker();
       var selectedPath = picker.PickFolder("Select your RCT3 Assets folder");
 
       if (!string.IsNullOrEmpty(selectedPath) && InstallFinder.Validate(selectedPath)) {
@@ -61,15 +61,13 @@ internal static class Program {
     AppDomain.CurrentDomain.UnhandledException += (sender, e) => HandleException(e.ExceptionObject as Exception);
 
     LogManager.Setup().LoadConfigurationFromFile("nlog.config");
-    Logger.Info("Starting OpenRCT3 on macOS...");
+    logger.Info("Starting OpenRCT3 on macOS...");
 
     // ‼ This order matters!
     // NSApplication.Init() must be called before any UI elements are created.
     // LoadConfigAndFindInstall may show a dialog to the user.
     NSApplication.Init();
-    // FIXME: Use LoadConfigAndFindInstall instead
-    AppConfig.Load();
-    InstallFinder.Find(AppConfig.Instance.ExtraPaths);
+    LoadConfigAndFindInstall();
     NSApplication.SharedApplication.Delegate = new AppDelegate();
     NSApplication.Main(args);
   }

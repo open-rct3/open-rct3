@@ -5,11 +5,22 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
-using System;
-using System.Diagnostics;
+using DryIoc;
+using NLog;
 using OpenCobra.GDK;
-using OpenRCT3.Simulation;
+using OpenCobra.GDK.Game;
+using OpenCobra.GDK.Materials;
+using OpenCobra.GDK.Meshes;
+using OpenCobra.GDK.Platform;
+using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
+using OpenRCT3.Scenario;
+using OpenRCT3.Simulation;
+using System.Drawing;
+using System.Numerics;
+using System.Threading;
+
+
 #if WINDOWS
 using System.Windows.Forms;
 #elif OSX
@@ -21,15 +32,53 @@ namespace OpenRCT3;
 /// <summary>
 /// The game world.
 /// </summary>
-public class Game : IDisposable {
+public class Game : IGame {
+  /// <summary>The maximum number of simulation ticks to process in one instant.</summary>
+  private const int MaxSimulationTicks = 8;
+  /// <summary>The minimum time between lag warning messages.</summary>
+  /// <remarks>This prevents spamming the log with warnings about lag.</remarks>
+  private readonly TimeSpan lagWarningDebounceInterval = TimeSpan.FromSeconds(10);
+
+  private readonly static Logger logger = LogManager.GetCurrentClassLogger();
+  private bool isRunning = false;
+  private bool isPaused = false;
+  private readonly ManualResetEvent resumeSignal = new(true);
+  private readonly Stopwatch stopwatch = new();
+  private DateTime lastLagWarning = DateTime.Now;
+  private readonly Renderer renderer = Game.IoC.Resolve<IRenderer>() as Renderer ??
+    throw new InvalidOperationException();
+
+  public static Container IoC => IGame.IoC;
   public static Game? Instance { get; private set; }
-  public static bool IsRunning => Instance != null;
+  public static bool IsRunning => Instance?.isRunning ?? false;
   /// <summary>
   /// Default frame rate of the game loop, in frames per second.
   /// </summary>
-  public static readonly int DefaultFrameRate = 60;
+  public readonly static int DefaultFrameRate = 60;
+
+  /// <summary>
+  /// Raised once the game has started and the game loop is running.
+  /// </summary>
+  /// <remarks>
+  /// The game is started via <see cref="Run"/>.
+  /// </remarks>
+  public event Action? Started;
+  /// <summary>
+  /// <para>Raised when the game ends, i.e. when the user quits.</para>
+  /// <para>See <see cref="Quit"/>.</para>
+  /// </summary>
+  public event Action? Exited;
 
   public AppConfig Config { get; } = AppConfig.Instance;
+
+  public bool IsPaused => isPaused;
+
+  /// <summary>
+  /// <para>The time taken to render the last frame, or null if no frame has been rendered yet.</para>
+  /// <para>Use <see cref="TargetFrameRate"/> to set the frame rate.</para>
+  /// </summary>
+  public TimeSpan FrameTime { get; private set; } = TimeSpan.Zero;
+
   /// <summary>
   /// Target frame rate of the game loop, in frames per second.
   /// </summary>
@@ -37,30 +86,69 @@ public class Game : IDisposable {
     get => Convert.ToInt32(1.0 / TargetFrameTime.TotalSeconds);
     set => TargetFrameTime = TimeSpan.FromSeconds(1.0 / value);
   }
+
   /// <summary>
   /// Target frame time of the game loop.
   /// </summary>
   public TimeSpan TargetFrameTime { get; private set; } = TimeSpan.FromSeconds(1.0 / 60.0);
-  [Unowned("The renderer is owned by the platform abstraction layer.")]
-  public WeakReference<IRenderer> Renderer { get; }
-  public World World { get; }
+
+  /// <summary>
+  /// Target simulation tick rate.
+  /// </summary>
+  public TimeSpan TargetUpdateRate { get; set; } = TimeSpan.FromSeconds(1.0 / 60.0);
+
+  /// <summary>
+  /// Whether the game should use vertical sync (VSync) to limit the frame rate.
+  /// </summary>
+  public bool VSync { get; set; } = false;
+
+  public Simulation.World World { get; } = new();
   public Scene Scene { get; } = new();
 
-  private readonly Stopwatch _stopwatch = new();
-
-  /// <param name="renderer">The game renderer.</param>
-  public Game(WeakReference<IRenderer> renderer) {
+  public Game() {
     Instance = this;
-    Renderer = renderer;
-    World = new World();
 
-    if (!string.IsNullOrEmpty(Config.InstallPath)) {
-      var nullbmpPath = System.IO.Path.Combine(Config.InstallPath, "nullbmp.common.ovl");
-      Scene.LoadTexture(nullbmpPath);
-    }
+    logger.Trace("Creating game world...");
+    logger.Warn("Simulation features are unimplemented!");
 
-    _stopwatch.Start();
-    // TODO: Log with the info severity: "Simulation features are unimplemented"
+    // Load the game world
+    // TODO: Show a progress bar while loading
+    World.Load();
+    logger.Trace("Game world loaded");
+
+    // Build a mesh from the loaded terrain's corner-height grid (solid-colored prototype;
+    // surface painting isn't wired up yet)
+    var grass = Color.FromArgb(79, 129, 14).ToGl();
+    Debug.Assert(World.Terrain != null);
+    var terrainMesh = TerrainMeshBuilder.Build(World.Terrain, grass);
+    var ground = new Model(terrainMesh) {
+      Material = new Flat()
+    };
+    Scene.Models.Add(ground);
+    logger.Trace("Added terrain mesh");
+
+    // Frame the camera on the loaded park's buildable area. Camera's default framing (a small fixed
+    // offset from the origin) only suits a toy scene — it doesn't scale to the actual, much larger,
+    // map, so most or all of the terrain ends up outside the view frustum entirely.
+    //
+    // `distance = diagonal` alone isn't enough margin: Camera's default view direction sits at an
+    // exact 45° azimuth (equal X/Y offset), so a square/rectangular map's corners land exactly on its
+    // diagonals and render as a rotated "diamond" rather than an upright rectangle. Perspective then
+    // foreshortens the near corner (closest to the eye) more than the sine-of-half-FOV bounding-sphere
+    // formula accounts for, pushing it outside the frustum before the far corner even reaches the
+    // frustum's edge. FramingDistanceMargin was picked empirically (see CameraFramingTests) to keep
+    // every corner — including the OOB border outside BuildableBounds, which the diagonal alone
+    // doesn't cover either — comfortably on-screen.
+    const float FramingDistanceMargin = 1.8f;
+    Debug.Assert(World.Park != null);
+    var bounds = World.Park.BuildableBounds;
+    var parkCenter = new Vector3((bounds.Min.X + bounds.Max.X) / 2f, (bounds.Min.Y + bounds.Max.Y) / 2f, 0f);
+    var parkDiagonal = Vector2.Distance(bounds.Min, bounds.Max);
+    Scene.Camera.Frame(parkCenter, parkDiagonal * FramingDistanceMargin);
+    logger.Trace("Framed camera on park");
+
+    // Add the scenario editor window
+    Scene.Windows.Add(new Editor());
   }
 
   /// <summary>
@@ -71,19 +159,36 @@ public class Game : IDisposable {
   /// </remarks>
   /// <seealso cref="TargetFrameRate"/>
   /// <seealso cref="TargetFrameTime"/>
-  /// <see href="https://gameprogrammingpatterns.com/game-loop.html"/>
+  /// <seealso href="https://gameprogrammingpatterns.com/game-loop.html"/>
   public void Run() {
-    var previousTime = _stopwatch.Elapsed;
-    var lag = TimeSpan.Zero;
-    var msPerUpdate = TargetFrameTime;
+    isRunning = true;
 
+    // Run the game loop
+    Started?.Invoke();
+    stopwatch.Start();
+    var previousTime = stopwatch.Elapsed;
+    // Measures wall time that has elapsed since the last frame
+    var lag = TimeSpan.Zero;
+
+    // Implements the fixed-update-time-step, variable-rendering pattern to decouple
+    // simulation stability (fixed step for physics/AI determinism) from visual
+    // smoothness (variable render rate).
+    //
+    // See https://gameprogrammingpatterns.com/game-loop.html
     while (IsRunning) {
-      var currentTime = _stopwatch.Elapsed;
-      var elapsed = currentTime - previousTime;
+      // Wait for the resume signal if the game is paused
+      if (isPaused) {
+        resumeSignal.WaitOne();
+        logger.Trace("Game resumed");
+      }
+
+      var currentTime = stopwatch.Elapsed;
+      var elapsed = FrameTime = currentTime - previousTime;
       previousTime = currentTime;
+      // FIXME: Ought the game NOT accumulate lag if the game was paused?
       lag += elapsed;
 
-      // Process any pending window events (e.g. input events)
+      // Process any pending window events, e.g. input events
 #if WINDOWS
       Application.DoEvents();
 #elif OSX
@@ -92,44 +197,83 @@ public class Game : IDisposable {
       NSApplication.EnsureUIThread();
 #endif
 
-      while (lag >= msPerUpdate) {
-        // FIXME: Shouldn't the amount of time Tick takes affect the lag calculation?
-        Tick(msPerUpdate);
-        lag -= msPerUpdate;
+      // Simulation ticks are fixed steps to aid physics/AI determinism
+      // For example, a 60Hz target frame-rate would process one tick 60 times per second
+      LogLagWarning(lag);
+      for (var tickCount = 0; tickCount < MaxSimulationTicks && lag >= TargetFrameTime; tickCount++) {
+        Tick(
+          delta: TargetFrameTime,
+          // Normalize the lag to a percentage representing how far into the
+          // simulation step we are (0.0 = just started, 1.0 = just finished)
+          interpolation: lag.TotalMilliseconds / TargetFrameTime.TotalMilliseconds);
+        lag -= TargetFrameTime;
       }
 
-      Render((float)(lag.TotalMilliseconds / msPerUpdate.TotalMilliseconds));
+      // Rendering can happen at arbitrary points between updates, and frames can
+      // be dropped if the machine is slow.
+      Scene.Update(delta: elapsed);
+      renderer.Render(Scene);
 
       // Reduce CPU usage by sleeping when ahead of schedule
-      var remaining = msPerUpdate - lag;
+      var remaining = TargetFrameTime - lag;
       if (remaining > TimeSpan.Zero) {
-        var sleepMs = (int)(remaining.TotalMilliseconds / 2.0);
-        if (sleepMs > 2)
-          System.Threading.Thread.Sleep(sleepMs / 2);
+        var sleepMs = remaining.TotalMilliseconds / 2.0;
+        if (sleepMs > 2) Thread.Sleep((int)sleepMs / 2);
       }
     }
+
+    Exited?.Invoke();
+    logger.Info("Game exited");
+  }
+
+  public void Pause() {
+    isPaused = true;
+    resumeSignal.Reset();
+  }
+
+  public void Resume() {
+    isPaused = false;
+    resumeSignal.Set();
   }
 
   /// <summary>
-  /// Advances the simulation.
+  /// Try to quit the game.
   /// </summary>
-  /// <param name="delta">The time between ticks.</param>
-  private void Tick(TimeSpan delta) {
-    // TODO: Advance the simulation logic by a fixed time step
-  }
+  /// <returns>Whether the game stopped running.</returns>
+  public bool Quit() {
+    // TODO: Check for unsaved changes and prevent closure
+    isRunning = false;
 
-  /// <summary>
-  /// Renders the scene.
-  /// </summary>
-  /// <param name="interpolation">The interpolation fraction.</param>
-  private void Render(float interpolation) {
-    if (Renderer.TryGetTarget(out var renderer))
-      renderer.Render(Scene);
+    if (!isRunning) logger.Info("Exiting game...");
+    return !isRunning;
   }
 
   public void Dispose() {
     // TODO: World.Dispose();
     GC.SuppressFinalize(this);
     Instance = null;
+  }
+
+  /// <summary>
+  /// Advances the simulation.
+  /// </summary>
+  /// <param name="delta">The time between ticks.</param>
+  /// <param name="interpolation">The interpolation fraction.</param>
+  private void Tick(TimeSpan delta, double interpolation) {
+    // TODO: Advance the simulation logic by a fixed time step
+    // TODO: Scheduler.Execute(delta);
+  }
+
+  [Conditional("DEBUG")]
+  private void LogLagWarning(TimeSpan lag) {
+    // TODO: Detect excessive lag and lower the user's target frame-rate
+    // TODO: Maybe even show a modal to the user:
+    // "You are experiencing excessive lag. Lowering frame-rate to prevent stuttering."
+    // "Consider lowering your target frame-rate in the game settings."
+    if (lag <= TargetFrameTime || DateTime.Now - lastLagWarning <= lagWarningDebounceInterval) return;
+
+    var details = $"{lag.TotalMilliseconds}ms (target: {TargetFrameTime.TotalMilliseconds}ms)";
+    logger.Warn($"Lag has exceeded target frame time budget: {details}");
+    lastLagWarning = DateTime.Now;
   }
 }

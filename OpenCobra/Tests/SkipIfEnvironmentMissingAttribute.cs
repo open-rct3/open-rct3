@@ -10,7 +10,9 @@ using NUnit.Framework.Internal;
 namespace OVL.Tests;
 
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-public class SkipIfEnvironmentMissingAttribute(string envVar, string reason) : NUnitAttribute, IApplyToTest {
+public class SkipIfEnvironmentMissingAttribute(
+  string envVar, string reason = "Cannot find RCT3. Skipping test."
+) : NUnitAttribute, IApplyToTest {
   public void ApplyToTest(Test test) {
     if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(envVar))) {
       test.RunState = RunState.Ignored;

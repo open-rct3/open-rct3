@@ -1,13 +1,13 @@
 {
-  "actions": {
-    "clean": {
-      "enabled": true,
-      "script": "#!\/bin\/sh\nmake clean\n"
+  "actions" : {
+    "clean" : {
+      "enabled" : true,
+      "script" : "#!\/bin\/sh\nmake clean\n"
     },
-    "run": {
-      "enabled": true,
-      "script": "#!\/bin\/sh\nmake test\n"
+    "run" : {
+      "enabled" : true,
+      "script" : "#!\/bin\/sh\ndotnet test OpenRCT3.macos.slnf\n"
     }
   },
-  "openLogOnRun": "fail"
+  "openLogOnRun" : "fail"
 }

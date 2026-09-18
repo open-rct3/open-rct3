@@ -26,5 +26,8 @@
     <Compile Update="ResourceProperties.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Settings\SettingsDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
 </Project>

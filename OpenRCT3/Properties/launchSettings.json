@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "OpenRCT3": {
+      "commandName": "Project",
+      "debugEngines": "managed,native",
+      "hotReloadEnabled": false
+    }
+  }
+}

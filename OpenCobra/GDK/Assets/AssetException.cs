@@ -11,7 +11,9 @@ internal class AssetException : Exception {
   public static readonly string MessagePrefix = "Could not process asset";
 
   public AssetException() {}
+  public AssetException(string message) : base($"{MessagePrefix}: {message}") {}
   public AssetException(Exception? innerException) : base($"{MessagePrefix}.", innerException) {}
-  public AssetException(string? message) : base(message) {}
-  public AssetException(string? message, Exception? innerException) : base(message, innerException) {}
+  public AssetException(string? message, Exception? innerException) : base(
+    $"{MessagePrefix}: {message}", innerException
+  ) {}
 }

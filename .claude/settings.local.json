@@ -1,16 +1,17 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:extism.github.io)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:dylibso.com)",
       "WebFetch(domain:docs.wasmtime.dev)",
       "Bash(dotnet build *)",
       "Bash(dotnet clean *)",
-      "Bash(deno test *)",
-      "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(dotnet test *)",
+      "Bash(deno test *)"
     ]
   }
 }

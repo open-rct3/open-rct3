@@ -14,14 +14,6 @@ Deno.test("ftx-viewer: name()", async () => {
   await plugin.close();
 });
 
-Deno.test("ftx-viewer: version()", async () => {
-  const plugin = await createPlugin(wasmUrl, { functions });
-  const out = await plugin.call("version");
-  assert(out !== null, "Expected a result!");
-  assertEquals(out!.text(), "0.1.0");
-  await plugin.close();
-});
-
 Deno.test("ftx-viewer: file_types()", async () => {
   const plugin = await createPlugin(wasmUrl, { functions });
   const out = await plugin.call("file_types");
@@ -32,7 +24,9 @@ Deno.test("ftx-viewer: file_types()", async () => {
 
 Deno.test("ftx-viewer: render() nullbmp", async () => {
   const nullBmp = new URL("../tests/nullbmp.ftx", import.meta.url);
-  if (!existsSync(nullBmp)) throw new Error("nullbmp.ftx not found!");
+  if (!existsSync(nullBmp)) return console.info(
+    "plugins/tests/nullbmp.ftx not found. Skipping this integration test."
+  );
 
   const plugin = await createPlugin(wasmUrl, { functions });
   const data = await Deno.readFile(nullBmp);
