@@ -11,9 +11,16 @@
 ## Context
 
 Scenery placement (where an object sits, at what rotation, static vs. animated) is a data-model concern
-separable from whether the underlying mesh/texture for that object has been resolved yet. This lets placement
-and object-registry design proceed without depending on the still-open texture decoding work
-([ovl-texture-decoding.md](../../bugs/ovl-texture-decoding.md)).
+separable from whether the underlying mesh/texture for that object has been resolved yet. This let placement
+and object-registry design proceed without depending on the texture decoding work, which was open when this
+plan was written and has since been fixed
+([`completed-work/ovl-texture-decoding.md`](../../summaries/completed-work/ovl-texture-decoding.md),
+[`completed-work/ovl-materials-integration.md`](../../summaries/completed-work/ovl-materials-integration.md)).
+The underlying reason this plan's design doesn't depend on that pipeline still holds, though: `svd`
+mesh decoding (which is what actually resolves a scenery item's geometry) remains unimplemented — see
+[`ovl-scenery-items.md`](ovl/ovl-scenery-items.md) (`svd`'s `meshtype == 0` case is unblocked by
+[`shs` decoding](../../summaries/completed-work/ovl-static-shapes.md), but `svd` itself isn't done)
+— so the object registry designed here is still ahead of, not blocked by, mesh resolution.
 
 **Scenery is not scalable.** RCT3's scenery catalog has a Small/Medium/Large enum, but that's a catalog
 filter/grouping property, not a render-time scale factor — placed scenery is static-mesh geometry (aside from
@@ -93,7 +100,7 @@ multiplier applied to a shared mesh.
 - **`FullTile` multi-tile height is a footprint-flatness gate, not an anchor-vs-average choice.** Multi-tile
   `FullTile` objects (and rides, later) query every corner within the object's footprint bounds (OVL data
   supplies scenery/ride bounds — a later concern). If those corners aren't all equal height, placement is
-  blocked outright rather than averaged or snapped — mirroring `terrain/tools.md`'s "Flatten for Scenery and
+  blocked outright rather than averaged or snapped — mirroring `research/terrain-tools.md`'s "Flatten for Scenery and
   Rides" tool and the same flatness-check shape [`Park.cs:112`](../../../OpenRCT3/Simulation/Park.cs)'s
   `IsAtGradePathPlaceable` already uses for single-tile paths. Once corners agree, "anchor vs. average" is moot
   — both read the same value. This applies to non-terrain-conforming footprint objects generally (flat rides,

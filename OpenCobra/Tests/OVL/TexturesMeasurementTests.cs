@@ -5,12 +5,12 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 //
-// Locks in the current fixture-decode count as a regression check while
-// .agents/plans/fix/ovl-texture-decoding.md is implemented. Not a success metric: the fixtures
-// don't exercise the mms/prt/fct-adjacent patterns the bug is actually about (see the plan's
-// "Fixture coverage is real but narrow" note). [Explicit] keeps this out of `make test`'s default
-// run; invoke with `--filter Category=Measurement` (which also requires passing the NUnit
-// TestExplicitAttribute filter) or by fully-qualified name to run it deliberately.
+// Locks in the current fixture-decode count as a regression check for an in-progress texture
+// decoding fix. Not a success metric: the fixtures don't exercise the mms/prt/fct-adjacent
+// patterns the underlying bug is actually about - coverage here is real but narrow. [Explicit]
+// keeps this out of `make test`'s default run; invoke with `--filter Category=Measurement` (which
+// also requires passing the NUnit TestExplicitAttribute filter) or by fully-qualified name to run
+// it deliberately.
 using NUnit.Framework;
 using OpenCobra.OVL;
 using OpenCobra.OVL.Files;
@@ -23,17 +23,18 @@ namespace OpenCobra.Tests.OVL;
 [TestFixture]
 [Category("Measurement")]
 public class TexturesMeasurementTests {
-  // Baseline recorded when this test was added (bug doc Part 6 / fix plan Step 0). After every
-  // change made while implementing the fix plan, this number must still hold - it is a regression
-  // check on the embedded fixtures, not a progress check (progress is measured against the fix
-  // plan's Step 7, using a real RCT3_PATH install).
-  private const int BaselineTextureCount = 5;
+  /// <remarks>
+  /// <para>This number must still hold after any change.</para>
+  /// <para>It's a regression check on the embedded fixtures, not a progress check.
+  /// Progress is measured against a real <c>RCT3_PATH</c> install.</para>
+  /// </remarks>
+  private const int BaselineTextureCount = 29;
 
   private static IEnumerable<string> CommonOvlResourceNames() =>
     Assembly.GetExecutingAssembly().GetManifestResourceNames().Where(n => n.EndsWith(".common.ovl"));
 
   [Test]
-  [Explicit("Measurement test: locks in the current fixture-decode count, not part of the default test flow.")]
+  [Explicit("Measurement test to count current fixture-decode count; not part of the default test flow.")]
   public void Extract_FromAllFixtures_MatchesBaselineCount() {
     var assembly = Assembly.GetExecutingAssembly();
     var log = new StringBuilder();

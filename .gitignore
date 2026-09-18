@@ -10,7 +10,18 @@ TestResults/
 OpenCobra/Tests/TestRunner/bin/**/ovl-tests.local.json
 OpenCobra/Tests/TestRunner/ovl-tests.local.json
 
+# Shortcuts
+assets/App Data.lnk
+
+# DUB
+.dub
+docs.json
+__dummy.html
+
+############
 # Artifacts
+############
+
 bin/open-rct3
 bin/open-rct3-test-application
 bin/OpenRCT3
@@ -23,15 +34,6 @@ bin/OpenRCT3 Server
 *.a
 *.lib
 *.exe
-
-# DUB
-.dub
-docs.json
-__dummy.html
-
-############
-# Artifacts
-############
 
 # .NET
 obj/
@@ -49,9 +51,11 @@ obj/
 **/bin/Debug/**/OpenCobra.Tests.Integration
 **/bin/Debug/**/OVL Dumper
 **/bin/Debug/**/OvlTestBench
+**/bin/Debug/**/textures-measurement.log
 **/bin/Release/**/*.deps.json
 **/bin/Release/**/.msCoverageSourceRootsMapping_Tests
 **/bin/Release/**/CoverletSourceRootsMapping_Tests
+.agents/tools/**/*.runtimeconfig.json
 
 bin/OpenRCT3*
 OpenRCT3/bin/
@@ -84,3 +88,6 @@ bin/open-rct3-*
 
 # Code Coverage
 *.lst
+
+# Node
+node_modules/

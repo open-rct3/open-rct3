@@ -1,200 +1,48 @@
-# Plan: Decode SceneryItem (SID) Entries
+# Decode SceneryItem (SID) and SceneryItemVisual (SVD) Entries
 
-## Problem
+**Roadmap**: Phase 1, "Render built-in static (unanimated) scenery items" and "Render built-in
+animated scenery items"
 
-SID entries are the most complex OVL file type — they define all placeable scenery objects (rides, stalls, decorations,
-etc.) with UI metadata, positioning rules, colors, sounds, and references to visual definitions (SVD). The dumper should
-display comprehensive scenery item metadata.
+**Status**: Decoders and tests are done — see
+[`completed-work/ovl-scenery-items.md`](../../../summaries/completed-work/ovl-scenery-items.md) for
+what landed, how it was tested, and the architecture decisions behind it. What's left is the
+`sid-viewer` Dumper plugin bug below, plus the deferred Future Work items.
 
-## Background Research
+## Open: `sid-viewer` `render()` crash
 
-**SID Manager** (`ManagerSID.h/cpp`):
+Calling `sid-viewer`'s `render()` with the full plugin (metadata table + placement diagram + LOD
+table all together) crashes the Extism JS test harness with `RangeError: Offset is outside the
+bounds of the DataView` inside Extism's own `store_u8`, thrown while marshaling the call.
 
-- Tag: `"sid"`, Name: `"SceneryItem"`, stored in **unique OVL only**
-- Each SID = `cSid` with extensive metadata:
-  - **UI**: name, icon, group, groupicon, type, cost, removal_cost
-  - **Position**: positioning type, tile dimensions (x/z), position (x/y/z), size (x/y/z), supports
-  - **Colors**: 3 default color values
-  - **Square unknowns**: per-tile flags, min/max height, height bitmask, supports
-  - **Extra**: version (0/1/2), addon pack (0=vanilla, 1=soaked, 2=wild), generic addon
-  - **Sounds**: array of sound references + animation scripts
-  - **SVDs**: array of visual definition references
-  - **Parameters**: key-value string pairs
-  - **Flat ride**: individual animation references, chunked ANR parameters
-- Multiple struct versions: `SceneryItem_V` (base), `SceneryItem_S` (v1), `SceneryItem_W` (v2)
-- Common data: `SceneryItemData[]` (per-tile), `SceneryParams[]`, sound scripts, animation names
-- Symbol references to: TXT (names), GSI (icons), SVD (visuals), SND (sounds)
+Bisected into standalone minimal plugins, every individual piece of `renderSceneryItem`'s logic
+passes on its own:
+- SID field parsing (`readU16LE`/`readU32LE`/`readI32LE` over the raw `render(bytes)` payload)
+- The placement SVG diagram (`renderPlacementDiagram`)
+- The SVD/LOD-walking host-function chain (`Ovl.symbolAddress` → `Ovl.resolvePointer` →
+  `Ovl.getRelocationSource`/`Ovl.resolveSymbolReference` per LOD)
+- The TXT content fetch (`readTxtContent` via `Ovl.readResource`)
 
-**Data Layout**:
+The crash only reproduces once everything is combined in the real file — the exact interaction
+hasn't been pinned down. Suspects not yet ruled out:
+- WASM linear-memory growth timing across many host-function calls in one `render()` invocation
+  (each `resolve_symbol_reference`/`resolve_pointer` call that returns bytes does its own
+  `ctx.store()` allocation; the full render does far more of these per call than any bisected piece
+  did)
+- AssemblyScript `Array<string>`/`class` allocation interacting with that growth (the bisected LOD
+  section used a `string[]` and a `LodSummary` class together; isolating that combination
+  specifically, independent of the metadata/placement sections, hasn't been tried)
 
-- Unique block: main `SceneryItem` struct → SVD pointer array → sound array
-- Common block: `SceneryItemData[]` → height bitmaps → `SceneryParams[]` → sound script data → animation name pointers
-- Extra data for v1/v2: `SceneryExtraSound[]`
+**Next steps**: bisect further by combining exactly two of the three sections at a time (metadata +
+placement, placement + LOD, metadata + LOD) rather than jumping straight to all three, to narrow
+which pairing first triggers the crash. The two affected tests are `Deno.test.ignore`d in
+[`plugins/sid-viewer/index.test.ts`](../../../../plugins/sid-viewer/index.test.ts) with a note
+pointing back here; `name()`/`file_types()` still pass, and the plugin builds cleanly via
+`scripts/build-plugins.ts`.
 
-**Complexity Notes**:
+## Future Work
 
-- 563 lines in ManagerSID.cpp — most complex manager
-- Multiple unknown fields (40+ across all structs)
-- Conditional size calculations based on version, addon pack, tile count
-- Sound scripts with variable-size commands (8 or 16 bytes)
-
-## Solution Architecture
-
-### New File: `OpenCobra/OVL/Files/SceneryItems.cs`
-
-```csharp
-public record SceneryItemUI {
-  string Name;
-  string Icon;
-  string Group;
-  string GroupIcon;
-  uint Type;
-  int Cost;
-  int RemovalCost;
-}
-
-public record SceneryItemPosition {
-  ushort PositioningType;
-  uint XSquares;
-  uint ZSquares;
-  float XPos, YPos, ZPos;
-  float XSize, YSize, ZSize;
-  string Supports;
-}
-
-public record SceneryItemTile {
-  uint Flags;
-  int MinHeight;
-  int MaxHeight;
-  uint Supports;
-}
-
-public record SceneryItemSound {
-  IReadOnlyList<string> SoundNames;  // SND references
-  IReadOnlyList<SoundScript> AnimationScripts;
-}
-
-public record SceneryItemExtra {
-  ushort Version;
-  uint AddonPack;       // 0=vanilla, 1=soaked, 2=wild
-  uint GenericAddon;
-  float UnkF;
-  uint BillboardAspect;
-}
-
-public record SceneryItem {
-  string Name;
-  string OvlPath;
-  SceneryItemUI UI;
-  SceneryItemPosition Position;
-  uint[] DefaultColors;  // 3 entries
-  IReadOnlyList<SceneryItemTile> Tiles;
-  SceneryItemExtra Extra;
-  IReadOnlyList<SceneryItemSound> Sounds;
-  IReadOnlyList<string> SvdRefs;  // SVD references
-  IReadOnlyList<SceneryParam> Parameters;
-}
-
-public static class SceneryItems {
-  public static IReadOnlyList<SceneryItem> Extract(Ovl ovl);
-}
-```
-
-### Implementation Steps
-
-1. Find loaders where `Tag == "sid"` (unique OVL only)
-2. Determine struct version from extra.version field
-3. Parse main `SceneryItem` struct (version-dependent size)
-4. Read SVD pointer array and resolve symbol references
-5. Read common data: `SceneryItemData[]` (per-tile), height bitmaps
-6. Read sound array with SND symbol references
-7. Read parameters array
-8. Return list of `SceneryItem`
-
-### Files to Create/Modify
-
-**Create:**
-
-- `OpenCobra/OVL/Files/SceneryItems.cs`
-
-### Dependencies
-
-- Existing relocation resolution
-- Symbol reference resolution for TXT, GSI, SVD, SND
-
-### Regression Prevention
-
-- No changes to `Ovl.cs`
-- New test file: `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItems.cs`
-- Run TestRunner before/after implementation
-
-### Testing Strategy (TestRunner)
-
-Create new file `OpenCobra/Tests/TestRunner/Tests/ReadSceneryItems.cs`:
-
-```csharp
-using System;
-using System.Linq;
-using OVL;
-
-namespace OvlTestBench.Tests;
-
-public static class ReadSceneryItems {
-  public static readonly OvlTest[] All = [
-    new("SceneryItemEntriesDecoded", pair => {
-      foreach (var file in pair.Files) {
-        if (file.Type != OvlType.Unique) continue;  // SID is unique-only
-        try {
-          using var stream = System.IO.File.OpenRead(file.Path);
-          var ovl = Ovl.Read(stream, file.Path);
-          var items = SceneryItems.Extract(ovl);
-          if (ovl.LoaderEntries.Any(e => e.Tag == "sid") && items.Count == 0) {
-            Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: expected scenery items but got none");
-          }
-          foreach (var item in items) {
-            Assert.That(!string.IsNullOrEmpty(item.UI.Name), $"{System.IO.Path.GetFileName(file.Path)}: scenery item has empty name");
-          }
-        } catch (Exception ex) {
-          Assert.That(false, $"{System.IO.Path.GetFileName(file.Path)}: {ex.Message}");
-        }
-      }
-    }),
-  ];
-}
-```
-
-Add to `LoadOvls.All` array or create as separate test file following the existing pattern.
-
-### Success Criteria
-
-- All SID entries extracted with full metadata
-- Version-dependent struct parsing correct (v0, v1, v2)
-- Symbol references to SVD/SND/TXT/GSI resolved
-- Tile data parsed correctly
-- Zero regressions
-
-## Production OVLs with Entries
-
-> **Status**: Not yet identified
-
-Production OVL archives containing scenery item entries (tag: `"sid"`) have not yet been catalogued. To identify:
-
-1. Scan production OVLs for loader entries with `Tag == "sid"` (unique OVL only)
-2. Document common vs unique archive distribution
-3. Note sample symbol names for verification
-
-**Known test files**: `style.common.ovl`, `style.unique.ovl` (no SID entries present)
-
-## Post-Implementation Steps
-
-When this decoder is implemented:
-
-1. **Create results file**: Add `.opencode/results/ovl-scenery-items.md` with implementation summary
-2. **Update README**: Change Status to `Done` in the Plans table and Summary Table
-3. **Update this plan**: Change status in "Production OVLs with Entries" section
-
-### Future Work
-
-- Full sound script parsing
-- Flat ride animation references
-- Export to human-readable format (JSON/XML)
+- Full sound script parsing (`SoundScript.RawCommands` currently holds undecoded 8-/16-byte
+  command bytes only)
+- Flat ride animation references (`SceneryItem.AnrRefs` currently holds raw ANR symbol names only)
+- Visualize LOD switching distances in `sid-viewer`'s LOD table (currently just lists the
+  `LodDistance` value per row, not a diagram of the switchover points)

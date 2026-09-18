@@ -63,6 +63,8 @@ try {
     '--no-restore',
     '--settings',
     $settings,
+    '--filter',
+    'TestCategory!=Measurement&TestCategory!=InstalledAssets',
     '--logger',
     'trx;LogFilePrefix=unit',
     '--results-directory',

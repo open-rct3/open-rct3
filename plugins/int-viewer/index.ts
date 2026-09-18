@@ -1,7 +1,6 @@
-/// <reference no-default-lib="true" />
-/// <reference types="assemblyscript/types" />
 import { Config, Host } from "@extism/as-pdk";
 import { renderHexView } from "../lib/hexViewer.ts";
+import "../types.ts";
 
 export function name(): i32 {
   Host.outputString("Integer Viewer");

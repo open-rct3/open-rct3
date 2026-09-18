@@ -1,0 +1,147 @@
+// TerrainPickerTests
+//
+// Authors:
+//   - Chance Snow <git@chancesnow.me>
+//
+// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+using System.Numerics;
+using OpenCobra.GDK;
+using OpenRCT3.Serialization;
+using OpenRCT3.Simulation;
+
+namespace OpenRCT3.Tests.Simulation;
+
+[TestFixture]
+public class TerrainPickerTests {
+  private const float Epsilon = 1e-3f;
+
+  // A small buildable area (Terrain pads it with the 5-tile OOB border on every side), giving a
+  // 12x12 OOB-inclusive grid so tile (6, 6) sits at world X/Z [0, 4)/[24, 28).
+  private static Terrain NewTerrain(ushort initialHeight = 0) => new(width: 2, height: 2, initialHeight);
+
+  [Test]
+  public void TryPickTile_RayStartsOutsideThenEntersTerrain_HitsSurface() {
+    var terrain = NewTerrain();
+    var target = new Vector3(2, 0, 26);
+    var origin = new Vector3(60, 50, 26);
+    var ray = new Ray(origin, Vector3.Normalize(target - origin));
+
+    var result = TerrainPicker.TryPickTile(ray, terrain, maxSteps: 100);
+
+    Assert.That(result, Is.Not.Null);
+    Assert.That(Vector3.Distance(result!.Value.Point, target), Is.LessThan(Epsilon));
+  }
+
+  [Test]
+  public void TryPickTile_StraightDownOverFlatTerrain_HitsExpectedTileAndPoint() {
+    var terrain = NewTerrain();
+    var ray = new Ray(new Vector3(2, 50, 26), -Vector3.UnitY);
+
+    var result = TerrainPicker.TryPickTile(ray, terrain, maxSteps: 100);
+
+    Assert.That(result, Is.Not.Null);
+    Assert.That(result!.Value.TileX, Is.EqualTo(6));
+    Assert.That(result.Value.TileY, Is.EqualTo(6));
+    Assert.That(Vector3.Distance(result.Value.Point, new Vector3(2, 0, 26)), Is.EqualTo(0f).Within(Epsilon));
+  }
+
+  [Test]
+  public void TryPickTile_StraightDownThroughARaisedCorner_ReturnsThatCornersExactHeight() {
+    var terrain = NewTerrain();
+    // Tile (6, 6)'s NorthEast corner sits at world (4, ..., 28). Raise it (propagating to shared
+    // neighbors, i.e. no cliff) so the hit point's Y should exactly match the raised height.
+    terrain.RaiseCorner(6, 6, TerrainCornerSlot.NorthEast, delta: 50);
+    var expectedY = Terrain.CornerHeightToWorldY(terrain.GetCorner(6, 6, TerrainCornerSlot.NorthEast).Height);
+    var ray = new Ray(new Vector3(4, 50, 28), -Vector3.UnitY);
+
+    var result = TerrainPicker.TryPickTile(ray, terrain, maxSteps: 100);
+
+    Assert.That(result, Is.Not.Null);
+    Assert.That(result!.Value.Point.Y, Is.EqualTo(expectedY).Within(Epsilon));
+  }
+
+  [Test]
+  public void TryPickTile_DetachedCorner_HitsTheEditedTilesOwnHeight_NotTheNeighbors() {
+    var terrain = NewTerrain();
+    // SetCornerHeight does not propagate - tile (6, 6)'s NorthEast corner is raised, but its neighbor
+    // across that corner (tile (7, 7)'s SouthWest copy) stays at 0, detaching the edge (a cliff).
+    terrain.SetCornerHeight(6, 6, TerrainCornerSlot.NorthEast, 50);
+    // Just inside tile (6, 6)'s bounds rather than exactly on the shared corner point (4, 28) - the
+    // latter floor-maps to the neighboring tile (7, 7) instead, which is the whole point of this test.
+    var ray = new Ray(new Vector3(3.999f, 50, 27.999f), -Vector3.UnitY);
+
+    var result = TerrainPicker.TryPickTile(ray, terrain, maxSteps: 100);
+
+    Assert.That(result, Is.Not.Null);
+    Assert.That(result!.Value.TileX, Is.EqualTo(6));
+    Assert.That(result.Value.TileY, Is.EqualTo(6));
+    Assert.That(result.Value.Point.Y, Is.EqualTo(Terrain.CornerHeightToWorldY(50)).Within(Epsilon));
+  }
+
+  [Test]
+  public void TryPickTile_DecodedTerrain_UsesStoredOriginAndTileSize() {
+    var terrain = Terrain.FromData(new DatTerrainData(
+      1,
+      1,
+      -12f,
+      7f,
+      4f,
+      5f,
+      [new DatTerrainCell(0f, 0f, 0f, 0f, 0, 0)]));
+    var ray = new Ray(new Vector3(-10f, 50f, 9f), -Vector3.UnitY);
+
+    var result = TerrainPicker.TryPickTile(ray, terrain, maxSteps: 0);
+
+    Assert.That(result, Is.Not.Null);
+    Assert.That(result!.Value.TileX, Is.EqualTo(0));
+    Assert.That(result.Value.TileY, Is.EqualTo(0));
+    Assert.That(result.Value.Point, Is.EqualTo(new Vector3(-10f, 0f, 9f)));
+  }
+
+  [Test]
+  public void TryPickTile_UsesThePhysicalDatDiagonalRatherThanRenderWinding() {
+    var terrain = Terrain.FromData(new DatTerrainData(
+      1,
+      1,
+      0f,
+      0f,
+      4f,
+      4f,
+      [new DatTerrainCell(0f, 0f, 0f, 0f, 0, 0)]));
+
+    var southWest = TerrainPicker.TryPickTile(
+      new Ray(new Vector3(1f, 50f, 1f), -Vector3.UnitY), terrain, maxSteps: 0);
+    var northEast = TerrainPicker.TryPickTile(
+      new Ray(new Vector3(3f, 50f, 3f), -Vector3.UnitY), terrain, maxSteps: 0);
+
+    Assert.That(southWest, Is.Not.Null);
+    Assert.That((southWest!.Value.A, southWest.Value.B, southWest.Value.C), Is.EqualTo(
+      (TerrainCornerSlot.SouthWest, TerrainCornerSlot.SouthEast, TerrainCornerSlot.NorthWest)));
+    Assert.That(northEast, Is.Not.Null);
+    Assert.That((northEast!.Value.A, northEast.Value.B, northEast.Value.C), Is.EqualTo(
+      (TerrainCornerSlot.NorthEast, TerrainCornerSlot.NorthWest, TerrainCornerSlot.SouthEast)));
+  }
+
+  [Test]
+  public void TryPickTile_RayOffTheOobInclusiveGrid_ReturnsNull() {
+    var terrain = NewTerrain();
+    // Far outside the grid's X extent (Width=12 tiles -> world X spans roughly [-24, 24]).
+    var ray = new Ray(new Vector3(1000, 50, 26), -Vector3.UnitY);
+
+    var result = TerrainPicker.TryPickTile(ray, terrain, maxSteps: 100);
+
+    Assert.That(result, Is.Null);
+  }
+
+  [Test]
+  public void TryPickTile_RayNeverConvergingOnTerrain_TerminatesAtTheStepBudgetInsteadOfLoopingForever() {
+    var terrain = NewTerrain();
+    // Pointing straight up from inside the grid - every triangle test reports "behind origin", so the
+    // march must give up once it exhausts maxSteps rather than run unbounded.
+    var ray = new Ray(new Vector3(2, 10, 26), Vector3.UnitY);
+
+    var result = TerrainPicker.TryPickTile(ray, terrain, maxSteps: 5);
+
+    Assert.That(result, Is.Null);
+  }
+}

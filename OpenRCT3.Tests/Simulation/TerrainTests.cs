@@ -139,19 +139,10 @@ public class TerrainTests {
   }
 
   [Test]
-  public void CornerHeightToWorldZ_ScalesByHeightStep() {
-    Assert.That(Terrain.CornerHeightToWorldZ(100), Is.EqualTo(1.0f).Within(0.0001f));
-    Assert.That(Terrain.CornerHeightToWorldZ(0), Is.EqualTo(0.0f));
-    Assert.That(Terrain.CornerHeightToWorldZ(-900), Is.EqualTo(-9.0f).Within(0.0001f));
-    Assert.That(Terrain.WorldZToCornerHeight(-9.0f), Is.EqualTo(-900));
-  }
-
-  [Test]
-  public void WorldZToCornerHeight_RejectsNonFiniteAndOutOfRangeValues() {
-    Assert.Throws<ArgumentOutOfRangeException>(new Action(() =>
-      Terrain.WorldZToCornerHeight(float.PositiveInfinity)));
-    Assert.Throws<ArgumentOutOfRangeException>(new Action(() =>
-      Terrain.WorldZToCornerHeight(float.MaxValue)));
+  public void CornerHeightToWorldY_ScalesByHeightStep() {
+    Assert.That(Terrain.CornerHeightToWorldY(100), Is.EqualTo(1.0f).Within(0.0001f));
+    Assert.That(Terrain.CornerHeightToWorldY(0), Is.EqualTo(0.0f));
+    Assert.That(Terrain.CornerHeightToWorldY(-900), Is.EqualTo(-9.0f).Within(0.0001f));
   }
 
   [Test]
@@ -206,7 +197,7 @@ public class TerrainTests {
 
     Assert.That(park.BuildableBounds.Min, Is.EqualTo(new System.Numerics.Vector2(0f, -5f)));
     Assert.That(park.BuildableBounds.Max, Is.EqualTo(new System.Numerics.Vector2(8f, 15f)));
-    Assert.That(park.EntrancePosition, Is.EqualTo(new System.Numerics.Vector3(4f, -5f, 0f)));
+    Assert.That(park.EntrancePosition, Is.EqualTo(new System.Numerics.Vector3(4f, 0f, -5f)));
   }
 
   [Test]

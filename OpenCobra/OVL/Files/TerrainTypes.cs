@@ -27,7 +27,10 @@ public sealed record TerrainParameters(
   uint Color02,
   float InvWidth,
   float InvHeight
-);
+) {
+  public uint ColorSimple => Color01;
+  public uint ColorMap => Color02;
+}
 
 /// <summary>Preserved fields whose rendering purpose is not yet established.</summary>
 public sealed record TerrainUnknowns(
@@ -50,6 +53,10 @@ public sealed record TerrainType(
   TerrainParameters Parameters,
   TerrainUnknowns Unknowns
 ) {
+  public static TerrainTypeKind GroundUnblended => TerrainTypeKind.GroundUnblended;
+  public static TerrainTypeKind Cliff => TerrainTypeKind.Cliff;
+  public static TerrainTypeKind GroundBlended => TerrainTypeKind.GroundBlended;
+
   public string DescriptionName => Description.Name;
   public string IconName => Icon.Name;
   public string TextureRef => Texture.Name;

@@ -13,8 +13,8 @@ namespace OpenRCT3.Simulation;
 /// <remarks>
 /// Provisional: OVL <c>sid</c> sound references, animation scripts, and flat-ride-specific <c>anr</c>
 /// params hint at categories that may not map cleanly onto <see cref="Looping"/>/<see cref="Triggered"/>
-/// once decoded (see <c>.agents/plans/features/scenery-placement-registry.md</c>). A future kind can be
-/// added without a breaking schema change; no keyframe/timeline model is in scope here.
+/// once decoded. A future kind can be added without a breaking schema change; no keyframe/timeline
+/// model is in scope here.
 /// </remarks>
 public enum AnimationKind {
   /// <summary>Static mesh, no animation.</summary>

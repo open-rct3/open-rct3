@@ -7,6 +7,14 @@
 
 namespace OpenCobra.OVL;
 
+/// <summary>
+/// Whether a the thing annotated has been observed in-game.
+/// </summary>
+[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Parameter)]
+public class SeenInGameAttribute : Attribute {
+  public long[] Values { get; init; } = [];
+}
+
 /// <summary>OVL archive format version.</summary>
 public enum Version : uint {
   Unknown = 0,
@@ -52,8 +60,10 @@ public enum SvdFlags : uint {
   Greenery = 0x00000001,
   NoShadow = 0x00000002,
   /// <remarks>
-  /// Alias for <see cref="NoShadow"/>. Both are explicitly <c>0x00000002</c> in the original
-  /// C++ source (rct3constants.h). On flower-type objects (<see cref="SidType.Flowers"/>),
+  /// <para>
+  /// Alias for <see cref="NoShadow"/>.
+  /// </para>
+  /// On flower-type objects (<see cref = "SidType.Flowers" />),
   /// this bit identifies the object as a flower; on all other object types, it suppresses
   /// shadow casting. The functional effect (no shadow) is the same in both contexts.
   /// </remarks>
@@ -67,19 +77,6 @@ public enum SvdFlags : uint {
   Soaked = 0x01000000,
   Wild = 0x02000000,
   SoakedOrWild = 0x03000000
-}
-
-/// <summary>Scenery item tile positioning.</summary>
-public enum SidPosition {
-  TileFull = 0,
-  PathEdgeInner = 1,
-  PathEdgeOuter = 2,
-  Wall = 3,
-  TileQuarter = 4,
-  TileHalf = 5,
-  PathCenter = 6,
-  Corner = 7,
-  PathEdgeJoin = 8
 }
 
 [Flags]
@@ -242,6 +239,38 @@ public enum SidType {
   #endregion
 }
 
+/// <summary>Track segment vertical inclination.</summary>
+public enum TrackSlope : uint {
+  Flat = 0,
+  GentleUp = 1,
+  MediumUp = 2,
+  SteepUp = 3,
+  VerticalUp = 4,
+  VerticalDown = 5,
+  SteepDown = 6,
+  MediumDown = 7,
+  GentleDown = 8
+}
+
+/// <summary>Track segment lateral roll/banking.</summary>
+public enum TrackBank : uint {
+  Flat = 0,
+  Left = 1,
+  MediumLeft = 2,
+  InvertedLeft = 3,
+  Inverted = 4,
+  Right = 5,
+  MediumRight = 6,
+  BankRight = 7
+}
+
+/// <summary>Track segment lateral travel direction.</summary>
+public enum TrackDirection : uint {
+  Straight = 0,
+  Left = 1,
+  Right = 2
+}
+
 /// <remarks>TODO: Tracked rides. See <see href="https://github.com/chances/rct3-importer/blob/431fbf2b5b5038c07ed197d29d12facdf319bc68/RCT3%20Importer/include/rct3constants.h#L505"/>.</remarks>
 
 public enum TextureType : uint {
@@ -301,14 +330,6 @@ public enum TextureFormat : uint {
   D15S1 = 0x102,
   /// <summary>Depth + stencil</summary>
   D24S8 = 0x103,
-}
-
-/// <summary>
-/// Whether a the thing annotated has been observed in-game.
-/// </summary>
-[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field | AttributeTargets.Property)]
-public class SeenInGameAttribute : Attribute {
-  public long[] Values { get; init; } = [];
 }
 
 public static class TextureFormatExtensions {

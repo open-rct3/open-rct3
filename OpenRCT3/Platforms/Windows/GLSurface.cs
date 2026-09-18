@@ -7,8 +7,6 @@
 
 using DryIoc;
 using NLog;
-using OpenCobra.GDK;
-using OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Numerics;
 using OpenCobra.GDK.Platform;
 using OpenRCT3.OpenGL;
@@ -20,6 +18,8 @@ using System.ComponentModel;
 using System.Windows.Forms;
 using static OpenRCT3.Platforms.Windows.Win32;
 using Drawing = System.Drawing;
+using GUI = OpenCobra.GDK.GUI;
+using Controller = OpenCobra.GDK.GUI.Controller;
 
 namespace OpenRCT3.Platforms.Windows;
 
@@ -28,6 +28,8 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
   private readonly SurfaceSettings settings;
   private GL? gl;
   private Renderer? renderer;
+  private IInputContext? input;
+  private Controller? controller;
   private readonly WindowsSurfaceResourceCycle resources = new();
   private Game? finalGame;
   private bool finalDisposalStarted;
@@ -116,11 +118,15 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
 
     // Initialize the GUI controller first, renderer implementations depend on it
     var mainWindow = Parent as GameWindow ?? throw new InvalidOperationException();
-    var input = mainWindow.CreateInput();
-    handleResources.OwnInput(input.Dispose);
-    var controller = new Controller(input);
-    handleResources.OwnController(controller.Dispose);
-    WindowsSurfaceRegistrations.ReplaceController(Game.IoC, controller);
+    var ownedInput = mainWindow.CreateInput();
+    input = ownedInput;
+    handleResources.OwnInput(ownedInput.Dispose);
+    Game.IoC.RegisterInstance<IInputContext>(ownedInput, IfAlreadyRegistered.Replace,
+      Setup.With(preventDisposal: true));
+    var ownedController = new Controller(ownedInput);
+    controller = ownedController;
+    handleResources.OwnController(ownedController.Dispose);
+    WindowsSurfaceRegistrations.ReplaceController(Game.IoC, ownedController);
 
     // Initialize the scene renderer
     var ownedRenderer = new Renderer {
@@ -131,19 +137,30 @@ public class GLSurface : Control, IGraphicsSurface, IGLContextSource {
     ownedRenderer.Initialize();
     WindowsSurfaceRegistrations.ReplaceRenderer(Game.IoC, ownedRenderer);
 
-    Game.Instance?.BindRenderer(ownedRenderer);
+    var game = Game.Instance;
+    game?.BindInput(ownedInput);
+    game?.Scene.BindGui(ownedController);
+    game?.BindRenderer(ownedRenderer);
     SurfaceCreated?.Invoke(this, ownedRenderer);
     base.OnHandleCreated(e);
     PresentFrame();
   }
 
   protected override void OnHandleDestroyed(EventArgs e) {
-    if (renderer != null) Game.Instance?.UnbindRenderer(renderer);
+    var ownedRenderer = renderer;
+    var ownedInput = input;
+    var ownedController = controller;
+    var game = Game.Instance;
+    if (ownedRenderer != null) game?.UnbindRenderer(ownedRenderer);
+    if (ownedController != null) game?.Scene.UnbindGui(ownedController);
+    if (ownedInput != null) game?.UnbindInput(ownedInput);
     try {
       resources.EndHandle(Context);
       logger.Trace("Surface resources disposed");
     } finally {
       renderer = null;
+      controller = null;
+      input = null;
       gl = null;
       base.OnHandleDestroyed(e);
     }

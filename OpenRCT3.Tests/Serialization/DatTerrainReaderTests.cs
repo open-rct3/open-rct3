@@ -44,6 +44,9 @@ public class DatTerrainReaderTests {
       Assert.That(terrain.TileSizeY, Is.EqualTo(5f));
       Assert.That(terrain.Cells, Has.Count.EqualTo(4));
       Assert.That(terrain.Cells[0].SouthWestHeight, Is.EqualTo(-4.25f));
+      Assert.That(terrain.Cells[0].SouthEastHeight, Is.EqualTo(2.5f));
+      Assert.That(terrain.Cells[0].NorthWestHeight, Is.EqualTo(3.75f));
+      Assert.That(terrain.Cells[0].NorthEastHeight, Is.EqualTo(4.5f));
       Assert.That(terrain.Cells[1].SouthWestHeight, Is.EqualTo(5.25f));
       Assert.That(terrain.Cells[2].SouthWestHeight, Is.EqualTo(9.25f));
       Assert.That(terrain.Cells[3].NorthEastHeight, Is.EqualTo(16.5f));
@@ -682,15 +685,7 @@ public class DatTerrainReaderTests {
   }
 
   private static byte[] BuildValidDatBytes() {
-    var payload = BuildTerrainPayload(
-      width: 1,
-      height: 1,
-      TerrainRecord24Bytes,
-      [new CellSpec(1f, 2f, 3f, 4f, 5, 6)]);
-    using var stream = BuildDat(
-      [TargetTerrainField()],
-      writer => WriteDynamicPayload(writer, payload));
-    return stream.ToArray();
+    return DatTerrainFixture.BuildMinimalTerrainBytes();
   }
 
   private static FieldSpec TargetTerrainField()

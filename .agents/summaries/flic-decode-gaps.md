@@ -83,7 +83,7 @@ walks the other file's blocks if the first lookup fails.
 **Fix in OpenCobra**: when `TryResolveRelocation(Ts2Ptr, ...)` returns false,
 retry the lookup against the `Ovl.allFileTypeBlocks` set as a whole (i.e.
 include the other file in the pair). This is the same change pattern
-[`ovl-resource-relocation.md`](./../bugs/ovl-resource-relocation.md) identified
+[`ovl-resource-relocation.md`](../completed-work/ovl-resource-relocation.md) identified
 for Suspect 5; it just needs to be applied to the tex/flic decoders too.
 
 ### 3. "Failed to resolve bitmap table data" (~25 entries) — BTBL has fewer than 2 chunks
@@ -189,7 +189,7 @@ entry whose inline `60 bytes` is shorter than the struct claims (e.g.
    fall back to reading the FlicHeader array inline from `ReadResource(btbl file)`'s
    bytes if `chunks.Count == 1`.
 4. **#2 (~50 entries)**: Cross-file relocation retry. Same fix pattern as
-   `ovl-resource-relocation.md` Suspect 5.
+   [`ovl-resource-relocation.md`](../completed-work/ovl-resource-relocation.md) Suspect 5.
 5. **#4 (~80 entries)**: Resolves with #3.
 6. **#6 (6 entries)**: Case-by-case.
 

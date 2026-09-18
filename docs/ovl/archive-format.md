@@ -154,3 +154,4 @@ Each symbol is 16 bytes:
 ## Sources
 
 - [`libOVLDump`](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLDump) reference implementation
+- [`libOVLng`](https://github.com/chances/rct3-importer/tree/main/RCT3%20Importer/src/libOVLng) reference implementation (resource manager classes, relocation handling)

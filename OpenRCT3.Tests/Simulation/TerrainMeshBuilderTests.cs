@@ -54,6 +54,19 @@ public class TerrainMeshBuilderTests {
   }
 
   [Test]
+  public void CornerPosition_UsesTheTerrainOriginAndTileSize() {
+    // Pins the exact formula TerrainPicker.TryPickTile's inverse mapping depends on. A decoded
+    // terrain's Origin and TileSize, rather than Park.TileSize, define its horizontal X/Z grid.
+    var terrain = NewTerrain();
+
+    var sw = TerrainMeshBuilder.CornerPosition(terrain, 6, 6, TerrainCornerSlot.SouthWest);
+    var ne = TerrainMeshBuilder.CornerPosition(terrain, 6, 6, TerrainCornerSlot.NorthEast);
+
+    Assert.That(sw, Is.EqualTo(new Vector3(0, 0, 24)));
+    Assert.That(ne, Is.EqualTo(new Vector3(4, 0, 28)));
+  }
+
+  [Test]
   public void Build_CornerWorldPositions_MatchTileGrid() {
     var terrain = NewTerrain();
     var mesh = TerrainMeshBuilder.Build(terrain, Vector4.One);
@@ -79,14 +92,14 @@ public class TerrainMeshBuilderTests {
 
     var vertices = TerrainMeshBuilder.Build(terrain, Vector4.One).Vertices;
 
-    Assert.That(vertices[0].Position, Is.EqualTo(new Vector3(-12f, 7f, -1.25f)));
-    Assert.That(vertices[1].Position, Is.EqualTo(new Vector3(-8f, 7f, 2.5f)));
-    Assert.That(vertices[2].Position, Is.EqualTo(new Vector3(-8f, 12f, -4f)));
-    Assert.That(vertices[3].Position, Is.EqualTo(new Vector3(-12f, 12f, 3.75f)));
+    Assert.That(vertices[0].Position, Is.EqualTo(new Vector3(-12f, -1.25f, 7f)));
+    Assert.That(vertices[1].Position, Is.EqualTo(new Vector3(-8f, 2.5f, 7f)));
+    Assert.That(vertices[2].Position, Is.EqualTo(new Vector3(-8f, -4f, 12f)));
+    Assert.That(vertices[3].Position, Is.EqualTo(new Vector3(-12f, 3.75f, 12f)));
   }
 
   [Test]
-  public void Build_DecodedTerrain_UsesSerializedSouthEastNorthWestDiagonal() {
+  public void Build_DecodedTerrain_UsesSerializedSouthEastNorthWestDiagonalWithReversedRenderWinding() {
     var data = new DatTerrainData(
       1,
       1,
@@ -99,9 +112,9 @@ public class TerrainMeshBuilderTests {
 
     var mesh = TerrainMeshBuilder.Build(Terrain.FromData(data), Vector4.One);
 
-    Assert.That(mesh.Indices, Is.EqualTo(new uint[] { 0, 1, 3, 1, 2, 3 }));
-    Assert.That(mesh.Vertices[0].Normal, Is.EqualTo(Vector3.UnitZ));
-    Assert.That(mesh.Vertices[2].Normal, Is.Not.EqualTo(Vector3.UnitZ));
+    Assert.That(mesh.Indices, Is.EqualTo(new uint[] { 0, 3, 1, 1, 3, 2 }));
+    Assert.That(mesh.Vertices[0].Normal, Is.EqualTo(Vector3.UnitY));
+    Assert.That(mesh.Vertices[2].Normal, Is.Not.EqualTo(Vector3.UnitY));
   }
 
   [Test]

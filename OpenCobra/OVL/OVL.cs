@@ -75,6 +75,9 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   private Version version;
   private readonly Dictionary<OvlFile, OvlEntry> entries = [];
   private readonly Dictionary<OvlFile, uint> entryDataPtrs = [];
+  private readonly Dictionary<uint, OvlFile> symbolsByDataPointer = [];
+  private readonly Dictionary<uint, OvlFile> symbolReferenceTargets = [];
+  private readonly HashSet<(string Name, FileType Type)> symbolReferences = [];
   private readonly List<FileTypeBlock[]> allFileTypeBlocks = [];
   private readonly List<LoaderHeader[]> allLoaderHeaders = [];
   private readonly List<Version> allVersions = [];
@@ -107,6 +110,12 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
   /// <summary>Exact per-source SymbolRef blocks and their serialized layout metadata.</summary>
   internal IReadOnlyList<OvlBlockEntry> SymbolReferenceBlocksInOrder =>
     symbolReferenceBlocksInOrder;
+
+  /// <summary>
+  /// Every typed target named by a serialized SymbolRef record, including targets that are defined
+  /// by another archive and therefore cannot be resolved to an <see cref="OvlFile"/> locally.
+  /// </summary>
+  public IReadOnlyCollection<(string Name, FileType Type)> SymbolReferences => symbolReferences;
 
   /// <summary>Reads <paramref name="length"/> raw bytes at a relocation-resolved data address.</summary>
   public bool TryReadBytes(uint address, int length, [MaybeNullWhen(false)] out byte[] data) {
@@ -280,6 +289,18 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
 
   /// <summary>Looks up a resolved resource's own (relative offset) data pointer address.</summary>
   public bool TryGetDataPointer(OvlFile file, out uint dataPtr) => entryDataPtrs.TryGetValue(file, out dataPtr);
+
+  /// <summary>Resolves a resource data address back to its local symbol.</summary>
+  public bool TryFindSymbol(uint dataPtr, [MaybeNullWhen(false)] out OvlFile file) =>
+    symbolsByDataPointer.TryGetValue(dataPtr, out file);
+
+  /// <summary>
+  /// Resolves a SymbolRef field address to the local symbol it targets. References to another
+  /// archive remain available through <see cref="SymbolReferences"/> but cannot produce an
+  /// <see cref="OvlFile"/> from this archive.
+  /// </summary>
+  public bool TryResolveSymbolReference(uint fieldAddress, [MaybeNullWhen(false)] out OvlFile file) =>
+    symbolReferenceTargets.TryGetValue(fieldAddress, out file);
 
   /// <summary>
   /// Resolves a relocated string pointer to its text value.
@@ -739,11 +760,43 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
             effectiveSize
           );
           entryDataPtrs[file] = dataPtr;
+          symbolsByDataPointer.TryAdd(dataPtr, file);
         }
 
         if (loaderSymbolRemaining > 0) loaderSymbolRemaining--;
       }
     }
+
+    ReadSymbolReferences();
+  }
+
+  private void ReadSymbolReferences() {
+    var filesByNameAndType = new Dictionary<(string Name, FileType Type), OvlFile>();
+    foreach (var file in entries.Keys)
+      filesByNameAndType.TryAdd((file.Name, file.Type), file);
+
+    foreach (var block in symbolReferenceBlocksInOrder) {
+      foreach (var index in Enumerable.Range(0, Convert.ToInt32(block.RecordCount))) {
+        var recordAddress = block.Address + Convert.ToUInt32(index * block.RecordStride);
+        if (!TryGetRelocationSource(recordAddress + 4, out var symbolAddress) ||
+            !TryResolveString(symbolAddress, out var rawName)) continue;
+
+        var (name, type) = SplitSymbolNameTag(rawName);
+        if (type == FileType.Unknown) continue;
+        symbolReferences.Add((name, type));
+        if (!TryGetRelocationSource(recordAddress, out var fieldAddress) ||
+            !filesByNameAndType.TryGetValue((name, type), out var target)) continue;
+        symbolReferenceTargets.TryAdd(fieldAddress, target);
+      }
+    }
+  }
+
+  private static (string Name, FileType Type) SplitSymbolNameTag(string rawName) {
+    var separator = rawName.LastIndexOf(':');
+    if (separator < 0) return (rawName, FileType.Unknown);
+
+    var type = rawName[(separator + 1)..].ToFileType();
+    return type == FileType.Unknown ? (rawName, type) : (rawName[..separator], type);
   }
 
   private static string? ReadString(List<FileBlock> blocks, uint ptr) {
@@ -771,6 +824,9 @@ public sealed class Ovl(string name) : IDictionary<OvlFile, OvlEntry>, IDisposab
     if (disposing) {
       entries.Clear();
       entryDataPtrs.Clear();
+      symbolsByDataPointer.Clear();
+      symbolReferenceTargets.Clear();
+      symbolReferences.Clear();
       allFileTypeBlocks.Clear();
       allLoaderHeaders.Clear();
       allExtraData.Clear();

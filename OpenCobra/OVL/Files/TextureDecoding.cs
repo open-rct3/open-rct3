@@ -17,13 +17,24 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.OVL.Files;
 
-public class Texture(string name, TextureFormat format, uint width, uint height, uint mipCount = 1) : IDisposable {
+public class Texture(
+  string name,
+  TextureFormat format,
+  uint width,
+  uint height,
+  uint mipCount = 1,
+  Recolorable recolorable = Recolorable.None
+) : IDisposable {
   private bool disposed;
 
   /// <summary>
   /// The symbol name of the texture, e.g. "GUIIcon.txs".
   /// </summary>
-  public string Name { get; private set; } = name;
+  /// <remarks>
+  /// OVL file-type suffixes are omitted so callers can consistently use the human-readable
+  /// symbol name. Animation frame suffixes remain part of the name.
+  /// </remarks>
+  public string Name { get; private set; } = name.StripOvlTagSuffix();
   public readonly TextureFormat Format = format;
   /// <summary>
   /// Symbol reference to a Texture Style (TXS).
@@ -32,6 +43,7 @@ public class Texture(string name, TextureFormat format, uint width, uint height,
   public readonly uint Width = width;
   public readonly uint Height = height;
   public readonly uint MipCount = mipCount;
+  public readonly Recolorable Recolorable = recolorable;
   public readonly bool IsCompressed = format.IsCompressed();
   /// <summary>
   /// The decoded texture data.
@@ -50,9 +62,18 @@ public class Texture(string name, TextureFormat format, uint width, uint height,
     GC.SuppressFinalize(this);
   }
 
+  /// <summary>
+  /// Transfers ownership of one mip image to the caller.
+  /// </summary>
+  public Image<Rgba32> TakeMip(int level) {
+    var mip = MipLevels[level];
+    MipLevels[level] = null!;
+    return mip;
+  }
+
   /// <returns>A clone of this texture with a new <paramref name="name"/>.</returns>
   public Texture WithName(string name) {
-    var clone = new Texture(name, Format, Width, Height, MipCount) { Style = this.Style };
+    var clone = new Texture(name, Format, Width, Height, MipCount, Recolorable) { Style = this.Style };
     for (var mip = 0; mip < MipLevels.Length; mip++) {
       if (MipLevels[mip] != null)
         clone.MipLevels[mip] = MipLevels[mip].Clone();
@@ -65,6 +86,12 @@ public class TextureCollection : IReadOnlyList<Texture>, IDisposable {
   private readonly Dictionary<string, Texture> textures = [];
   private bool disposed;
 
+  public TextureCollection(IEnumerable<Texture>? initial = null, uint fps = 0) {
+    Fps = fps;
+    if (initial == null) return;
+    foreach (var texture in initial) Add(texture);
+  }
+
   public Texture this[int index] => textures.Values.ElementAt(index);
   public Texture this[string name] => textures[name];
 
@@ -72,6 +99,7 @@ public class TextureCollection : IReadOnlyList<Texture>, IDisposable {
 
   public IEnumerable<string> Names => [.. textures.Keys];
   public int Count => textures.Count;
+  public uint Fps { get; }
 
   int IReadOnlyCollection<Texture>.Count => Count;
 
@@ -160,40 +188,6 @@ internal readonly struct Tex {
   /// </summary>
   [FieldOffset(52)]
   public readonly uint FlicPtr;
-}
-
-internal static class BinaryReaderExtensions {
-  public static BitmapTable ReadBitmapTable(this BinaryReader reader) =>
-    reader.Read<BitmapTable>(out var table) != 0 ? table : default;
-
-  public static FlicHeader ReadFlicHeader(this BinaryReader reader) =>
-    reader.Read<FlicHeader>(out var flic) != 0 ? flic : default;
-
-  /// <summary>
-  /// Reads a structure of type <typeparamref name="T"/> from the binary reader and returns the number of bytes read.
-  /// </summary>
-  public static uint Read<T>(this BinaryReader reader, out T data) where T : struct {
-    var size = Marshal.SizeOf<T>();
-    var bytes = reader.ReadBytes(size);
-    if (bytes.Length != size) {
-      data = default!;
-      return 0;
-    }
-
-    var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-    try {
-      var ptr = handle.AddrOfPinnedObject();
-      if (ptr == nint.Zero) {
-        data = default!;
-        return 0;
-      }
-
-      data = Marshal.PtrToStructure<T>(ptr)!;
-      return Convert.ToUInt32(size);
-    } finally {
-      handle.Free();
-    }
-  }
 }
 
 internal static class ReadOnlySpanExtensions {
@@ -429,6 +423,38 @@ internal static class TextureDecoding {
     // used for this - see ManagerTEX.cpp:83, LodSymRefManager.cpp's reserveSymbolReference.
 
     return texture;
+  }
+
+  /// <summary>
+  /// Associates each <c>flic</c> loader with the most recent <c>btbl</c> loader in its source
+  /// archive. Bitmap-table association is encoded by loader order, not by a symbol relationship.
+  /// </summary>
+  public static IReadOnlyDictionary<uint, Texture[]> BuildBitmapTablesByFlicAddress(Ovl ovl) {
+    Texture[]? currentTable = null;
+    string? currentSourcePath = null;
+    var tablesByFlicAddress = new Dictionary<uint, Texture[]>();
+    foreach (var entry in ovl.LoaderEntriesInOrder) {
+      if (!string.Equals(currentSourcePath, entry.SourcePath, StringComparison.OrdinalIgnoreCase)) {
+        currentSourcePath = entry.SourcePath;
+        currentTable = null;
+      }
+
+      switch (entry.Tag) {
+        case "btbl":
+          try {
+            currentTable = BitmapTables.ReadAt(
+              $"{ovl.Name}:btbl@{entry.DataAddress:X}", ovl, entry.DataAddress);
+          } catch {
+            currentTable = null;
+          }
+          break;
+        case "flic" when currentTable != null:
+          tablesByFlicAddress[entry.DataAddress] = currentTable;
+          break;
+      }
+    }
+
+    return tablesByFlicAddress;
   }
 
   // See ManagerFLIC.cpp. `chunk` is a loader's raw extra-data chunk: either a 4-byte index into

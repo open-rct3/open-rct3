@@ -18,6 +18,9 @@ public sealed record StaticShapeVertex(
   Vector4 Color
 );
 
+/// <summary>A triangle expressed as three zero-based vertex indices.</summary>
+public readonly record struct Triangle(uint A, uint B, uint C);
+
 /// <summary>A decoded mesh within an RCT3 static-shape resource.</summary>
 public sealed record StaticShapeMesh(
   string Name,
@@ -84,6 +87,22 @@ public static class StaticShapes {
   /// <summary>Decodes every static-shape resource from the unique half of an OVL pair.</summary>
   public static IReadOnlyList<StaticShape> Extract(Ovl ovl) {
     return Extract(ovl, StaticShapeDecodeLimits.Default);
+  }
+
+  /// <summary>
+  /// Decodes one <c>shs</c> resource for callers that need an optional presentation asset without
+  /// failing an archive-wide import when that one symbol is malformed or unsupported.
+  /// </summary>
+  public static StaticShape? TryExtractOne(Ovl ovl, OvlFile file) {
+    try {
+      if (file.Type != FileType.StaticShape ||
+          !file.Path.EndsWith(".unique.ovl", StringComparison.OrdinalIgnoreCase) ||
+          !ovl.TryGetDataPointer(file, out var address)) return null;
+      var context = new DecodeContext(StaticShapeDecodeLimits.Default);
+      return Decode(file.Name, address, new OvlStaticShapeDataSource(ovl, context), context);
+    } catch (Exception) {
+      return null;
+    }
   }
 
   internal static IReadOnlyList<StaticShape> Extract(Ovl ovl, StaticShapeDecodeLimits limits) {

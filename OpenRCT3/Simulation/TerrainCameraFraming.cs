@@ -36,8 +36,8 @@ public static class TerrainCameraFraming {
     }
 
     var (minXY, maxXY) = terrain.Bounds;
-    var min = new Vector3(minXY, Terrain.CornerHeightToWorldZ(minHeight));
-    var max = new Vector3(maxXY, Terrain.CornerHeightToWorldZ(maxHeight));
+    var min = new Vector3(minXY.X, Terrain.CornerHeightToWorldY(minHeight), minXY.Y);
+    var max = new Vector3(maxXY.X, Terrain.CornerHeightToWorldY(maxHeight), maxXY.Y);
     var target = (min + max) * 0.5f;
     var distance = Vector3.Distance(min, max) * DistanceMargin;
     return (target, distance);

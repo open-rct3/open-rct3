@@ -52,29 +52,29 @@ public class CameraFramingTests {
   // The corners of the *rendered mesh*, not just the buildable area: TerrainMeshBuilder renders the
   // full OOB-inclusive grid (see Terrain.cs / CornerPosition), which extends beyond BuildableBounds on
   // every side. Framing needs to keep this larger extent on-screen, not just the buildable area.
-  private static Vector3[] FullMeshCorners(Terrain terrain, float minZ = 0f, float maxZ = 0f) {
+  private static Vector3[] FullMeshCorners(Terrain terrain, float minY = 0f, float maxY = 0f) {
     var (min, max) = terrain.Bounds;
     var minCorners = new[] {
-      new Vector3(min.X, min.Y, minZ),
-      new Vector3(max.X, min.Y, minZ),
-      new Vector3(min.X, max.Y, minZ),
-      new Vector3(max.X, max.Y, minZ),
+      new Vector3(min.X, minY, min.Y),
+      new Vector3(max.X, minY, min.Y),
+      new Vector3(min.X, minY, max.Y),
+      new Vector3(max.X, minY, max.Y),
     };
-    if (minZ == maxZ) return minCorners;
+    if (minY == maxY) return minCorners;
 
     return [
       .. minCorners,
-      new Vector3(min.X, min.Y, maxZ),
-      new Vector3(max.X, min.Y, maxZ),
-      new Vector3(min.X, max.Y, maxZ),
-      new Vector3(max.X, max.Y, maxZ),
+      new Vector3(min.X, maxY, min.Y),
+      new Vector3(max.X, maxY, min.Y),
+      new Vector3(min.X, maxY, max.Y),
+      new Vector3(max.X, maxY, max.Y),
     ];
   }
 
   [Test]
   public void Calculate_CentersOnFullTerrainBoundsAndUsesThreeDimensionalDiagonal() {
-    var minHeight = Terrain.WorldZToCornerHeight(-5f);
-    var maxHeight = Terrain.WorldZToCornerHeight(15f);
+    var minHeight = Convert.ToInt32(-5f / Terrain.HeightStep);
+    var maxHeight = Convert.ToInt32(15f / Terrain.HeightStep);
     var terrain = new Terrain(width: 4, height: 2, initialHeight: minHeight);
     terrain.SetCornerHeight(
       terrain.Width - 1,
@@ -85,9 +85,9 @@ public class CameraFramingTests {
 
     var framing = TerrainCameraFraming.Calculate(terrain);
 
-    var (minXY, maxXY) = terrain.Bounds;
-    var min = new Vector3(minXY, Terrain.CornerHeightToWorldZ(minHeight));
-    var max = new Vector3(maxXY, Terrain.CornerHeightToWorldZ(maxHeight));
+    var (minXZ, maxXZ) = terrain.Bounds;
+    var min = new Vector3(minXZ.X, Terrain.CornerHeightToWorldY(minHeight), minXZ.Y);
+    var max = new Vector3(maxXZ.X, Terrain.CornerHeightToWorldY(maxHeight), maxXZ.Y);
     Assert.That(
       Vector3.Distance(framing.Target, (min + max) * 0.5f),
       Is.EqualTo(0f).Within(Epsilon)
@@ -111,10 +111,10 @@ public class CameraFramingTests {
 
     var (min, max) = park.BuildableBounds;
     var corners = new[] {
-      new Vector3(min.X, min.Y, 0),
-      new Vector3(max.X, min.Y, 0),
-      new Vector3(min.X, max.Y, 0),
-      new Vector3(max.X, max.Y, 0),
+      new Vector3(min.X, 0, min.Y),
+      new Vector3(max.X, 0, min.Y),
+      new Vector3(min.X, 0, max.Y),
+      new Vector3(max.X, 0, max.Y),
     };
 
     var allOnScreen = corners.All(c => IsInsideClipSpace(ProjectToClip(camera, c)));
@@ -165,16 +165,16 @@ public class CameraFramingTests {
     string mapName,
     int terrainWidth,
     int terrainHeight,
-    float minZ,
-    float maxZ,
+    float minY,
+    float maxY,
     int viewportWidth,
     int viewportHeight) {
     // This extends the square, flat, 16:9 cases above with deterministic camera-math coverage for
     // representative loaded-map envelopes and observed window aspect ratios. Native resize and window
     // behavior remain manual acceptance concerns; this test does not create or drive a live window.
     var borderTiles = Park.OutOfBoundsBorder * 2;
-    var minHeight = Terrain.WorldZToCornerHeight(minZ);
-    var maxHeight = Terrain.WorldZToCornerHeight(maxZ);
+    var minHeight = Convert.ToInt32(minY / Terrain.HeightStep);
+    var maxHeight = Convert.ToInt32(maxY / Terrain.HeightStep);
     var terrain = new Terrain(
       terrainWidth - borderTiles,
       terrainHeight - borderTiles,
@@ -188,10 +188,10 @@ public class CameraFramingTests {
     );
     var aspectRatio = Convert.ToSingle(viewportWidth) / viewportHeight;
     var camera = FrameTerrain(terrain, aspectRatio);
-    var actualMinZ = Terrain.CornerHeightToWorldZ(minHeight);
-    var actualMaxZ = Terrain.CornerHeightToWorldZ(maxHeight);
+    var actualMinY = Terrain.CornerHeightToWorldY(minHeight);
+    var actualMaxY = Terrain.CornerHeightToWorldY(maxHeight);
 
-    foreach (var corner in FullMeshCorners(terrain, actualMinZ, actualMaxZ))
+    foreach (var corner in FullMeshCorners(terrain, actualMinY, actualMaxY))
       AssertInsideClipSpace(camera, corner, mapName);
   }
 }

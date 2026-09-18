@@ -1,12 +1,13 @@
-// Park
-//
-// Authors:
-//   - Chance Snow <git@chancesnow.me>
+// Represents a park within the game world: buildable area, paths, water, and scenery.
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using OpenCobra.Data;
+using OpenCobra.OVL;
+using Parks = OpenCobra.Data.Parks;
 
 namespace OpenRCT3.Simulation;
 
@@ -35,6 +36,9 @@ public class Park {
   /// <summary>
   /// The width of the out-of-bounds border in tiles.
   /// </summary>
+  /// <remarks>
+  /// "Skirt" is classic terrain-engine jargon for border geometry that hides the edge of the world.
+  /// </remarks>
   public const int OutOfBoundsBorder = 5;
   /// <summary>
   /// The position of the park entrance.
@@ -43,7 +47,7 @@ public class Park {
   /// The entrance is typically on the South edge of the buildable area.
   /// </remarks>
   // FIXME: This should be loaded from park data, not hard-coded.
-  public Vector3 EntrancePosition { get; set; } = new(0, OutOfBoundsBorder * TileSize, 0);
+  public Vector3 EntrancePosition { get; set; } = new(0, 0, OutOfBoundsBorder * TileSize);
 
   /// <summary>
   /// The rectangular boundary of the buildable area.
@@ -55,9 +59,7 @@ public class Park {
   /// <see cref="Terrain.HeightStep"/> units (100 units = 1m).
   /// </summary>
   /// <remarks>
-  /// Sourced from
-  /// <c>.agents/plans/features/path-network.md</c>: "players can only place path pieces on terrain
-  /// shallower than 1m rise".
+  /// Players can only place path pieces on terrain shallower than 1m rise.
   /// </remarks>
   public const ushort AtGradePathMaxRise = 100;
 
@@ -87,7 +89,7 @@ public class Park {
 
   /// <summary>
   /// Every placed <see cref="SceneryPlacement"/>. Placement data lives directly on <see cref="Park"/>,
-  /// not a separate "scenery layer" type — see <c>.agents/plans/features/scenery-placement-registry.md</c>.
+  /// not a separate "scenery layer" type.
   /// </summary>
   public List<SceneryPlacement> SceneryPlacements { get; } = [];
 
@@ -121,9 +123,39 @@ public class Park {
     );
     EntrancePosition = new Vector3(
       (BuildableBounds.Min.X + BuildableBounds.Max.X) / 2f,
-      BuildableBounds.Min.Y,
-      0f
+      0f,
+      BuildableBounds.Min.Y
     );
+  }
+
+  /// <summary>
+  /// Loads and returns a park from the given path, or creates a default park if path is null.
+  /// </summary>
+  /// <remarks>
+  /// If <paramref name="path"/> is null, creates a default empty park. Otherwise, loads the
+  /// saved-park <c>.dat</c> file's path data from the given path.
+  /// </remarks>
+  /// <param name="path">The path to load, or null to create a default park.</param>
+  /// <returns>The loaded or default park.</returns>
+  public static Park Load(string? path) {
+    if (path == null)
+      return new Park();
+
+    var dat = Dat.Load(path);
+    var park = new Park();
+
+    foreach (var tile in Parks.Paths.ExtractAtGrade(dat))
+      park.Paths[(tile.ColIndex, tile.RowIndex)] = new PathTile();
+
+    foreach (var tile in Parks.Paths.ExtractRaised(dat))
+      park.Paths[(tile.ColIndex, tile.RowIndex)] = new PathTile {
+        Raised = true,
+        RaisedHeight = (ushort)tile.QuantisedHeight,
+        RaisedSlope = (PathRaisedSlope)tile.SlopeType,
+        RaisedSlopeDirection = (Edge)tile.Direction,
+      };
+
+    return park;
   }
 
   /// <summary>
@@ -203,8 +235,8 @@ public class Park {
   /// </summary>
   /// <remarks>
   /// Terrain height is untouched by this call; a pool is a separate overlay traced over existing
-  /// terrain shape at creation time (see <c>.agents/plans/features/terrain-heightmap.md</c>, "Water is
-  /// per-pool"). Perimeter-tracing/flood-fill from a seed tile is not implemented here — the caller
+  /// terrain shape at creation time (water is tracked per-pool, not per-tile). Perimeter-tracing/
+  /// flood-fill from a seed tile is not implemented here — the caller
   /// supplies the already-decided tile set, the same way <see cref="TryPlacePath"/> takes an
   /// already-decided <see cref="PathTile"/> rather than routing one.
   /// </remarks>
@@ -262,10 +294,9 @@ public class Park {
   /// tile it covers.
   /// </summary>
   /// <remarks>
-  /// A terrain edit invalidates the whole pool it touches, not just the edited tile — see
-  /// <c>.agents/plans/features/terrain-heightmap.md</c>, "Terrain edits invalidate whole pools, not
-  /// partial regions." Re-creating a pool after an edit means re-running placement, not reshaping this
-  /// one.
+  /// A terrain edit invalidates the whole pool it touches, not just the edited tile or a partial
+  /// region of the pool. Re-creating a pool after an edit means re-running placement, not reshaping
+  /// this one.
   /// </remarks>
   /// <returns><c>true</c> if a pool was found and removed.</returns>
   public bool InvalidateWaterPoolAt(int tileX, int tileY) {
@@ -288,8 +319,8 @@ public class Park {
 
   /// <summary>
   /// Raises a terrain corner via <see cref="Terrain.RaiseCorner"/>, then invalidates any
-  /// <see cref="WaterPool"/> covering a tile whose height actually changed as a result (the edited tile
-  /// and every neighbor sharing that corner).
+  /// <see cref="WaterPool"/> covering a tile affected by the edit (the edited tile and every
+  /// neighbor sharing that corner, per <see cref="Terrain.GetTilesSharingCorner"/>).
   /// </summary>
   public void RaiseTerrainCorner(
     Terrain terrain,
@@ -299,13 +330,13 @@ public class Park {
     int delta,
     Func<int, int, TerrainCornerSlot, int>? maxHeightQuery = null) {
     terrain.RaiseCorner(tileX, tileY, slot, delta, maxHeightQuery);
-    InvalidateWaterPoolsSharingCorner(terrain, tileX, tileY, slot);
+    foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot)) InvalidateWaterPoolAt(x, y);
   }
 
   /// <summary>
   /// Lowers a terrain corner via <see cref="Terrain.LowerCorner"/>, then invalidates any
-  /// <see cref="WaterPool"/> covering a tile whose height actually changed as a result (the edited tile
-  /// and every neighbor sharing that corner).
+  /// <see cref="WaterPool"/> covering a tile affected by the edit (the edited tile and every
+  /// neighbor sharing that corner, per <see cref="Terrain.GetTilesSharingCorner"/>).
   /// </summary>
   public void LowerTerrainCorner(
     Terrain terrain,
@@ -315,7 +346,7 @@ public class Park {
     int delta,
     Func<int, int, TerrainCornerSlot, int>? minHeightQuery = null) {
     terrain.LowerCorner(tileX, tileY, slot, delta, minHeightQuery);
-    InvalidateWaterPoolsSharingCorner(terrain, tileX, tileY, slot);
+    foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot)) InvalidateWaterPoolAt(x, y);
   }
 
   /// <summary>
@@ -332,16 +363,11 @@ public class Park {
     InvalidateWaterPoolAt(tileX, tileY);
   }
 
-  private void InvalidateWaterPoolsSharingCorner(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot) {
-    foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot))
-      InvalidateWaterPoolAt(x, y);
-  }
-
   /// <summary>
   /// Attempts to place a scenery instance per <paramref name="placement"/>.
   /// </summary>
   /// <remarks>
-  /// A multi-tile <see cref="Simulation.Placement.FullTile"/> footprint (see
+  /// A multi-tile <see cref="OpenCobra.OVL.Placement.FullTile"/> footprint (see
   /// <see cref="SceneryDefinition.FootprintWidth"/>/<see cref="SceneryDefinition.FootprintHeight"/>)
   /// requires a level pad: every corner across the rotated footprint's covered tiles must agree, or
   /// placement is rejected outright — mirroring the "Flatten for Scenery and Rides" terrain tool and
@@ -369,17 +395,17 @@ public class Park {
 
   /// <summary>
   /// Returns the terrain height(s) a placed scenery instance should render at, per the sampling rule
-  /// its <see cref="Simulation.Placement"/> implies.
+  /// its <see cref="OpenCobra.OVL.Placement"/> implies.
   /// </summary>
   /// <remarks>
-  /// <see cref="Simulation.Placement.FullTile"/>/<see cref="Simulation.Placement.Quarter"/>/
-  /// <see cref="Simulation.Placement.Half"/>/<see cref="Simulation.Placement.Corner"/>/
-  /// <see cref="Simulation.Placement.PathCenter"/> are single-sample: both returned values are the
+  /// <see cref="OpenCobra.OVL.Placement.FullTile"/>/<see cref="OpenCobra.OVL.Placement.Quarter"/>/
+  /// <see cref="OpenCobra.OVL.Placement.Half"/>/<see cref="OpenCobra.OVL.Placement.Corner"/>/
+  /// <see cref="OpenCobra.OVL.Placement.PathCenter"/> are single-sample: both returned values are the
   /// average height across the anchor tile's four corners (exactly the anchor corner's height when the
   /// tile is flat, which a multi-tile <c>FullTile</c> footprint is guaranteed to be by
-  /// <see cref="TryPlaceScenery"/>). <see cref="Simulation.Placement.PathEdgeInner"/>/
-  /// <see cref="Simulation.Placement.PathEdgeOuter"/>/<see cref="Simulation.Placement.PathEdgeJoin"/>/
-  /// <see cref="Simulation.Placement.Wall"/> are edge-conforming: the two returned values are the
+  /// <see cref="TryPlaceScenery"/>). <see cref="OpenCobra.OVL.Placement.PathEdgeInner"/>/
+  /// <see cref="OpenCobra.OVL.Placement.PathEdgeOuter"/>/<see cref="OpenCobra.OVL.Placement.PathEdgeJoin"/>/
+  /// <see cref="OpenCobra.OVL.Placement.Wall"/> are edge-conforming: the two returned values are the
   /// heights of the two corners bounding <see cref="SceneryPlacement.Rotation"/>'s edge, so the
   /// object's mesh can follow the terrain's slope along that edge instead of sitting at one flat
   /// height.

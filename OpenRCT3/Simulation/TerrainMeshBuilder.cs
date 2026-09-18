@@ -133,7 +133,7 @@ public static class TerrainMeshBuilder {
     _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
   };
 
-  private static Vector3 CornerPosition(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot) {
+  internal static Vector3 CornerPosition(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot) {
     var (dx, dy) = slot switch {
       TerrainCornerSlot.SouthWest => (0, 0),
       TerrainCornerSlot.SouthEast => (1, 0),
@@ -143,8 +143,8 @@ public static class TerrainMeshBuilder {
     };
 
     var worldX = terrain.Origin.X + ((tileX + dx) * terrain.TileSize.X);
-    var worldY = terrain.Origin.Y + ((tileY + dy) * terrain.TileSize.Y);
-    var worldZ = Terrain.CornerHeightToWorldZ(terrain.GetCorner(tileX, tileY, slot).Height);
+    var worldZ = terrain.Origin.Y + ((tileY + dy) * terrain.TileSize.Y);
+    var worldY = Terrain.CornerHeightToWorldY(terrain.GetCorner(tileX, tileY, slot).Height);
     return new Vector3(worldX, worldY, worldZ);
   }
 
@@ -162,8 +162,8 @@ public static class TerrainMeshBuilder {
 
     // RCT3 splits each terrain cell along its SouthEast-to-NorthWest diagonal. These are the same
     // two triangle orders serialized by WaterManager: (SW, SE, NW) and (NE, NW, SE).
-    var southWestNormal = Vector3.Normalize(Vector3.Cross(se - sw, nw - sw));
-    var northEastNormal = Vector3.Normalize(Vector3.Cross(nw - ne, se - ne));
+    var southWestNormal = Vector3.Normalize(Vector3.Cross(nw - sw, se - sw));
+    var northEastNormal = Vector3.Normalize(Vector3.Cross(se - ne, nw - ne));
     var sharedNormal = Vector3.Normalize(southWestNormal + northEastNormal);
     var baseIndex = (uint)vertices.Count;
     vertices.Add(new Vertex {
@@ -180,11 +180,11 @@ public static class TerrainMeshBuilder {
     });
     indices.AddRange([
       baseIndex,
-      baseIndex + 1,
       baseIndex + 3,
       baseIndex + 1,
-      baseIndex + 2,
-      baseIndex + 3
+      baseIndex + 1,
+      baseIndex + 3,
+      baseIndex + 2
     ]);
   }
 
@@ -213,10 +213,10 @@ public static class TerrainMeshBuilder {
     var farBottom = CornerPosition(terrain, neighborX, neighborY, farNeighborSlot);
 
     // Wind so the face's outward normal points away from this tile, into the neighbor.
-    var normal = Vector3.Normalize(Vector3.Cross(farTop - nearTop, nearBottom - nearTop));
+    var normal = Vector3.Normalize(Vector3.Cross(nearBottom - nearTop, farTop - nearTop));
     var edgeLength = edge == Edge.South ? terrain.TileSize.X : terrain.TileSize.Y;
-    var nearHeight = Math.Abs(nearTop.Z - nearBottom.Z) / edgeLength;
-    var farHeight = Math.Abs(farTop.Z - farBottom.Z) / edgeLength;
+    var nearHeight = Math.Abs(nearTop.Y - nearBottom.Y) / edgeLength;
+    var farHeight = Math.Abs(farTop.Y - farBottom.Y) / edgeLength;
     var baseIndex = (uint)vertices.Count;
     vertices.Add(new Vertex {
       Position = nearTop, Normal = normal, TexCoord = new Vector2(0, nearHeight), Color = color
@@ -230,7 +230,7 @@ public static class TerrainMeshBuilder {
     vertices.Add(new Vertex {
       Position = nearBottom, Normal = normal, TexCoord = new Vector2(0, 0), Color = color
     });
-    indices.AddRange([baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3]);
+    indices.AddRange([baseIndex, baseIndex + 2, baseIndex + 1, baseIndex, baseIndex + 3, baseIndex + 2]);
   }
 
   private sealed class MeshGeometry {

@@ -121,6 +121,16 @@ public static class Textures {
         texture.Dispose();
     }
 
+    foreach (var file in ovl.Keys.Where(file => file.Type == FileType.FlexibleTexture)) {
+      try {
+        var frames = FlexiTextureList.Load(ovl, file);
+        foreach (var frame in frames.Frames) bag.Add(frame);
+      } catch (Exception ex) {
+        logger.Error(ex, "Failed to decode {FileName}", file.ToString());
+        failures.Add(file);
+      }
+    }
+
     if (!failures.IsEmpty)
       logger.Error(
         "Failed to decode {count} textures from {x} OVL{suffix}.",

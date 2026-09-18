@@ -45,9 +45,9 @@ public class WaterMeshBuilderTests {
     using (Assert.EnterMultipleScope()) {
       Assert.That(mesh.Vertices, Has.Count.EqualTo(expectedVertexCount));
       Assert.That(mesh.Indices, Has.Count.EqualTo(expectedVertexCount == 4 ? 6 : 3));
-      Assert.That(mesh.Vertices.Select(vertex => vertex.Position.Z),
-        Is.All.EqualTo(ExpectedSurfaceZ));
-      Assert.That(mesh.Vertices.Select(vertex => vertex.Normal), Is.All.EqualTo(Vector3.UnitZ));
+      Assert.That(mesh.Vertices.Select(vertex => vertex.Position.Y),
+        Is.All.EqualTo(ExpectedSurfaceY));
+      Assert.That(mesh.Vertices.Select(vertex => vertex.Normal), Is.All.EqualTo(Vector3.UnitY));
       Assert.That(mesh.Vertices.Select(vertex => vertex.Color), Is.All.EqualTo(color));
     }
     AssertCounterClockwise(mesh);
@@ -87,7 +87,7 @@ public class WaterMeshBuilderTests {
     var mesh = WaterMeshBuilder.Build(terrain, pool, Vector4.One);
 
     using (Assert.EnterMultipleScope()) {
-      Assert.That(mesh.Indices, Is.EqualTo(new uint[] { 0, 1, 2, 0, 2, 3 }));
+      Assert.That(mesh.Indices, Is.EqualTo(new uint[] { 0, 2, 1, 0, 3, 2 }));
       AssertPosition(mesh.Vertices[0], corners[0]);
       AssertPosition(mesh.Vertices[1], corners[1]);
       AssertPosition(mesh.Vertices[2], Vector2.Lerp(corners[1], corners[2], 1f / 3f));
@@ -184,8 +184,8 @@ public class WaterMeshBuilderTests {
     };
     using (Assert.EnterMultipleScope()) {
       Assert.That(mesh.Vertices.Select(vertex => new Vector2(
-        vertex.Position.X, vertex.Position.Y)), Is.EqualTo(expected));
-      Assert.That(mesh.Indices, Is.EqualTo(new uint[] { 0, 1, 2, 3, 4, 5 }));
+        vertex.Position.X, vertex.Position.Z)), Is.EqualTo(expected));
+      Assert.That(mesh.Indices, Is.EqualTo(new uint[] { 0, 2, 1, 3, 5, 4 }));
       Assert.That(IndexedArea(mesh),
         Is.EqualTo(terrain.TileSize.X * terrain.TileSize.Y).Within(0.0001f));
     }
@@ -206,13 +206,13 @@ public class WaterMeshBuilderTests {
       Assert.That(mesh.Vertices, Has.Count.EqualTo(9));
       Assert.That(mesh.Vertices[0].Position.X,
         Is.EqualTo(terrain.Origin.X + (2 * terrain.TileSize.X)));
-      Assert.That(mesh.Vertices[0].Position.Y,
+      Assert.That(mesh.Vertices[0].Position.Z,
         Is.EqualTo(terrain.Origin.Y + terrain.TileSize.Y));
       Assert.That(mesh.Vertices[3].Position.X,
         Is.EqualTo(terrain.Origin.X + (3 * terrain.TileSize.X)));
       Assert.That(mesh.Vertices[6].Position.X,
         Is.EqualTo(terrain.Origin.X + terrain.TileSize.X));
-      Assert.That(mesh.Vertices[6].Position.Y,
+      Assert.That(mesh.Vertices[6].Position.Z,
         Is.EqualTo(terrain.Origin.Y + (2 * terrain.TileSize.Y)));
     }
   }
@@ -228,8 +228,8 @@ public class WaterMeshBuilderTests {
       Assert.That(mesh.Indices, Has.Count.EqualTo(6));
       Assert.That(mesh.BoundingBox.Min.X, Is.EqualTo(terrain.Origin.X));
       Assert.That(mesh.BoundingBox.Max.X, Is.EqualTo(terrain.Origin.X + terrain.TileSize.X));
-      Assert.That(mesh.BoundingBox.Min.Y, Is.EqualTo(terrain.Origin.Y));
-      Assert.That(mesh.BoundingBox.Max.Y, Is.EqualTo(terrain.Origin.Y + terrain.TileSize.Y));
+      Assert.That(mesh.BoundingBox.Min.Z, Is.EqualTo(terrain.Origin.Y));
+      Assert.That(mesh.BoundingBox.Max.Z, Is.EqualTo(terrain.Origin.Y + terrain.TileSize.Y));
     }
   }
 
@@ -319,19 +319,19 @@ public class WaterMeshBuilderTests {
 
   private static void AssertPosition(Vertex vertex, Vector2 expected) {
     Assert.That(vertex.Position.X, Is.EqualTo(expected.X).Within(0.0001f));
-    Assert.That(vertex.Position.Y, Is.EqualTo(expected.Y).Within(0.0001f));
-    Assert.That(vertex.Position.Z, Is.EqualTo(ExpectedSurfaceZ).Within(0.0001f));
+    Assert.That(vertex.Position.Z, Is.EqualTo(expected.Y).Within(0.0001f));
+    Assert.That(vertex.Position.Y, Is.EqualTo(ExpectedSurfaceY).Within(0.0001f));
   }
 
-  private static float ExpectedSurfaceZ =>
-    Terrain.CornerHeightToWorldZ(WaterHeight) + WaterMeshBuilder.SurfaceRenderOffset;
+  private static float ExpectedSurfaceY =>
+    Terrain.CornerHeightToWorldY(WaterHeight) + WaterMeshBuilder.SurfaceRenderOffset;
 
   private static void AssertCounterClockwise(Mesh mesh) {
     for (var index = 0; index < mesh.Indices.Count; index += 3) {
       var a = mesh.Vertices[Convert.ToInt32(mesh.Indices[index])].Position;
       var b = mesh.Vertices[Convert.ToInt32(mesh.Indices[index + 1])].Position;
       var c = mesh.Vertices[Convert.ToInt32(mesh.Indices[index + 2])].Position;
-      Assert.That(Vector3.Cross(b - a, c - a).Z, Is.GreaterThan(0f));
+      Assert.That(Vector3.Cross(b - a, c - a).Y, Is.GreaterThan(0f));
     }
   }
 

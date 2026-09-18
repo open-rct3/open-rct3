@@ -1,18 +1,28 @@
 # OVL Decoding
 
-This directory contains plans for decoding OVL archive file types. Six are documented but not yet ranked by
-implementation difficulty.
+This directory contains plans for decoding OVL archive file types.
 
 ## Plans
 
-| Plan                                                         | OVL Tag | File Type |
-| ------------------------------------------------------------ | ------- | --------- |
-| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"` | Terrain   |
-| [ovl-static-shapes.md](./ovl-static-shapes.md)               | `"shs"` | Shape     |
-| [ovl-scenery-item-visuals.md](./ovl-scenery-item-visuals.md) | `"svd"` | Visual    |
-| [ovl-flexible-textures.md](./ovl-flexible-textures.md)       | `"ftx"` | Texture   |
-| [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"` | Scenery   |
-| [ovl-textures.md](./ovl-textures.md)                         | `"tex"` | Texture   |
+| Plan                                                          | OVL Tag         | File Type        | Status      |
+| ----------------------------------------------------------- | --------------- | ---------------- | ----------- |
+| [ovl-terrain-types.md](./ovl-terrain-types.md)               | `"ter"`         | Terrain           | Completed   |
+| [ovl-scenery-items.md](./ovl-scenery-items.md)               | `"sid"`/`"svd"` | Scenery + Visual  | Completed (decoders; sid-viewer plugin has a known render() bug) |
+| [ovl-track-pieces.md](./ovl-track-pieces.md)                 | `"spl"`/`"tks"` | Spline + Track    | Planned     |
+
+The `tex`/`ftx` texture pipeline and `shs` (StaticShape) decoding are done and moved out of this
+directory:
+[`ovl-materials-integration.md`](../../../summaries/completed-work/ovl-materials-integration.md) unified
+static and animated OVL textures onto one GDK `Texture` type, on top of the separately-fixed
+`tex`/`flic`/`btbl` relocation bugs
+([`completed-work/ovl-texture-decoding.md`](../../../summaries/completed-work/ovl-texture-decoding.md)). The
+texture pipeline is no longer a blocker for anything in this directory or for
+[`grass-from-ovl.md`](../../grass-from-ovl.md).
+[`ovl-static-shapes.md`](../../../summaries/completed-work/ovl-static-shapes.md) decoded `shs`
+entries (`StaticShapes.Extract`, `Ovl.TryFindSymbol`, the `shs-viewer` Dumper plugin, and the
+general "ovl" host-function surface future pointer-heavy decoders should reuse — see Dumper
+Plugin Requirement below); `ovl-scenery-items.md`'s SHS-symbol dependency (for `svd`'s
+`meshtype == 0` case) is unblocked as a result.
 
 ## Ranked by Difficulty
 
@@ -21,67 +31,82 @@ implementation difficulty.
 - **Task**: Decode terrain entries (tag: `"ter"`)
 - **Complexity**: ~80 lines of spec
 - **Key work**: Simple struct with color parameters and texture references
-- **Verdict**: Low complexity, straightforward parsing
+- **Verdict**: Low complexity, straightforward parsing. Research on what the data means is already done —
+  see [`grass-from-ovl.md`](../../../research/grass-from-ovl.md).
 
-### 2. Moderately Difficult: [ovl-static-shapes.md](./ovl-static-shapes.md)
+### 2. Most Difficult: [ovl-scenery-items.md](./ovl-scenery-items.md)
 
-- **Task**: Decode static 3D shape entries (tag: `"shs"`)
-- **Complexity**: 118 lines of spec
-- **Key work**: Two-level struct hierarchy (`StaticShape` → `StaticShapeMesh[]`), vertex/index arrays, symbol refs to
-  FTX/TXS
-- **Dependencies**: Relocation resolution, symbol reference resolution
-- **Verdict**: Multi-level pointer chasing, requires cross-block data access
-
-### 3. More Difficult: [ovl-scenery-items.md](./ovl-scenery-items.md)
-
-- **Task**: Decode scenery item entries (tag: `"sid"`)
-- **Complexity**: 149 lines of spec
-- **Key work**: Extensive metadata (UI, positioning, colors, tiles, sounds, SVDs, parameters), 3 struct versions
-  (v0/v1/v2), 40+ unknown fields
-- **Dependencies**: Relocation resolution, symbol reference resolution for TXT/GSI/SVD/SND
-- **Verdict**: Second-most complex, significant unknown fields
-
-### 4. Most Difficult: [ovl-textures.md](./ovl-textures.md)
-
-- **Task**: Decode texture entries (TEX/FLIC/BTBL system)
-- **Complexity**: 386 lines of spec
-- **Key work**: 22 texture formats, BTBL vs direct FLIC layouts, mipmap parsing, DXT compression detection
-- **Dependencies**: `SixLabors.ImageSharp.Image`, relocation resolution, format-specific block size calculations
-- **Verdict**: Most research-intensive plan, extensive format table, multiple code paths
-
-## Unranked Plans
-
-These plans are documented but not yet ranked:
-
-- **[ovl-flexible-textures.md](./ovl-flexible-textures.md)** — Palette-based animated textures (FTX) with frames,
-  palettes, and alpha channels. Similar complexity to textures plan.
-- **[ovl-scenery-item-visuals.md](./ovl-scenery-item-visuals.md)** — LOD-based visual definitions (SVD) referencing
-  StaticShape, BoneShape, or Billboard meshes.
-
-## Summary Table
-
-| Rank | Plan                 | Lines | Key Challenge                  |
-| ---- | -------------------- | ----- | ------------------------------ |
-| 1    | ovl-terrain-types.md | ~80   | Color parameters, texture refs |
-| 2    | ovl-static-shapes.md | 118+  | Multi-level mesh hierarchy     |
-| 3    | ovl-scenery-items.md | 149+  | Complex metadata, 3 versions   |
-| 4    | ovl-textures.md      | 386+  | 22 formats, 2 layouts          |
+- **Task**: Decode scenery item entries (tag: `"sid"`) together with the LOD-based visual definitions they
+  reference (tag: `"svd"`) — merged into one plan because they're tightly coupled in the real game (every
+  `sid` holds `svd` symbol refs; an `svd` has no meaning without its owning `sid`)
+- **Key work (SID)**: Extensive metadata (UI, positioning, colors, tiles, sounds, SVDs, parameters), 3 struct
+  versions (v0/v1/v2), 40+ unknown fields. `sizeflag` (placement footprint/height-sampling) is confirmed to
+  live here, not on `svd` — see [`scenery-placement-registry.md`](../scenery-placement-registry.md).
+- **Key work (SVD)**: References StaticShape, BoneShape, or Billboard meshes with distance-based LOD
+  switching and animation references; feeds `scenery-placement-registry.md`, which already keys registry
+  entries on raw `svd` symbol names
+- **Dependencies**: Relocation resolution, symbol reference resolution for TXT/GSI/SVD/SND/SHS/BSH/FTX/TXS/BAN/MAM
+- **Verdict**: Most complex, significant unknown fields, plus cross-resource symbol-ref validation between
+  SID and SVD
 
 ## Recommendation
 
-Start with `ovl-terrain-types.md` for a quick win. Both can be implemented in under 100 lines of C# and validate the
-extraction pattern before tackling more complex file types.
+Start with `ovl-terrain-types.md` for a quick win — under 100 lines of C#, validates the extraction pattern.
+It's not on the critical path for grass texturing to *render*: `grass-from-ovl.md` found that each `ter`
+entry's `texture_ref` points to a `tex` entry with the same name, and `tex` already decodes cleanly, so the
+grass-texture work doesn't wait on this plan to ship. It does, however, resolve that plan's one remaining
+open risk — `"Terrain_00" is grass` is currently a guess (first `tex` entry, no `Cliff` prefix, BTBL index 0),
+not a verified mapping; decoding `ter` gives an authoritative `TerrainType.texture` reference instead. `grass-
+from-ovl.md` proceeds with the guess and confirms visually in the meantime, so this plan is parallel
+verification work, not a blocker.
+
+## Reference Source: `rct3-importer`
+
+Plans in this directory cite the `rct3-importer` C++ reference implementation (struct layouts,
+allocation order, line numbers) by GitHub URL, but that is **not the only copy** — a local
+checkout already exists as a sibling of this repo, at `../../../../../rct3-importer` (i.e.
+`rct3-importer/` next to `open-rct3/`). Read struct definitions and `Manager*.cpp` decoders
+directly from there (e.g. `../../../../../rct3-importer/RCT3 Importer/include/staticshape.h` and
+`.../src/libOVLng/ManagerSHS.cpp` for the `shs` plan) instead of fetching the GitHub URL — it's
+faster, works offline, and avoids citing line numbers from a fetch that isn't preserved anywhere
+else in this repo. Verify a plan's line-number citations against this local copy before trusting
+them in a fresh session, since nothing in `.agents/` vendors or caches the source itself.
+
+## Dumper Plugin Requirement
+
+Every OVL decoder plan in this directory must ship a matching `<tag>-viewer` Extism plugin under
+[`plugins/`](../../../../plugins/) — see [`plugins/README.md`](../../../../plugins/README.md) for
+the plugin contract (`name`/`version`/`file_types`/`render`) and template structure. This is not
+optional follow-up work: a decoder plan's Goals section should include the plugin, and its
+Post-Implementation Steps should mark the plugin `✅ Completed` in `plugins/README.md`'s status
+table (moving it out of `📋 Planned`). Reference an existing plugin close in complexity to the new
+decoder (e.g. `mam-viewer` for vertex/face-count-shaped data) rather than starting from the bare
+template.
+
+**Pointer-heavy resource types** (anything relying on relocated pointers for its interesting
+data — `svd`, `sid`, `ftx`, and `shs` before it): don't fall back to a header-only/hex-dump-only
+viewer just because `render(bytes)` only gets a resource's own raw bytes. `shs-viewer`
+([`ovl-static-shapes.md`](../../../summaries/completed-work/ovl-static-shapes.md)) established a
+general "ovl" host-function surface for exactly this —
+`Dumper/Plugins/ViewerPlugin.cs`'s `resolve_pointer`/`get_relocation_source`/`find_symbol`/
+`read_resource`/`current_resource_address`, wrapped for AssemblyScript by `plugins/lib/ovl.ts`'s
+`Ovl` class — that lets a plugin request further archive data on demand against whichever archive
+is currently open, without the host having to pre-flatten everything a plugin might want. Reuse
+these rather than adding new per-type host functions; keep struct-layout/decode-quirk knowledge
+centralized in the .NET decoder (plugins should only walk pointers via these functions, not
+reinterpret struct layouts themselves — see `StaticShapes.cs`'s sort-tail ambiguity for why that
+matters).
 
 ## Testing Approach
 
-All tests for OVL decoding implementations are created as new test files in `OpenCobra/Tests/TestRunner/Tests/`, not to
-NUnit unit tests. Each plan includes a TestRunner test file template following the existing pattern:
+The `TestRunner`/`OpenCobra/Tests/TestRunner/Tests/Read<Feature>.cs`/`OvlTest[]` pattern these plans originally
+specified no longer exists in the codebase. Current convention (see
+`completed-work/ovl-materials-integration.md`'s test plan for a live example):
 
-1. Create new file: `OpenCobra/Tests/TestRunner/Tests/Read<Feature>.cs`
-2. Each file contains a static class with `OvlTest[] All` array
-3. Tests use `Assert.That(condition, message)` and `Assert.Result(name)`
-4. Tests are registered in the test runner to run against OVL pairs
-5. Run the TestRunner before and after implementation to verify
+1. NUnit unit tests in `OpenCobra/Tests/OVL/<Feature>Tests.cs` — synthetic struct input, no `RCT3_PATH` needed.
+2. Real-archive checks added to `OpenCobra/Tests/Integration/ExtractResources.cs`, gated by `RCT3_PATH`.
+3. Run `make test` (unit tests) per `AGENTS.md`; the integration suite is separate and only runs with real
+   game data present.
 
 ## Production OVLs Discovery
 

@@ -334,15 +334,11 @@ Assert-NativeSmokeScreenshotContent -Path $renderedCapturePath
 
 $nativeSmokeSource = Get-Content -Raw -LiteralPath (
   Join-Path $repo 'scripts\verification\Test-NativeSmoke.ps1')
-foreach ($requiredIsolationBoundary in @(
-    '$env:OPENRCT3_APPDATA_PATH = $isolatedAppData',
-    '$env:OPENRCT3_MAP_PATH = $null',
-    'Set-NativeSmokeIsolatedLoggingConfiguration',
-    'Assert-NativeSmokeScreenshotContent -Path $capturePath',
-    "'-Action', 'Screenshot', '-OutFile', `$capturePath, '-StrictPid'")) {
-  if ($nativeSmokeSource.IndexOf($requiredIsolationBoundary, [StringComparison]::Ordinal) -lt 0) {
-    throw "Native smoke does not enforce its application-data/capture contract: $requiredIsolationBoundary"
-  }
+if ($nativeSmokeSource -notmatch 'Use OpenRCT3 MCP') {
+  throw 'Native inspection must direct callers to OpenRCT3 MCP.'
+}
+if (Test-Path -LiteralPath (Join-Path $repo '.claude/skills/drive-native-app/scripts/AppDriver.ps1')) {
+  throw 'The removed desktop-input driver must not be restored.'
 }
 
 $terrainSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'OpenRCT3\Simulation\Terrain.cs')
@@ -363,9 +359,9 @@ if ([string]::IsNullOrWhiteSpace($openRct3Assembly)) {
   throw 'The loaded-map application probe requires the make test-build output.'
 }
 $builtNlogPath = Join-Path (Split-Path $openRct3Assembly -Parent) 'nlog.config'
-$parkFixture = Join-Path $repo 'OpenCobra\Tests\Fixtures\Parks\Fun Valley Amusment park.dat'
-$parkHash = (Get-FileHash -LiteralPath $parkFixture -Algorithm SHA256).Hash
+$parkFixture = Join-Path $results 'loaded-map-fixture.dat'
 $fallbackProbe = Invoke-LoadedMapProbe -Name 'fallback' -ConfiguredMapPath $parkFixture
+$parkHash = (Get-FileHash -LiteralPath $parkFixture -Algorithm SHA256).Hash
 $fallbackState = Get-NativeSmokeLogState `
   -LogPath $fallbackProbe.LogPath `
   -RunId $fallbackProbe.RunId `
@@ -576,48 +572,13 @@ $missingCapture.capture.artifacts = @(
 Assert-Throws { Assert-NativeSmokeEvidenceRecord -Evidence $missingCapture } `
   'manifest rejects nonexistent screenshot' 'file does not exist'
 
-$nativeSmokeResults = Join-Path $repo 'TestResults\native-smoke'
-if (Test-Path -LiteralPath $nativeSmokeResults) {
-  Remove-Item -LiteralPath $nativeSmokeResults -Recurse -Force
-}
-New-Item -ItemType Directory -Path $nativeSmokeResults -Force | Out-Null
-$priorManifestPath = Join-Path $nativeSmokeResults 'native-smoke.json'
-$priorPassedEvidence = New-PassedEvidence `
-  -Repo $repo `
-  -Executable (Join-Path $nativeSmokeResults 'OpenRCT3.exe') `
-  -Map (Join-Path $nativeSmokeResults 'prior-map.dat')
-Write-NativeSmokeEvidenceManifest -Evidence $priorPassedEvidence -Path $priorManifestPath
-$priorManifestHash = (Get-FileHash -LiteralPath $priorManifestPath -Algorithm SHA256).Hash
-$priorRunNonce = $priorPassedEvidence.runNonce
-$originalVerifyNative = $env:OPENRCT3_VERIFY_NATIVE
-$env:OPENRCT3_VERIFY_NATIVE = $null
-try {
-  $optOutOutput = & powershell -NoProfile -ExecutionPolicy Bypass `
-    -File (Join-Path $PSScriptRoot 'Test-NativeSmoke.ps1') 2>&1 | Out-String
-  if ($LASTEXITCODE -ne 0) {
-    throw "Native opt-out stale-evidence probe failed: $optOutOutput"
-  }
-} finally {
-  $env:OPENRCT3_VERIFY_NATIVE = $originalVerifyNative
-}
-$freshOptOut = Get-Content -Raw -LiteralPath $priorManifestPath | ConvertFrom-Json
-Assert-NativeSmokeEvidenceRecord -Evidence $freshOptOut
-if ($freshOptOut.outcome -ne 'skipped' -or
-    $freshOptOut.reason -ne 'OPENRCT3_VERIFY_NATIVE is not enabled') {
-  throw 'Native opt-out did not overwrite prior passed evidence with an explicit skip.'
-}
-if ($freshOptOut.runNonce -eq $priorRunNonce) {
-  throw 'Native opt-out reused the prior passed evidence nonce.'
-}
-if ((Get-FileHash -LiteralPath $priorManifestPath -Algorithm SHA256).Hash -eq
-    $priorManifestHash) {
-  throw 'Native opt-out left the prior passed manifest byte-for-byte stale.'
-}
+Assert-Throws { & (Join-Path $PSScriptRoot 'Test-NativeSmoke.ps1') } `
+  'removed desktop runner directs callers to MCP' 'Use OpenRCT3 MCP'
 
 Assert-NativeSmokeProcessExited -ProcessId ([int]::MaxValue)
 Assert-Throws { Assert-NativeSmokeProcessExited -ProcessId $PID } `
   'live candidate fails cleanup validation' 'still running'
 
-& (Join-Path $PSScriptRoot 'Test-AppDriver.ps1')
+# Native application inspection is performed exclusively through OpenRCT3 MCP.
 
 Write-Output 'Harness self-tests passed: native identity/logging, strict TRX, manifest, and driver guards.'

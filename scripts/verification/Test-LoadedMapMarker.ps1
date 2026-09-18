@@ -24,6 +24,7 @@ $openRct3Project = Join-Path $RepoPath 'OpenRCT3\OpenRCT3.csproj'
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="$openRct3Project" />
+    <Compile Include="$RepoPath\OpenRCT3.Tests\Serialization\DatTerrainFixture.cs" Link="DatTerrainFixture.cs" />
   </ItemGroup>
 </Project>
 "@ | Set-Content -LiteralPath $projectPath -Encoding UTF8
@@ -32,9 +33,11 @@ using NLog;
 using NLog.Config;
 using OpenRCT3.Platforms;
 using OpenRCT3.Simulation;
+using OpenRCT3.Tests.Serialization;
 using System.Reflection;
 
 LogManager.Configuration = new XmlLoggingConfiguration(args[0]);
+File.WriteAllBytes(args[2], DatTerrainFixture.BuildMinimalTerrainBytes());
 var config = new AppConfig { InstallPath = args[1], MapPath = args[2] };
 typeof(AppConfig).GetField("instance", BindingFlags.NonPublic | BindingFlags.Static)!
   .SetValue(null, config);

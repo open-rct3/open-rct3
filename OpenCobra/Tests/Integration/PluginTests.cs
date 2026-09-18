@@ -31,11 +31,55 @@ public static class PluginTests {
     };
   }
 
+  static HostFunction[] CreateOvlFunctions() {
+    const long NotFound = long.MinValue;
+    return new[] {
+      new HostFunction(
+        "resolve_pointer",
+        [ExtismValType.I64],
+        [ExtismValType.I64],
+        null,
+        (plugin, inputs, outputs) => outputs[0].v.i64 = NotFound
+      ).WithNamespace("ovl"),
+      new HostFunction(
+        "get_relocation_source",
+        [ExtismValType.I64],
+        [ExtismValType.I64],
+        null,
+        (plugin, inputs, outputs) => outputs[0].v.i64 = NotFound
+      ).WithNamespace("ovl"),
+      new HostFunction(
+        "find_symbol",
+        [ExtismValType.I64],
+        [ExtismValType.I64],
+        null,
+        (plugin, inputs, outputs) => outputs[0].v.i64 = NotFound
+      ).WithNamespace("ovl"),
+      new HostFunction(
+        "read_resource",
+        [ExtismValType.I64, ExtismValType.I64, ExtismValType.I64, ExtismValType.I64],
+        [ExtismValType.I64],
+        null,
+        (plugin, inputs, outputs) => outputs[0].v.i64 = NotFound
+      ).WithNamespace("ovl"),
+      new HostFunction(
+        "current_resource_address",
+        [],
+        [ExtismValType.I64],
+        null,
+        (plugin, inputs, outputs) => outputs[0].v.i64 = NotFound
+      ).WithNamespace("ovl")
+    };
+  }
+
+  static HostFunction[] CreateAllFunctions() =>
+    [..CreateAbortFunctions(), ..CreateOvlFunctions()];
+
   public static readonly PluginTest[] All = [
     new("Compile and Instantiate", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      var compiled = new CompiledPlugin(manifest, CreateAllFunctions(), options);
       Assert.That(compiled != null, "Plugin loaded and instantiated successfully");
       var instance = compiled?.Instantiate();
       if (instance == null) {
@@ -52,7 +96,7 @@ public static class PluginTests {
     new("Has Name", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      var compiled = new CompiledPlugin(manifest, CreateAllFunctions(), options);
       var instance = compiled.Instantiate();
       var nameBytes = instance.Call("name", []);
       var name = Encoding.UTF8.GetString(nameBytes);
@@ -63,7 +107,7 @@ public static class PluginTests {
     new("Has Version", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      var compiled = new CompiledPlugin(manifest, CreateAllFunctions(), options);
       var instance = compiled.Instantiate();
       var versionBytes = instance.Call("version", []);
       var version = Encoding.UTF8.GetString(versionBytes);
@@ -74,7 +118,7 @@ public static class PluginTests {
     new("Has File Types", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      var compiled = new CompiledPlugin(manifest, CreateAllFunctions(), options);
       var instance = compiled.Instantiate();
       var jsonBytes = instance.Call("file_types", []);
       var json = Encoding.UTF8.GetString(jsonBytes);
@@ -85,7 +129,7 @@ public static class PluginTests {
     new("Renders a View", wasmPath => {
       var manifest = new Manifest(new PathWasmSource(wasmPath));
       var options = new PluginIntializationOptions { WithWasi = true };
-      var compiled = new CompiledPlugin(manifest, CreateAbortFunctions(), options);
+      var compiled = new CompiledPlugin(manifest, CreateAllFunctions(), options);
       var instance = compiled.Instantiate();
       var htmlBytes = instance.Call("render", []);
       var html = Encoding.UTF8.GetString(htmlBytes);

@@ -44,7 +44,7 @@ public static class WaterMeshBuilder {
 
     var vertices = new List<Vertex>(checked(pool.Triangles.Count * 4));
     var indices = new List<uint>(checked(pool.Triangles.Count * 6));
-    var surfaceZ = Terrain.CornerHeightToWorldZ(pool.Height) + SurfaceRenderOffset;
+    var surfaceY = Terrain.CornerHeightToWorldY(pool.Height) + SurfaceRenderOffset;
     var triangleKeys = new HashSet<(int X, int Y, WaterTerrainTriangle Triangle)>();
 
     foreach (var triangle in pool.Triangles
@@ -63,7 +63,7 @@ public static class WaterMeshBuilder {
           $"Water tile ({triangle.X}, {triangle.Y}) is outside the terrain grid.");
 
       var polygon = ClipTriangle(terrain, pool.Height, triangle);
-      AddPolygon(terrain, triangle, polygon, surfaceZ, color, vertices, indices);
+      AddPolygon(terrain, triangle, polygon, surfaceY, color, vertices, indices);
     }
 
     return new Mesh(vertices, indices) { Name = name };
@@ -124,20 +124,20 @@ public static class WaterMeshBuilder {
     Terrain terrain,
     WaterSurfaceTriangle triangle,
     IReadOnlyList<Vector2> polygon,
-    float surfaceZ,
+    float surfaceY,
     Vector4 color,
     List<Vertex> vertices,
     List<uint> indices
   ) {
     var west = terrain.Origin.X + (triangle.X * terrain.TileSize.X);
     var south = terrain.Origin.Y + (triangle.Y * terrain.TileSize.Y);
-    var normal = Vector3.UnitZ;
+    var normal = Vector3.UnitY;
     var baseIndex = Convert.ToUInt32(vertices.Count);
     if (polygon.Count == 0) return;
 
     foreach (var point in polygon) {
       vertices.Add(new Vertex {
-        Position = new Vector3(point, surfaceZ),
+        Position = new Vector3(point.X, surfaceY, point.Y),
         Normal = normal,
         TexCoord = new Vector2(
           (point.X - west) / terrain.TileSize.X,
@@ -148,8 +148,8 @@ public static class WaterMeshBuilder {
 
     for (var index = 1; index < polygon.Count - 1; index++) {
       indices.Add(baseIndex);
-      indices.Add(baseIndex + Convert.ToUInt32(index));
       indices.Add(baseIndex + Convert.ToUInt32(index + 1));
+      indices.Add(baseIndex + Convert.ToUInt32(index));
     }
   }
 

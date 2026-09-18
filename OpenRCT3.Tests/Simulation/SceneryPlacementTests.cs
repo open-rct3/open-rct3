@@ -4,7 +4,8 @@
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
-using NUnit.Framework;
+
+using OpenCobra.OVL;
 using OpenRCT3.Simulation;
 
 namespace OpenRCT3.Tests.Simulation;
@@ -31,8 +32,10 @@ public class SceneryPlacementTests {
 
     var placed = park.TryPlaceScenery(placement, NewRegistry(), terrain);
 
-    Assert.That(placed, Is.False);
-    Assert.That(park.SceneryPlacements, Is.Empty);
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(placed, Is.False);
+      Assert.That(park.SceneryPlacements, Is.Empty);
+    }
   }
 
   [Test]
@@ -55,8 +58,10 @@ public class SceneryPlacementTests {
 
     var placed = park.TryPlaceScenery(placement, NewRegistry(), terrain);
 
-    Assert.That(placed, Is.True);
-    Assert.That(park.SceneryPlacements, Has.Count.EqualTo(1));
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(placed, Is.True);
+      Assert.That(park.SceneryPlacements, Has.Count.EqualTo(1));
+    }
   }
 
   [Test]
@@ -69,8 +74,10 @@ public class SceneryPlacementTests {
 
     var placed = park.TryPlaceScenery(placement, NewRegistry(), terrain);
 
-    Assert.That(placed, Is.False);
-    Assert.That(park.SceneryPlacements, Is.Empty);
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(placed, Is.False);
+      Assert.That(park.SceneryPlacements, Is.Empty);
+    }
   }
 
   [Test]
@@ -110,8 +117,10 @@ public class SceneryPlacementTests {
 
     var (near, far) = Park.GetSceneryHeight(placement, definition, terrain);
 
-    Assert.That(near, Is.EqualTo(10));
-    Assert.That(far, Is.EqualTo(10));
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(near, Is.EqualTo(10));
+      Assert.That(far, Is.EqualTo(10));
+    }
   }
 
   [Test]
@@ -124,8 +133,10 @@ public class SceneryPlacementTests {
 
     var (near, far) = Park.GetSceneryHeight(placement, definition, terrain);
 
-    Assert.That(near, Is.EqualTo(5));
-    Assert.That(far, Is.EqualTo(15));
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(near, Is.EqualTo(5));
+      Assert.That(far, Is.EqualTo(15));
+    }
   }
 
   [Test]
@@ -138,7 +149,9 @@ public class SceneryPlacementTests {
 
     var (near, far) = Park.GetSceneryHeight(placement, definition, terrain);
 
-    Assert.That(near, Is.EqualTo(30));
-    Assert.That(far, Is.EqualTo(40));
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(near, Is.EqualTo(30));
+      Assert.That(far, Is.EqualTo(40));
+    }
   }
 }

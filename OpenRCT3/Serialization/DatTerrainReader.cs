@@ -423,6 +423,8 @@ internal static class DatTerrainReader {
     var layout = DetermineTerrainLayout(payloadSize, cellCount);
     var cells = new DatTerrainCell[cellCount];
     for (var index = 0; index < cellCount; index++) {
+      // The saved-field compass labels are camera-relative. Preserve the positional order here: the
+      // real-map shared-edge continuity check establishes it as the simulation's world-space order.
       var southWest = reader.ReadSingle();
       var southEast = reader.ReadSingle();
       var northWest = reader.ReadSingle();

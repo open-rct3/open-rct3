@@ -8,11 +8,9 @@
 // Symbols tagged "fct" (FileType.FontCharacterTable) - e.g. GUIFontSmallNumbers, GUIFontSmall,
 // GUIFontTiny in Main.ovl. Unlike CharacterSkins/ParticleEffects, these are NOT tex/flic/btbl
 // shaped: an "fct" resource's bytes were found to decode as a Win32 LOGFONT-like structure
-// containing readable ASCII font-family name strings ("Tahoma", "Verdana", "Arial", "Lucida", ...)
-// - see .agents/plans/fix/ovl-texture-decoding.md for how this was found (it was previously
-// misclassified as FileType.BitmapTable via the position-based loader fallback, which is what
-// exposed the mismatch). The exact struct layout - field offsets, string encoding/length prefix,
-// how multiple font entries are delimited - has not been reverse-engineered yet.
+// containing readable ASCII font-family name strings ("Tahoma", "Verdana", "Arial", "Lucida", ...).
+// The exact struct layout - field offsets, string encoding/length prefix, how multiple font entries
+// are delimited - has not been reverse-engineered yet.
 //
 // This module deliberately does not attempt to decode that structure yet: guessing a wrong layout
 // here would be worse than not decoding at all. It only enumerates "fct" resources and exposes

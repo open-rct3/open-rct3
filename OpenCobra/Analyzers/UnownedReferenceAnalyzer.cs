@@ -4,40 +4,24 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Resources;
 
 namespace OpenCobra.Analyzers;
-
-internal static class Resources {
-  public static readonly ResourceManager ResourceManager = new(typeof(Resources));
-
-  public const string Title = "Unowned reference accessed unsafely";
-  public const string MessageFormat = "{0}";
-  public const string Description =
-      "Fields marked with [Unowned] should use WeakReference<T> and " +
-      "should always check if the target is alive before accessing it.";
-}
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class UnownedReferenceAnalyzer : DiagnosticAnalyzer {
   public static readonly string UnownedRefId = "GDK001";
 
-  private static readonly LocalizableString Title =
-      new LocalizableResourceString(nameof(Resources.Title),
-          Resources.ResourceManager, typeof(Resources));
-  private static readonly LocalizableString MessageFormat =
-      new LocalizableResourceString(nameof(Resources.MessageFormat),
-          Resources.ResourceManager, typeof(Resources));
-  private static readonly LocalizableString Description =
-      new LocalizableResourceString(nameof(Resources.Description),
-          Resources.ResourceManager, typeof(Resources));
-
   private const string Category = "Design";
 
+  // Plain strings implicitly convert to LocalizableString. Do not switch these back to
+  // LocalizableResourceString + ResourceManager without also adding a real embedded .resx —
+  // the previous version threw MissingManifestResourceException (AD0001) on every build of
+  // every consuming project, because no .resources file was ever embedded in this assembly.
   private static readonly DiagnosticDescriptor Rule =
-      new("GDK001", Title, MessageFormat,
+      new("GDK001", "Unowned reference accessed unsafely", "{0}",
           Category, DiagnosticSeverity.Warning, isEnabledByDefault: true,
-          description: Description);
+          description: "Fields marked with [Unowned] should use WeakReference<T> and " +
+                        "should always check if the target is alive before accessing it.");
 
   public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 

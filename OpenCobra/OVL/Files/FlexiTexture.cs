@@ -11,7 +11,27 @@ using SixLabors.ImageSharp.Processing;
 
 namespace OpenCobra.OVL.Files;
 
-public record struct FlexiTexture(Recolorable Recolorable, Image<Rgba32> Texture);
+public record struct FlexiTexture(string Name, Recolorable Recolorable, Image<Rgba32> Texture) {
+  public FlexiTexture(Recolorable recolorable, Image<Rgba32> texture)
+    : this(string.Empty, recolorable, texture) { }
+
+  public uint Width => Convert.ToUInt32(Texture.Width);
+  public uint Height => Convert.ToUInt32(Texture.Height);
+
+  public static implicit operator Texture(FlexiTexture frame) {
+    var texture = new Texture(
+      frame.Name, TextureFormat.A8R8G8B8, frame.Width, frame.Height, recolorable: frame.Recolorable);
+    texture.MipLevels[0] = frame.Texture;
+    return texture;
+  }
+}
+
+internal readonly record struct FlexiFrameData(
+  Recolorable Recolorable,
+  ReadOnlyMemory<byte> Palette,
+  ReadOnlyMemory<byte> Texture,
+  ReadOnlyMemory<byte> Alpha
+);
 
 public record struct FlexiTextureList(uint Fps, FlexiTexture[] Frames) {
   private const int HeaderSize = 36;
@@ -31,6 +51,7 @@ public record struct FlexiTextureList(uint Fps, FlexiTexture[] Frames) {
   public readonly int Height => Frames[0].Texture.Height;
   public readonly Recolorable Recolorable => Frames[0].Recolorable;
   public readonly int Length => Frames.Length;
+  public readonly int Count => Frames.Length;
   public readonly FlexiTexture this[int index] => Frames[index];
 
   // See FlexiTextureInfoStruct/FlexiTextureStruct in flexitexture.h and ManagerFTX.cpp.
@@ -144,10 +165,31 @@ public record struct FlexiTextureList(uint Fps, FlexiTexture[] Frames) {
       var image = Image.LoadPixelData<Rgba32>(
         rgbaTexture, Convert.ToInt32(data.Width), Convert.ToInt32(data.Height));
       image.Mutate(context => context.Flip(FlipMode.Vertical));
-      frames[outputIndex] = new FlexiTexture(data.Recolorable, image);
+      frames[outputIndex] = new FlexiTexture(
+        frameOrder.Length == 1 ? name : $"{name}#{outputIndex}", data.Recolorable, image);
     }
 
     return new FlexiTextureList(fps, frames);
+  }
+
+  internal static TextureCollection Parse(
+    string name, uint fps, uint width, uint height, IReadOnlyList<FlexiFrameData> frameData
+  ) {
+    var frames = new Texture[frameData.Count];
+    foreach (var index in Enumerable.Range(0, frameData.Count)) {
+      var frame = frameData[index];
+      var rgba = PaletteConverter.ConvertIndexedBgraToRgba(
+        width, height, frame.Palette.Span, frame.Texture.Span, frame.Alpha.Span);
+      var image = Image.LoadPixelData<Rgba32>(rgba, Convert.ToInt32(width), Convert.ToInt32(height));
+      var frameName = frameData.Count == 1 ? name : $"{name}#{index}";
+      frames[index] = new Texture(
+        frameName, TextureFormat.A8R8G8B8, width, height, mipCount: 1,
+        recolorable: frame.Recolorable) {
+        MipLevels = { [0] = image },
+      };
+    }
+
+    return new TextureCollection(frames, fps);
   }
 
   private static int[] ReadFrameOrder(

@@ -12,6 +12,11 @@ using NLog;
 using OpenCobra.GDK.Assets;
 using OpenRCT3.Platforms;
 using OpenRCT3.Serialization;
+using System.Linq;
+using OpenCobra.Data;
+using OpenCobra.OVL;
+using OpenCobra.OVL.Files;
+using DatParks = OpenCobra.Data.Parks;
 
 namespace OpenRCT3.Simulation;
 
@@ -20,11 +25,11 @@ namespace OpenRCT3.Simulation;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The coordinate system is Z-up:
+/// The coordinate system is Y-up:
 /// <list type="bullet">
 /// <item><description>X: West to East (East is +X)</description></item>
-/// <item><description>Y: South to North (North is +Y)</description></item>
-/// <item><description>Z: Down to Up (Up is +Z)</description></item>
+/// <item><description>Y: Down to Up (Up is +Y)</description></item>
+/// <item><description>Z: South to North (North is +Z)</description></item>
 /// </list>
 /// </para>
 /// <para>
@@ -51,9 +56,8 @@ public class Terrain {
 
   /// <summary>
   /// The height of one corner step, in meters. One corner-height unit = 1 cm; the freeform sculpting
-  /// tools in <c>.agents/plans/features/terrain/tools.md</c> are continuous drag-based, so the
-  /// corner grid has to be finer than the 1m "ramp rise" snap granularity to let gentle hills and
-  /// valleys resolve smoothly.
+  /// tools are continuous drag-based, so the corner grid has to be finer than the 1m "ramp rise"
+  /// snap granularity to let gentle hills and valleys resolve smoothly.
   /// </summary>
   public const float HeightStep = 0.01f;
 
@@ -230,6 +234,29 @@ public class Terrain {
     }
 
     return terrain;
+  }
+
+  /// <summary>Builds a <see cref="Terrain"/> sized and shaped from a saved park's decoded corner-height grid.</summary>
+  internal static Terrain LoadFromSave(string path) {
+    // Share the decoded corner-grid factory so saved dimensions, origins, material indices, and
+    // signed heights match the full park loader without adding a second out-of-bounds border.
+    return FromData(DatTerrainReader.Read(path));
+  }
+
+  private static uint ColorDistance(uint c1, uint c2) {
+    var r1 = (byte)((c1 >> 16) & 0xFF);
+    var g1 = (byte)((c1 >> 8) & 0xFF);
+    var b1 = (byte)(c1 & 0xFF);
+
+    var r2 = (byte)((c2 >> 16) & 0xFF);
+    var g2 = (byte)((c2 >> 8) & 0xFF);
+    var b2 = (byte)(c2 & 0xFF);
+
+    var dr = (int)r1 - r2;
+    var dg = (int)g1 - g2;
+    var db = (int)b1 - b2;
+
+    return (uint)(dr * dr + dg * dg + db * db);
   }
 
   /// <summary>
@@ -419,6 +446,8 @@ public class Terrain {
 
   /// <summary>Converts a corner-height count to world-space Z, in meters.</summary>
   public static float CornerHeightToWorldZ(int cornerHeight) => cornerHeight * HeightStep;
+  /// <summary>Converts a corner-height count to world-space Y, in meters.</summary>
+  public static float CornerHeightToWorldY(int cornerHeight) => cornerHeight * HeightStep;
 
   /// <summary>Converts a world-space Z value in meters to signed corner-height units.</summary>
   public static int WorldZToCornerHeight(float worldZ) {

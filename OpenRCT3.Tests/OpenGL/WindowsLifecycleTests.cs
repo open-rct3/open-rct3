@@ -3,10 +3,12 @@ using OpenCobra.GDK;
 using OpenCobra.GDK.GUI;
 using OpenCobra.GDK.Numerics;
 using OpenCobra.GDK.Platform;
+using OpenRCT3.Input;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.Windows;
 using Silk.NET.Core.Contexts;
+using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -274,6 +276,28 @@ public class WindowsLifecycleTests {
     } finally {
       SetGameInstance(null);
     }
+  }
+
+  [Test]
+  public void HandleRecreation_DetachesOnlyTheOwnedInputAndGuiServices() {
+    var scene = new TestScene();
+    var firstController = (Controller)RuntimeHelpers.GetUninitializedObject(typeof(Controller));
+    var secondController = (Controller)RuntimeHelpers.GetUninitializedObject(typeof(Controller));
+    scene.BindGui(firstController);
+    scene.UnbindGui(secondController);
+    Assert.That(GetSceneField(scene, "gui"), Is.SameAs(firstController));
+    scene.UnbindGui(firstController);
+    Assert.That(GetSceneField(scene, "gui"), Is.Null);
+
+    var game = (Game)RuntimeHelpers.GetUninitializedObject(typeof(Game));
+    SetGameField(game, "inputLock", new object());
+    var firstInput = CreateUninitializedInputController(new FakeInputContext());
+    var secondInput = CreateUninitializedInputController(new FakeInputContext());
+    SetGameField(game, "inputController", secondInput);
+    game.UnbindInput(firstInput.Context);
+    Assert.That(GetGameField(game, "inputController"), Is.SameAs(secondInput));
+    game.UnbindInput(secondInput.Context);
+    Assert.That(GetGameField(game, "inputController"), Is.Null);
   }
 
   [Test]
@@ -577,6 +601,44 @@ public class WindowsLifecycleTests {
     var field = typeof(Game).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic) ??
       throw new InvalidOperationException($"Could not access Game.{fieldName}.");
     field.SetValue(game, value);
+  }
+
+  private static object? GetGameField(Game game, string fieldName) {
+    var field = typeof(Game).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic) ??
+      throw new InvalidOperationException($"Could not access Game.{fieldName}.");
+    return field.GetValue(game);
+  }
+
+  private static object? GetSceneField(Scene scene, string fieldName) {
+    var field = typeof(Scene).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic) ??
+      throw new InvalidOperationException($"Could not access Scene.{fieldName}.");
+    return field.GetValue(scene);
+  }
+
+  private static InputController CreateUninitializedInputController(IInputContext context) {
+    var controller = (InputController)RuntimeHelpers.GetUninitializedObject(typeof(InputController));
+    var field = typeof(InputController).GetField("<Context>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic) ??
+      throw new InvalidOperationException("Could not access InputController.Context.");
+    field.SetValue(controller, context);
+    return controller;
+  }
+
+  private sealed class TestScene : Scene {
+    public TestScene() : base(null, null) { }
+  }
+
+  private sealed class FakeInputContext : IInputContext {
+    public nint Handle => 0;
+    public IReadOnlyList<IGamepad> Gamepads => [];
+    public IReadOnlyList<IJoystick> Joysticks => [];
+    public IReadOnlyList<IKeyboard> Keyboards => [];
+    public IReadOnlyList<IMouse> Mice => [];
+    public IReadOnlyList<IInputDevice> OtherDevices => [];
+    public event Action<IInputDevice, bool>? ConnectionChanged {
+      add { }
+      remove { }
+    }
+    public void Dispose() { }
   }
 
   private sealed class FakeRenderer : IRenderer {

@@ -1,7 +1,14 @@
 # Plan: Excitement, Intensity, Nausea (EIN) Rating Model
 
-**Roadmap**: Unscheduled — stub spun off from [ride-track-spline.md](ride-track-spline.md) common `Ride` base
-type work.
+**Roadmap**: Unscheduled (Spun off from [ride-track-spline.md](ride-track-spline.md) common `Ride` base
+type work)
+
+> [!IMPORTANT]
+> **Blocked on foundational work.** EIN calculation requires a queryable track data model and stable ride
+> instance representation. See [Rides & Track Splines](../../TODO.md#rides--track-splines) in `TODO.md` for the
+> prioritized dependency chain: bank propagation fix → world-space rendering → track editor → content
+> authoring. Physics-based intensity/nausea calculations are further blocked on a physics simulation layer
+> (currently out of scope).
 
 ## Context
 
@@ -20,10 +27,12 @@ from these as a starting approximation, not ground truth.
 
 ## Open Questions
 
-- Which community-sourced formula approximation (if any) to adopt as a baseline vs. designing an original
+- **Formula baseline**: Which community-sourced approximation (if any) to adopt vs. designing an original
   formula tuned to this engine's physics model.
-- Does intensity/nausea rating require the physics simulation layer (out of scope for the track-spline plan)
-  to be in place first, since G-force and speed are physics outputs, not static geometry?
+- **Physics dependency**: Can excitement be calculated from pure geometry (drop height, inversions, duration)?
+  Or does intensity/nausea require a working physics simulation layer for G-force/speed? Currently, only
+  geometry-based excitement is viable; intensity/nausea are blocked until physics is in place (separate scope,
+  not part of this plan or track-spline plan).
 
 ## Status
 

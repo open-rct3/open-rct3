@@ -1,0 +1,191 @@
+// Ride Track Spline Data Model
+//
+// Authors:
+//   - Chance Snow <git@chancesnow.me>
+//
+// Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+
+using System;
+using System.Collections.Generic;
+using System.Numerics;
+
+namespace OpenRCT3.Rides.TrackSpline;
+
+/// <summary>
+/// A control point on a rail spline: position, tangent direction, and bank rotation.
+/// </summary>
+public struct RailControlPoint {
+  /// <summary>Position in local piece space.</summary>
+  public Vector3 Position;
+
+  /// <summary>Tangent vector (unit direction for Catmull-Rom interpolation).</summary>
+  public Vector3 Tangent;
+
+  /// <summary>Bank angle, in radians. Rotation about the forward (tangent) axis.</summary>
+  public float Bank;
+}
+
+/// <summary>
+/// A single baked sample along a rail spline: position, orientation, and arc-length coordinate.
+/// </summary>
+public struct BakedSample {
+  /// <summary>Position in world space.</summary>
+  public Vector3 Position;
+
+  /// <summary>Orientation quaternion (encodes heading and pitch).</summary>
+  public Quaternion Orientation;
+
+  /// <summary>Bank angle at this sample, in radians.</summary>
+  public float Bank;
+
+  /// <summary>Arc-length coordinate along the rail from piece start, in world units.</summary>
+  public float ArcLength;
+}
+
+/// <summary>
+/// One side of a track piece's rail spline (left or right).
+/// </summary>
+public class RailSpline {
+  /// <summary>Ordered sequence of control points defining the spline in local piece space.</summary>
+  public List<RailControlPoint> ControlPoints { get; set; } = [];
+
+  /// <summary>Baked samples for fast runtime queries. Regenerated when geometry changes.</summary>
+  public List<BakedSample> BakedSamples { get; set; } = [];
+
+  /// <summary>Total arc-length of this rail, in world units (cached from last bake).</summary>
+  public float TotalArcLength { get; set; }
+}
+
+/// <summary>
+/// Left/Right rail selector for dual-rail queries.
+/// </summary>
+public enum RailSide {
+  Left = 0,
+  Right = 1,
+}
+
+/// <summary>
+/// A track piece: two independent rail splines, transform, and bake state.
+/// Placement in the world is via affine transform; all geometry is authored in local piece space.
+/// </summary>
+/// <remarks>
+/// <see cref="Position"/>/<see cref="Heading"/>/<see cref="Bank"/> are set by <see cref="TrackChaining"/> when
+/// the piece is added to a graph; <see cref="RailSpline.ControlPoints"/> and <see cref="RailSpline.BakedSamples"/>
+/// on <see cref="LeftRail"/>/<see cref="RightRail"/> stay in local/model space regardless and are never
+/// transformed by it — applying this piece's world transform to baked samples is the render pipeline's job.
+/// </remarks>
+public class TrackPiece {
+  /// <summary>Unique identifier within the track graph.</summary>
+  public int PieceId { get; set; }
+
+  /// <summary>Type of piece (straight, curve, slope, loop, corkscrew, etc.).</summary>
+  public TrackPieceType PieceType { get; set; }
+
+  /// <summary>Left rail spline (local piece space).</summary>
+  public RailSpline LeftRail { get; set; } = new();
+
+  /// <summary>Right rail spline (local piece space).</summary>
+  public RailSpline RightRail { get; set; } = new();
+
+  /// <summary>Position of piece origin in world space.</summary>
+  public Vector3 Position { get; set; }
+
+  /// <summary>Heading angle, in radians (yaw rotation applied to rails when placed).</summary>
+  public float Heading { get; set; }
+
+  /// <summary>Bank angle, in radians (roll rotation applied to rails when placed).</summary>
+  public float Bank { get; set; }
+
+  /// <summary>True if this piece's rails have been baked; false if geometry was modified and needs rebake.</summary>
+  public bool IsBaked { get; set; }
+
+  /// <summary>
+  /// For organic (hand-authored) pieces: true if control points are user-overridden.
+  /// For procedural pieces: false (geometry is generated from profile curve).
+  /// </summary>
+  public bool IsOrganic { get; set; }
+
+  /// <summary>
+  /// Baked samples along the heartline of this piece, lazy-computed on first access.
+  /// </summary>
+  /// <remarks>
+  /// The heartline is the centerline of both rails, inset upward to align with the average rider's heart (middle-torso level), accounting for varied seating positions (sitting, standing, lying down).
+  /// </remarks>
+  public Lazy<BakedSample[]> Heartline { get; } = new(() => ComputeHeartline());
+
+  private static BakedSample[] ComputeHeartline() {
+    throw new NotImplementedException("Heartline computation deferred to track geometry tuning phase.");
+  }
+}
+
+/// <summary>
+/// Standard track piece types (extensible enum-like pattern for future custom types).
+/// </summary>
+public enum TrackPieceType {
+  Straight = 0,
+  Curve = 1,
+  Slope = 2,
+  Loop = 3,
+  Corkscrew = 4,
+  Twist = 5,
+  BankedCurve = 6,
+
+  /// <summary>
+  /// A junction piece with more than one valid exit rail set. Branch metadata (which exit is
+  /// active/default) lives on the piece itself, not on the graph edges.
+  /// </summary>
+  Switch = 7,
+  // Future: more exotic piece types
+}
+
+/// <summary>
+/// A node in the track graph: chains pieces sequentially, validating tangent continuity.
+/// </summary>
+public class TrackGraphNode {
+  /// <summary>The track piece at this node.</summary>
+  public TrackPiece Piece { get; set; } = default!;
+
+  /// <summary>List of outgoing edges (for DAG support; typically 1 for linear tracks, >1 for junctions).</summary>
+  public List<TrackGraphEdge> OutgoingEdges { get; set; } = [];
+
+  /// <summary>Incoming edge (parent node in the chain; null for root).</summary>
+  public TrackGraphEdge? IncomingEdge { get; set; }
+}
+
+/// <summary>
+/// An edge in the track graph connecting two pieces, with validation of C1 continuity.
+/// </summary>
+public class TrackGraphEdge {
+  /// <summary>The node this edge points to.</summary>
+  public TrackGraphNode TargetNode { get; set; } = default!;
+
+  /// <summary>True if tangent continuity (C1) has been validated between this and previous piece.</summary>
+  public bool IsContinuousAtStart { get; set; }
+}
+
+/// <summary>
+/// A complete track graph: the DAG of track pieces chained together.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A <see cref="TrackGraph"/> is one <em>constructed</em> ride: pieces laid in-game, or built from
+/// an RCT3 <c>.trk</c>, RCT1 <c>.TD4</c>, or RCT2 <c>.TD6</c> design.
+/// </para>
+/// <para>
+/// It is not what decoding a <c>Track*.ovl</c> yields. An OVL holds a ride type's unordered
+/// <em>palette</em> of segment shapes (<c>TrackLibrary</c> and <c>TrackSegments</c> in
+/// <c>OpenRCT3.Rides</c>), with no ordering, connectivity, or world placement. A design importer
+/// builds a graph by naming segments from a loaded <c>TrackLibrary</c>. Importing the OVL alone
+/// never produces one.
+/// </para>
+/// </remarks>
+public class TrackGraph {
+  /// <summary>Root node (first piece in the sequence).</summary>
+  public TrackGraphNode? RootNode { get; set; }
+
+  /// <summary>All nodes in the graph, indexed by piece ID.</summary>
+  public Dictionary<int, TrackGraphNode> NodesById { get; set; } = [];
+
+  /// <summary>Next available piece ID (incremented as pieces are added).</summary>
+  public int NextPieceId { get; set; } = 1;
+}

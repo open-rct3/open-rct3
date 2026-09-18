@@ -5,25 +5,23 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using System.Numerics;
 using DryIoc;
 using NLog;
 using OpenCobra.GDK;
 using OpenCobra.GDK.Game;
-using OpenCobra.GDK.Materials;
-using OpenCobra.GDK.Meshes;
+using OpenCobra.GDK.Input;
 using OpenCobra.GDK.Platform;
+using OpenRCT3.Input;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Scenario;
 using OpenRCT3.Simulation;
 using System.Collections.Generic;
-using System.Numerics;
 using System.Threading;
+using Silk.NET.Input;
 
-
-#if WINDOWS
-using System.Windows.Forms;
-#elif OSX
+#if OSX
 using AppKit;
 #endif
 
@@ -50,7 +48,7 @@ public class Game : IGame {
   private Simulation.World? ownedWorld;
   private bool disposed;
 
-  public static Container IoC => IGame.IoC;
+  public static DryIoc.Container IoC => IGame.IoC;
   public static Game? Instance { get; private set; }
   public static bool IsRunning => Instance?.lifecycle.IsRunning ?? false;
 
@@ -125,10 +123,35 @@ public class Game : IGame {
   public Simulation.World World { get; } = new();
   public Scene Scene { get; } = new();
 
+  private readonly object inputLock = new();
+  private InputController? inputController;
+  /// <summary>
+  /// Resolves the game's named, rebindable input actions (see <see cref="DefaultBindings"/>) against the
+  /// window's live <see cref="IInputContext"/>.
+  /// </summary>
+  public InputActionMap InputActions => Volatile.Read(ref inputController)?.Actions
+    ?? throw new InvalidOperationException("Input services are unavailable.");
+
+  internal void BindInput(IInputContext input) {
+    ArgumentNullException.ThrowIfNull(input);
+    var replacement = new InputController(input, Config, Scene.Camera, Quit);
+    lock (inputLock) inputController = replacement;
+  }
+
+  internal void UnbindInput(IInputContext ownedInput) {
+    ArgumentNullException.ThrowIfNull(ownedInput);
+    lock (inputLock) {
+      if (ReferenceEquals(inputController?.Context, ownedInput)) inputController = null;
+    }
+  }
+
   public Game() {
     ownedScene = Scene;
     ownedWorld = World;
     Instance = this;
+    IoC.RegisterInstance(this);
+
+    BindInput(IoC.Resolve<IInputContext>());
 
     logger.Trace("Creating game world...");
     logger.Warn("Simulation features are unimplemented!");
@@ -136,53 +159,7 @@ public class Game : IGame {
     // Load the game world
     // TODO: Show a progress bar while loading
     World.Load();
-    logger.Debug("Game world loaded");
-
-    // Build texture-batched meshes from the loaded terrain's corner-height grid. Each DAT cell's
-    // decoded surface/cliff indices select the matching texture from the terrain catalog.
-    Debug.Assert(World.Terrain != null);
-    Debug.Assert(World.Terrain.TextureCatalog != null);
-    foreach (var batch in TerrainMeshBuilder.BuildBatches(World.Terrain, Vector4.One)) {
-      var texture = batch.Kind switch {
-        TerrainMaterialKind.Surface => World.Terrain.TextureCatalog.GetSurface(batch.Index),
-        TerrainMaterialKind.Cliff => World.Terrain.TextureCatalog.GetCliff(batch.Index),
-        _ => throw new ArgumentOutOfRangeException(nameof(batch.Kind), batch.Kind, null),
-      };
-      var terrainModel = new Model(batch.Mesh) {
-        Material = new Textured { AlbedoTexture = texture }
-      };
-      Scene.Models.Add(terrainModel);
-    }
-    logger.Debug("Added terrain meshes");
-
-    // Water is a separate overlay over the terrain. Each decoded DAT WaterManager pool keeps its
-    // exact triangle masks and surface height while rendering independently from the terrain mesh.
-    Debug.Assert(World.Park != null);
-    foreach (var pool in World.Park.WaterPools) {
-      var waterModel = new Model(WaterMeshBuilder.Build(
-        World.Terrain,
-        pool,
-        new Vector4(0.12f, 0.42f, 0.72f, 1f))) {
-        Material = new Flat()
-      };
-      Scene.Models.Add(waterModel);
-    }
-    logger.Debug("Added {Count} water meshes", World.Park.WaterPools.Count);
-
-    // Frame the camera on the loaded terrain's full 3D bounds. Camera's default framing (a small
-    // fixed offset from the origin) only suits a toy scene; it doesn't scale to an actual map, so
-    // most or all of the terrain otherwise ends up outside the view frustum.
-    //
-    // TerrainCameraFraming includes the OOB border and scans the real corner-height range. Centering
-    // on XYZ keeps elevated maps aimed correctly, while the full 3D diagonal bounds the 45°-azimuth
-    // "diamond" without the old buildable-area-only 1.8x heuristic (see CameraFramingTests).
-    var framing = TerrainCameraFraming.Calculate(World.Terrain);
-    Scene.Camera.Frame(framing.Target, framing.Distance);
-    logger.Trace("Framed camera on terrain");
-
-    // Keep normal gameplay unchanged while allowing native visual verification to capture the map
-    // without an incidental editor panel obscuring it.
-    if (GamePresentationOptions.ShowUserInterface) Scene.Windows.Add(new Editor());
+    logger.Trace("Game world loaded");
   }
 
   /// <summary>
@@ -243,6 +220,11 @@ public class Game : IGame {
         lag -= TargetFrameTime;
       }
 
+      // Poll held-key camera movement (WASD/arrows) once per rendered frame - unlike the
+      // InputActionMap.Pressed/Scrolled-driven handlers, continuous movement has no discrete event to
+      // hook and needs this frame's elapsed time to scale by.
+      UpdateInput((float)elapsed.TotalSeconds);
+
       // Rendering can happen at arbitrary points between updates, and frames can
       // be dropped if the machine is slow.
       Scene.Update(delta: elapsed);
@@ -266,6 +248,10 @@ public class Game : IGame {
   ) {
     processEvents();
     return isRunning();
+  }
+
+  private void UpdateInput(float deltaSeconds) {
+    lock (inputLock) inputController?.Update(deltaSeconds);
   }
 
   public void Pause() {
@@ -330,11 +316,17 @@ public class Game : IGame {
   /// <summary>
   /// Advances the simulation.
   /// </summary>
+  /// <remarks>
+  /// Called at a fixed timestep (potentially multiple times per frame if lagging, clamped by
+  /// <see cref="MaxSimulationTicks"/>). Invokes <see cref="Simulation.World.Update"/> to execute all
+  /// registered systems in phase order (Early → Update → Render → Late). Park load requests from
+  /// <see cref="ParkChooser"/> are dequeued and executed in Early phase, deferred from the render loop
+  /// to avoid UI-thread reentrancy.
+  /// </remarks>
   /// <param name="delta">The time between ticks.</param>
   /// <param name="interpolation">The interpolation fraction.</param>
   private void Tick(TimeSpan delta, double interpolation) {
-    // TODO: Advance the simulation logic by a fixed time step
-    // TODO: Scheduler.Execute(delta);
+    World.Update(delta);
   }
 
   [Conditional("DEBUG")]

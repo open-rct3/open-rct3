@@ -1,6 +1,8 @@
 // PluginManager
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
+using OpenCobra.OVL;
+
 namespace Dumper.Plugins;
 
 /// <summary>Discovers, loads, and routes Extism viewer plugins by OVL file type tag.</summary>
@@ -10,6 +12,23 @@ sealed class PluginManager : IDisposable {
 
   /// <summary>All loaded plugins, keyed by their source path.</summary>
   public IReadOnlyList<IViewerPlugin> AllPlugins { get; private set; }
+
+  /// <summary>
+  /// The archive currently open in the host UI, if any. Read by every loaded plugin's
+  /// "ovl" host functions (see <see cref="ViewerPlugin"/>) at call time - plugins are loaded
+  /// once at startup, before any archive is open, so this can't be baked in at load time and
+  /// must be a live reference the host updates on <c>MainForm.LoadOvl</c>.
+  /// </summary>
+  public Ovl? CurrentOvl { get; set; }
+
+  /// <summary>
+  /// The symbol currently being rendered, if any - lets the "ovl" host functions answer
+  /// "current_resource_address" (a plugin's own resource address, needed to compute e.g.
+  /// <c>shapeAddress + 40</c> for a StaticShape's <c>sh[]</c> field) without changing
+  /// <see cref="IViewerPlugin.Render"/>'s signature. Set by <c>MainForm</c> alongside
+  /// <c>ContentPanel.ShowContent</c>.
+  /// </summary>
+  public OvlFile? CurrentFile { get; set; }
 
   public PluginManager() =>
     AllPlugins = Load().Cast<IViewerPlugin>().ToList();
@@ -29,7 +48,7 @@ sealed class PluginManager : IDisposable {
 
     return wasmFiles.Select(wasmPath => {
       try {
-        var plugin = ViewerPlugin.Load(wasmPath);
+        var plugin = ViewerPlugin.Load(wasmPath, () => CurrentOvl, () => CurrentFile);
 
         // Add plugin to dictionary of OVL file plugins
         foreach (var tag in plugin.SupportedFileTypes) {

@@ -174,27 +174,33 @@ public class MaterialResourceTests {
   }
 
   [Test]
-  public void AnimatedTexture_MixedSizeFramesUseOwnDimensionsAndPixelSpans() {
+  public void AnimatedTexture_MixedSizeFramesRetainsFrameDimensionsAndMetadata() {
     var small = new Image<Rgba32>(1, 2, new Rgba32(10, 20, 30, 255));
     var wide = new Image<Rgba32>(3, 1, new Rgba32(30, 20, 10, 255));
     var source = new FlexiTextureList(12, [
       new FlexiTexture(Recolorable.None, small),
       new FlexiTexture(Recolorable.None, wide),
     ]);
-    var animated = new AnimatedTexture("mixed", source);
+    var animated = new Texture("mixed", small.Width, small.Height, small) {
+      Frames = source.Frames
+        .Select(frame => new MipChain([frame.Texture]))
+        .ToArray(),
+      Animation = new Animation(source.Fps, small.Width, small.Height, source.Count),
+    };
     var gpu = new FakeTextureGpuApi();
     try {
-      foreach (var frame in animated) frame.Upload(gpu);
+      animated.Upload(gpu);
 
       using (Assert.EnterMultipleScope()) {
-        Assert.That(animated[0].Width, Is.EqualTo(1));
-        Assert.That(animated[0].Height, Is.EqualTo(2));
-        Assert.That(animated[1].Width, Is.EqualTo(3));
-        Assert.That(animated[1].Height, Is.EqualTo(1));
-        Assert.That(gpu.Uploads, Is.EqualTo(new[] { (1, 2, 2), (3, 1, 3) }));
+        Assert.That(animated.Frames[0].Mips[0].Width, Is.EqualTo(1));
+        Assert.That(animated.Frames[0].Mips[0].Height, Is.EqualTo(2));
+        Assert.That(animated.Frames[1].Mips[0].Width, Is.EqualTo(3));
+        Assert.That(animated.Frames[1].Mips[0].Height, Is.EqualTo(1));
+        Assert.That(animated.Animation, Is.EqualTo(new Animation(12, 1, 2, 2)));
+        Assert.That(gpu.Uploads, Is.EqualTo(new[] { (1, 2, 2) }));
       }
     } finally {
-      foreach (var frame in animated) frame.Dispose();
+      animated.Dispose();
     }
   }
 

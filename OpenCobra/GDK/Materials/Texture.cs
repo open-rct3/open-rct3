@@ -12,12 +12,23 @@ using OpenCobra.OVL.Files;
 using Silk.NET.OpenGL;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using System.Collections;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 namespace OpenCobra.GDK.Materials;
+
+/// <summary>
+/// One frame's mip chain. A static texture has a single <see cref="MipChain"/> with every mip
+/// level. An animated (flexi) texture has one single-resolution <see cref="MipChain"/> per frame.
+/// </summary>
+public record struct MipChain(IReadOnlyList<Image<Rgba32>> Mips);
+
+/// <summary>
+/// Animation metadata for a multi-frame <see cref="Texture"/>. <c>FrameCount == 1</c> and
+/// <c>Fps == 0</c> for static textures; <c>FrameCount == Frames.Count</c> for animated ones.
+/// </summary>
+public record struct Animation(uint Fps, int FrameWidth, int FrameHeight, int FrameCount);
 
 public class Texture : IResource, IDisposable {
   public static readonly string UniformName = "u_Texture";
@@ -37,7 +48,27 @@ public class Texture : IResource, IDisposable {
   [Category("Appearance")]
   public Recolorable Recolorable { get; }
   [Category("Appearance")]
-  public Image<Rgba32> Pixels { get; }
+  public TextureFormat Format { get; init; } = TextureFormat.A8R8G8B8;
+
+  /// <summary>
+  /// Every frame's mip chain. Static textures hold one frame with every mip; animated (flexi)
+  /// textures hold one single-resolution frame per animation frame.
+  /// </summary>
+  [Browsable(false)]
+  public IReadOnlyList<MipChain> Frames { get; init; }
+
+  /// <summary>
+  /// Animation metadata, or <c>null</c> for a static texture. The renderer reads this together
+  /// with <see cref="Frames"/> - it never iterates separate <see cref="Texture"/> instances.
+  /// </summary>
+  [Category("Appearance")]
+  public Animation? Animation { get; init; }
+
+  /// <summary>
+  /// Convenience alias for <c>Frames[0].Mips[0]</c>, the existing public surface.
+  /// </summary>
+  [Category("Appearance")]
+  public Image<Rgba32> Pixels => Frames[0].Mips[0];
 
   [Browsable(false)]
   public TextureCacheKey CacheKey { get; }
@@ -46,14 +77,14 @@ public class Texture : IResource, IDisposable {
     string name,
     int width,
     int height,
-    Image<Rgba32> texture,
+    [TakesOwnership] Image<Rgba32> texture,
     Recolorable recolorable = 0
   ) {
     Name = name;
     Width = width;
     Height = height;
     Recolorable = recolorable;
-    Pixels = texture;
+    Frames = [new MipChain([texture])];
     uploadPixels = new Rgba32[texture.Width * texture.Height];
     texture.CopyPixelDataTo(uploadPixels);
     CacheKey = TextureCacheKey.Create(name, width, height, recolorable, uploadPixels);
@@ -170,7 +201,9 @@ public class Texture : IResource, IDisposable {
   private void CompleteDispose() {
     if (disposed) return;
     GC.SuppressFinalize(this);
-    Pixels.Dispose();
+    foreach (var frame in Frames)
+      foreach (var mip in frame.Mips)
+        mip.Dispose();
     disposed = true;
   }
 
@@ -245,27 +278,4 @@ public readonly record struct TextureCacheKey(
     var hash = Convert.ToHexString(SHA256.HashData(bytes));
     return new(name, width, height, recolorable, hash);
   }
-}
-
-public class AnimatedTexture(string name, FlexiTextureList textures) : IEnumerable<Texture> {
-  private readonly Texture[] _textures = [.. textures.Frames.Select(
-    frame => new Texture(
-      name,
-      frame.Texture.Width,
-      frame.Texture.Height,
-      frame.Texture,
-      frame.Recolorable)
-  )];
-
-  [Category("Design")]
-  public string Name { get; private set; } = name;
-  [Category("Appearance")]
-  public uint Fps { get; } = textures.Fps;
-  [Browsable(false)]
-  public Texture[] Frames => _textures;
-  [Browsable(false)]
-  public Texture this[int index] => _textures[index];
-
-  public IEnumerator<Texture> GetEnumerator() => _textures.AsEnumerable().GetEnumerator();
-  IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
