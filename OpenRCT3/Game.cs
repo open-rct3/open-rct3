@@ -15,6 +15,10 @@ using OpenCobra.GDK.Platform;
 using OpenRCT3.Input;
 using OpenRCT3.OpenGL;
 using OpenRCT3.Platforms;
+using OpenRCT3.Scenario;
+using OpenRCT3.Simulation;
+using System.Collections.Generic;
+using System.Threading;
 using Silk.NET.Input;
 
 #if OSX
@@ -34,17 +38,37 @@ public class Game : IGame {
   private readonly TimeSpan lagWarningDebounceInterval = TimeSpan.FromSeconds(10);
 
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
-  private bool isRunning = false;
+  private readonly GameRunLifecycle lifecycle = new();
   private bool isPaused = false;
   private readonly ManualResetEvent resumeSignal = new(true);
   private readonly Stopwatch stopwatch = new();
   private DateTime lastLagWarning = DateTime.Now;
-  private readonly Renderer renderer = IoC.Resolve<IRenderer>() as Renderer ??
-    throw new InvalidOperationException();
+  private IRenderer? renderer = ResolveRenderer(Game.IoC);
+  private Scene? ownedScene;
+  private Simulation.World? ownedWorld;
+  private bool disposed;
 
   public static DryIoc.Container IoC => IGame.IoC;
   public static Game? Instance { get; private set; }
-  public static bool IsRunning => Instance?.isRunning ?? false;
+  public static bool IsRunning => Instance?.lifecycle.IsRunning ?? false;
+
+  internal static Game? DetachInstance() {
+    var instance = Instance;
+    Instance = null;
+    return instance;
+  }
+
+  internal static IRenderer ResolveRenderer(IResolverContext resolver) =>
+    resolver.Resolve<IRenderer>();
+
+  internal IRenderer? BoundRenderer => Volatile.Read(ref renderer);
+
+  internal void BindRenderer(IRenderer replacement) =>
+    Volatile.Write(ref renderer, replacement);
+
+  internal void UnbindRenderer(IRenderer ownedRenderer) =>
+    Interlocked.CompareExchange(ref renderer, null, ownedRenderer);
+
   /// <summary>
   /// Default frame rate of the game loop, in frames per second.
   /// </summary>
@@ -99,18 +123,35 @@ public class Game : IGame {
   public Simulation.World World { get; } = new();
   public Scene Scene { get; } = new();
 
-  private readonly InputController inputController;
+  private readonly object inputLock = new();
+  private InputController? inputController;
   /// <summary>
   /// Resolves the game's named, rebindable input actions (see <see cref="DefaultBindings"/>) against the
   /// window's live <see cref="IInputContext"/>.
   /// </summary>
-  public InputActionMap InputActions => inputController.Actions;
+  public InputActionMap InputActions => Volatile.Read(ref inputController)?.Actions
+    ?? throw new InvalidOperationException("Input services are unavailable.");
+
+  internal void BindInput(IInputContext input) {
+    ArgumentNullException.ThrowIfNull(input);
+    var replacement = new InputController(input, Config, Scene.Camera, Quit);
+    lock (inputLock) inputController = replacement;
+  }
+
+  internal void UnbindInput(IInputContext ownedInput) {
+    ArgumentNullException.ThrowIfNull(ownedInput);
+    lock (inputLock) {
+      if (ReferenceEquals(inputController?.Context, ownedInput)) inputController = null;
+    }
+  }
 
   public Game() {
+    ownedScene = Scene;
+    ownedWorld = World;
     Instance = this;
     IoC.RegisterInstance(this);
 
-    inputController = new InputController(IoC.Resolve<IInputContext>(), Config, Scene.Camera, Quit);
+    BindInput(IoC.Resolve<IInputContext>());
 
     logger.Trace("Creating game world...");
     logger.Warn("Simulation features are unimplemented!");
@@ -131,7 +172,7 @@ public class Game : IGame {
   /// <seealso cref="TargetFrameTime"/>
   /// <seealso href="https://gameprogrammingpatterns.com/game-loop.html"/>
   public void Run() {
-    isRunning = true;
+    if (!lifecycle.TryStart()) return;
 
     // Run the game loop
     Started?.Invoke();
@@ -145,7 +186,7 @@ public class Game : IGame {
     // smoothness (variable render rate).
     //
     // See https://gameprogrammingpatterns.com/game-loop.html
-    while (IsRunning) {
+    while (lifecycle.IsRunning) {
       // Wait for the resume signal if the game is paused
       if (isPaused) {
         resumeSignal.WaitOne();
@@ -160,11 +201,11 @@ public class Game : IGame {
 
       // Process any pending window events, e.g. input events
 #if WINDOWS
-      Application.DoEvents();
+      if (!ProcessEventsAndCheckRunning(Application.DoEvents, static () => IsRunning)) break;
 #elif OSX
       // FIXME: Pump macOS windowing events
       // See https://duckduckgo.com/?q=osx+how+to+pump+windowing+events+in+a+game+loop&ia=web
-      NSApplication.EnsureUIThread();
+      if (!ProcessEventsAndCheckRunning(NSApplication.EnsureUIThread, static () => IsRunning)) break;
 #endif
 
       // Simulation ticks are fixed steps to aid physics/AI determinism
@@ -182,18 +223,12 @@ public class Game : IGame {
       // Poll held-key camera movement (WASD/arrows) once per rendered frame - unlike the
       // InputActionMap.Pressed/Scrolled-driven handlers, continuous movement has no discrete event to
       // hook and needs this frame's elapsed time to scale by.
-      inputController.Update((float)elapsed.TotalSeconds);
+      UpdateInput((float)elapsed.TotalSeconds);
 
       // Rendering can happen at arbitrary points between updates, and frames can
       // be dropped if the machine is slow.
       Scene.Update(delta: elapsed);
-
-      // Proof-of-concept: an ImDraw.Axis marker at the rotation-marker cube's center, exercising
-      // ImDraw end-to-end (see OpenCobra/GDK/ImDraw.cs). screenSpaceExtent keeps it a fixed 80px size
-      // regardless of camera distance, unlike the marker cube it's attached to.
-      Scene.ImDraw.Axis(World.MarkerCenter, Quaternion.Identity, size: 80f, screenSpaceExtent: true);
-
-      renderer.Render(Scene);
+      Volatile.Read(ref renderer)?.Render(Scene);
 
       // Reduce CPU usage by sleeping when ahead of schedule
       var remaining = TargetFrameTime - lag;
@@ -205,6 +240,18 @@ public class Game : IGame {
 
     Exited?.Invoke();
     logger.Info("Game exited");
+  }
+
+  internal static bool ProcessEventsAndCheckRunning(
+    Action processEvents,
+    Func<bool> isRunning
+  ) {
+    processEvents();
+    return isRunning();
+  }
+
+  private void UpdateInput(float deltaSeconds) {
+    lock (inputLock) inputController?.Update(deltaSeconds);
   }
 
   public void Pause() {
@@ -223,16 +270,47 @@ public class Game : IGame {
   /// <returns>Whether the game stopped running.</returns>
   public bool Quit() {
     // TODO: Check for unsaved changes and prevent closure
-    isRunning = false;
+    lifecycle.Stop();
+    resumeSignal.Set();
 
-    if (!isRunning) logger.Info("Exiting game...");
-    return !isRunning;
+    if (!lifecycle.IsRunning) logger.Info("Exiting game...");
+    return !lifecycle.IsRunning;
   }
 
   public void Dispose() {
-    // TODO: World.Dispose();
-    GC.SuppressFinalize(this);
-    Instance = null;
+    if (disposed) return;
+    disposed = true;
+    var scene = ownedScene;
+    var world = ownedWorld;
+    ownedScene = null;
+    ownedWorld = null;
+
+    // Dispose GPU-backed scene resources while the graphics context is still alive, then release
+    // the world-owned texture catalog and simulation systems.
+    DisposeOwnedResources(
+      scene == null ? null : scene.Dispose,
+      world == null ? null : world.Dispose,
+      () => {
+        lifecycle.Stop();
+        resumeSignal.Set();
+        Instance = null;
+        GC.SuppressFinalize(this);
+      });
+  }
+
+  internal static void DisposeOwnedResources(
+    Action? disposeScene,
+    Action? disposeWorld,
+    Action clearState
+  ) {
+    try {
+      var releases = new List<Action>();
+      if (disposeScene != null) releases.Add(disposeScene);
+      if (disposeWorld != null) releases.Add(disposeWorld);
+      ResourceReleaser.Run(releases);
+    } finally {
+      clearState();
+    }
   }
 
   /// <summary>
@@ -263,4 +341,18 @@ public class Game : IGame {
     logger.Warn($"Lag has exceeded target frame time budget: {details}");
     lastLagWarning = DateTime.Now;
   }
+}
+
+internal sealed class GameRunLifecycle {
+  private const int Created = 0;
+  private const int Running = 1;
+  private const int Stopped = 2;
+  private int state = Created;
+
+  public bool IsRunning => Volatile.Read(ref state) == Running;
+
+  public bool TryStart() =>
+    Interlocked.CompareExchange(ref state, Running, Created) == Created;
+
+  public void Stop() => Interlocked.Exchange(ref state, Stopped);
 }

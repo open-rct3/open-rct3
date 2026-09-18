@@ -5,6 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using NUnit.Framework;
+using OpenRCT3.Serialization;
 using OpenRCT3.Simulation;
 
 namespace OpenRCT3.Tests.Simulation;
@@ -13,7 +14,7 @@ namespace OpenRCT3.Tests.Simulation;
 public class TerrainTests {
   // Small buildable area; Terrain still pads it with the standard OOB border, but tile (0,0) and its
   // immediate neighbors stay well within the grid for easy reasoning.
-  private static Terrain NewTerrain(ushort initialHeight = 0)
+  private static Terrain NewTerrain(int initialHeight = 0)
     => new(width: 2, height: 2, initialHeight);
 
   [Test]
@@ -49,6 +50,15 @@ public class TerrainTests {
 
     Assert.That(terrain.GetCorner(0, 0, TerrainCornerSlot.NorthEast).Height, Is.EqualTo(6));
     Assert.That(terrain.GetCorner(1, 1, TerrainCornerSlot.SouthWest).Height, Is.EqualTo(6));
+  }
+
+  [Test]
+  public void LowerCorner_AllowsTerrainBelowWorldZero() {
+    var terrain = NewTerrain();
+
+    terrain.LowerCorner(0, 0, TerrainCornerSlot.SouthWest, delta: 25);
+
+    Assert.That(terrain.GetCorner(0, 0, TerrainCornerSlot.SouthWest).Height, Is.EqualTo(-25));
   }
 
   [Test]
@@ -132,6 +142,62 @@ public class TerrainTests {
   public void CornerHeightToWorldY_ScalesByHeightStep() {
     Assert.That(Terrain.CornerHeightToWorldY(100), Is.EqualTo(1.0f).Within(0.0001f));
     Assert.That(Terrain.CornerHeightToWorldY(0), Is.EqualTo(0.0f));
+    Assert.That(Terrain.CornerHeightToWorldY(-900), Is.EqualTo(-9.0f).Within(0.0001f));
+  }
+
+  [Test]
+  public void FromData_PreservesMapGeometryMaterialsAndSignedHeights() {
+    var data = new DatTerrainData(
+      width: 2,
+      height: 1,
+      originX: -12f,
+      originY: 7f,
+      tileSizeX: 4f,
+      tileSizeY: 5f,
+      cells: [
+        new DatTerrainCell(-1.25f, 2.5f, 3.75f, -4f, 11, 6),
+        new DatTerrainCell(8f, 8.5f, 9f, 9.5f, 12, 7),
+      ]
+    );
+
+    var terrain = Terrain.FromData(data);
+
+    Assert.That(terrain.Width, Is.EqualTo(2));
+    Assert.That(terrain.Height, Is.EqualTo(1));
+    Assert.That(terrain.Origin.X, Is.EqualTo(-12f));
+    Assert.That(terrain.Origin.Y, Is.EqualTo(7f));
+    Assert.That(terrain.Bounds.Max.X, Is.EqualTo(-4f));
+    Assert.That(terrain.Bounds.Max.Y, Is.EqualTo(12f));
+    Assert.That(terrain.GetCorner(0, 0, TerrainCornerSlot.SouthWest).Height, Is.EqualTo(-125));
+    Assert.That(terrain.GetCorner(0, 0, TerrainCornerSlot.SouthEast).Height, Is.EqualTo(250));
+    Assert.That(terrain.GetCorner(0, 0, TerrainCornerSlot.NorthWest).Height, Is.EqualTo(375));
+    var northEast = terrain.GetCorner(0, 0, TerrainCornerSlot.NorthEast);
+    Assert.That(northEast.Height, Is.EqualTo(-400));
+    Assert.That(northEast.SurfaceIndex, Is.EqualTo(11));
+    Assert.That(northEast.CliffIndex, Is.EqualTo(6));
+    var secondCell = terrain.GetCorner(1, 0, TerrainCornerSlot.SouthWest);
+    Assert.That(secondCell.Height, Is.EqualTo(800));
+    Assert.That(secondCell.SurfaceIndex, Is.EqualTo(12));
+    Assert.That(secondCell.CliffIndex, Is.EqualTo(7));
+  }
+
+  [Test]
+  public void ParkFromTerrain_ExcludesSerializedOutOfBoundsBorder() {
+    var data = new DatTerrainData(
+      12,
+      14,
+      -20f,
+      -30f,
+      4f,
+      5f,
+      new DatTerrainCell[12 * 14]
+    );
+
+    var park = new Park(Terrain.FromData(data));
+
+    Assert.That(park.BuildableBounds.Min, Is.EqualTo(new System.Numerics.Vector2(0f, -5f)));
+    Assert.That(park.BuildableBounds.Max, Is.EqualTo(new System.Numerics.Vector2(8f, 15f)));
+    Assert.That(park.EntrancePosition, Is.EqualTo(new System.Numerics.Vector3(4f, 0f, -5f)));
   }
 
   [Test]

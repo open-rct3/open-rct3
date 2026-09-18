@@ -13,7 +13,7 @@ export function version(): i32 {
   return 0;
 }
 export function file_types(): i32 {
-  Host.outputString('["ftx", "flt"]');
+  Host.outputString('["ftx"]');
   return 0;
 }
 

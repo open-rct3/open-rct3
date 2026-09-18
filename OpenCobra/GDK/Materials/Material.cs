@@ -5,10 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved
 
-using DryIoc;
-using OpenCobra.GDK.Game;
 using OpenCobra.GDK.Shaders;
-using Silk.NET.OpenGL;
 using System.ComponentModel;
 
 namespace OpenCobra.GDK.Materials;
@@ -16,18 +13,41 @@ namespace OpenCobra.GDK.Materials;
 public abstract class Material : IResource, IDisposable {
   // FIXME: Inline this into `Material.State`.
   private bool disposed;
+  private Texture? albedoTexture;
+  private Texture? normalMap;
+  private Texture? specularMap;
+  private Texture? emissiveMap;
+  private IDisposable? albedoLease;
+  private IDisposable? normalLease;
+  private IDisposable? specularLease;
+  private IDisposable? emissiveLease;
 
   [Category("GPU")]
   public ShaderSource Shaders { get; protected set; }
 
+  [Browsable(false)]
+  public MaterialCacheKey CacheKey => new(Shaders);
+
   [Category("Appearance")]
-  public Texture? AlbedoTexture { get; set; }
+  public Texture? AlbedoTexture {
+    get => albedoTexture;
+    set => SetTexture(ref albedoTexture, ref albedoLease, value);
+  }
   [Category("Appearance")]
-  public Texture? NormalMap { get; set; }
+  public Texture? NormalMap {
+    get => normalMap;
+    set => SetTexture(ref normalMap, ref normalLease, value);
+  }
   [Category("Appearance")]
-  public Texture? SpecularMap { get; set; }
+  public Texture? SpecularMap {
+    get => specularMap;
+    set => SetTexture(ref specularMap, ref specularLease, value);
+  }
   [Category("Appearance")]
-  public Texture? EmissiveMap { get; set; }
+  public Texture? EmissiveMap {
+    get => emissiveMap;
+    set => SetTexture(ref emissiveMap, ref emissiveLease, value);
+  }
 
   public IEnumerable<Texture> Textures {
     get {
@@ -50,20 +70,27 @@ public abstract class Material : IResource, IDisposable {
 
   public void Dispose() {
     if (disposed) return;
+    disposed = true;
     GC.SuppressFinalize(this);
 
-    var gl = IGame.IoC.Resolve<GL>();
     // FIXME: Dispose of shader sources
-    Texture?[] textures = [AlbedoTexture, NormalMap, SpecularMap, EmissiveMap];
-    foreach (var texture in textures.Where(t => t != null)) {
-      Debug.Assert(texture != null);
-      gl.DeleteTexture(texture.Handle);
-      texture.Dispose();
-    }
+    IDisposable?[] leases = [albedoLease, normalLease, specularLease, emissiveLease];
+    foreach (var lease in leases.Where(lease => lease != null).Cast<IDisposable>())
+      lease.Dispose();
+  }
 
-    disposed = true;
+  private void SetTexture(ref Texture? field, ref IDisposable? lease, Texture? value) {
+    ObjectDisposedException.ThrowIf(disposed, this);
+    if (ReferenceEquals(field, value)) return;
+
+    var replacementLease = value?.AcquireLease();
+    lease?.Dispose();
+    field = value;
+    lease = replacementLease;
   }
 }
+
+public readonly record struct MaterialCacheKey(ShaderSource Shaders);
 
 public class Flat : Material {
   public Flat() {
@@ -102,6 +129,7 @@ public class Textured : Material {
   public Textured() {
     var vertexSource = @"#version 410 core
 in vec3 a_Position;
+in vec3 a_Normal;
 in vec2 a_TexCoord;
 in vec4 a_Color;
 
@@ -110,22 +138,32 @@ uniform mat4 u_ViewProj;
 
 out vec2 v_TexCoord;
 out vec4 v_Color;
+out float v_Light;
 
 void main() {
     gl_Position = u_ViewProj * u_Model * vec4(a_Position, 1.0);
     v_TexCoord = a_TexCoord; // FIXME: Flip Y if needed for texture orientation
     v_Color = a_Color;
+    vec3 transformedNormal = mat3(transpose(inverse(u_Model))) * a_Normal;
+    float normalLength = length(transformedNormal);
+    vec3 worldNormal = normalLength > 0.0001
+        ? transformedNormal / normalLength
+        : vec3(0.0, 0.0, 1.0);
+    vec3 lightDirection = normalize(vec3(-0.35, -0.45, 0.82));
+    float diffuse = max(dot(worldNormal, lightDirection), 0.0);
+    v_Light = 0.45 + (0.55 * diffuse);
 }";
     var fragmentSource = @"#version 410 core
 uniform sampler2D u_Texture;
 in vec2 v_TexCoord;
 in vec4 v_Color; // tint multiplier over the sampled texture, not a lighting term
+in float v_Light;
 
 out vec4 FragColor;
 
 void main() {
     vec4 texColor = texture(u_Texture, v_TexCoord);
-    FragColor = texColor * v_Color;
+    FragColor = vec4(texColor.rgb * v_Color.rgb * v_Light, texColor.a * v_Color.a);
 }";
 
     Shaders = new(vertexSource, fragmentSource);

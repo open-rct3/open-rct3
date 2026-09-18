@@ -27,17 +27,12 @@ namespace OpenRCT3.Simulation;
 /// Represents the game world including the current park, terrain, objects, and people.
 /// </summary>
 public class World : GDK.Game.World, IParkLoader {
-  /// <summary>
-  /// <see cref="IGame.IoC"/> service key the terrain <see cref="Mesh"/> is registered under - keyed
-  /// rather than by bare <see cref="Mesh"/> type so a later feature registering some other
-  /// <see cref="Mesh"/> instance can't collide with (or be shadowed by) this one.
-  /// </summary>
-  private const string TerrainMeshServiceKey = "Terrain";
-  private readonly static Vector4 GrassColor = Color.FromArgb(79, 129, 14).ToGl();
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
   public Terrain? Terrain { get; private set; }
   public Park? Park { get; private set; }
+  /// <summary>The first current terrain batch, exposed for live debug statistics.</summary>
+  internal Mesh? TerrainMesh { get; private set; }
   /// <summary>
   /// World-space center of the rotation-marker cube (see <see cref="Load"/>) - exposed so per-frame code
   /// (e.g. <c>Game.Run</c>'s <c>ImDraw.Axis</c> proof of concept) can reference the marker's position
@@ -46,14 +41,12 @@ public class World : GDK.Game.World, IParkLoader {
   public Vector3 MarkerCenter { get; private set; }
 
   /// <summary>
-  /// The scenario editor and park chooser windows, created once on <see cref="BuildScene"/> (called
-  /// once, from <see cref="Load"/>) and wired to <see cref="ReplaceTerrain"/> for opening a different
-  /// park later.
+  /// The scenario editor and park chooser windows, created once and wired to the persistent loader
+  /// system for opening a different park later.
   /// </summary>
   private Editor? editor;
   private ParkChooser? parkChooser;
-  /// <summary>The terrain <see cref="Model"/> added to the scene by <see cref="BuildScene"/>, whose <see cref="Mesh"/> <see cref="ReplaceTerrain"/> updates in place.</summary>
-  private Model? groundModel;
+  private ParkLoadSystem? parkLoadSystem;
 
   // FIXME: Load() blocks until every task completes since callers (e.g. Game's constructor) dereference
   // Terrain/Park synchronously right after calling it. Progress.MeasureTasks runs tasks on a background
@@ -65,33 +58,40 @@ public class World : GDK.Game.World, IParkLoader {
 
   /// <summary>Loads a park from the given path (or the default park if path is null) and builds the scene.</summary>
   /// <remarks>
-  /// Creates and registers <see cref="ParkLoadSystem"/> for handling subsequent park load requests safely via
-  /// the systems pipeline (Early phase), fixing the UI-thread reentrancy bug that motivated the
-  /// <see cref="ReplaceTerrain"/> workaround (which only swapped terrain, leaving Park/paths/water stale).
+  /// Creates and registers one <see cref="ParkLoadSystem"/> for subsequent park load requests through
+  /// the Early-phase systems pipeline.
   /// </remarks>
   /// <param name="parkPath">Path to the park save file, or null to load the default park.</param>
   public void Load(string? parkPath) {
+    var previousTerrain = Terrain;
     var measurement = Progress.MeasureTasks([
-      new(() => Park = Park.Load(parkPath), "Loading park"),
-      new(() => Terrain = Terrain.Load(), "Loading terrain"),
       new(() => {
-        // Create and register the park load system before building the scene
-        var parkLoadSystem = new ParkLoadSystem();
-        AddSystem(parkLoadSystem);
-        BuildScene(parkLoadSystem);
-      }, "Creating park"),
+        var terrain = Terrain.Load(out var waterManager, parkPath);
+        try {
+          var park = new Park(terrain);
+          if (waterManager != null) WaterManagerLoader.Load(park, terrain, waterManager);
+          Terrain = terrain;
+          Park = park;
+        } catch {
+          terrain.TextureCatalog?.Dispose();
+          throw;
+        }
+      }, "Loading park terrain"),
     ]);
     Progress = measurement.Progress;
     measurement.Task.Wait();
+    var loader = parkLoadSystem ??= new ParkLoadSystem();
+    AddSystem(loader);
+    BuildScene(loader);
+    if (!ReferenceEquals(previousTerrain?.TextureCatalog, Terrain?.TextureCatalog))
+      previousTerrain?.TextureCatalog?.Dispose();
   }
 
   /// <summary>Builds the terrain mesh, rotation-marker cube, camera framing, and windows for <see cref="Game.Scene"/>.</summary>
   /// <remarks>
   /// <para>
-  /// Called once, from <see cref="Load"/>. Wires <see cref="ParkChooser.ParkSelected"/> to
-  /// <see cref="ParkLoadSystem.RequestLoad"/> to defer subsequent park loads to the Early phase,
-  /// fixing the UI-thread reentrancy bug (the old workaround <see cref="ReplaceTerrain"/> only
-  /// swapped terrain mesh, leaving Park/paths/water/scenery/camera framing stale).
+  /// The first call wires <see cref="ParkChooser.ParkSelected"/> to
+  /// <see cref="ParkLoadSystem.RequestLoad"/> so later park selection runs during the Early phase.
   /// </para>
   /// <para>
   /// Opening a different park afterward is handled by <paramref name="parkLoadSystem"/>, which
@@ -102,15 +102,52 @@ public class World : GDK.Game.World, IParkLoader {
     var game = Game.Instance!;
     var scene = game.Scene;
 
+    TerrainMesh = null;
+    foreach (var model in scene.Models) model.Dispose();
+    scene.Models.Clear();
+    // Build texture-batched meshes from the loaded terrain's corner-height grid. Each DAT cell's
+    // decoded surface/cliff indices select the matching texture from the terrain catalog.
     Debug.Assert(Terrain != null);
-    var hasGrassTexture = Terrain.GrassTexture != null;
-    var terrainMesh = TerrainMeshBuilder.Build(Terrain, hasGrassTexture ? Color.White.ToGl() : GrassColor);
-    Game.IoC.RegisterInstance(terrainMesh, serviceKey: TerrainMeshServiceKey);
-    groundModel = new Model(terrainMesh) {
-      Material = hasGrassTexture ? new Textured { AlbedoTexture = Terrain.GrassTexture } : new Flat()
-    };
-    scene.Models.Add(groundModel);
-    logger.Trace("Added terrain mesh");
+    Debug.Assert(Terrain.TextureCatalog != null);
+    foreach (var batch in TerrainMeshBuilder.BuildBatches(Terrain, Vector4.One)) {
+      var texture = batch.Kind switch {
+        TerrainMaterialKind.Surface => Terrain.TextureCatalog.GetSurface(batch.Index),
+        TerrainMaterialKind.Cliff => Terrain.TextureCatalog.GetCliff(batch.Index),
+        _ => throw new ArgumentOutOfRangeException(nameof(batch.Kind), batch.Kind, null),
+      };
+      var terrainModel = new Model(batch.Mesh) {
+        Material = new Textured { AlbedoTexture = texture }
+      };
+      scene.Models.Add(terrainModel);
+      TerrainMesh ??= terrainModel.Mesh;
+    }
+    logger.Debug("Added terrain meshes");
+
+    // Water is a separate overlay over the terrain. Each decoded DAT WaterManager pool keeps its
+    // exact triangle masks and surface height while rendering independently from the terrain mesh.
+    Debug.Assert(Park != null);
+    foreach (var pool in Park.WaterPools) {
+      var waterModel = new Model(WaterMeshBuilder.Build(
+        Terrain,
+        pool,
+        new Vector4(0.12f, 0.42f, 0.72f, 1f))) {
+        Material = new Flat()
+      };
+      scene.Models.Add(waterModel);
+    }
+    logger.Debug("Added {Count} water meshes", Park.WaterPools.Count);
+
+    // Frame the camera on the loaded terrain's full 3D bounds. Camera's default framing (a small
+    // fixed offset from the origin) only suits a toy scene; it doesn't scale to an actual map, so
+    // most or all of the terrain otherwise ends up outside the view frustum.
+    //
+    // TerrainCameraFraming includes the OOB border and scans the real corner-height range. Centering
+    // on XYZ keeps elevated maps aimed correctly, while the full 3D diagonal bounds the 45°-azimuth
+    // "diamond" without the old buildable-area-only 1.8x heuristic (see CameraFramingTests).
+    var framing = TerrainCameraFraming.Calculate(Terrain);
+    scene.Camera.MaxDistance = framing.Distance;
+    scene.Camera.Frame(framing.Target, framing.Distance);
+    logger.Trace("Framed camera on terrain");
 
     // Proof-of-concept marker: a unit cube placed off-center in one quadrant of the buildable area, so
     // Q/E map rotation (above) is visually obvious - a centered object wouldn't appear to move at all.
@@ -128,23 +165,7 @@ public class World : GDK.Game.World, IParkLoader {
     scene.Models.Add(marker);
     logger.Trace("Added rotation marker cube");
 
-    // "Fully zoomed out" distance framing the whole park - bounds Zoom and sizes the far clip plane
-    // (Camera.FarPlaneReferenceDistance) even though default framing below targets the marker cube.
-    // Margin compensates for Camera's fixed 45° azimuth foreshortening the near corner; picked empirically.
-    const float FramingDistanceMargin = 1.25f;
-    var bounds = Park.BuildableBounds;
-    var parkDiagonal = Vector2.Distance(bounds.Min, bounds.Max);
-    var maxFramingDistance = parkDiagonal * FramingDistanceMargin;
-    scene.Camera.MaxDistance = maxFramingDistance;
-
-    // Default framing targets the marker cube (currently the only placed object worth focusing on)
-    // rather than the whole park. Primitives.Cube spans -1..1 on each local axis (corner-to-corner
-    // diagonal 2*sqrt(3)); the same margin as the whole-park framing keeps every corner on-screen.
-    var markerDiagonal = 2f * MathF.Sqrt(3);
-    var markerFramingDistance = markerDiagonal * FramingDistanceMargin;
-    scene.Camera.Frame(MarkerCenter, markerFramingDistance);
-    logger.Trace("Framed camera on marker cube");
-
+    if (editor != null) return;
     // Add the scenario editor and park chooser windows.
     editor = new Editor();
     editor.Exit += () => {
@@ -159,47 +180,31 @@ public class World : GDK.Game.World, IParkLoader {
         app.Exit();
 #endif
     };
-    scene.Windows.Add(editor);
+    if (GamePresentationOptions.ShowUserInterface) scene.Windows.Add(editor);
 
     parkChooser = new ParkChooser();
     editor.OpenPark += parkChooser.Show;
     parkChooser.ParkSelected += parkLoadSystem.RequestLoad;
-    scene.Windows.Add(parkChooser);
+    if (GamePresentationOptions.ShowUserInterface) scene.Windows.Add(parkChooser);
 
     // Made.Of statically checks Debug's constructor at compile time (rather than reflection-based
-    // Parameters.Of), matching the IInputContext/GUI.Controller registrations above - Game and the
-    // terrain Mesh are resolved from the instances just registered, PlatformWindow/IInputContext from
-    // the registrations GameWindow.cs/GLSurface.cs already made.
+    // Parameters.Of). Debug reads the current terrain batch from Game.World each frame, so reloads
+    // cannot leave it holding a mesh that scene replacement already disposed.
     Game.IoC.Register(Made.Of(() => new UI.Debug(
       Arg.Of<Game>(),
-      Arg.Of<Mesh>(TerrainMeshServiceKey),
       Arg.Of<GDK.Platform.IWindow>(),
       Arg.Of<IInputContext>())));
-    scene.Windows.Add(Game.IoC.Resolve<UI.Debug>());
+    if (GamePresentationOptions.ShowUserInterface) scene.Windows.Add(Game.IoC.Resolve<UI.Debug>());
   }
 
-  /// <summary>Replaces <see cref="Terrain"/> and updates the existing terrain <see cref="Model"/>'s mesh in place with <paramref name="parkPath"/>'s saved corner-height grid.</summary>
-  /// <remarks>
-  /// Does not touch <see cref="Park"/>/paths/water/scenery or camera framing. Reuses
-  /// <see cref="groundModel"/>'s existing <see cref="Model.Material"/> as-is (rather than rebuilding
-  /// it from the newly-loaded <see cref="Terrain"/>, which never has a
-  /// <see cref="OpenRCT3.Simulation.Terrain.GrassTexture"/> of its own) - vertex color is picked to
-  /// match whichever material is already there.
-  /// </remarks>
-  private void ReplaceTerrain(string parkPath) {
-    Terrain = Terrain.LoadFromSave(parkPath);
-    var hasGrassTexture = groundModel!.Material is Textured;
-    var mesh = TerrainMeshBuilder.Build(Terrain, hasGrassTexture ? Color.White.ToGl() : GrassColor);
-    groundModel.Mesh.Replace(mesh.Vertices, mesh.Indices);
-  }
-
-  protected virtual void Dispose(bool disposing) {
+  protected override void Dispose(bool disposing) {
     if (disposing) {
-      Terrain?.GrassTexture?.Dispose();
+      Terrain?.TextureCatalog?.Dispose();
     }
 
     Terrain = null;
     Park = null;
+    TerrainMesh = null;
     base.Dispose(disposing);
   }
 }

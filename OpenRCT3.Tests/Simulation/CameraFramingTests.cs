@@ -14,50 +14,90 @@ namespace OpenRCT3.Tests.Simulation;
 
 [TestFixture]
 public class CameraFramingTests {
-  // Mirrors the framing Game.cs computes from the loaded Park after World.Load(): center the camera
-  // on the buildable area, at a distance equal to its diagonal times a safety margin.
-  //
-  // The margin exists because Camera's default view direction sits at an exact 45° azimuth (equal X/Y
-  // offset), so a square/rectangular map's corners land exactly on its diagonals and render as a
-  // rotated "diamond." Perspective foreshortens the near corner (closest to the eye) more than the
-  // sine-of-half-FOV bounding-sphere formula a plain diagonal distance assumes, so the near corner
-  // clips out of frame well before `distance = diagonal` alone would suggest.
-  private const float FramingDistanceMargin = 1.8f;
+  private const float Epsilon = 0.001f;
 
-  private static Camera FrameOnPark(Park park) {
+  // Uses the same shared framing calculation as Game.cs: center on the full OOB-inclusive terrain's
+  // actual XYZ bounds, then use its 3D diagonal plus the validated safety margin as the distance.
+  private static Camera FrameTerrain(Terrain terrain, float aspectRatio = 16f / 9f) {
     var camera = new Camera();
-    var bounds = park.BuildableBounds;
-    var center = new Vector3((bounds.Min.X + bounds.Max.X) / 2f, 0f, (bounds.Min.Y + bounds.Max.Y) / 2f);
-    var diagonal = Vector2.Distance(bounds.Min, bounds.Max);
-    camera.Frame(center, diagonal * FramingDistanceMargin);
-    camera.Update(aspectRatio: 16f / 9f);
+    var framing = TerrainCameraFraming.Calculate(terrain);
+    camera.Frame(framing.Target, framing.Distance);
+    camera.Update(aspectRatio);
     return camera;
   }
 
-  private static Vector2 ProjectToNdc(Camera camera, Vector3 worldPos) {
+  private static Vector4 ProjectToClip(Camera camera, Vector3 worldPos) {
     Assert.That(camera.Value, Is.Not.Null);
-    var clip = Vector4.Transform(new Vector4(worldPos, 1f), camera.Value!.Value);
-    return new Vector2(clip.X / clip.W, clip.Y / clip.W);
+    return Vector4.Transform(new Vector4(worldPos, 1f), camera.Value!.Value);
   }
 
-  private static float ProjectToNdcZ(Camera camera, Vector3 worldPos) {
-    Assert.That(camera.Value, Is.Not.Null);
-    var clip = Vector4.Transform(new Vector4(worldPos, 1f), camera.Value!.Value);
-    return clip.Z / clip.W;
+  private static bool IsInsideClipSpace(Vector4 clip) =>
+    clip.W > 0f
+    && clip.X >= -clip.W && clip.X <= clip.W
+    && clip.Y >= -clip.W && clip.Y <= clip.W
+    && clip.Z >= -clip.W && clip.Z <= clip.W;
+
+  private static void AssertInsideClipSpace(
+    Camera camera,
+    Vector3 worldPos,
+    string? context = null) {
+    var clip = ProjectToClip(camera, worldPos);
+    var label = context == null ? $"corner {worldPos}" : $"{context} corner {worldPos}";
+    Assert.That(clip.W, Is.GreaterThan(0f), $"{label} is behind the camera");
+    Assert.That(clip.X, Is.InRange(-clip.W, clip.W), $"{label} X out of view");
+    Assert.That(clip.Y, Is.InRange(-clip.W, clip.W), $"{label} Y out of view");
+    Assert.That(clip.Z, Is.InRange(-clip.W, clip.W), $"{label} Z out of view");
   }
 
   // The corners of the *rendered mesh*, not just the buildable area: TerrainMeshBuilder renders the
   // full OOB-inclusive grid (see Terrain.cs / CornerPosition), which extends beyond BuildableBounds on
   // every side. Framing needs to keep this larger extent on-screen, not just the buildable area.
-  private static Vector3[] FullMeshCorners(Terrain terrain) {
-    var halfWidth = terrain.Width / 2f * Park.TileSize;
-    var height = terrain.Height * Park.TileSize;
+  private static Vector3[] FullMeshCorners(Terrain terrain, float minY = 0f, float maxY = 0f) {
+    var (min, max) = terrain.Bounds;
+    var minCorners = new[] {
+      new Vector3(min.X, minY, min.Y),
+      new Vector3(max.X, minY, min.Y),
+      new Vector3(min.X, minY, max.Y),
+      new Vector3(max.X, minY, max.Y),
+    };
+    if (minY == maxY) return minCorners;
+
     return [
-      new Vector3(-halfWidth, 0, 0),
-      new Vector3(halfWidth, 0, 0),
-      new Vector3(-halfWidth, 0, height),
-      new Vector3(halfWidth, 0, height),
+      .. minCorners,
+      new Vector3(min.X, maxY, min.Y),
+      new Vector3(max.X, maxY, min.Y),
+      new Vector3(min.X, maxY, max.Y),
+      new Vector3(max.X, maxY, max.Y),
     ];
+  }
+
+  [Test]
+  public void Calculate_CentersOnFullTerrainBoundsAndUsesThreeDimensionalDiagonal() {
+    var minHeight = Convert.ToInt32(-5f / Terrain.HeightStep);
+    var maxHeight = Convert.ToInt32(15f / Terrain.HeightStep);
+    var terrain = new Terrain(width: 4, height: 2, initialHeight: minHeight);
+    terrain.SetCornerHeight(
+      terrain.Width - 1,
+      terrain.Height - 1,
+      TerrainCornerSlot.NorthEast,
+      maxHeight
+    );
+
+    var framing = TerrainCameraFraming.Calculate(terrain);
+
+    var (minXZ, maxXZ) = terrain.Bounds;
+    var min = new Vector3(minXZ.X, Terrain.CornerHeightToWorldY(minHeight), minXZ.Y);
+    var max = new Vector3(maxXZ.X, Terrain.CornerHeightToWorldY(maxHeight), maxXZ.Y);
+    Assert.That(
+      Vector3.Distance(framing.Target, (min + max) * 0.5f),
+      Is.EqualTo(0f).Within(Epsilon)
+    );
+    Assert.That(TerrainCameraFraming.DistanceMargin, Is.EqualTo(1.1f));
+    Assert.That(
+      framing.Distance,
+      Is.EqualTo(Vector3.Distance(min, max) * TerrainCameraFraming.DistanceMargin)
+        .Within(Epsilon)
+    );
   }
 
   [Test]
@@ -77,29 +117,21 @@ public class CameraFramingTests {
       new Vector3(max.X, 0, max.Y),
     };
 
-    var allOnScreen = corners.All(c => {
-      var ndc = ProjectToNdc(camera, c);
-      return ndc.X is >= -1f and <= 1f && ndc.Y is >= -1f and <= 1f;
-    });
+    var allOnScreen = corners.All(c => IsInsideClipSpace(ProjectToClip(camera, c)));
     Assert.That(allOnScreen, Is.False);
   }
 
   [Test]
   public void FramedCamera_KeepsDefaultParkRenderedMeshCornersOnScreen() {
-    var park = new Park();
     var terrain = new Terrain();
-    var camera = FrameOnPark(park);
+    var camera = FrameTerrain(terrain);
 
     foreach (var corner in FullMeshCorners(terrain)) {
-      var ndc = ProjectToNdc(camera, corner);
-      Assert.That(ndc.X, Is.InRange(-1f, 1f), $"corner {corner} X out of view");
-      Assert.That(ndc.Y, Is.InRange(-1f, 1f), $"corner {corner} Y out of view");
       // Regression guard: a fixed far clip plane (previously hardcoded at 1000) doesn't scale with the
-      // framing distance Game.cs computes from the park's actual size, so the default 128x128 map's
-      // framing distance (~1303) exceeded it and every corner was silently frustum-culled - invisible
-      // despite X/Y projecting to plausible on-screen coordinates. Camera.Update now derives the far
-      // plane from the eye-to-target distance itself (see Camera.cs), so this must hold for any park size.
-      Assert.That(ProjectToNdcZ(camera, corner), Is.InRange(-1f, 1f), $"corner {corner} Z out of view (behind far plane)");
+      // framing distance Game.cs computes from the terrain's actual size. Camera.Update now derives
+      // the far plane from the eye-to-target distance itself (see Camera.cs), so the same projection
+      // remains valid as the shared framing helper scales across park sizes.
+      AssertInsideClipSpace(camera, corner);
     }
   }
 
@@ -107,31 +139,59 @@ public class CameraFramingTests {
   public void FramedCamera_KeepsSmallerCustomParkRenderedMeshCornersOnScreen() {
     // Same check against a much smaller map, to confirm the framing scales rather than being tuned to
     // one specific map size.
-    var park = new Park(buildableWidth: 16, buildableHeight: 16);
     var terrain = new Terrain(width: 16, height: 16);
-    var camera = FrameOnPark(park);
+    var camera = FrameTerrain(terrain);
 
-    foreach (var corner in FullMeshCorners(terrain)) {
-      var ndc = ProjectToNdc(camera, corner);
-      Assert.That(ndc.X, Is.InRange(-1f, 1f), $"corner {corner} X out of view");
-      Assert.That(ndc.Y, Is.InRange(-1f, 1f), $"corner {corner} Y out of view");
-      Assert.That(ProjectToNdcZ(camera, corner), Is.InRange(-1f, 1f), $"corner {corner} Z out of view (behind far plane)");
-    }
+    foreach (var corner in FullMeshCorners(terrain))
+      AssertInsideClipSpace(camera, corner);
   }
 
   [Test]
   public void FramedCamera_KeepsLargerCustomParkRenderedMeshCornersOnScreen() {
     // A map larger than the default proves the far plane truly scales with framing distance rather than
     // happening to clear a fixed constant that was merely large enough for the 128x128 default.
-    var park = new Park(buildableWidth: 512, buildableHeight: 512);
     var terrain = new Terrain(width: 512, height: 512);
-    var camera = FrameOnPark(park);
+    var camera = FrameTerrain(terrain);
 
-    foreach (var corner in FullMeshCorners(terrain)) {
-      var ndc = ProjectToNdc(camera, corner);
-      Assert.That(ndc.X, Is.InRange(-1f, 1f), $"corner {corner} X out of view");
-      Assert.That(ndc.Y, Is.InRange(-1f, 1f), $"corner {corner} Y out of view");
-      Assert.That(ProjectToNdcZ(camera, corner), Is.InRange(-1f, 1f), $"corner {corner} Z out of view (behind far plane)");
-    }
+    foreach (var corner in FullMeshCorners(terrain))
+      AssertInsideClipSpace(camera, corner);
+  }
+
+  [TestCase("Go With the Flow", 99, 119, -10f, 15f, 624, 381)]
+  [TestCase("Go With the Flow", 99, 119, -10f, 15f, 1920, 1009)]
+  [TestCase("Valley of Kings", 90, 90, -4f, 112.907f, 624, 381)]
+  [TestCase("Valley of Kings", 90, 90, -4f, 112.907f, 1920, 1009)]
+  public void FramedCamera_KeepsRepresentativeLoadedMapBoundsInsideClipSpace(
+    string mapName,
+    int terrainWidth,
+    int terrainHeight,
+    float minY,
+    float maxY,
+    int viewportWidth,
+    int viewportHeight) {
+    // This extends the square, flat, 16:9 cases above with deterministic camera-math coverage for
+    // representative loaded-map envelopes and observed window aspect ratios. Native resize and window
+    // behavior remain manual acceptance concerns; this test does not create or drive a live window.
+    var borderTiles = Park.OutOfBoundsBorder * 2;
+    var minHeight = Convert.ToInt32(minY / Terrain.HeightStep);
+    var maxHeight = Convert.ToInt32(maxY / Terrain.HeightStep);
+    var terrain = new Terrain(
+      terrainWidth - borderTiles,
+      terrainHeight - borderTiles,
+      minHeight
+    );
+    terrain.SetCornerHeight(
+      terrain.Width - 1,
+      terrain.Height - 1,
+      TerrainCornerSlot.NorthEast,
+      maxHeight
+    );
+    var aspectRatio = Convert.ToSingle(viewportWidth) / viewportHeight;
+    var camera = FrameTerrain(terrain, aspectRatio);
+    var actualMinY = Terrain.CornerHeightToWorldY(minHeight);
+    var actualMaxY = Terrain.CornerHeightToWorldY(maxHeight);
+
+    foreach (var corner in FullMeshCorners(terrain, actualMinY, actualMaxY))
+      AssertInsideClipSpace(camera, corner, mapName);
   }
 }

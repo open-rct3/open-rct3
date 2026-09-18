@@ -1,31 +1,39 @@
-// Shared tex/flic/btbl decode plumbing.
+// TextureDecoding
 //
 // Authors:
 //   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2024-2026 OpenRCT3 Contributors. All rights reserved.
-
+//
+// Shared tex/flic/btbl decode plumbing. Originally lived entirely in Textures.cs; split out so
+// other symbol families that reuse the same on-disk tex/flic/btbl loader shapes - CharacterSkins
+// (mms/prt), ParticleEffects (psi) - can decode through the same code instead of duplicating it.
+// See .agents/plans/fix/ovl-texture-decoding.md for the on-disk format and what's still broken.
 using System.Collections;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
+using CommunityToolkit.HighPerformance;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace OpenCobra.OVL.Files;
 
 public class Texture(
-  string name, TextureFormat format, uint width, uint height, uint mipCount = 1,
+  string name,
+  TextureFormat format,
+  uint width,
+  uint height,
+  uint mipCount = 1,
   Recolorable recolorable = Recolorable.None
 ) : IDisposable {
   private bool disposed;
 
   /// <summary>
-  /// The symbol name of the texture, e.g. "GUIIcon". Always stored without the OVL file-type
-  /// tag suffix (".tex", ".flic", ".btbl", ".ftx", ".mms", ".prx") so callers that look up
-  /// textures by their human-readable name never have to guess whether the suffix is present.
-  /// OvlFile.ToString() returns "Name.tag"; decoders pass that through, so the ctor strips it
-  /// back off here.
+  /// The symbol name of the texture, e.g. "GUIIcon.txs".
   /// </summary>
+  /// <remarks>
+  /// OVL file-type suffixes are omitted so callers can consistently use the human-readable
+  /// symbol name. Animation frame suffixes remain part of the name.
+  /// </remarks>
   public string Name { get; private set; } = name.StripOvlTagSuffix();
   public readonly TextureFormat Format = format;
   /// <summary>
@@ -35,22 +43,12 @@ public class Texture(
   public readonly uint Width = width;
   public readonly uint Height = height;
   public readonly uint MipCount = mipCount;
-  public readonly bool IsCompressed = format.IsCompressed();
   public readonly Recolorable Recolorable = recolorable;
+  public readonly bool IsCompressed = format.IsCompressed();
   /// <summary>
   /// The decoded texture data.
   /// </summary>
   public readonly Image<Rgba32>[] MipLevels = new Image<Rgba32>[mipCount == 0 ? 1 : mipCount];
-
-  /// <summary>
-  /// Removes and returns mip <paramref name="level"/>, transferring ownership to the caller.
-  /// The removed slot is nulled so <see cref="Dispose(bool)"/> skips it, preventing a double-dispose.
-  /// </summary>
-  public Image<Rgba32> TakeMip(int level) {
-    var mip = MipLevels[level];
-    MipLevels[level] = null!;
-    return mip;
-  }
 
   protected virtual void Dispose(bool disposing) {
     if (disposed || !disposing) return;
@@ -64,52 +62,69 @@ public class Texture(
     GC.SuppressFinalize(this);
   }
 
-  /// <returns>A clone of this texture with a new <paramref name="name"/> (with any OVL tag
-  /// suffix stripped, matching the ctor's behavior).</returns>
+  /// <summary>
+  /// Transfers ownership of one mip image to the caller.
+  /// </summary>
+  public Image<Rgba32> TakeMip(int level) {
+    var mip = MipLevels[level];
+    MipLevels[level] = null!;
+    return mip;
+  }
+
+  /// <returns>A clone of this texture with a new <paramref name="name"/>.</returns>
   public Texture WithName(string name) {
-    var clone = MemberwiseClone() as Texture;
-    Debug.Assert(clone != null);
-    clone.Name = name.StripOvlTagSuffix();
+    var clone = new Texture(name, Format, Width, Height, MipCount, Recolorable) { Style = this.Style };
+    for (var mip = 0; mip < MipLevels.Length; mip++) {
+      if (MipLevels[mip] != null)
+        clone.MipLevels[mip] = MipLevels[mip].Clone();
+    }
     return clone;
   }
 }
 
-public class TextureCollection : IReadOnlyList<Texture> {
+public class TextureCollection : IReadOnlyList<Texture>, IDisposable {
   private readonly Dictionary<string, Texture> textures = [];
+  private bool disposed;
 
-  public TextureCollection() { }
-
-  // ReSharper disable once ParameterHidesMember
-  public TextureCollection(IEnumerable<Texture> textures, uint fps = 0) {
+  public TextureCollection(IEnumerable<Texture>? initial = null, uint fps = 0) {
     Fps = fps;
-    AddRange(textures);
+    if (initial == null) return;
+    foreach (var texture in initial) Add(texture);
   }
-
-  /// <summary>
-  /// Frames-per-second for animated (flexi) texture collections. 0 for static collections.
-  /// </summary>
-  public uint Fps { get; init; }
 
   public Texture this[int index] => textures.Values.ElementAt(index);
   public Texture this[string name] => textures[name];
 
-  Texture IReadOnlyList<Texture>.this[int index] => throw new NotImplementedException();
+  Texture IReadOnlyList<Texture>.this[int index] => this[index];
 
   public IEnumerable<string> Names => [.. textures.Keys];
   public int Count => textures.Count;
+  public uint Fps { get; }
 
   int IReadOnlyCollection<Texture>.Count => Count;
 
   public IEnumerator<Texture> GetEnumerator() => textures.Values.GetEnumerator();
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-  public void Add(Texture texture) => textures[texture.Name] = texture;
+  internal void Add(Texture texture) {
+    ObjectDisposedException.ThrowIf(disposed, this);
+    if (textures.TryGetValue(texture.Name, out var previous) && !ReferenceEquals(previous, texture))
+      previous.Dispose();
+    textures[texture.Name] = texture;
+  }
 
   // ReSharper disable once ParameterHidesMember
-  public TextureCollection AddRange(IEnumerable<Texture> textures) {
-    foreach (var texture in textures)
-      this.textures[texture.Name] = texture;
+  internal TextureCollection AddRange(IEnumerable<Texture> textures) {
+    foreach (var texture in textures) Add(texture);
     return this;
+  }
+
+  public void Dispose() {
+    if (disposed) return;
+    foreach (var texture in textures.Values) texture.Dispose();
+    textures.Clear();
+    disposed = true;
+    GC.SuppressFinalize(this);
   }
 }
 
@@ -215,7 +230,7 @@ internal static class DxtDecoder {
     for (var by = 0; by < blocksRows; by++)
     for (var bx = 0; bx < blocksPerRow; bx++) {
       var blockOffset = (by * blocksPerRow + bx) * 8;
-      DecodeDxt1Block(span.Slice(blockOffset, 8), pixels, width, bx * 4, by * 4);
+      DecodeDxtColorBlock(span.Slice(blockOffset, 8), pixels, width, bx * 4, by * 4, true);
     }
     return Image.LoadPixelData<Rgba32>(pixels, width, height);
   }
@@ -256,7 +271,9 @@ internal static class DxtDecoder {
     return Image.LoadPixelData<Rgba32>(pixels, width, height);
   }
 
-  private static void DecodeDxt1Block(ReadOnlySpan<byte> block, Rgba32[] pixels, int width, int x, int y) {
+  private static void DecodeDxtColorBlock(
+    ReadOnlySpan<byte> block, Rgba32[] pixels, int width, int x, int y, bool allowTransparent
+  ) {
     var c0 = BitConverter.ToUInt16(block.Slice(0, 2));
     var c1 = BitConverter.ToUInt16(block.Slice(2, 2));
     var lut = BitConverter.ToUInt32(block.Slice(4, 4));
@@ -268,10 +285,15 @@ internal static class DxtDecoder {
       Rgba32 rgba;
       if (idx == 0) rgba = color0;
       else if (idx == 1) rgba = color1;
-      else if (c0 > c1) rgba = new Rgba32(
+      else if (idx == 2 && (c0 > c1 || !allowTransparent)) rgba = new Rgba32(
         (byte)((color0.R * 2 + color1.R + 1) / 3),
         (byte)((color0.G * 2 + color1.G + 1) / 3),
         (byte)((color0.B * 2 + color1.B + 1) / 3)
+      );
+      else if (idx == 3 && (c0 > c1 || !allowTransparent)) rgba = new Rgba32(
+        (byte)((color0.R + color1.R * 2 + 1) / 3),
+        (byte)((color0.G + color1.G * 2 + 1) / 3),
+        (byte)((color0.B + color1.B * 2 + 1) / 3)
       );
       else if (idx == 2) rgba = new Rgba32(
         (byte)((color0.R + color1.R + 1) / 2),
@@ -287,21 +309,26 @@ internal static class DxtDecoder {
   }
 
   private static void DecodeDxt3Block(ReadOnlySpan<byte> block, Rgba32[] pixels, int width, int x, int y) {
+    DecodeDxtColorBlock(block.Slice(8, 8), pixels, width, x, y, false);
+    var alphaLut = BitConverter.ToUInt64(block.Slice(0, 8));
     for (var py = 0; py < 4; py++)
     for (var px = 0; px < 4; px++) {
-      var alphaByte = block[py * 2 + (px / 4)];
-      var alpha = (byte)(((alphaByte >> ((px & 3) * 2)) & 0x3) * 0x55);
-      var saved = pixels[(y + py) * width + (x + px)];
-      pixels[(y + py) * width + (x + px)] = new Rgba32(saved.R, saved.G, saved.B, alpha);
+      var dx = x + px;
+      var dy = y + py;
+      if ((uint)dx >= (uint)width || (uint)dy >= (uint)(pixels.Length / width)) continue;
+      var shift = (py * 4 + px) * 4;
+      var alpha = Convert.ToByte(((alphaLut >> shift) & 0xF) * 17);
+      var saved = pixels[dy * width + dx];
+      pixels[dy * width + dx] = new Rgba32(saved.R, saved.G, saved.B, alpha);
     }
-    DecodeDxt1Block(block.Slice(8, 8), pixels, width, x, y);
   }
 
   private static void DecodeDxt5Block(ReadOnlySpan<byte> block, Rgba32[] pixels, int width, int x, int y) {
     var a0 = block[0];
     var a1 = block[1];
-    var alphaLut = (ulong)BitConverter.ToUInt32(block.Slice(2, 4))
-                 | ((ulong)BitConverter.ToUInt32(block.Slice(6, 4)) << 32);
+    ulong alphaLut = 0;
+    for (var i = 0; i < 6; i++)
+      alphaLut |= Convert.ToUInt64(block[i + 2]) << (i * 8);
     var alphas = new byte[8];
     alphas[0] = a0;
     alphas[1] = a1;
@@ -314,13 +341,16 @@ internal static class DxtDecoder {
       alphas[6] = 0;
       alphas[7] = 0xFF;
     }
+    DecodeDxtColorBlock(block.Slice(8, 8), pixels, width, x, y, false);
     for (var py = 0; py < 4; py++)
     for (var px = 0; px < 4; px++) {
-      var idx = (int)((alphaLut >> ((py * 4 + px) * 3)) & 0x7);
-      var saved = pixels[(y + py) * width + (x + px)];
-      pixels[(y + py) * width + (x + px)] = new Rgba32(saved.R, saved.G, saved.B, alphas[idx]);
+      var dx = x + px;
+      var dy = y + py;
+      if ((uint)dx >= (uint)width || (uint)dy >= (uint)(pixels.Length / width)) continue;
+      var idx = Convert.ToInt32((alphaLut >> ((py * 4 + px) * 3)) & 0x7);
+      var saved = pixels[dy * width + dx];
+      pixels[dy * width + dx] = new Rgba32(saved.R, saved.G, saved.B, alphas[idx]);
     }
-    DecodeDxt1Block(block.Slice(8, 8), pixels, width, x, y);
   }
 
   private static Rgba32 Rgb565(ushort c) => new(
@@ -330,11 +360,10 @@ internal static class DxtDecoder {
   );
 }
 
-// See ManagerTEX.cpp (icontexture.h). Decodes the "tex" loader shape, chasing through to the
-// "flic" data it points at (Flic.cs). "btbl" decoding lives in BitmapTable.cs. Split this way so
-// other symbol families that reuse the exact same on-disk shapes under different tags (mms/prt/
-// psi - see CharacterSkins.cs, ParticleEffects.cs) can decode through the same per-format code
-// without duplicating it.
+// See ManagerTEX.cpp/ManagerFLIC.cpp/ManagerBTBL.cpp (icontexture.h). Shared decode logic for the
+// three on-disk loader shapes ("tex", "flic", "btbl") that back tex/flic/btbl-tagged symbols, plus
+// the other symbol families that reuse the exact same shapes under different tags (mms/prt/psi -
+// see CharacterSkins.cs, ParticleEffects.cs).
 internal static class TextureDecoding {
   // See ManagerTEX.cpp/icontexture.h (TextureStruct). Texture pixel data is never inline:
   // TextureStruct.Flic (FlicPtr, offset 52) is a FlicStruct** - "always points to pointer before
@@ -357,35 +386,37 @@ internal static class TextureDecoding {
     string name, Ovl ovl, uint texAddress, ReadOnlyMemory<byte> bytes,
     IReadOnlyDictionary<uint, Texture[]>? bitmapTablesByFlicAddress
   ) {
-    // Per Part 6 Finding 2, FlicPtr is read via a direct relocation-table lookup below (not from
-    // `bytes`), and TextureStruct2/Ts2Ptr are dead - the only field still read from the resolved
-    // resource bytes is Type (offset 40). ExtractResources has no real per-symbol length (there is
-    // none on disk), so `bytes` is only ever "read to the end of the resolved block", which can be
-    // shorter than TextureStruct's full 60 bytes for a Tex symbol sitting near a block boundary
-    // (confirmed against Style/Vanilla/Scenery.common.ovl's ObjectIcons/ObjectIcons01, 44 bytes).
-    // Requiring a full-struct read here (like the reference's own Tex.rs, which never slices a
-    // bounded Tex byte buffer at all) would wrongly fail/crash on those - read just the field
-    // actually needed, bounds-checked.
-    var type = bytes.Length >= 44 ? (TextureType)BitConverter.ToUInt32(bytes.Span[40..44]) : default;
+    using var ms = bytes.AsStream();
+    using var reader = new BinaryReader(ms);
 
-    // Hop 1: gate FlicPtr's on-disk value as a real (fixed-up) pointer rather than unpatched
-    // placeholder bytes, by requiring texAddress+52 (the field's own location) to be listed in the
-    // relocation-fixup table.
-    if (!ovl.TryGetRelocationSource(texAddress + 52, out var flicSlot))
-      return null;
+    var read = reader.Read<Tex>(out var tex);
+    if (read != Marshal.SizeOf<Tex>())
+      throw new InvalidDataException($"'{name}' texture header is truncated");
+
+    // Hop 1: gate FlicPtr's on-disk value as a real (fixed-up) pointer rather than trusting
+    // arbitrary unpatched bytes. A missing relocation is intentionally textureless only when the
+    // raw slot is zero; a non-zero slot without relocation evidence is malformed or an unsupported
+    // external reference and must fail closed.
+    if (!ovl.TryGetRelocationSource(texAddress + 52, out var flicSlot)) {
+      if (tex.FlicPtr == 0) return null;
+      throw new InvalidDataException(
+        $"'{name}' has non-zero FLIC pointer {tex.FlicPtr:X} without relocation evidence");
+    }
     // Hop 2: FlicPtr is a double pointer - flicSlot is itself a relocatable location, and the value
     // stored there is the FLIC loader's own (equally relocation-gated) data address.
     if (!ovl.TryGetRelocationSource(flicSlot, out var flicAddr))
-      return null;
+      throw new InvalidDataException(
+        $"'{name}' FLIC pointer slot {flicSlot:X} is not relocation-resolved");
 
     if (!ovl.TryReadExtraData(flicAddr, out var chunks) || chunks.Count == 0)
-      return null;
+      throw new InvalidDataException(
+        $"'{name}' FLIC address {flicAddr:X} has no extra-data chunk");
 
     var bitmapTable = bitmapTablesByFlicAddress?.GetValueOrDefault(flicAddr);
-    var texture = Flic.Read(name, chunks[0], bitmapTable);
+    var texture = ReadFlic(name, chunks[0], bitmapTable);
 
     // Default style to GUI icon for icon textures
-    if (type == TextureType.Icon)
+    if (tex.Type == TextureType.Icon)
       texture.Style = "GUIIcon";
     // TODO: Resolve the real texture style symbol reference (a SymbolRefStruct entry, not yet
     // parsed by Ovl). TextureStruct.TextureData is documented as always 0 on disk, so it cannot be
@@ -394,9 +425,118 @@ internal static class TextureDecoding {
     return texture;
   }
 
+  /// <summary>
+  /// Associates each <c>flic</c> loader with the most recent <c>btbl</c> loader in its source
+  /// archive. Bitmap-table association is encoded by loader order, not by a symbol relationship.
+  /// </summary>
+  public static IReadOnlyDictionary<uint, Texture[]> BuildBitmapTablesByFlicAddress(Ovl ovl) {
+    Texture[]? currentTable = null;
+    string? currentSourcePath = null;
+    var tablesByFlicAddress = new Dictionary<uint, Texture[]>();
+    foreach (var entry in ovl.LoaderEntriesInOrder) {
+      if (!string.Equals(currentSourcePath, entry.SourcePath, StringComparison.OrdinalIgnoreCase)) {
+        currentSourcePath = entry.SourcePath;
+        currentTable = null;
+      }
+
+      switch (entry.Tag) {
+        case "btbl":
+          try {
+            currentTable = BitmapTables.ReadAt(
+              $"{ovl.Name}:btbl@{entry.DataAddress:X}", ovl, entry.DataAddress);
+          } catch {
+            currentTable = null;
+          }
+          break;
+        case "flic" when currentTable != null:
+          tablesByFlicAddress[entry.DataAddress] = currentTable;
+          break;
+      }
+    }
+
+    return tablesByFlicAddress;
+  }
+
+  // See ManagerFLIC.cpp. `chunk` is a loader's raw extra-data chunk: either a 4-byte index into
+  // `table` (bitmap-table-backed archives) or a standalone FlicHeader + mips + pixel data blob.
+  // Neither case has a leading FlicStruct - that struct is only ever a placeholder holding zeros,
+  // reachable via relocation but never used to store the extracted pixel data.
+  public static Texture ReadFlic(string name, byte[] chunk, Texture[]? table = null) {
+    // A bitmap-table index chunk is always exactly 4 bytes (see ManagerFLIC.cpp::Make); anything
+    // else is a standalone flic blob. Deciding this from the chunk's own length, rather than
+    // solely from whether a bitmap table happens to be available, prevents a 4-byte index from
+    // being misread as a 16-byte FlicHeader if the archive's bitmap table failed to decode.
+    if (chunk.Length == 4) {
+      if (table == null)
+        throw new InvalidOperationException($"'{name}' references a bitmap table that failed to decode");
+
+      var index = BitConverter.ToUInt32(chunk, 0);
+      if (index >= table.Length)
+        throw new InvalidOperationException(
+          $"'{name}' bitmap table index {index} is out of range (table has {table.Length} entries)");
+
+      return table[index].WithName(name);
+    }
+
+    using var ms = new ReadOnlyMemory<byte>(chunk).AsStream();
+    using var reader = new BinaryReader(ms);
+
+    var header = reader.ReadFlicHeader();
+    if (header.Format == 0)
+      throw new InvalidDataException($"'{name}' has zero format");
+    if (header.Width == 0 || header.Height == 0)
+      throw new InvalidDataException($"'{name}' has zero dimensions ({header.Width}x{header.Height})");
+
+    var format = header.Format;
+    if (format is not TextureFormat.A8R8G8B8
+        and not TextureFormat.Dxt1 and not TextureFormat.Dxt3 and not TextureFormat.Dxt5)
+      throw new InvalidDataException($"'{name}' uses unsupported format {format}");
+    ValidateDimensions(name, header.Width, header.Height);
+    // Reference (ManagerFLIC.cpp; rct3tex.cpp::ReadTexture) doesn't trust the header's MipCount:
+    // it pre-reads the first FlicMipHeader, then loops while (width && height && pitch && blocks)
+    // are all non-zero, reading a new mip header at the tail of each iteration. A mip is
+    // "accepted" only when its MWidth/MHeight match max(1, header.W/H >> level); `level` only
+    // advances on a match, so a mip header that doesn't line up with the expected downsampled
+    // dimensions is simply skipped over. We size the Texture's mip array to log2(width)+1, the
+    // number of distinct downsampled sizes available, and let the loop leave unused slots null.
+    var mipCount = Convert.ToUInt32(ComputeMipCount(header));
+    var texture = new Texture(name, format, header.Width, header.Height, mipCount);
+    try {
+      if (reader.Read<FlicMipHeader>(out var mipHeader) != Marshal.SizeOf<FlicMipHeader>())
+        throw new InvalidDataException($"'{name}' mip header truncated");
+
+      for (var level = 0;
+           level < mipCount && header.Width > 0 && header.Height > 0
+                            && mipHeader.Pitch > 0 && mipHeader.Blocks > 0;
+           level++) {
+        var expectedWidth = Math.Max(1u, header.Width >> level);
+        var expectedHeight = Math.Max(1u, header.Height >> level);
+        if (mipHeader.Width == expectedWidth && mipHeader.Height == expectedHeight) {
+          // QUESTION: What is the purpose of `mipHeader.Pitch`?
+          var size = Convert.ToInt32(checked(
+            Convert.ToUInt64(mipHeader.Pitch) * Convert.ToUInt64(mipHeader.Blocks)));
+          if (reader.BaseStream.Position + size > reader.BaseStream.Length)
+            throw new InvalidDataException($"'{name}' mip {level} data exceeds file size");
+          ReadOnlySpan<byte> data = reader.ReadBytes(size);
+          texture.MipLevels[level] = data.ToImage(format,
+            Convert.ToInt32(expectedWidth), Convert.ToInt32(expectedHeight));
+        }
+
+        if (reader.Read<FlicMipHeader>(out var next) != Marshal.SizeOf<FlicMipHeader>()
+            || next.Width == 0 || next.Height == 0 || next.Pitch == 0 || next.Blocks == 0)
+          break;
+        mipHeader = next;
+      }
+
+      return texture;
+    } catch {
+      texture.Dispose();
+      throw;
+    }
+  }
+
   // Reference (ManagerFLIC.cpp) mip count: right-shift width until 0, plus one. The mip header
   // table is therefore `log2(width) + 1` entries long, with the smallest mip clamped to 1x1.
-  // Shared by Flic (standalone flic blobs) and BitmapTables (btbl entries).
   public static int ComputeMipCount(FlicHeader header) {
     var count = 0;
     var width = header.Width;
@@ -409,30 +549,126 @@ internal static class TextureDecoding {
     return Math.Max(count, 1);
   }
 
-  // Walk every loader instance in on-disk order (Part 6 Finding 4): "btbl"/"flic" are
-  // loader-category tags, not classified symbols (Finding 5), so they're invisible to ovl.Keys -
-  // this is the only way to discover and decode them. Each "btbl" loader becomes "current" until
-  // the next one; each "flic" loader's single extra-data chunk is a 4-byte index into whichever
-  // table was current when it was encountered.
-  public static IReadOnlyDictionary<uint, Texture[]> BuildBitmapTablesByFlicAddress(Ovl ovl) {
-    var logger = NLog.LogManager.GetCurrentClassLogger();
-    Texture[]? currentTable = null;
-    var bitmapTablesByFlicAddress = new Dictionary<uint, Texture[]>();
-    foreach (var (tag, dataAddress) in ovl.LoaderEntriesOrdered) {
-      switch (tag) {
-        case "btbl":
-          try {
-            currentTable = BitmapTables.ReadAt($"{ovl.Name}:btbl@{dataAddress:X}", ovl, dataAddress);
-          } catch (Exception ex) {
-            logger.Error(ex, "Failed to decode bitmap table at {Address:X} in {OvlName}", dataAddress, ovl.Name);
-            currentTable = null;
-          }
-          break;
-        case "flic" when currentTable != null:
-          bitmapTablesByFlicAddress[dataAddress] = currentTable;
-          break;
+  // See ManagerBTBL.cpp. Only the tiny BmpTbl{unk,count} header is inline resource data; the
+  // FlicHeader array and raw pixel data are both attached to the "btbl" loader as two separate
+  // extra-data chunks (chunk 0: two leading zero longs + `count` FlicHeaders; chunk 1: all mip
+  // pixel bytes for every texture, concatenated in table order).
+  public static Texture[] ReadBitmapTable(string name, Ovl ovl, OvlFile file, ReadOnlyMemory<byte> bytes) {
+    using var headerMs = bytes.AsStream();
+    using var headerReader = new BinaryReader(headerMs);
+    if (headerReader.Read<BitmapTable>(out var table) != Marshal.SizeOf<BitmapTable>())
+      throw new InvalidDataException($"'{name}' bitmap table header is truncated");
+
+    if (!ovl.TryReadExtraData(file, out var chunks))
+      throw new InvalidOperationException($"Failed to resolve bitmap table data for {name}");
+
+    return DecodeBitmapTable(name, table, chunks);
+  }
+
+  // "btbl" is a loader-category tag only, never a classified symbol (Part 6 Finding 5) - unlike
+  // ReadBitmapTable above (which needs an OvlFile symbol), this reads a loader instance directly by
+  // its relocation-resolved data address, discovered by walking Ovl.LoaderEntriesInOrder.
+  internal static Texture[] ReadBitmapTableAt(string name, Ovl ovl, uint dataAddress) {
+    if (!ovl.TryReadBytes(dataAddress, Marshal.SizeOf<BitmapTable>(), out var headerBytes))
+      throw new InvalidDataException($"'{name}' bitmap table header is unavailable");
+    using var headerMs = new ReadOnlyMemory<byte>(headerBytes).AsStream();
+    using var headerReader = new BinaryReader(headerMs);
+    if (headerReader.Read<BitmapTable>(out var table) != Marshal.SizeOf<BitmapTable>())
+      throw new InvalidDataException($"'{name}' bitmap table header is truncated");
+
+    if (!ovl.TryReadExtraData(dataAddress, out var chunks))
+      throw new InvalidOperationException($"Failed to resolve bitmap table data at {dataAddress:X}");
+
+    return DecodeBitmapTable(name, table, chunks);
+  }
+
+  internal static Texture[] DecodeBitmapTable(
+    string name, BitmapTable table, IReadOnlyList<byte[]> chunks
+  ) {
+    if (chunks.Count != 2)
+      throw new InvalidDataException(
+        $"'{name}' bitmap table has {chunks.Count} extra-data chunks; expected exactly 2");
+
+    var tableLength = Convert.ToInt32(table.Length);
+    var expectedHeaderLength = checked(8 + tableLength * Marshal.SizeOf<FlicHeader>());
+    if (chunks[0].Length != expectedHeaderLength)
+      throw new InvalidDataException(
+        $"'{name}' bitmap table header chunk is {chunks[0].Length} bytes; expected {expectedHeaderLength}");
+    // Two leading zero longs
+    if (chunks[0].Take(8).Any(value => value != 0))
+      throw new InvalidDataException($"'{name}' bitmap table header prefix is not zero");
+
+    using var headersMs = new ReadOnlyMemory<byte>(chunks[0]).AsStream();
+    using var headersReader = new BinaryReader(headersMs);
+    headersReader.ReadBytes(8);
+
+    var textures = new Texture[tableLength];
+    var pixelOffset = 0;
+    try {
+      for (var i = 0; i < tableLength; i++) {
+        if (headersReader.Read<FlicHeader>(out var flic) != Marshal.SizeOf<FlicHeader>())
+          throw new InvalidDataException($"'{name}' bitmap table entry {i} header is truncated");
+        if (flic.Format == 0)
+          throw new InvalidDataException($"'{name}' bitmap table entry {i} has zero format");
+        if (flic.Width == 0 || flic.Height == 0)
+          throw new InvalidDataException(
+            $"'{name}' bitmap table entry {i} has zero dimensions ({flic.Width}x{flic.Height})");
+        ValidateDimensions($"{name} bitmap table entry {i}", flic.Width, flic.Height);
+        if (flic.MipCount == 0 || flic.MipCount > 32)
+          throw new InvalidDataException(
+            $"'{name}' bitmap table entry {i} has invalid mip count {flic.MipCount}");
+
+        var bytesPerUnit = flic.Format switch {
+          TextureFormat.A8R8G8B8 => 4,
+          TextureFormat.Dxt1 => 8,
+          TextureFormat.Dxt3 or TextureFormat.Dxt5 => 16,
+          _ => throw new InvalidDataException(
+            $"'{name}' bitmap table entry {i} uses unsupported format {flic.Format}"),
+        };
+        textures[i] = new Texture(name, flic.Format, flic.Width, flic.Height, flic.MipCount);
+
+        // Reference (rct3tex.cpp::ReadTextures) sizes each mip independently. The base W/H are
+        // already in pixels; for DXT they are first divided by 4 to get block counts, then
+        // halved per level (clamped to 1). `num` is the per-block byte size for compressed formats
+        // (BitsPerPixel()/8 truncates to 0 for Dxt1's 4 bits/pixel, so it can't be used here), or
+        // the per-pixel byte width for uncompressed formats.
+        var baseW = flic.Width;
+        var baseH = flic.Height;
+        if (flic.Format.IsCompressed()) {
+          baseW = Math.Max(1u, baseW / 4);
+          baseH = Math.Max(1u, baseH / 4);
+        }
+        for (var mip = 0; mip < flic.MipCount; mip++) {
+          var w = Math.Max(1u, baseW >> mip);
+          var h = Math.Max(1u, baseH >> mip);
+          var size = Convert.ToInt32(checked(
+            Convert.ToUInt64(w) * Convert.ToUInt64(h) * Convert.ToUInt64(bytesPerUnit)));
+          if (pixelOffset > chunks[1].Length - size)
+            throw new InvalidDataException(
+              $"'{name}' bitmap table entry {i} mip {mip} truncated: needed {size} bytes, " +
+              $"got {Math.Max(0, chunks[1].Length - pixelOffset)}");
+          ReadOnlySpan<byte> data = chunks[1].AsSpan(pixelOffset, size);
+          var pixelWidth = Convert.ToInt32(Math.Max(1u, flic.Width >> mip));
+          var pixelHeight = Convert.ToInt32(Math.Max(1u, flic.Height >> mip));
+          textures[i].MipLevels[mip] = data.ToImage(flic.Format, pixelWidth, pixelHeight);
+          pixelOffset = checked(pixelOffset + size);
+        }
       }
+
+      if (pixelOffset != chunks[1].Length)
+        throw new InvalidDataException(
+          $"'{name}' bitmap table pixel chunk has {chunks[1].Length - pixelOffset} trailing bytes");
+      return textures;
+    } catch {
+      foreach (var texture in textures) texture?.Dispose();
+      throw;
     }
-    return bitmapTablesByFlicAddress;
+  }
+
+  private static void ValidateDimensions(string name, uint width, uint height) {
+    var pixels = Convert.ToUInt64(width) * Convert.ToUInt64(height);
+    if (width > int.MaxValue || height > int.MaxValue || pixels > int.MaxValue)
+      throw new InvalidDataException(
+        $"'{name}' dimensions {width}x{height} exceed the supported image size");
   }
 }

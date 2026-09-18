@@ -5,6 +5,7 @@
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
+using OpenRCT3.Serialization;
 using OpenRCT3.Simulation;
 using System.Numerics;
 
@@ -53,10 +54,9 @@ public class TerrainMeshBuilderTests {
   }
 
   [Test]
-  public void CornerPosition_AppliesTheWidthCenteringOffsetAndTileSizeScale() {
-    // Pins the exact formula TerrainPicker.TryPickTile's inverse mapping depends on - if this ever
-    // changes (e.g. the Width/2f centering), the picker would silently start pointing at the wrong
-    // tiles without this test catching it.
+  public void CornerPosition_UsesTheTerrainOriginAndTileSize() {
+    // Pins the exact formula TerrainPicker.TryPickTile's inverse mapping depends on. A decoded
+    // terrain's Origin and TileSize, rather than Park.TileSize, define its horizontal X/Z grid.
     var terrain = NewTerrain();
 
     var sw = TerrainMeshBuilder.CornerPosition(terrain, 6, 6, TerrainCornerSlot.SouthWest);
@@ -75,5 +75,143 @@ public class TerrainMeshBuilderTests {
     var sw = mesh.Vertices[0].Position;
     Assert.That(sw.Y, Is.EqualTo(0));
     Assert.That(sw.Z, Is.EqualTo(0));
+  }
+
+  [Test]
+  public void Build_DecodedTerrain_UsesStoredOriginTileSizeAndCornerOrder() {
+    var data = new DatTerrainData(
+      1,
+      1,
+      -12f,
+      7f,
+      4f,
+      5f,
+      [new DatTerrainCell(-1.25f, 2.5f, 3.75f, -4f, 11, 6)]
+    );
+    var terrain = Terrain.FromData(data);
+
+    var vertices = TerrainMeshBuilder.Build(terrain, Vector4.One).Vertices;
+
+    Assert.That(vertices[0].Position, Is.EqualTo(new Vector3(-12f, -1.25f, 7f)));
+    Assert.That(vertices[1].Position, Is.EqualTo(new Vector3(-8f, 2.5f, 7f)));
+    Assert.That(vertices[2].Position, Is.EqualTo(new Vector3(-8f, -4f, 12f)));
+    Assert.That(vertices[3].Position, Is.EqualTo(new Vector3(-12f, 3.75f, 12f)));
+  }
+
+  [Test]
+  public void Build_DecodedTerrain_UsesSerializedSouthEastNorthWestDiagonalWithReversedRenderWinding() {
+    var data = new DatTerrainData(
+      1,
+      1,
+      0f,
+      0f,
+      4f,
+      4f,
+      [new DatTerrainCell(0f, 0f, 0f, 1f, 0, 0)]
+    );
+
+    var mesh = TerrainMeshBuilder.Build(Terrain.FromData(data), Vector4.One);
+
+    Assert.That(mesh.Indices, Is.EqualTo(new uint[] { 0, 3, 1, 1, 3, 2 }));
+    Assert.That(mesh.Vertices[0].Normal, Is.EqualTo(Vector3.UnitY));
+    Assert.That(mesh.Vertices[2].Normal, Is.Not.EqualTo(Vector3.UnitY));
+  }
+
+  [Test]
+  public void Build_DecodedTerrain_ScalesCliffUvsByTheSerializedEdgeLength() {
+    var data = new DatTerrainData(
+      1,
+      2,
+      0f,
+      0f,
+      2f,
+      5f,
+      [
+        new DatTerrainCell(0f, 0f, 0f, 0f, 0, 0),
+        new DatTerrainCell(5f, 10f, 5f, 10f, 0, 0),
+      ]
+    );
+
+    var vertices = TerrainMeshBuilder.Build(Terrain.FromData(data), Vector4.One).Vertices;
+
+    Assert.That(vertices, Has.Count.EqualTo(12));
+    Assert.That(vertices[^4].TexCoord, Is.EqualTo(new Vector2(0f, 2.5f)));
+    Assert.That(vertices[^3].TexCoord, Is.EqualTo(new Vector2(1f, 5f)));
+  }
+
+  [Test]
+  public void Build_FlatTerrain_AssignsRepeatingTileUvs() {
+    var mesh = TerrainMeshBuilder.Build(NewTerrain(), Vector4.One);
+
+    Assert.That(mesh.Vertices.Take(4).Select(vertex => vertex.TexCoord), Is.EqualTo(new[] {
+      new Vector2(0, 0),
+      new Vector2(1, 0),
+      new Vector2(1, 1),
+      new Vector2(0, 1),
+    }));
+  }
+
+  [Test]
+  public void BuildBatches_DecodedTerrain_GroupsTopFacesBySurfaceIndex() {
+    var data = new DatTerrainData(
+      3,
+      1,
+      0f,
+      0f,
+      4f,
+      4f,
+      [
+        new DatTerrainCell(0f, 0f, 0f, 0f, 11, 1),
+        new DatTerrainCell(0f, 0f, 0f, 0f, 12, 2),
+        new DatTerrainCell(0f, 0f, 0f, 0f, 11, 3),
+      ]
+    );
+
+    var batches = TerrainMeshBuilder.BuildBatches(Terrain.FromData(data), Vector4.One);
+
+    Assert.That(batches.Select(batch => (batch.Kind, batch.Index)), Is.EqualTo(new[] {
+      (TerrainMaterialKind.Surface, Convert.ToByte(11)),
+      (TerrainMaterialKind.Surface, Convert.ToByte(12)),
+    }));
+    Assert.That(batches[0].Mesh.Vertices, Has.Count.EqualTo(8));
+    Assert.That(batches[0].Mesh.Indices, Has.Count.EqualTo(12));
+    Assert.That(batches[1].Mesh.Vertices, Has.Count.EqualTo(4));
+    Assert.That(batches[1].Mesh.Indices, Has.Count.EqualTo(6));
+  }
+
+  [Test]
+  public void BuildBatches_DetachedEdge_UsesDecodedCliffIndex() {
+    var data = new DatTerrainData(
+      1,
+      2,
+      0f,
+      0f,
+      4f,
+      4f,
+      [
+        new DatTerrainCell(0f, 0f, 0f, 0f, 7, 2),
+        new DatTerrainCell(5f, 5f, 5f, 5f, 7, 4),
+      ]
+    );
+
+    var batches = TerrainMeshBuilder.BuildBatches(Terrain.FromData(data), Vector4.One);
+    var cliff = batches.Single(batch => batch.Kind == TerrainMaterialKind.Cliff);
+
+    Assert.That(cliff.Index, Is.EqualTo(4));
+    Assert.That(cliff.Mesh.Vertices, Has.Count.EqualTo(4));
+    Assert.That(cliff.Mesh.Indices, Has.Count.EqualTo(6));
+  }
+
+  [Test]
+  public void BuildBatches_MixedSurfaceIndices_FailsUntilBlendingIsImplemented() {
+    var terrain = NewTerrain();
+    var corner = terrain.GetCorner(0, 0, TerrainCornerSlot.NorthEast);
+    corner.SurfaceIndex = 1;
+    terrain.SetCorner(0, 0, TerrainCornerSlot.NorthEast, corner);
+
+    var exception = Assert.Throws<InvalidOperationException>(new Action(() =>
+      TerrainMeshBuilder.BuildBatches(terrain, Vector4.One)));
+
+    Assert.That(exception!.Message, Does.Contain("mixed surface indices"));
   }
 }

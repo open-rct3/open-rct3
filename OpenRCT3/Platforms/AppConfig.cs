@@ -15,6 +15,8 @@ using OpenRCT3.Input;
 namespace OpenRCT3.Platforms;
 
 public record AppConfig {
+  internal const string AppDataPathEnvironmentVariable = "OPENRCT3_APPDATA_PATH";
+
   private static AppConfig? instance = null;
   public static AppConfig Instance => instance
     ?? throw new InvalidOperationException("App configuration is not initialized!");
@@ -25,6 +27,11 @@ public record AppConfig {
   /// Cached path to the user's RCT3 installation.
   /// </summary>
   public string? InstallPath { get; set; }
+  /// <summary>
+  /// Optional absolute park path, or a path relative to <see cref="InstallPath"/>. When unset,
+  /// OpenRCT3 loads the shipped blank landscape.
+  /// </summary>
+  public string? MapPath { get; set; }
   /// <summary>
   /// Extra paths from which to search for an installation of RCT3.
   /// </summary>
@@ -39,19 +46,23 @@ public record AppConfig {
   /// </summary>
   public Dictionary<string, KeyBindingOverride>? KeyBindings { get; set; }
 
-  public static string LogsFolder => Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-    "OpenRCT3",
-    "logs"
-  );
+  private static string ApplicationDataFolder => ResolveApplicationDataFolder(
+    Environment.GetEnvironmentVariable(AppDataPathEnvironmentVariable),
+    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+
+  public static string LogsFolder => Path.Combine(ApplicationDataFolder, "OpenRCT3", "logs");
 
   public static string LogPath => Path.Combine(LogsFolder, "app.log");
 
-  private static string ConfigPath => Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-    "OpenRCT3",
-    "config.json"
-  );
+  private static string ConfigPath => Path.Combine(ApplicationDataFolder, "OpenRCT3", "config.json");
+
+  internal static string ResolveApplicationDataFolder(string? configuredPath, string fallbackPath) {
+    if (string.IsNullOrWhiteSpace(configuredPath)) return fallbackPath;
+    if (!Path.IsPathRooted(configuredPath))
+      throw new InvalidOperationException(
+        $"{AppDataPathEnvironmentVariable} must contain an absolute path.");
+    return Path.GetFullPath(configuredPath);
+  }
 
   public static AppConfig Load() {
     if (!File.Exists(ConfigPath)) return instance = new AppConfig();

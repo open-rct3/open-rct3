@@ -55,6 +55,8 @@ public sealed class InputController {
   /// <summary>Resolves the game's named, rebindable input actions against the window's live <see cref="IInputContext"/>.</summary>
   public InputActionMap Actions { get; }
 
+  internal IInputContext Context { get; }
+
   /// <summary>
   /// Multiplies both <see cref="ZoomStepDistance"/> (keyboard) and <see cref="ScrollZoomScale"/> (scroll
   /// wheel) zoom amounts. Defaulted per-platform here, but a plain settable property so callers can
@@ -81,6 +83,7 @@ public sealed class InputController {
 
   public InputController(IInputContext context, AppConfig config, Camera camera, Func<bool> quit) {
     this.camera = camera;
+    Context = context;
     mouse = context.Mice[0];
 
     // Seed the action map with the game's defaults, then layer in any user rebinds from config.

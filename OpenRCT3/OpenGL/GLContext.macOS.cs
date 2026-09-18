@@ -12,23 +12,30 @@ namespace OpenRCT3.OpenGL;
 
 public partial class GLContext : IGLContext, INativeContext, IDisposable {
   private const int RTLD_LAZY = 1;
-  private readonly nint openglLib = dlopen("/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY);
-  private nint _currentContext;
+  private readonly MacGlContextLifetime lifetime = new(
+    dlopen("/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY));
 
   public static int PreferredColorDepth => 32;
   public static int PreferredDepthBufferBits => 24;
   public static int PreferredStencilBufferBits => 8;
 
-  public nint GetProcAddress(string procName) => dlsym(openglLib, procName);
+  public nint GetProcAddress(string procName) => dlsym(lifetime.LibraryHandle, procName);
 
-  public nint GetProcAddress(string proc, int? slot = null) => dlsym(openglLib, proc);
+  public nint GetProcAddress(string proc, int? slot = null) =>
+    dlsym(lifetime.LibraryHandle, proc);
 
   public bool TryGetProcAddress(string proc, out nint addr, int? slot = null) {
-    addr = dlsym(openglLib, proc);
-    return addr != 0;
+    try {
+      addr = dlsym(lifetime.LibraryHandle, proc);
+      return addr != 0;
+    } catch (ObjectDisposedException) {
+      addr = nint.Zero;
+      return false;
+    }
   }
 
   public void SwapInterval(int interval) {
+    lifetime.ThrowIfDisposed();
     const int kCGLCPSwapInterval = 222;
     var context = CGLGetCurrentContext();
     if (context == nint.Zero) return;
@@ -36,11 +43,15 @@ public partial class GLContext : IGLContext, INativeContext, IDisposable {
   }
 
   public void SwapBuffers() {
-    if (_currentContext != nint.Zero)
-      CGLFlushDrawable(_currentContext);
+    lifetime.ThrowIfDisposed();
+    var context = lifetime.ContextHandle;
+    if (context != nint.Zero) CGLFlushDrawable(context);
   }
 
-  public void MakeCurrent() => CGLSetCurrentContext(_currentContext);
+  public void MakeCurrent() {
+    lifetime.ThrowIfDisposed();
+    CGLSetCurrentContext(lifetime.ContextHandle);
+  }
 
   /// <summary>
   /// Updates the CGL context handle used by <see cref="MakeCurrent"/> and <see cref="SwapBuffers"/>.
@@ -49,22 +60,30 @@ public partial class GLContext : IGLContext, INativeContext, IDisposable {
   /// <see cref="CAOpenGLLayer"/> hands us a fresh <c>CGLContextObj</c> on every draw callback rather than
   /// guaranteeing one stays current between frames, so the caller must supply it each frame.
   /// </remarks>
-  public void SetCurrentContext(nint handle) => _currentContext = handle;
+  public void SetCurrentContext(nint handle) => lifetime.SetCurrentContext(handle);
 
   public void Clear() {
+    lifetime.ThrowIfDisposed();
     // glClear is called via Silk.NET GL after context is set
   }
 
   [System.ComponentModel.Browsable(false)]
-  public nint Handle => _currentContext;
+  public nint Handle => lifetime.ContextHandle;
 
   [System.ComponentModel.Browsable(false)]
   public IGLContextSource? Source => null;
 
-  public bool IsCurrent => _currentContext != nint.Zero;
+  public bool IsCurrent => lifetime.IsCurrent(CGLGetCurrentContext);
 
   public void Dispose() {
-    if (openglLib != nint.Zero) dlclose(openglLib);
+    GC.SuppressFinalize(this);
+    var handles = lifetime.Release();
+    try {
+      if (handles.Context != nint.Zero && CGLGetCurrentContext() == handles.Context)
+        CGLSetCurrentContext(nint.Zero);
+    } finally {
+      if (handles.Library != nint.Zero) dlclose(handles.Library);
+    }
   }
 
   [LibraryImport("/System/Library/Frameworks/OpenGL.framework/OpenGL")]

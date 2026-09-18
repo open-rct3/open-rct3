@@ -52,7 +52,7 @@ public class TexturesMeasurementTests {
           CopyResourceTo(assembly, uniqueResourceName, Path.Combine(tempDir, "fixture.unique.ovl"));
 
         using var ovl = Ovl.Load(commonPath);
-        var textures = Textures.Extract(ovl);
+        using var textures = Textures.Extract(ovl);
         total += textures.Count;
         log.AppendLine($"{commonResourceName}: {textures.Count} textures");
       } finally {

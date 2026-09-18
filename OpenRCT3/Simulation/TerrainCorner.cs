@@ -13,8 +13,8 @@ namespace OpenRCT3.Simulation;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Packed to 4 bytes so that a 138x138 terrain stores its 76,176 corners in roughly 305 KB without
-/// padding. Layout: <c>ushort Height</c> (corner-height count, see
+/// Packed to 6 bytes so that a 138x138 terrain stores its 76,176 corners in roughly 457 KB without
+/// padding. Layout: <c>int Height</c> (signed corner-height count, see
 /// <see cref="Terrain.HeightStep"/>) + <c>byte SurfaceIndex</c> (ground paint-type index) +
 /// <c>byte CliffIndex</c> (cliff paint-type index).
 /// </para>
@@ -25,14 +25,13 @@ namespace OpenRCT3.Simulation;
 /// neighbor and is otherwise don't-care.
 /// </para>
 /// </remarks>
-[StructLayout(LayoutKind.Sequential, Pack = 1, Size = 4)]
+[StructLayout(LayoutKind.Sequential, Pack = 1, Size = 6)]
 public struct TerrainCorner {
   /// <summary>
-  /// The corner's height in <see cref="Terrain.HeightStep"/> units (1 cm per unit). Stored as
-  /// <c>ushort</c> for a 0 to 65,535 cm (0 to 655.35 m) range, which covers any plausible
-  /// theme-park terrain height above the world Z=0 floor.
+  /// The corner's signed height in <see cref="Terrain.HeightStep"/> units (1 cm per unit). RCT3 maps
+  /// can place terrain below world Z=0, so this cannot be an unsigned value.
   /// </summary>
-  public ushort Height;
+  public int Height;
   /// <summary>
   /// The index of the ground paint type, into the <c>ter</c> entries decoded from
   /// <c>Terrain_RCT3.*.ovl</c> (e.g. grass, sand, etc.).
@@ -51,7 +50,7 @@ public struct TerrainCorner {
   /// <param name="height">The corner height in <see cref="Terrain.HeightStep"/> units.</param>
   /// <param name="surfaceIndex">The ground paint-type index.</param>
   /// <param name="cliffIndex">The cliff paint-type index.</param>
-  public TerrainCorner(ushort height, byte surfaceIndex = 0, byte cliffIndex = 0) {
+  public TerrainCorner(int height, byte surfaceIndex = 0, byte cliffIndex = 0) {
     Height = height;
     SurfaceIndex = surfaceIndex;
     CliffIndex = cliffIndex;

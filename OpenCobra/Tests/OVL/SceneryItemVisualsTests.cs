@@ -114,10 +114,10 @@ public class SceneryItemVisualsTests {
     var shapes = StaticShapes.Extract(ovl);
 
     // BeachTorch1Hlod/Mlod/Llod meshes are known to reference the "BeachTorch" flexi-texture -
-    // confirms StaticMesh.FtxRef resolves via the symbol-reference table against real data.
+    // confirms StaticShapeMesh.FtxRef resolves via the symbol-reference table against real data.
     var texturedMeshes = shapes.SelectMany(s => s.Meshes).Where(m => m.FtxRef != null).ToList();
     Assert.That(texturedMeshes, Is.Not.Empty, "Expected at least one FtxRef-textured mesh");
-    Assert.That(texturedMeshes, Has.All.Matches<StaticMesh>(m => m.FtxRef == "BeachTorch"));
+    Assert.That(texturedMeshes, Has.All.Matches<StaticShapeMesh>(m => m.FtxRef == "BeachTorch"));
   }
 
   [Test]

@@ -85,8 +85,8 @@ public class TextureNameManglingTests {
     // Mirrors TextureLoader.LoadTexture's FileType.FlexibleTexture branch: each frame
     // is ToGl'd, then flattened into one GDK Texture with Frames.Count == collection.Count.
     // Each per-frame OVL texture carries the suffixed "Name.ftx#i" form that
-    // FlexiTextureList.Parse produces; the ctor leaves that intact (the "#i" tail makes
-    // ".ftx" not a clean trailing tag) so each frame keeps a unique name. The flattened
+    // FlexiTextureList.Parse produces; the ctor removes the ".ftx" tag while retaining the
+    // "#i" tail so each frame keeps a unique name. The flattened
     // combined GDK texture inherits the first frame's name verbatim.
     using var frame0 = MakeSyntheticOvlTexture("FlexiTex.ftx#0");
     using var frame1 = MakeSyntheticOvlTexture("FlexiTex.ftx#1");

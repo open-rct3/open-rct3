@@ -29,6 +29,7 @@ internal partial class GameWindow : Form, IWindow {
   private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
   private readonly Dictionary<Delegate, EventHandler> handlerMap = [];
+  private readonly GameLoopCloseCoordinator closeCoordinator = new();
   private readonly ManualResetEvent rendererCreated = new(false);
   private readonly Stopwatch stopwatch = new();
   private IRenderer? renderer;
@@ -223,7 +224,12 @@ internal partial class GameWindow : Form, IWindow {
     if (Game.Instance == null) {
       logger.Trace("Starting game...");
       var game = new Game();
-      Task.Run(game.Run);
+      // Game construction finishes loading and framing the scene before the worker loop starts.
+      // Force that first scene through WM_PAINT now so startup never depends on a later resize,
+      // activation, or other incidental Windows message to present the back buffer.
+      glSurface.PresentFrame(() => game.Scene.Update(game.TargetFrameTime));
+      logger.Debug("Presented initial scene frame");
+      closeCoordinator.Track(Task.Run(game.Run));
     } else {
       logger.Trace("Resuming game...");
       Game.Instance.Resume();
@@ -319,9 +325,14 @@ internal partial class GameWindow : Form, IWindow {
   }
 
   private void GameWindow_FormClosing(object sender, FormClosingEventArgs e) {
-    var wasGameStopped = Game.Instance?.Quit() ?? false;
-    // Cancel the closure if the game is still running
-    e.Cancel = wasGameStopped == false || Game.IsRunning;
+    e.Cancel = closeCoordinator.ShouldCancelClose(
+      () => Game.Instance?.Quit() ?? true,
+      action => {
+        if (!IsDisposed && !Disposing) BeginInvoke(action);
+      },
+      glSurface.Dispose,
+      Close,
+      error => logger.Error(error, "Game loop failed during shutdown."));
     isClosing = e.Cancel == false;
     if (isClosing) closing.Cancel();
   }
@@ -332,4 +343,76 @@ internal partial class GameWindow : Form, IWindow {
   }
 
   private void GlSurface_Resize(object sender, EventArgs e) => FramebufferResize?.Invoke(FramebufferSize);
+}
+
+internal sealed class GameLoopCloseCoordinator {
+  private readonly object gate = new();
+  private Task gameTask = Task.CompletedTask;
+  private bool closePending;
+  private bool finalClose;
+
+  public void Track(Task task) {
+    ArgumentNullException.ThrowIfNull(task);
+    lock (gate) gameTask = task;
+  }
+
+  public bool ShouldCancelClose(
+    Func<bool> requestQuit,
+    Action<Action> marshal,
+    Action prepareFinalClose,
+    Action requestFinalClose,
+    Action<Exception>? handleFailure = null
+  ) {
+    Task task;
+    lock (gate) {
+      if (finalClose) return false;
+      if (closePending) return true;
+      closePending = true;
+      task = gameTask;
+    }
+
+    bool canQuit;
+    try {
+      canQuit = requestQuit();
+    } catch {
+      lock (gate) closePending = false;
+      throw;
+    }
+    if (!canQuit) {
+      lock (gate) closePending = false;
+      return true;
+    }
+
+    _ = task.ContinueWith(
+      completed => {
+        var error = completed.Exception;
+        try {
+          marshal(() => {
+            try {
+              if (error != null) handleFailure?.Invoke(error);
+              prepareFinalClose();
+              lock (gate) finalClose = true;
+              requestFinalClose();
+            } catch {
+              ResetPendingClose();
+              throw;
+            }
+          });
+        } catch (Exception marshalError) {
+          ResetPendingClose();
+          handleFailure?.Invoke(marshalError);
+        }
+      },
+      CancellationToken.None,
+      TaskContinuationOptions.ExecuteSynchronously,
+      TaskScheduler.Default);
+    return true;
+  }
+
+  private void ResetPendingClose() {
+    lock (gate) {
+      finalClose = false;
+      closePending = false;
+    }
+  }
 }

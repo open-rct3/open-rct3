@@ -3,6 +3,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using OpenCobra.Data;
 using OpenCobra.OVL;
@@ -69,17 +70,22 @@ public class Park {
   public Dictionary<(int X, int Y), PathTile> Paths { get; } = [];
 
   /// <summary>
-  /// Every placed <see cref="WaterPool"/>. Prefer <see cref="WaterTiles"/> for tile-based lookups; this
-  /// list exists for iteration (e.g. rendering every pool) and O(1) removal by reference.
+  /// Every placed <see cref="WaterPool"/>. Prefer <see cref="WaterTiles"/> for tile occupancy and
+  /// <see cref="WaterTriangles"/> for exact coverage; this list exists for iteration (e.g. rendering
+  /// every pool) and O(1) removal by reference.
   /// </summary>
   public List<WaterPool> WaterPools { get; } = [];
 
   /// <summary>
-  /// Maps each tile a <see cref="WaterPool"/> covers to that pool, so a tile query resolves its pool
-  /// (if any) in O(1) without scanning <see cref="WaterPools"/>. Multiple tiles alias the same
-  /// <see cref="WaterPool"/> reference.
+  /// Maps each occupied tile to every pool touching either of its terrain triangles. Two distinct
+  /// pools may occupy opposite triangles of one tile, matching RCT3's two-record grid layout.
   /// </summary>
-  public Dictionary<(int X, int Y), WaterPool> WaterTiles { get; } = [];
+  public Dictionary<(int X, int Y), HashSet<WaterPool>> WaterTiles { get; } = [];
+
+  /// <summary>Maps exact tile-triangle coverage to its one owning pool.</summary>
+  public Dictionary<(int X, int Y, WaterTerrainTriangle Triangle), WaterPool> WaterTriangles {
+    get;
+  } = [];
 
   /// <summary>
   /// Every placed <see cref="SceneryPlacement"/>. Placement data lives directly on <see cref="Park"/>,
@@ -94,6 +100,31 @@ public class Park {
     BuildableBounds = (
       new Vector2(-halfWidth, borderOffset),
       new Vector2(halfWidth, borderOffset + (buildableHeight * TileSize))
+    );
+  }
+
+  /// <summary>
+  /// Initializes park bounds from a loaded terrain grid, excluding its out-of-bounds border.
+  /// </summary>
+  public Park(Terrain terrain) {
+    if (terrain.Width <= OutOfBoundsBorder * 2 || terrain.Height <= OutOfBoundsBorder * 2)
+      throw new ArgumentException("Terrain is too small to contain the park border.", nameof(terrain));
+
+    var border = new Vector2(
+      OutOfBoundsBorder * terrain.TileSize.X,
+      OutOfBoundsBorder * terrain.TileSize.Y
+    );
+    BuildableBounds = (
+      terrain.Origin + border,
+      terrain.Origin + new Vector2(
+        (terrain.Width - OutOfBoundsBorder) * terrain.TileSize.X,
+        (terrain.Height - OutOfBoundsBorder) * terrain.TileSize.Y
+      )
+    );
+    EntrancePosition = new Vector3(
+      (BuildableBounds.Min.X + BuildableBounds.Max.X) / 2f,
+      0f,
+      BuildableBounds.Min.Y
     );
   }
 
@@ -151,13 +182,13 @@ public class Park {
     if (!terrain.HasTile(tileX, tileY)) return false;
 
     var corners = terrain.GetCorners(tileX, tileY);
-    var min = ushort.MaxValue;
-    var max = ushort.MinValue;
+    var min = int.MaxValue;
+    var max = int.MinValue;
     foreach (var corner in corners) {
       if (corner.Height < min) min = corner.Height;
       if (corner.Height > max) max = corner.Height;
     }
-    return max - min < AtGradePathMaxRise;
+    return Convert.ToInt64(max) - min < AtGradePathMaxRise;
   }
 
   /// <summary>
@@ -191,7 +222,10 @@ public class Park {
 
     var (thisC1, thisC2) = terrain.GetEdgeCornerHeights(tileX, tileY, edge);
     var (thatC1, thatC2) = terrain.GetEdgeCornerHeights(neighborX, neighborY, edge.Opposite());
-    var diff = Math.Max(Math.Abs(thisC1 - thatC1), Math.Abs(thisC2 - thatC2));
+    var diff = Math.Max(
+      Math.Abs(Convert.ToInt64(thisC1) - thatC1),
+      Math.Abs(Convert.ToInt64(thisC2) - thatC2)
+    );
     return diff <= AtGradePathMaxRise / 2;
   }
 
@@ -210,18 +244,48 @@ public class Park {
   /// <c>true</c> if the pool was placed; <c>false</c> if <paramref name="tiles"/> is empty, any tile is
   /// off-grid, or any tile already belongs to another pool.
   /// </returns>
-  public bool TryPlaceWaterPool(IEnumerable<(int X, int Y)> tiles, ushort height, Terrain terrain, bool isOcean = false) {
+  public bool TryPlaceWaterPool(
+    IEnumerable<(int X, int Y)> tiles,
+    int height,
+    Terrain terrain,
+    bool isOcean = false) {
     var tileList = tiles as ICollection<(int X, int Y)> ?? [.. tiles];
     if (tileList.Count == 0) return false;
 
-    foreach (var tile in tileList) {
-      if (!terrain.HasTile(tile.X, tile.Y)) return false;
-      if (WaterTiles.ContainsKey(tile)) return false;
+    return TryAddWaterPool(new WaterPool(height, tileList, isOcean), terrain);
+  }
+
+  /// <summary>Places a decoded pool with exact partial-triangle coverage.</summary>
+  internal bool TryPlaceWaterTriangles(
+    IEnumerable<WaterSurfaceTriangle> triangles,
+    int height,
+    Terrain terrain,
+    bool isOcean = false
+  ) {
+    ArgumentNullException.ThrowIfNull(triangles);
+    var triangleList = triangles as ICollection<WaterSurfaceTriangle> ?? [.. triangles];
+    if (triangleList.Count == 0) return false;
+
+    return TryAddWaterPool(new WaterPool(height, triangleList, isOcean), terrain);
+  }
+
+  private bool TryAddWaterPool(WaterPool pool, Terrain terrain) {
+    foreach (var triangle in pool.Triangles) {
+      if (!terrain.HasTile(triangle.X, triangle.Y)) return false;
+      var key = (triangle.X, triangle.Y, triangle.Triangle);
+      if (WaterTriangles.ContainsKey(key)) return false;
     }
 
-    var pool = new WaterPool(height, tileList, isOcean);
     WaterPools.Add(pool);
-    foreach (var tile in tileList) WaterTiles[tile] = pool;
+    foreach (var triangle in pool.Triangles)
+      WaterTriangles[(triangle.X, triangle.Y, triangle.Triangle)] = pool;
+    foreach (var tile in pool.Tiles) {
+      if (!WaterTiles.TryGetValue(tile, out var pools)) {
+        pools = [];
+        WaterTiles[tile] = pools;
+      }
+      pools.Add(pool);
+    }
     return true;
   }
 
@@ -236,11 +300,21 @@ public class Park {
   /// </remarks>
   /// <returns><c>true</c> if a pool was found and removed.</returns>
   public bool InvalidateWaterPoolAt(int tileX, int tileY) {
-    if (!WaterTiles.TryGetValue((tileX, tileY), out var pool)) return false;
+    if (!WaterTiles.TryGetValue((tileX, tileY), out var pools)) return false;
 
-    WaterPools.Remove(pool);
-    foreach (var tile in pool.Tiles) WaterTiles.Remove(tile);
+    foreach (var pool in pools.ToArray()) RemoveWaterPool(pool);
     return true;
+  }
+
+  private void RemoveWaterPool(WaterPool pool) {
+    WaterPools.Remove(pool);
+    foreach (var triangle in pool.Triangles)
+      WaterTriangles.Remove((triangle.X, triangle.Y, triangle.Triangle));
+    foreach (var tile in pool.Tiles) {
+      if (!WaterTiles.TryGetValue(tile, out var pools)) continue;
+      pools.Remove(pool);
+      if (pools.Count == 0) WaterTiles.Remove(tile);
+    }
   }
 
   /// <summary>
@@ -254,8 +328,7 @@ public class Park {
     int tileY,
     TerrainCornerSlot slot,
     int delta,
-    Func<int, int, TerrainCornerSlot, ushort>? maxHeightQuery = null
-  ) {
+    Func<int, int, TerrainCornerSlot, int>? maxHeightQuery = null) {
     terrain.RaiseCorner(tileX, tileY, slot, delta, maxHeightQuery);
     foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot)) InvalidateWaterPoolAt(x, y);
   }
@@ -271,8 +344,7 @@ public class Park {
     int tileY,
     TerrainCornerSlot slot,
     int delta,
-    Func<int, int, TerrainCornerSlot, ushort>? minHeightQuery = null
-  ) {
+    Func<int, int, TerrainCornerSlot, int>? minHeightQuery = null) {
     terrain.LowerCorner(tileX, tileY, slot, delta, minHeightQuery);
     foreach (var (x, y) in terrain.GetTilesSharingCorner(tileX, tileY, slot)) InvalidateWaterPoolAt(x, y);
   }
@@ -286,7 +358,7 @@ public class Park {
   /// Only the edited tile's own pool is invalidated: unlike raise/lower, this doesn't propagate to
   /// neighboring tiles, so no other tile's height actually changed.
   /// </remarks>
-  public void SetTerrainCornerHeight(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot, ushort height) {
+  public void SetTerrainCornerHeight(Terrain terrain, int tileX, int tileY, TerrainCornerSlot slot, int height) {
     terrain.SetCornerHeight(tileX, tileY, slot, height);
     InvalidateWaterPoolAt(tileX, tileY);
   }
@@ -338,7 +410,7 @@ public class Park {
   /// object's mesh can follow the terrain's slope along that edge instead of sitting at one flat
   /// height.
   /// </remarks>
-  public static (ushort Near, ushort Far) GetSceneryHeight(SceneryPlacement placement, SceneryDefinition definition, Terrain terrain) {
+  public static (int Near, int Far) GetSceneryHeight(SceneryPlacement placement, SceneryDefinition definition, Terrain terrain) {
     switch (definition.Placement) {
       case Placement.PathEdgeInner:
       case Placement.PathEdgeOuter:
@@ -348,9 +420,9 @@ public class Park {
         return (c1, c2);
       }
       default: {
-        var sum = 0;
+        var sum = 0L;
         foreach (var corner in terrain.GetCorners(placement.TileX, placement.TileY)) sum += corner.Height;
-        var average = (ushort)(sum / Terrain.CornersPerTile);
+        var average = Convert.ToInt32(sum / Terrain.CornersPerTile);
         return (average, average);
       }
     }
@@ -372,7 +444,7 @@ public class Park {
   /// height.
   /// </summary>
   private static bool IsFootprintLevel(int tileX, int tileY, int width, int height, Terrain terrain) {
-    ushort? reference = null;
+    int? reference = null;
     for (var dy = 0; dy < height; dy++) {
       for (var dx = 0; dx < width; dx++) {
         var x = tileX + dx;

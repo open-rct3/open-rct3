@@ -6,6 +6,7 @@
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 using System.Numerics;
 using OpenCobra.GDK;
+using OpenRCT3.Serialization;
 using OpenRCT3.Simulation;
 
 namespace OpenRCT3.Tests.Simulation;
@@ -15,9 +16,21 @@ public class TerrainPickerTests {
   private const float Epsilon = 1e-3f;
 
   // A small buildable area (Terrain pads it with the 5-tile OOB border on every side), giving a
-  // 12x12 OOB-inclusive grid so tile (6, 6) sits at world X/Y [0, 4)/[24, 28) - see
-  // TerrainMeshBuilder.CornerPosition's (tileX - Width/2f) centering.
+  // 12x12 OOB-inclusive grid so tile (6, 6) sits at world X/Z [0, 4)/[24, 28).
   private static Terrain NewTerrain(ushort initialHeight = 0) => new(width: 2, height: 2, initialHeight);
+
+  [Test]
+  public void TryPickTile_RayStartsOutsideThenEntersTerrain_HitsSurface() {
+    var terrain = NewTerrain();
+    var target = new Vector3(2, 0, 26);
+    var origin = new Vector3(60, 50, 26);
+    var ray = new Ray(origin, Vector3.Normalize(target - origin));
+
+    var result = TerrainPicker.TryPickTile(ray, terrain, maxSteps: 100);
+
+    Assert.That(result, Is.Not.Null);
+    Assert.That(Vector3.Distance(result!.Value.Point, target), Is.LessThan(Epsilon));
+  }
 
   [Test]
   public void TryPickTile_StraightDownOverFlatTerrain_HitsExpectedTileAndPoint() {
@@ -63,6 +76,50 @@ public class TerrainPickerTests {
     Assert.That(result!.Value.TileX, Is.EqualTo(6));
     Assert.That(result.Value.TileY, Is.EqualTo(6));
     Assert.That(result.Value.Point.Y, Is.EqualTo(Terrain.CornerHeightToWorldY(50)).Within(Epsilon));
+  }
+
+  [Test]
+  public void TryPickTile_DecodedTerrain_UsesStoredOriginAndTileSize() {
+    var terrain = Terrain.FromData(new DatTerrainData(
+      1,
+      1,
+      -12f,
+      7f,
+      4f,
+      5f,
+      [new DatTerrainCell(0f, 0f, 0f, 0f, 0, 0)]));
+    var ray = new Ray(new Vector3(-10f, 50f, 9f), -Vector3.UnitY);
+
+    var result = TerrainPicker.TryPickTile(ray, terrain, maxSteps: 0);
+
+    Assert.That(result, Is.Not.Null);
+    Assert.That(result!.Value.TileX, Is.EqualTo(0));
+    Assert.That(result.Value.TileY, Is.EqualTo(0));
+    Assert.That(result.Value.Point, Is.EqualTo(new Vector3(-10f, 0f, 9f)));
+  }
+
+  [Test]
+  public void TryPickTile_UsesThePhysicalDatDiagonalRatherThanRenderWinding() {
+    var terrain = Terrain.FromData(new DatTerrainData(
+      1,
+      1,
+      0f,
+      0f,
+      4f,
+      4f,
+      [new DatTerrainCell(0f, 0f, 0f, 0f, 0, 0)]));
+
+    var southWest = TerrainPicker.TryPickTile(
+      new Ray(new Vector3(1f, 50f, 1f), -Vector3.UnitY), terrain, maxSteps: 0);
+    var northEast = TerrainPicker.TryPickTile(
+      new Ray(new Vector3(3f, 50f, 3f), -Vector3.UnitY), terrain, maxSteps: 0);
+
+    Assert.That(southWest, Is.Not.Null);
+    Assert.That((southWest!.Value.A, southWest.Value.B, southWest.Value.C), Is.EqualTo(
+      (TerrainCornerSlot.SouthWest, TerrainCornerSlot.SouthEast, TerrainCornerSlot.NorthWest)));
+    Assert.That(northEast, Is.Not.Null);
+    Assert.That((northEast!.Value.A, northEast.Value.B, northEast.Value.C), Is.EqualTo(
+      (TerrainCornerSlot.NorthEast, TerrainCornerSlot.NorthWest, TerrainCornerSlot.SouthEast)));
   }
 
   [Test]

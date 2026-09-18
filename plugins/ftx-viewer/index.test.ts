@@ -18,7 +18,7 @@ Deno.test("ftx-viewer: file_types()", async () => {
   const plugin = await createPlugin(wasmUrl, { functions });
   const out = await plugin.call("file_types");
   assert(out !== null, "Expected a result!");
-  assertEquals(JSON.parse(out!.text()), ["ftx", "flt"]);
+  assertEquals(JSON.parse(out!.text()), ["ftx"]);
   await plugin.close();
 });
 

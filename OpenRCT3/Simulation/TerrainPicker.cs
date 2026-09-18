@@ -35,34 +35,42 @@ public readonly record struct TilePickResult(
 /// </summary>
 public static class TerrainPicker {
   /// <summary>
-  /// The fixed diagonal split <see cref="TerrainMeshBuilder.AddTopFace"/> emits per tile: two
-  /// triangles, (SW, NW, NE) then (SW, NE, SE).
+  /// The DAT physical diagonal split is SouthEast-to-NorthWest: (SW, SE, NW) and (NE, NW, SE).
+  /// <see cref="TerrainMeshBuilder.AddTopFace"/> reverses that winding for Y-up rendering.
   /// </summary>
   private static readonly (TerrainCornerSlot A, TerrainCornerSlot B, TerrainCornerSlot C)[] Triangles = [
-    (TerrainCornerSlot.SouthWest, TerrainCornerSlot.NorthWest, TerrainCornerSlot.NorthEast),
-    (TerrainCornerSlot.SouthWest, TerrainCornerSlot.NorthEast, TerrainCornerSlot.SouthEast),
+    (TerrainCornerSlot.SouthWest, TerrainCornerSlot.SouthEast, TerrainCornerSlot.NorthWest),
+    (TerrainCornerSlot.NorthEast, TerrainCornerSlot.NorthWest, TerrainCornerSlot.SouthEast),
   ];
 
   /// <summary>
-  /// Marches <paramref name="ray"/> in <see cref="Park.TileSize"/> increments, testing each stepped-into
+  /// Marches <paramref name="ray"/> in the smaller decoded tile dimension, testing each stepped-into
   /// tile's two corner-triangles for intersection.
   /// </summary>
   /// <param name="ray">The world-space ray to pick with, e.g. from <see cref="Camera.Unproject"/>.</param>
   /// <param name="terrain">The heightfield to hit-test against.</param>
   /// <param name="maxSteps">
   /// The step budget - callers should derive this from the camera's view distance (e.g.
-  /// <c>Camera.MaxDistance ?? distance</c>, divided by <see cref="Park.TileSize"/>) so the march can't
+  /// <c>Camera.MaxDistance ?? distance</c>, divided by the terrain's smaller tile dimension) so the march can't
   /// run unbounded, but also can't give up before it could plausibly reach the ground.
   /// </param>
   /// <returns>The first hit tile/triangle, or <c>null</c> if the march exits the grid or step budget
   /// with no hit.</returns>
   public static TilePickResult? TryPickTile(Ray ray, Terrain terrain, int maxSteps) {
+    var enteredGrid = false;
+    var stepLength = MathF.Min(terrain.TileSize.X, terrain.TileSize.Y);
     for (var step = 0; step <= maxSteps; step++) {
-      var point = ray.Origin + (ray.Direction * (step * Park.TileSize));
-      var tileX = (int)MathF.Floor((point.X / Park.TileSize) + (terrain.Width / 2f));
-      var tileY = (int)MathF.Floor(point.Z / Park.TileSize);
+      var point = ray.Origin + (ray.Direction * (step * stepLength));
+      var tileX = Convert.ToInt32(MathF.Floor(
+        (point.X - terrain.Origin.X) / terrain.TileSize.X));
+      var tileY = Convert.ToInt32(MathF.Floor(
+        (point.Z - terrain.Origin.Y) / terrain.TileSize.Y));
 
-      if (!terrain.HasTile(tileX, tileY)) return null;
+      if (!terrain.HasTile(tileX, tileY)) {
+        if (enteredGrid) return null;
+        continue;
+      }
+      enteredGrid = true;
 
       foreach (var (a, b, c) in Triangles) {
         var v0 = TerrainMeshBuilder.CornerPosition(terrain, tileX, tileY, a);

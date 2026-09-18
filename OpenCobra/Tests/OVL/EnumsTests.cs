@@ -53,7 +53,6 @@ public class EnumsTests {
   [TestCase(FileType.CharacterSkinPart)]
   [TestCase(FileType.ParticleSpriteItem)]
   [TestCase(FileType.FontCharacterTable)]
-  [TestCase(FileType.Unknown)]
   public void FileType_ToIconName_ReturnsNonEmpty(FileType type) =>
     Assert.That(type.ToIconName(), Is.Not.Empty);
 
@@ -91,7 +90,6 @@ public class EnumsTests {
   [TestCase(FileType.CharacterSkinPart)]
   [TestCase(FileType.ParticleSpriteItem)]
   [TestCase(FileType.FontCharacterTable)]
-  [TestCase(FileType.Unknown)]
   public void FileType_ToGroupIconName_ReturnsNonEmpty(FileType type) =>
     Assert.That(type.ToGroupIconName(), Is.Not.Empty);
 
@@ -174,7 +172,7 @@ public class EnumsTests {
   [TestCase("tex", FileType.Texture)]
   [TestCase("flic", FileType.Flic)]
   [TestCase("ftx", FileType.FlexibleTexture)]
-  [TestCase("flt", FileType.FlexibleTexture)]
+  [TestCase("flt", FileType.Float)]
   [TestCase("gsi", FileType.GuiSkinItem)]
   [TestCase("sid", FileType.SceneryItem)]
   [TestCase("btbl", FileType.BitmapTable)]

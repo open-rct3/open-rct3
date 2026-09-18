@@ -61,7 +61,8 @@ OVL files can store a variety of resource types, identified by their tags, inclu
 | :--- | :--- | :--- |
 | `tex` | Texture | 2D Texture |
 | `flic` | Flic | Compressed 2D Image (animated frames) |
-| `ftx` / `flt` | FlexibleTexture | Flexi-Texture |
+| `ftx` | FlexibleTexture | Flexi-Texture |
+| `flt` | Float | Floating-Point Number |
 | `btbl` | BitmapTable | Bitmap Table |
 
 ### Texture & Bitmap Relationships
@@ -118,8 +119,9 @@ In C++, OVL resource pointers are stored as 32-bit virtual addresses. On 64-bit 
 *   `Flic` ([Textures.cs](../../../OpenCobra/OVL/Files/Textures.cs)): A 12-byte sequential structure storing animation/frame pointer locations.
 *   `FlicHeader` & `FlicMipHeader` ([Textures.cs](../../../OpenCobra/OVL/Files/Textures.cs)): Explicitly sized 16-byte sequential structures ensuring proper mapping of image dimensions, pitch, block size, and formatting enumerations.
 
-### File Type Tags (29 Supported Types)
-The `FileType` enumeration spans all loader tags defined by the `Manager` classes:
+### File Type Tags (Historical Partial List)
+This table is a historical subset of the loader tags represented by `FileType`. See
+[`FileTypes.cs`](../../../OpenCobra/OVL/Files/FileTypes.cs) for the current complete mapping.
 
 | Tag | Type | Name |
 | :--- | :--- | :--- |
@@ -127,7 +129,8 @@ The `FileType` enumeration spans all loader tags defined by the `Manager` classe
 | `int` | Integer | Integer Number |
 | `tex` | Texture | 2D Texture |
 | `flic` | Flic | Compressed 2D Image |
-| `ftx` | FlexibleTexture | Flexi-Texture (alias `flt`) |
+| `ftx` | FlexibleTexture | Flexi-Texture |
+| `flt` | Float | Floating-Point Number |
 | `gsi` | GuiSkinItem | GUI Skin Item |
 | `sid` | SceneryItem | Scenery Item |
 | `btbl` | BitmapTable | Bitmap Table |

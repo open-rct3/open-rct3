@@ -93,74 +93,38 @@ test-plugins: $(PLUGINS_OUT)
 TESTS_PROJ := OpenCobra/Tests/Tests.csproj
 TEST_BENCH_PROJ := OpenCobra/Tests/TestRunner/OvlTestBench.csproj
 
-# $(wildcard) alone doesn't recurse, and shelling out to `find` is not portable here - on Windows
-# it silently resolves to cmd.exe's builtin FIND.EXE instead of GNU find depending on PATH/shell
-# context ("FIND: Parameter format not correct"), and even GNU find's quoted -path globs can get
-# shell-expanded before find sees them depending on how $(shell ...) invokes its shell. `rwildcard`
-# recurses using only Make's builtin $(wildcard), so there's no external-tool/PATH dependency
-# at all. Source dirs matter here because a change to e.g. OpenCobra/OVL/Files/*.cs (a
-# ProjectReference of Tests.csproj) must also trigger a rebuild, not just Tests' own sources.
-rwildcard = $(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+# Target frameworks, compiled runner paths, and their validation are resolved by .NET/MSBuild.
+# Do not scrape project XML or construct framework-dependent output paths in Make.
 
-# Integration/TestRunner are separate projects so excluded here too.
-# See <Compile Remove="Integration\**"/TestRunner\**" /> in OpenCobra/Tests/Tests.csproj
-TESTS_SRC := $(filter-out %/bin/% %/obj/% OpenCobra/Tests/Integration/% OpenCobra/Tests/TestRunner/%,\
-  $(call rwildcard,OpenCobra/Tests/,*.cs) $(call rwildcard,OpenCobra/OVL/,*.cs) $(call rwildcard,OpenCobra/GDK/,*.cs))
-# Extract TargetFramework from the csproj
-TESTS_TFM := $(shell grep -oEm1 "<TargetFramework>[^<]+" OpenCobra/Tests/Tests.csproj | sed "s/<TargetFramework>//")
-TESTS_DLL := OpenCobra/Tests/bin/Debug/$(TESTS_TFM)/Tests.dll
-
-$(TESTS_DLL): $(TESTS_PROJ) $(TESTS_SRC)
-	dotnet build OpenCobra/Tests/Tests.csproj
-
-OPENRCT3_TESTS_PROJ := OpenRCT3.Tests/OpenRCT3.Tests.csproj
-OPENRCT3_TESTS_SRC := $(filter-out %/bin/% %/obj/%,\
-  $(call rwildcard,OpenRCT3.Tests/,*.cs) $(call rwildcard,OpenRCT3/,*.cs) $(call rwildcard,OpenCobra/OVL/,*.cs) $(call rwildcard,OpenCobra/GDK/,*.cs))
-ifeq ($(PLATFORM),Darwin)
-  OPENRCT3_TESTS_TFM := net10.0-macos
-else ifeq ($(PLATFORM),Windows)
-  OPENRCT3_TESTS_TFM := net10.0-windows10.0.17763.0
-else
-  OPENRCT3_TESTS_TFM := net10.0
-endif
-OPENRCT3_TESTS_DLL := OpenRCT3.Tests/bin/Debug/$(OPENRCT3_TESTS_TFM)/OpenRCT3.Tests.dll
-
-$(OPENRCT3_TESTS_DLL): $(OPENRCT3_TESTS_PROJ) $(OPENRCT3_TESTS_SRC)
-	dotnet build $(OPENRCT3_TESTS_PROJ) /p:Testing=true /p:SolutionDir=$(CURDIR)/
-
-# Extract TargetFramework from the project
-TEST_BENCH_TFM := $(shell grep -oEm1 "<TargetFramework>[^<]+" $(TEST_BENCH_PROJ) | sed "s/<TargetFramework>//")
-# Path to the compiled test runner using the detected TFM
-TEST_BENCH_DLL := OpenCobra/Tests/TestRunner/bin/Debug/$(TEST_BENCH_TFM)/OvlTestBench.dll
-
-# Validate TFM resolution
-TFM_ERROR := Could not determine .NET target framework!
-ifeq ($(TESTS_TFM),)
-  $(error $(TFM_ERROR))
-else ifeq ($(TEST_BENCH_TFM),)
-  $(error $(TFM_ERROR))
-else
-  $(info Using '$(TESTS_TFM)' to compile $(TESTS_PROJ))
-  $(info Using '$(TEST_BENCH_TFM)' to compile $(TEST_BENCH_PROJ))
-  $(info Using '$(OPENRCT3_TESTS_TFM)' to compile $(OPENRCT3_TESTS_PROJ))
-endif
+.PHONY: test-build
+test-build:
+	dotnet build OpenRCT3.tests.slnf -p:SolutionDir="$(CURDIR)/"
+	dotnet build Dumper/Dumper.Tests/Dumper.Tests.csproj -p:SolutionDir="$(CURDIR)/"
 
 .PHONY: test
-test: $(TESTS_DLL) $(OPENRCT3_TESTS_DLL)
-	dotnet test OpenRCT3.tests.slnf --no-build /p:Testing=true /p:SolutionDir=$(CURDIR)
+test: test-build
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verification/Test-Unit.ps1
+
+# Installed RCT3 verification is intentionally opt-in and never part of the unit gate or CI.
+# Set OPENRCT3_VERIFY_INSTALLED=1 and RCT3_PATH before invoking this target.
+.PHONY: test-installed-ovl
+test-installed-ovl:
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verification/Test-InstalledOvl.ps1
+
+# Native verification needs Windows, a desktop session, and installed RCT3 assets. It is not CI-safe.
+# Set OPENRCT3_VERIFY_NATIVE=1 and RCT3_PATH; OPENRCT3_MAP_PATH may select a specific map.
+.PHONY: test-native-smoke
+test-native-smoke:
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verification/Test-NativeSmoke.ps1
 
 .PHONY: cover
-cover: $(TESTS_DLL)
-	dotnet test $(TESTS_PROJ) --no-build --configuration Debug \
-	  --collect:"XPlat Code Coverage;Format=cobertura;CoverageFileName=coverage.cobertura.xml" \
-	  --results-directory coverage \
-	  --logger "console;verbosity=minimal"
-ifeq ($(CI),)
-	reportgenerator -reports:coverage/**/coverage.cobertura.xml -targetdir:coverage/report -reporttypes:Html
-endif
+cover: test-build
+	dotnet test $(TESTS_PROJ) --no-build \
+	  -p:SolutionDir="$(CURDIR)/" \
+	  --collect:"XPlat Code Coverage;Format=lcov" \
+	  --results-directory "$(CURDIR)/coverage"
 
 .PHONY: integration
-$(TEST_BENCH_DLL): $(PLUGINS_OUT) test-plugins $(TEST_BENCH_PROJ) $(TESTS_SRC)
-integration: $(TEST_BENCH_DLL)
+integration: test-plugins
 	dotnet run --project $(TEST_BENCH_PROJ) -- --plugins
 	dotnet test OpenCobra/Tests/Integration/IntegrationTests.csproj

@@ -73,6 +73,7 @@
     <None Remove="Fixtures\OVL\**\*.ovl" />
     <EmbeddedResource Include="Fixtures\OVL\**\*.ovl" />
     <None Remove="Fixtures\Parks\**\*.dat" />
-    <EmbeddedResource Include="Fixtures\Parks\**\*.dat" />
+    <EmbeddedResource Include="..\..\OpenRCT3.Tests\Fixtures\Parks\**\*.dat"
+      Link="Fixtures\Parks\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

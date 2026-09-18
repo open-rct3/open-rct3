@@ -7,6 +7,6 @@ public static class Constants {
   /// <summary>The repository root directory, injected at build time via <c>SolutionDir</c>.</summary>
   public static string SolutionDir => ThisAssembly.Constants.SolutionDir;
 
-  /// <summary>The vendored saved-park fixtures under <c>OpenCobra/Tests/Fixtures/Parks</c>, shared with <c>OpenCobra.Tests</c>.</summary>
-  public static string ParkFixturesDir => Path.Combine(SolutionDir, "OpenCobra", "Tests", "Fixtures", "Parks");
+  /// <summary>The vendored saved-park fixtures, shared with <c>OpenCobra.Tests</c> through an MSBuild link.</summary>
+  public static string ParkFixturesDir => Path.Combine(SolutionDir, "OpenRCT3.Tests", "Fixtures", "Parks");
 }

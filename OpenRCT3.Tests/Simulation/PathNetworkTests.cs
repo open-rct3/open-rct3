@@ -39,6 +39,16 @@ public class PathNetworkTests {
   }
 
   [Test]
+  public void TryPlacePath_AtGrade_RejectsExtremeSignedRangeWithoutOverflow() {
+    var park = new Park();
+    var terrain = NewTerrain();
+    terrain.SetCornerHeight(1, 1, TerrainCornerSlot.SouthWest, int.MinValue);
+    terrain.SetCornerHeight(1, 1, TerrainCornerSlot.NorthEast, int.MaxValue);
+
+    Assert.That(park.TryPlacePath(1, 1, terrain, new PathTile()), Is.False);
+  }
+
+  [Test]
   public void TryPlacePath_AtGrade_RejectsOffGrid() {
     var park = new Park();
     var terrain = NewTerrain();

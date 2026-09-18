@@ -16,20 +16,26 @@ internal static class BinaryReaderExtensions {
   /// <summary>
   /// Reads a structure of type <typeparamref name="T"/> from the binary reader and returns the number of bytes read.
   /// </summary>
-  public static uint Read<T>(this BinaryReader reader, out T data) {
-    byte[] bytes = reader.ReadBytes(Marshal.SizeOf(typeof(T)));
-
-    var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-    var ptr = handle.AddrOfPinnedObject();
-    if (ptr == nint.Zero) {
+  public static uint Read<T>(this BinaryReader reader, out T data) where T : struct {
+    var size = Marshal.SizeOf<T>();
+    var bytes = reader.ReadBytes(size);
+    if (bytes.Length != size) {
       data = default!;
       return 0;
     }
-    var structure = (T?)Marshal.PtrToStructure(ptr, typeof(T));
-    if (structure == null) data = default!;
-    handle.Free();
 
-    data = structure!;
-    return Convert.ToUInt32(bytes.Length);
+    var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+    try {
+      var ptr = handle.AddrOfPinnedObject();
+      if (ptr == nint.Zero) {
+        data = default!;
+        return 0;
+      }
+
+      data = Marshal.PtrToStructure<T>(ptr)!;
+      return Convert.ToUInt32(size);
+    } finally {
+      handle.Free();
+    }
   }
 }

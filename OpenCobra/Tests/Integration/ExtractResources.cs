@@ -78,6 +78,23 @@ public class ExtractResources {
   }
 
   [Test]
+  [SkipIfEnvironmentMissing("RCT3_PATH", "Cannot find RCT3. Skipping integration test.")]
+  public void Load_StyleCommon_ClassifiesFltAsFloat() {
+    var stylePath = Path.Combine(Rct3Path()!, "Style", "Vanilla", "Style.common.ovl");
+    Assert.That(File.Exists(stylePath), Is.True, $"Style.common.ovl not found at: {stylePath}");
+
+    using var ovl = Ovl.Load(stylePath);
+    var mapColourRed = ovl.Keys.SingleOrDefault(key => key.Name == "MapColourRed");
+    Assert.That(mapColourRed, Is.Not.Null, "MapColourRed.flt not found in Style.common.ovl");
+    var bytes = ovl.ReadResource(mapColourRed!);
+    using (Assert.EnterMultipleScope()) {
+      Assert.That(mapColourRed!.Type, Is.EqualTo(FileType.Float));
+      Assert.That(mapColourRed.ToString(), Is.EqualTo("MapColourRed.flt"));
+      Assert.That(bytes, Is.Not.Null.And.Length.GreaterThanOrEqualTo(sizeof(float)));
+    }
+  }
+
+  [Test]
   public void Load_ShapesCommon_HasResources() {
     var rct3 = Rct3Path();
     if (rct3 == null)
@@ -200,12 +217,10 @@ public class ExtractResources {
   }
 
   /// <remarks>
-  /// A small number of real archives (e.g. "MapColourRed" in Style.common.ovl, "PlatformHeight" in
-  /// tracks/Platforms/Vanilla/*.ovl) have non-texture symbols mislabeled as FileType.FlexibleTexture,
-  /// a separate pre-existing resource-classification bug (tracked as a follow-up). Those entries fail
-  /// even the cheap raw-header
-  /// plausibility check (square, power-of-two dimensions) that every real FTX resource passes, so they
-  /// are skipped here rather than asserted on.
+  /// Float symbols such as "MapColourRed" in Style.common.ovl and "PlatformHeight" in
+  /// tracks/Platforms/Vanilla/*.ovl use the distinct "flt" tag and are classified as
+  /// FileType.Float. Every entry reaching this test is therefore tagged "ftx" and must decode;
+  /// malformed entries fail instead of being filtered by a header plausibility check.
   /// </remarks>
   [TestCaseSource(nameof(GetOvlFixtures))]
   public void FtxResources_AreDecodable(string ovlPath) {
@@ -218,13 +233,13 @@ public class ExtractResources {
 
     using (Assert.EnterMultipleScope()) {
       foreach (var entry in ftxEntries) {
-        var bytes = ovl.ReadResource(entry);
-        if (bytes == null || bytes.Length < 12) continue;
+        var bytes = ovl.ReadResource(entry) ??
+          throw new AssertionException($"{entry.Name} in {Path.GetFileName(ovlPath)} has no data");
+        Assert.That(bytes, Has.Length.GreaterThanOrEqualTo(36),
+          $"{entry.Name} in {Path.GetFileName(ovlPath)}: truncated FTX header");
 
         var width = BitConverter.ToUInt32(bytes, 4);
         var height = BitConverter.ToUInt32(bytes, 8);
-        var isPlausibleFtxHeader = width == height && width > 0 && (width & (width - 1)) == 0;
-        if (!isPlausibleFtxHeader) continue;
 
         var collection = FlexiTextureList.Load(ovl, entry);
         Assert.That(collection, Is.Not.Empty,

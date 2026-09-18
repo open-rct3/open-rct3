@@ -33,6 +33,12 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
   private GL? gl;
   private readonly GLContext glContext = new();
   private Renderer? renderer;
+  private readonly MacSurfaceResourceOwner resources = new();
+  private bool ownsGame;
+
+  public OpenGLLayer() {
+    resources.OwnContext(glContext.Dispose);
+  }
 
   public event SurfaceCreated? SurfaceCreated;
   public event SurfaceChanged? SurfaceChanged;
@@ -96,6 +102,10 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
     if (!faulted) {
       try {
         glContext.SetCurrentContext(context.Handle.Handle);
+        if (!ownsGame) {
+          resources.OwnGame(() => Game.Instance?.Dispose());
+          ownsGame = true;
+        }
 
         if (!initialized) InitializeRenderer(context);
         if (renderer != null) RenderScene();
@@ -112,7 +122,9 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
 
   private void InitializeRenderer(CGLContext context) {
     // Load Silk.NET OpenGL with the current context
-    gl = GL.GetApi(glContext.GetProcAddress);
+    var ownedGl = GL.GetApi(glContext.GetProcAddress);
+    gl = ownedGl;
+    resources.OwnGl(ownedGl.Dispose);
 
     // Determine the current OpenGL version
     CGLContext.CurrentContext = context;
@@ -129,18 +141,25 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
 
     // Provide a minimal input context and GUI controller used by the renderer
     var input = new MacInputContext(context.Handle.Handle);
+    resources.OwnInput(input.Dispose);
     Game.IoC.RegisterInstance<IInputContext>(input);
-    Game.IoC.RegisterInstance(new Controller(input));
+    var controller = new Controller(input);
+    resources.OwnController(controller.Dispose);
+    Game.IoC.RegisterInstance(controller);
 
     // Create and initialize the scene renderer
-    renderer = new Renderer { FramebufferSize = new((int)Frame.Width, (int)Frame.Height) };
-    renderer.Initialize();
-    Game.IoC.RegisterInstance<IRenderer>(renderer);
+    var ownedRenderer = new Renderer {
+      FramebufferSize = new((int)Frame.Width, (int)Frame.Height)
+    };
+    renderer = ownedRenderer;
+    resources.OwnRenderer(ownedRenderer.Dispose);
+    ownedRenderer.Initialize();
+    Game.IoC.RegisterInstance<IRenderer>(ownedRenderer);
 
     // Create a platform surface handle (opaque) for consumers
     Surface = new Handle<IntPtr>((nint)context.Handle.Handle, false);
 
-    SurfaceCreated?.Invoke(this, renderer);
+    SurfaceCreated?.Invoke(this, ownedRenderer);
     SetNeedsDisplay();
 
     initialized = true;
@@ -154,12 +173,18 @@ public class OpenGLLayer : CAOpenGLLayer, IGraphicsSurface {
   }
 
   protected override void Dispose(bool disposing) {
-    if (disposing) {
-      Game.Instance?.Dispose();
-      renderer?.Dispose();
-      gl?.Dispose();
+    try {
+      if (disposing) {
+        resources.Dispose(glContext);
+      }
+    } finally {
+      if (disposing) {
+        renderer = null;
+        gl = null;
+        initialized = false;
+      }
+      base.Dispose(disposing);
     }
-    base.Dispose(disposing);
   }
 
   [DllImport("/System/Library/Frameworks/OpenGL.framework/OpenGL")]

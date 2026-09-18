@@ -9,7 +9,6 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using OpenCobra.GDK;
 using OpenCobra.GDK.GUI;
-using OpenCobra.GDK.Meshes;
 using OpenRCT3.Simulation;
 using Silk.NET.Input;
 using PlatformWindow = OpenCobra.GDK.Platform.IWindow;
@@ -26,14 +25,16 @@ namespace OpenRCT3.UI;
 /// container's existing registrations (see <c>GameWindow.cs</c>/<c>GLSurface.cs</c>), so this window
 /// never has to reach back into the container itself at render time.
 /// </remarks>
-public class Debug(Game game, Mesh terrainMesh, PlatformWindow window, IInputContext inputContext) : IWindow {
+public class Debug(Game game, PlatformWindow window, IInputContext inputContext) : IWindow {
   /// <summary>
   /// The step budget for the cursor-position ray march - derived per-frame from <see cref="Camera.MaxDistance"/>,
   /// falling back to the live eye-to-target distance (mirroring the fallback <see cref="Camera"/> itself
   /// uses for its far clip plane) when unset, e.g. before <c>Game.cs</c> has framed a park.
   /// </summary>
-  private static int StepBudget(Camera camera)
-    => (int)MathF.Ceiling((camera.MaxDistance ?? Vector3.Distance(camera.Eye, camera.Target)) / Park.TileSize);
+  private static int StepBudget(Camera camera, Terrain terrain)
+    => Convert.ToInt32(MathF.Ceiling(
+      (camera.MaxDistance ?? Vector3.Distance(camera.Eye, camera.Target)) /
+      MathF.Min(terrain.TileSize.X, terrain.TileSize.Y)));
 
   public bool Open { get; private set; } = true;
 
@@ -55,7 +56,10 @@ public class Debug(Game game, Mesh terrainMesh, PlatformWindow window, IInputCon
     var frameSeconds = game.FrameTime.TotalSeconds;
     var fps = frameSeconds > 0 ? 1.0 / frameSeconds : 0;
     ImGui.Text($"Frame: {fps:0} fps ({game.FrameTime.TotalMilliseconds:0.00}ms)");
-    ImGui.Text($"Terrain: {terrainMesh.Indices.Count / 3} faces, {terrainMesh.Vertices.Count} vertices");
+    var terrainMesh = game.World.TerrainMesh;
+    ImGui.Text(terrainMesh is { State: not State.Disposed }
+      ? $"Terrain: {terrainMesh.Indices.Count / 3} faces, {terrainMesh.Vertices.Count} vertices"
+      : "Terrain: unavailable");
 
     RenderCursorPosition();
 
@@ -90,7 +94,7 @@ public class Debug(Game game, Mesh terrainMesh, PlatformWindow window, IInputCon
     }
 
     var ray = camera.ToRay(mouse.Position, window.FramebufferSize);
-    var pick = TerrainPicker.TryPickTile(ray, terrain, StepBudget(camera));
+    var pick = TerrainPicker.TryPickTile(ray, terrain, StepBudget(camera, terrain));
 
     ImGui.Text(pick is { } hit
       ? $"Cursor: Terrain at ({hit.Point.X:0.00}, {hit.Point.Y:0.00}, {hit.Point.Z:0.00})"

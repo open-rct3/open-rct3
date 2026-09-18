@@ -14,7 +14,7 @@ public static class Textures {
 
   public static bool IsDecodable(TextureFormat _) => false;
 
-  // Extract all textures from an OVL.
+  // Extract all textures from an OVL
   public static TextureCollection Extract(Ovl ovl) {
     // Find all tex, flic, and btbl files and read their data, in parallel
     var textureTypes = new[] { FileType.Texture, FileType.Flic, FileType.BitmapTable };
@@ -38,71 +38,98 @@ public static class Textures {
     var bitmapTableData = textureFiles.Where(fileData => fileData.File.Type == FileType.BitmapTable);
     var otherTextureData = textureFiles.Where(fileData => fileData.File.Type != FileType.BitmapTable);
 
-    // Read bitmap tables in parallel
-    var bitmapTables = new Dictionary<string, Texture[]>();
-    Parallel.ForEach(bitmapTableData, fileData => {
+    // Read bitmap tables first
+    // Association state is order-sensitive, so tables are decoded before the parallel texture pass.
+    var bitmapTables = new Dictionary<string, Texture[]>(StringComparer.OrdinalIgnoreCase);
+    var rawBitmapTables = new List<Texture[]>();
+    foreach (var fileData in bitmapTableData) {
       try {
         var name = fileData.File.ToString();
 
-        var table = BitmapTables.Read(name, ovl, fileData.File, fileData.Data);
-        bitmapTables[fileData.OvlName] = table;
-        foreach (var texture in table) bag.Add(texture);
+        var table = TextureDecoding.ReadBitmapTable(name, ovl, fileData.File, fileData.Data);
+        bitmapTables[fileData.File.Path] = table;
+        rawBitmapTables.Add(table);
       } catch (Exception ex) {
         logger.Error(ex, "Failed to decode {FileName}", fileData.File.ToString());
         failures.Add(fileData.File);
       }
-    });
+    }
 
     // Walk every loader instance in on-disk order (Part 6 Finding 4): "btbl"/"flic" are
     // loader-category tags, not classified symbols (Finding 5), so they're invisible to ovl.Keys -
-    // this is the only way to discover and decode them.
-    var bitmapTablesByFlicAddress = TextureDecoding.BuildBitmapTablesByFlicAddress(ovl);
-    // Each distinct table discovered above gets its textures added exactly once, mirroring the
-    // previous inline walk's per-btbl bag.Add.
-    foreach (var table in new HashSet<Texture[]>(bitmapTablesByFlicAddress.Values))
-      foreach (var texture in table) bag.Add(texture);
+    // this is the only way to discover and decode them. Each "btbl" loader becomes "current" until
+    // the next one; each "flic" loader's single extra-data chunk is a 4-byte index into whichever
+    // table was current when it was encountered.
+    Texture[]? currentTable = null;
+    string? currentSourcePath = null;
+    var bitmapTablesByFlicAddress = new Dictionary<uint, Texture[]>();
+    foreach (var entry in ovl.LoaderEntriesInOrder) {
+      if (!string.Equals(currentSourcePath, entry.SourcePath, StringComparison.OrdinalIgnoreCase)) {
+        currentSourcePath = entry.SourcePath;
+        currentTable = null;
+      }
+
+      switch (entry.Tag) {
+        case "btbl":
+          try {
+            currentTable = TextureDecoding.ReadBitmapTableAt(
+              $"{ovl.Name}:btbl@{entry.DataAddress:X}", ovl, entry.DataAddress);
+            rawBitmapTables.Add(currentTable);
+          } catch (Exception ex) {
+            logger.Error(
+              ex, "Failed to decode bitmap table at {Address:X} in {OvlName}",
+              entry.DataAddress, ovl.Name);
+            currentTable = null;
+          }
+          break;
+        case "flic" when currentTable != null:
+          bitmapTablesByFlicAddress[entry.DataAddress] = currentTable;
+          break;
+      }
+    }
 
     // Read other textures in parallel
-    Parallel.ForEach(otherTextureData, fileData => {
-      try {
-        var name = fileData.File.ToString();
-
-        // ReSharper disable once ConvertIfStatementToSwitchStatement
-        if (fileData.File.Type == FileType.Texture) {
-          if (!ovl.TryGetDataPointer(fileData.File, out var texAddress))
-            throw new InvalidOperationException($"Failed to resolve data pointer for {name}");
-          var texture = TextureDecoding.ReadTexture(name, ovl, texAddress, fileData.Data, bitmapTablesByFlicAddress);
-          if (texture != null) bag.Add(texture);
-        } else if (fileData.File.Type == FileType.Flic) {
-          var bitmapTable = bitmapTables.GetValueOrDefault(fileData.OvlName);
-          if (!ovl.TryReadExtraData(fileData.File, out var chunks) || chunks.Count == 0)
-            throw new InvalidOperationException($"Failed to resolve flic data for {name}");
-          bag.Add(Flic.Read(name, chunks[0], bitmapTable));
-        }
-      } catch (Exception ex) {
-        logger.Error(ex, "Failed to decode {FileName}", fileData.File.ToString());
-        failures.Add(fileData.File);
-      }
-    });
-
-    // ftx (FlexiTexture) decodes through its own format-specific loader (FlexiTexture.cs) into a
-    // TextureCollection - each animation frame is already one Texture in that collection.
-    var ftxFiles = ovl.Keys.Where(file => file.Type == FileType.FlexibleTexture).ToList();
-    var ftxCollections = ftxFiles
-      .AsParallel()
-      .Select(file => {
+    try {
+      Parallel.ForEach(otherTextureData, fileData => {
         try {
-          return FlexiTextureList.Load(ovl, file);
+          var name = fileData.File.ToString();
+
+          // ReSharper disable once ConvertIfStatementToSwitchStatement
+          if (fileData.File.Type == FileType.Texture) {
+            if (!ovl.TryGetDataPointer(fileData.File, out var texAddress))
+              throw new InvalidOperationException($"Failed to resolve data pointer for {name}");
+            var texture = TextureDecoding.ReadTexture(
+              name, ovl, texAddress, fileData.Data, bitmapTablesByFlicAddress);
+            if (texture != null) bag.Add(texture);
+          } else if (fileData.File.Type == FileType.Flic) {
+            if (!ovl.TryGetDataPointer(fileData.File, out var flicAddress))
+              throw new InvalidOperationException($"Failed to resolve data pointer for {name}");
+            var bitmapTable = bitmapTablesByFlicAddress.GetValueOrDefault(flicAddress)
+                              ?? bitmapTables.GetValueOrDefault(fileData.File.Path);
+            if (!ovl.TryReadExtraData(fileData.File, out var chunks) || chunks.Count == 0)
+              throw new InvalidOperationException($"Failed to resolve flic data for {name}");
+            bag.Add(TextureDecoding.ReadFlic(name, chunks[0], bitmapTable));
+          }
         } catch (Exception ex) {
-          logger.Error(ex, "Failed to decode {FileName}", file.ToString());
-          failures.Add(file);
-          return null;
+          logger.Error(ex, "Failed to decode {FileName}", fileData.File.ToString());
+          failures.Add(fileData.File);
         }
-      })
-      .Where(collection => collection != null);
-    foreach (var collection in ftxCollections)
-      foreach (var texture in collection!)
-        bag.Add(texture);
+      });
+    } finally {
+      foreach (var table in rawBitmapTables)
+      foreach (var texture in table)
+        texture.Dispose();
+    }
+
+    foreach (var file in ovl.Keys.Where(file => file.Type == FileType.FlexibleTexture)) {
+      try {
+        var frames = FlexiTextureList.Load(ovl, file);
+        foreach (var frame in frames.Frames) bag.Add(frame);
+      } catch (Exception ex) {
+        logger.Error(ex, "Failed to decode {FileName}", file.ToString());
+        failures.Add(file);
+      }
+    }
 
     if (!failures.IsEmpty)
       logger.Error(
@@ -112,6 +139,6 @@ public static class Textures {
         textureFiles.Length != 1 ? "s" : string.Empty
       );
 
-    return [.. bag];
+    return new TextureCollection().AddRange(bag);
   }
 }

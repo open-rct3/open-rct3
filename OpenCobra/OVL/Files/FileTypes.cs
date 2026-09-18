@@ -113,7 +113,10 @@ public enum FileType : ushort {
   ParticleSpriteItem,
   /// <summary>Font Character Table (fct)</summary>
   [Description("Font Character Table")]
-  FontCharacterTable
+  FontCharacterTable,
+  /// <summary>Floating-Point Number (flt)</summary>
+  [Description("Floating-Point Number")]
+  Float
 }
 
 /// <summary>Extension methods for working with <see cref="FileType"/>.</summary>
@@ -147,7 +150,7 @@ public static class FileTypeExtensions {
     "tex" => FileType.Texture,
     "flic" => FileType.Flic,
     "ftx" => FileType.FlexibleTexture,
-    "flt" => FileType.FlexibleTexture,
+    "flt" => FileType.Float,
     "gsi" => FileType.GuiSkinItem,
     "sid" => FileType.SceneryItem,
     "btbl" => FileType.BitmapTable,
@@ -191,6 +194,7 @@ public static class FileTypeExtensions {
       FileType.Texture => "tex",
       FileType.Flic => "flic",
       FileType.FlexibleTexture => "ftx",
+      FileType.Float => "flt",
       FileType.GuiSkinItem => "gsi",
       FileType.SceneryItem => "sid",
       FileType.BitmapTable => "btbl",
@@ -272,6 +276,7 @@ public static class FileTypeExtensions {
     FileType.CharacterSkinPart => "Image",
     FileType.ParticleSpriteItem => "Image",
     FileType.FontCharacterTable => "FormatFont",
+    FileType.Float => "Numeric",
     _ => "FileQuestion",
   };
 
@@ -301,6 +306,7 @@ public static class FileTypeExtensions {
     FileType.CharacterSkinSet or FileType.CharacterSkinPart => "ImageMultiple",
     FileType.ParticleSpriteItem => "ImageMultiple",
     FileType.FontCharacterTable => "FormatFont",
+    FileType.Float => "Numeric",
     _ => "FileMultipleOutline",
   };
 }

@@ -40,14 +40,28 @@ jobs:
         if: runner.os == 'macOS'
         run: dotnet workload restore
       - name: Restore Dependencies
-        run: dotnet restore
-      - name: Test
-        run: dotnet test --no-restore --verbosity normal --collect:"XPlat Code Coverage"
+        run: |
+          dotnet restore OpenRCT3.tests.slnf -p:SolutionDir="${{ github.workspace }}/"
+          dotnet restore Dumper/Dumper.Tests/Dumper.Tests.csproj -p:SolutionDir="${{ github.workspace }}/"
+      - name: Setup GNU Make
+        run: choco install make --version=4.4.1 --no-progress --yes
+      - name: Unit Gate
+        id: unit-gate
+        env:
+          COLLECT_COVERAGE: "1"
+        run: make test
+      - name: Upload Test Results
+        if: always() && steps.unit-gate.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.name }}
+          path: TestResults/unit
+          if-no-files-found: error
       - name: Merge Coverage Reports
         if: success()
         run: |
           dotnet tool install -g dotnet-reportgenerator-globaltool
-          reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:CoverageReport -reporttypes:Cobertura
+          reportgenerator -reports:"TestResults/unit/**/coverage.cobertura.xml" -targetdir:CoverageReport -reporttypes:Cobertura
       - name: Upload Coverage to Codecov
         if: success()
         uses: codecov/codecov-action@v5

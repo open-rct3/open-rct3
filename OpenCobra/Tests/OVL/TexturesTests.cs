@@ -38,7 +38,7 @@ public class TexturesTests {
         CopyResourceTo(assembly, uniqueResourceName, Path.Combine(tempDir, "fixture.unique.ovl"));
 
       using var ovl = Ovl.Load(commonPath);
-      var textures = Textures.Extract(ovl);
+      using var textures = Textures.Extract(ovl);
       Assert.That(textures, Is.Not.Null);
       // We don't necessarily know a given fixture has textures, but we can check it doesn't throw
     } finally {
