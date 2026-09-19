@@ -149,3 +149,11 @@ $(TEST_BENCH_DLL): $(PLUGINS_OUT) test-plugins $(TEST_BENCH_PROJ) $(TESTS_SRC)
 integration: $(TEST_BENCH_DLL)
 	dotnet run --project $(TEST_BENCH_PROJ) -- --plugins
 	dotnet test OpenCobra/Tests/Integration/IntegrationTests.csproj
+
+.PHONY: clean
+clean:
+ifeq ($(PLATFORM),Windows)
+	dotnet clean OpenRCT3.sln
+else
+	dotnet clean OpenRCT3.unix.sln
+endif
