@@ -154,9 +154,6 @@ When describing *anything* (code behavior, edge cases, invariants, or deferred s
 - **Prefer:** "full mesh geometry is future work" or "deferred to track geometry tuning phase"
 - **Avoid:** "generation is planned for a subsequent milestone" or "transitions to full mesh geometry if performance testing justifies it"
 
-
-
-
 ### See Also Links
 
 For cross-project references (e.g. references to source files

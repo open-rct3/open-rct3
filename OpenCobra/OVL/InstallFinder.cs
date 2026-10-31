@@ -36,6 +36,8 @@ public static class InstallFinder {
       // TODO: Discover Steam's `steamapps` path automatically (from the registry or other means?)
       $"C:\\Steam\\steamapps\\common\\{SteamIds.Complete}",
       $"C:\\Steam\\steamapps\\common\\{SteamIds.Platinum}",
+      $"D:\\Steam\\steamapps\\common\\{SteamIds.Complete}",
+      $"D:\\Steam\\steamapps\\common\\{SteamIds.Platinum}",
 #elif OSX
       "/Applications/RollerCoaster Tycoon 3 Complete Edition.app/Contents/Assets",
       "/Applications/RollerCoaster Tycoon 3 Platinum.app/Contents/Assets",

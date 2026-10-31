@@ -28,14 +28,14 @@ public record struct Progress(string Task, float Loaded = 0.0f) {
 
   public readonly float LoadedPercent => Loaded * 100.0f;
   public readonly float LoadedPercentRounded => Convert.ToSingle(Math.Round(LoadedPercent, 2));
-  public readonly bool IsLoading => Loaded < 1;
+  public readonly bool IsLoading => Loaded < 1.0f - 0.0001f;
   /// <summary>
   /// Whether the long-running task is considered loaded.
   /// </summary>
   /// <remarks>
   /// A task is considered loaded when its <see cref="Loaded"/> value is sufficiently close to <c>1.0f</c>.
   /// </remarks>
-  public readonly bool IsLoaded => Loaded >= 1.0f - float.Epsilon;
+  public readonly bool IsLoaded => Loaded >= 1.0f - 0.0001f;
 
   public static Progress operator +(Progress a, Progress b) => new(a.Task, a.Loaded + b.Loaded);
 

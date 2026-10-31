@@ -31,6 +31,25 @@ endif
 release: gui
 	dotnet build OpenRCT3/OpenRCT3.csproj -c Release
 
+
+# ==========
+# Debugging
+# ==========
+
+# Debug the Game
+
+.PHONY: debug
+debug:
+	deno task build:plugins
+	deno task build:desktop
+	dotnet run --project OpenRCT3/OpenRCT3.csproj
+
+# =============
+# Web Platform
+# =============
+
+# Game GUI
+
 .PHONY: gui
 gui: ovl
 	deno task build:desktop
@@ -38,10 +57,6 @@ gui: ovl
 .PHONY: ovl
 ovl:
 	dotnet build OpenCobra/OVL/OVL.csproj -c Release
-
-# ==========
-# Debugging
-# ==========
 
 .PHONY: dumper
 dumper:

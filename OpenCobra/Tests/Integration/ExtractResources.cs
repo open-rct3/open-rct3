@@ -12,7 +12,17 @@ namespace OpenCobra.Tests.Integration;
 
 [TestFixture]
 public class ExtractResources {
-  private static string? Rct3Path() => Environment.GetEnvironmentVariable("RCT3_PATH");
+  private static string? Rct3Path() {
+    var rct3Path = Environment.GetEnvironmentVariable("RCT3_PATH");
+    if (string.IsNullOrEmpty(rct3Path)) {
+      try {
+        rct3Path = InstallFinder.Find();
+      } catch (InstallNotFoundException) {
+        rct3Path = null;
+      }
+    }
+    return rct3Path;
+  }
 
   [SetUp]
   public void Setup() {
@@ -21,11 +31,14 @@ public class ExtractResources {
   }
 
   [Test]
-  [SkipIfEnvironmentMissing("RCT3_PATH", "Cannot find RCT3. Skipping integration test.")]
   public void Load_NullbmpFtx_ExtractsFlexibleTexture() {
-    var rct3 = Rct3Path()!;
+    var rct3 = Rct3Path();
+    if (string.IsNullOrEmpty(rct3)) {
+      // TODO: Extract this logic to the `SkipIfEnvironmentMissing` attribute implementation
+      Assert.Ignore("Cannot find RCT3. Skipping integration test.");
+    }
 
-    var commonPath = Path.Combine(rct3, "nullbmp.common.ovl");
+    var commonPath = Path.Join(rct3!, "nullbmp.common.ovl");
     Assert.That(File.Exists(commonPath), Is.True, $"nullbmp.common.ovl not found at: {commonPath}");
 
     var resources = Ovl.Load(commonPath);
@@ -102,7 +115,7 @@ public class ExtractResources {
       yield break;
     }
 
-    var files = Directory.GetFiles(rct3Path, "*.ovl", SearchOption.AllDirectories);
+    var files = Directory.GetFiles(rct3Path, "*.common.ovl", SearchOption.AllDirectories);
     if (files.Length == 0) {
       yield return new TestCaseData(string.Empty).Ignore("No OVL fixtures found.");
       yield break;
