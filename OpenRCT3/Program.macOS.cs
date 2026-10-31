@@ -45,7 +45,7 @@ internal static class Program {
       var selectedPath = picker.PickFolder("Select your RCT3 Assets folder");
 
       if (!string.IsNullOrEmpty(selectedPath) && InstallFinder.Validate(selectedPath)) {
-        config = config with { InstallPath = selectedPath };
+        config.InstallPath = selectedPath;
         config.Save();
         return config;
       }

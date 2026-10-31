@@ -67,7 +67,7 @@ internal static class Program {
 
     try {
       var installPath = InstallFinder.Find(config.ExtraPaths);
-      config = config with { InstallPath = installPath };
+      config.InstallPath = installPath;
       config.Save();
       return config;
     }
@@ -77,7 +77,7 @@ internal static class Program {
       var selectedPath = picker.PickFolder("Select your RCT3 installation folder");
 
       if (!string.IsNullOrEmpty(selectedPath) && InstallFinder.Validate(selectedPath)) {
-        config = config with { InstallPath = selectedPath };
+        config.InstallPath = selectedPath;
         config.Save();
         return config;
       }

@@ -1,0 +1,95 @@
+2026-05-18 23:44:33.6641 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-18 23:44:33.6681 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-18 23:44:33.6717 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-18 23:44:33.6802 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-18 23:44:33.6883 Info Configuration initialized.
+2026-05-18 23:44:33.7043 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-18-2026-2344.log` (Fallback to dynamic wildcard)
+2026-05-18 23:44:38.4210 Info AppDomain Shutting down. LogFactory closing...
+2026-05-18 23:44:38.4254 Info LogFactory has been closed.
+2026-05-18 23:46:56.9388 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-18 23:46:56.9421 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-18 23:46:56.9467 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-18 23:46:56.9545 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-18 23:46:56.9626 Info Configuration initialized.
+2026-05-18 23:46:56.9769 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-18-2026-2346.log` (Fallback to dynamic wildcard)
+2026-05-18 23:46:56.9797 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-18-2026-2346.log
+2026-05-18 23:49:24.6828 Info AppDomain Shutting down. LogFactory closing...
+2026-05-18 23:49:24.6875 Info LogFactory has been closed.
+2026-05-18 23:49:38.6960 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-18 23:49:38.6999 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-18 23:49:38.7048 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-18 23:49:38.7135 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-18 23:49:38.7223 Info Configuration initialized.
+2026-05-18 23:49:38.7369 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-18-2026-2349.log` (Fallback to dynamic wildcard)
+2026-05-18 23:49:38.7415 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-18-2026-2349.log
+2026-05-18 23:53:00.3616 Info AppDomain Shutting down. LogFactory closing...
+2026-05-18 23:53:00.3688 Info LogFactory has been closed.
+2026-05-18 23:53:54.0052 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-18 23:53:54.0118 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-18 23:53:54.0186 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-18 23:53:54.0338 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-18 23:53:54.0485 Info Configuration initialized.
+2026-05-18 23:53:54.0765 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-18-2026-2353.log` (Fallback to dynamic wildcard)
+2026-05-18 23:53:54.0854 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-18-2026-2353.log
+2026-05-18 23:54:10.8489 Info AppDomain Shutting down. LogFactory closing...
+2026-05-18 23:54:10.8604 Info LogFactory has been closed.
+2026-05-19 09:57:01.0218 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-19 09:57:01.0253 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-19 09:57:01.0290 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-19 09:57:01.0372 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-19 09:57:01.0475 Info Configuration initialized.
+2026-05-19 09:57:01.0644 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-19-2026-0957.log` (Fallback to dynamic wildcard)
+2026-05-19 09:57:01.0692 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-19-2026-0957.log
+2026-05-19 09:58:25.8790 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-19 09:58:25.8819 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-19 09:58:25.8860 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-19 09:58:25.8948 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-19 09:58:25.9032 Info Configuration initialized.
+2026-05-19 09:58:25.9178 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-19-2026-0958.log` (Fallback to dynamic wildcard)
+2026-05-19 09:58:25.9228 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-19-2026-0958.log
+2026-05-19 09:59:03.5090 Info AppDomain Shutting down. LogFactory closing...
+2026-05-19 09:59:03.5146 Info LogFactory has been closed.
+2026-05-19 10:02:21.2277 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-19 10:02:21.2311 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-19 10:02:21.2349 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-19 10:02:21.2439 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-19 10:02:21.2525 Info Configuration initialized.
+2026-05-19 10:02:21.2683 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-19-2026-1002.log` (Fallback to dynamic wildcard)
+2026-05-19 10:02:21.2732 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-19-2026-1002.log
+2026-05-19 10:07:05.7942 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-19 10:07:05.7970 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-19 10:07:05.8008 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-19 10:07:05.8083 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-19 10:07:05.8163 Info Configuration initialized.
+2026-05-19 10:07:05.8303 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-19-2026-1007.log` (Fallback to dynamic wildcard)
+2026-05-19 10:07:05.8350 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-19-2026-1007.log
+2026-05-19 10:07:39.1247 Info AppDomain Shutting down. LogFactory closing...
+2026-05-19 10:07:39.1294 Info LogFactory has been closed.
+2026-05-31 15:01:05.9359 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-31 15:01:05.9397 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-31 15:01:05.9439 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-31 15:01:05.9527 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-31 15:01:05.9617 Info Configuration initialized.
+2026-05-31 15:01:05.9800 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-31-2026-1501.log` (Fallback to dynamic wildcard)
+2026-05-31 15:01:05.9855 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-31-2026-1501.log
+2026-05-31 15:01:42.4556 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-31 15:01:42.4587 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-31 15:01:42.4625 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-31 15:01:42.4709 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-31 15:01:42.4790 Info Configuration initialized.
+2026-05-31 15:01:42.4943 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-31-2026-1501.log` (Fallback to dynamic wildcard)
+2026-05-31 15:01:42.5002 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-31-2026-1501.1.log
+2026-05-31 15:03:39.2797 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-31 15:03:39.2827 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-31 15:03:39.2865 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-31 15:03:39.2943 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-31 15:03:39.3023 Info Configuration initialized.
+2026-05-31 15:03:39.3162 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-31-2026-1503.log` (Fallback to dynamic wildcard)
+2026-05-31 15:03:39.3209 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-31-2026-1503.log
+2026-05-31 15:06:43.9841 Info Registered target NLog.Targets.FileTarget(Name=file)
+2026-05-31 15:06:43.9872 Info Registered target NLog.Targets.ConsoleTarget(Name=console)
+2026-05-31 15:06:43.9909 Info NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c. File version: 5.3.4.2778. Product version: 5.3.4+73d83d3161d31288ca5c554cc50d27b6bed5f28b. GlobalAssemblyCache: False
+2026-05-31 15:06:43.9986 Info Validating config: TargetNames=file, console, ConfigItems=31, FilePath=/home/tomast1337/Documents/openRCT3/open-rct3/OpenRCT3/bin/Debug/net8.0/nlog.config
+2026-05-31 15:06:44.0065 Info Configuration initialized.
+2026-05-31 15:06:44.0208 Info FileTarget: Pattern {#} is missing in ArchiveFileName `/home/tomast1337/.config/OpenRCT3/logs/app.may-31-2026-1506.log` (Fallback to dynamic wildcard)
+2026-05-31 15:06:44.0259 Info FileTarget(Name=file): Archiving /home/tomast1337/.config/OpenRCT3/logs/app.log to /home/tomast1337/.config/OpenRCT3/logs/app.may-31-2026-1506.log

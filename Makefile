@@ -155,5 +155,5 @@ clean:
 ifeq ($(PLATFORM),Windows)
 	dotnet clean OpenRCT3.sln
 else
-	dotnet clean OpenRCT3.unix.sln
+	dotnet clean OpenRCT3.unix.slnf
 endif
