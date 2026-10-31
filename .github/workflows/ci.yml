@@ -18,6 +18,8 @@ jobs:
             os: windows-2022
           - name: Windows Server 2025
             os: windows-2025
+          - name: Ubuntu Linux (Latest)
+            os: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +42,7 @@ jobs:
         if: runner.os == 'macOS'
         run: dotnet workload restore
       - name: Restore Dependencies
-        run: dotnet restore
+        run: dotnet restore OpenRCT3.tests.slnf
       - name: Test
         run: dotnet test OpenRCT3.tests.slnf --no-restore --verbosity normal --collect:"XPlat Code Coverage"
       - name: Merge Coverage Reports
