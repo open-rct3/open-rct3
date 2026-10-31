@@ -27,6 +27,11 @@
 
 - [ ] Update framebuffer on window resize/screen changes (`OpenRCT3/Platforms/macOS/GameViewController.cs:35`)
 - [ ] Tear down graphics and other unmanaged resources (`OpenRCT3/Platforms/macOS/AppDelegate.cs:24`)
+- [ ] Convert remaining `DllImport`s to
+      [`LibraryImport`](https://learn.microsoft.com/dotnet/standard/native-interop/pinvoke-source-generation)
+  - [ ] `CGLFlushDrawable` ([OpenRCT3/Platforms/macOS/OpenGLLayer.cs](OpenRCT3/Platforms/macOS/OpenGLLayer.cs#L165))
+  - [ ] `DestroyIcon`
+        ([OpenCobra/Tests/TestRunner/OvlTestBenchForm.Icons.cs](OpenCobra/Tests/TestRunner/OvlTestBenchForm.Icons.cs#L119))
 
 ## Phase 2: Gameplay
 

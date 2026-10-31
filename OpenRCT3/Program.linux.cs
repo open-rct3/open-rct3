@@ -2,11 +2,13 @@
 //
 // Authors:
 //   - Nicolas Vyčas Nery <vycasnicolas@gmail.com>
+//   - Chance Snow <git@chancesnow.me>
 //
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System;
 using NLog;
+using OpenCobra.OVL;
 using OpenRCT3.Platforms;
 using OpenRCT3.Platforms.Linux;
 
@@ -57,6 +59,6 @@ internal static class Program {
     LoadConfigAndFindInstall();
 
     using var window = new MainWindow();
-    window.Run();
+    window.Start();
   }
 }

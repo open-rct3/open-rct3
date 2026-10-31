@@ -2,7 +2,7 @@
 //
 // Authors:
 //   - Nicolas Vyčas Nery <vycasnicolas@gmail.com>
-//
+//   - Chance Snow <git@chancesnow.me>
 // Copyright © 2026 OpenRCT3 Contributors. All rights reserved.
 
 using System;
@@ -11,10 +11,15 @@ using Silk.NET.Core.Contexts;
 
 namespace OpenRCT3.OpenGL;
 
-// Loads OpenGL symbols on Linux. Prefers glXGetProcAddress (which can resolve
-// modern, context-specific entry points exposed by the driver) and falls back
-// to plain dlsym(libGL.so.1, ...) for the legacy 1.x exports.
-public class GLContext : IGLContext, INativeContext {
+/// <summary>
+/// Loads OpenGL symbols on Linux.
+/// </summary>
+/// <remarks>
+/// Prefers glXGetProcAddress (which can resolve modern, context-specific entry
+/// points exposed by the driver) and falls back to plain
+/// <c>dlsym(libGL.so.1, ...)</c> for the legacy <c>1.x</c> exports.
+/// </remarks>
+public partial class GLContext : INativeContext {
   private readonly nint _openglLib;
 
   public GLContext() {
@@ -50,15 +55,15 @@ public class GLContext : IGLContext, INativeContext {
   private const int RTLD_NOW = 2;
   private const int RTLD_GLOBAL = 0x100;
 
-  [DllImport("libdl.so.2")]
-  private static extern nint dlopen(string path, int mode);
+  [LibraryImport("libdl.so.2", StringMarshalling = StringMarshalling.Utf8)]
+  private static partial nint dlopen(string path, int mode);
 
-  [DllImport("libdl.so.2")]
-  private static extern nint dlsym(nint handle, string symbol);
+  [LibraryImport("libdl.so.2", StringMarshalling = StringMarshalling.Utf8)]
+  private static partial nint dlsym(nint handle, string symbol);
 
-  [DllImport("libdl.so.2")]
-  private static extern int dlclose(nint handle);
+  [LibraryImport("libdl.so.2")]
+  private static partial int dlclose(nint handle);
 
-  [DllImport("libGL.so.1", EntryPoint = "glXGetProcAddress", CharSet = CharSet.Ansi)]
-  private static extern nint glXGetProcAddress(string proc);
+  [LibraryImport("libGL.so.1", EntryPoint = "glXGetProcAddress", StringMarshalling = StringMarshalling.Utf8)]
+  private static partial nint glXGetProcAddress(string proc);
 }
