@@ -46,6 +46,8 @@ public class FolderPicker : IFolderPicker {
     return string.IsNullOrWhiteSpace(line) ? null : line!.Trim();
   }
 
+  public void Dispose() {}
+
   private static string? TryRun(string program, IEnumerable<string> args) {
     try {
       var psi = new ProcessStartInfo(program) {

@@ -195,6 +195,9 @@ public class Game : IGame {
       // FIXME: Pump macOS windowing events
       // See https://duckduckgo.com/?q=osx+how+to+pump+windowing+events+in+a+game+loop&ia=web
       NSApplication.EnsureUIThread();
+#elif LINUX
+      // GLFW requires events be pumped from the thread which owns the window
+      IoC.Resolve<OpenCobra.GDK.Platform.IWindow>().DoEvents();
 #endif
 
       // Simulation ticks are fixed steps to aid physics/AI determinism
