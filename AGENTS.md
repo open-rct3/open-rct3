@@ -45,6 +45,7 @@ These cover how to act on the codebase. They are not as severe as the Hard Rules
 #### Using Tools
 
 - **Obey Explicit Tool Directives Immediately.** When the user tells you to use a specific tool (e.g., "use the internet", "use bash", "use the file-writing tools"), obey on the next tool invocation. Do NOT substitute, retreat to local guesswork, or repeat failing patterns.
+- **Follow Skill Output Contracts Exactly.** When a skill specifies an output format, use that format, including required code fences, without substituting a prose summary.
 - **Always Prefer Built-in File Tools & NEVER Use Terminal to Create Files.** Always use built-in file read & write tools (`view_file`, `replace_file_content`) rather than shell commands. NEVER use the terminal or shell commands (e.g. `New-Item`, `touch`, `Set-Content`, `Get-Content`, `cat`, `echo`, heredocs, or PowerShell scripts) to create, read, or modify files.
 - **Always Use `ask_question` for Decisions & Choices.** ALWAYS use the `ask_question` tool whenever asking the user ANY question, presenting architectural choices, clarifying requirements, soliciting design preferences, or asking the user to pick from a list of options. NEVER write open questions or multiple-choice questions as plain text in your response; ALWAYS invoke the `ask_question` tool.
 - **Simple Commands Only & Prefer Default Tools.** Stop prompting the user for permission on complicated, multi-line, or convoluted shell commands. Do NOT execute inline multi-line scripts (such as `node -e "..."`, PowerShell multi-line invocations, or pipeline gymnastics). Keep tool operations simple, single-purpose, and direct. Use the default built-in file and search tools whenever possible.
@@ -105,3 +106,7 @@ For any task requiring multiple steps:
 - In NUnit tests, use `Assert.Throws<T>(new Action(() => ...))` instead of the obsolete `TestDelegate`.
 - In NUnit tests, annotate test methods with `[Test]` & `[Description("...")]` using simple, verb-led method names (e.g. `ConstrainToBounds`, `EvictOldestSampleAtCapacity`) instead of bloated identifier names. Use `using (Assert.EnterMultipleScope()) { ... }` when verifying multiple related assertions. See [`OpenCobra/Tests/GUI/RollingPlotTests.cs`](OpenCobra/Tests/GUI/RollingPlotTests.cs) as the gold standard pattern.
 - Do NOT resolve IoC dependencies at the call site to pass into constructors; move container resolutions (such as `Game.IoC.Resolve<T>()`) into the constructor or resolve them internally.
+
+- **Plan files live in [.agents/plans/](.agents/plans/); name each <feature-name>.md without a date.**
+
+- **Delta checkout source of truth:** when Delta identifies a local checkout, read, edit, and verify that checkout directly. Treat the Delta worktree as a copy, not the user's working set.
